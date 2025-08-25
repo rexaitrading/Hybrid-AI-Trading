@@ -1,4 +1,4 @@
-﻿import os, sys, json, traceback
+import os, sys, json, traceback
 from dotenv import load_dotenv
 import requests
 
