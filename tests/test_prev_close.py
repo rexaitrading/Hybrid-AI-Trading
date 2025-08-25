@@ -3,6 +3,8 @@ from pprint import pprint
 from utils.config import load_config
 from utils.universe import Core_Stocks
 from utils.polygon import PolygonClient
+from utils.universe import Core_Stocks, Crypto_Signal, Macro_Risk, Leverage_Tools, IPO_Watch
+from utils.crypto import prev_close_ohlc
 
 def main():
     # 1) 讀 config.yaml
@@ -41,6 +43,7 @@ def main():
                     print(f"⚠️ {symbol} 無數據: {data}")
             except Exception as e:
                 print(f"❌ {symbol} 錯誤: {e}")
+
 
 if __name__ == "__main__":
     main()

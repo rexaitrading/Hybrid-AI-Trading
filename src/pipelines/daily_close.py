@@ -1,15 +1,15 @@
 # tests/export_prev_close.py
 from __future__ import annotations
 
-import json
 import os
+import json
 from datetime import datetime, timezone
 from typing import Dict, List, Any
 
 from utils.config import load_config
 from utils.universe import Core_Stocks, Crypto_Signal, Macro_Risk, Leverage_Tools, IPO_Watch
 from utils.polygon import PolygonClient
-
+from utils.crypto import batch_prev_close # <--- 用於 Crypto_Signal 一次過抓
 
 def _ms_to_iso(ms: int) -> str:
     """Polygon 回傳的 t 為毫秒 epoch，轉 ISO UTC 字串。"""
@@ -17,7 +17,6 @@ def _ms_to_iso(ms: int) -> str:
         return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat()
     except Exception:
         return ""
-
 
 def main():
     # 1) 載入設定 & 建立 client
@@ -33,11 +32,36 @@ def main():
         "IPO_Watch": IPO_Watch,
     }
 
-    # 3) 逐組別抓取前日收市，累積成 rows
+    # 3) 逐組別抓前日收市，累積成 rows
     rows: List[Dict[str, Any]] = []
 
     for group, symbols in asset_groups.items():
-        print(f"\n📊 取得 {group}（{len(symbols)}）")
+        print(f"\n📥 取得 {group} ({len(symbols)})")
+         
+        # ---- Crypto_Signal 用 CoinAPI：批次抓取 ----
+        if group == "Crypto_Signal":
+            try:
+                out = batch_prev_close(symbols, quote="USD")
+                for s in symbols:
+                    r = out.get(s, {})
+                    rows.append({
+                        "group": group, "symbol": s,
+                        "asof": r.get("asof", ""),
+                        "open": r.get("open"),
+                        "high": r.get("high"),
+                        "low": r.get("low"),
+                        "close": r.get("close"),
+                        "volume": r.get("volume"),
+                        "vwap": r.get("vwap"),
+                        "status": r.get("status", "NO_DATA"),
+                    })
+                print(f"✅ {group} done")
+            except Exception as e:
+                print(f"❌ {group} error: {e}")
+            # 這組處理完就換下一組（跳過下面 Polygon 流程）
+        continue
+
+        # ---- 其他組別維持原本 Polygon 流程（逐隻 symbol）----
         for symbol in symbols:
             try:
                 data = client.prev_close(symbol)
@@ -56,22 +80,22 @@ def main():
                         "status": data.get("status", "OK"),
                     }
                     rows.append(row)
-                    print(f" ✅ {symbol} close={row['close']} O/H/L={row['open']}/{row['high']}/{row['low']} vol={row['volume']}")
+                    print(f"✅ {symbol} close={row['close']} O/H/L={row['open']}/{row['high']}/{row['low']}")
                 else:
                     rows.append({
                         "group": group, "symbol": symbol, "asof": "",
                         "open": None, "high": None, "low": None, "close": None,
-                        "volume": None, "vwap": None, "status": f"NO_DATA: {data}"
+                        "volume": None, "vwap": None, "status": f"NO_DATA: {data}",
                     })
-                    print(f" ⚠️ {symbol} 無數據")
+                    print(f"⚠️ {symbol} 無數據")
             except Exception as e:
                 rows.append({
                     "group": group, "symbol": symbol, "asof": "",
                     "open": None, "high": None, "low": None, "close": None,
-                    "volume": None, "vwap": None, "status": f"ERROR: {e}"
+                    "volume": None, "vwap": None, "status": f"ERROR: {e}",
                 })
-                print(f" ❌ {symbol} 錯誤: {e}")
-
+                print(f"❌ {symbol} 錯誤: {e}")    
+        
     # 4) 輸出 CSV / JSON 到 ./data
     os.makedirs("data", exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -90,8 +114,7 @@ def main():
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(rows, f, ensure_ascii=False, indent=2)
 
-    print(f"\n📁 已輸出：\n- {csv_path}\n- {json_path}")
-
+    print(f"\n📂 已輸出：\n- {csv_path}\n- {json_path}")
 
 if __name__ == "__main__":
     main()
