@@ -1,29 +1,52 @@
-# tests/test_crypto_demo.py
-import os, json
-from datetime import datetime as dt
-import requests
-from dotenv import load_dotenv
+﻿import unittest
+from unittest.mock import patch, MagicMock
+from src.data.clients import coinapi_client
+from src.data.clients.coinapi_client import CoinAPIError
 
-# 讀取 .env 檔案
-load_dotenv() 
+class TestCoinAPIClient(unittest.TestCase):
 
-# Debug print，檢查 API key 是否讀到
-# print("DEBUG - COINAPI_KEY:", os.getenv("COINAPI_KEY"))
+    @patch("src.data.clients.coinapi_client._retry_get")
+    def test_get_fx_rate_success(self, mock_retry):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"rate": 123.45}
+        mock_retry.return_value = mock_resp
 
-API = os.getenv("COINAPI_KEY")
-BASE = "https://rest.coinapi.io"
-HEAD = {"X-CoinAPI-Key": API}
+        rate = coinapi_client.get_fx_rate("BTC", "USD")
+        self.assertEqual(rate, 123.45)
 
-def rate(symbol: str, quote="USD"):
-    r = requests.get(f"{BASE}/v1/exchangerate/{symbol}/{quote}", headers=HEAD, timeout=10)
-    r.raise_for_status()
-    data = r.json()
-    return data["rate"], data.get("time")
+    @patch("src.data.clients.coinapi_client._retry_get")
+    def test_get_fx_rate_failure(self, mock_retry):
+        mock_retry.side_effect = CoinAPIError("API down")
+        with self.assertRaises(CoinAPIError):
+            coinapi_client.get_fx_rate("BTC", "USD")
 
-def main():
-    for s in ["BTC", "ETH"]:
-        px, t = rate(s, "USD")
-        print(f"{s}/USD rate={px:.2f} time={t}")
+    @patch("src.data.clients.coinapi_client._retry_get")
+    def test_get_ohlcv_latest_success(self, mock_retry):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = [
+            {
+                "time_period_start": "2025-08-01T00:00:00Z",
+                "price_open": 100,
+                "price_high": 110,
+                "price_low": 95,
+                "price_close": 105,
+            }
+        ]
+        mock_retry.return_value = mock_resp
 
-if __name__ == "__main__":
-    main()
+        data = coinapi_client.get_ohlcv_latest("BTC", "USD", period_id="1DAY", limit=1)
+        self.assertEqual(data[0]["price_close"], 105)
+
+    @patch("src.data.clients.coinapi_client._retry_get")
+    def test_ping_success(self, mock_retry):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"rate": 50000}
+        mock_retry.return_value = mock_resp
+
+        self.assertTrue(coinapi_client.ping())
+
+    @patch("src.data.clients.coinapi_client._retry_get")
+    def test_ping_failure(self, mock_retry):
+        mock_retry.side_effect = CoinAPIError("timeout")
+        self.assertFalse(coinapi_client.ping())
+

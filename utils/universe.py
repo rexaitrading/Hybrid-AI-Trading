@@ -1,10 +1,10 @@
-# utils/universe.py
-from utils.config import load_config
+﻿# utils/universe.py
+from src.config.settings import load_config
 
-_cfg = load_config() # 讀 config.yaml
-U = _cfg.get("universe", {}) # 只取 universe 區塊
+_cfg = load_config() # è®€ config.yaml
+U = _cfg.get("universe", {}) # åªå– universe å€å¡Š
 
-# 個別清單（冇就回傳空清單）
+# å€‹åˆ¥æ¸…å–®ï¼ˆå†‡å°±å›žå‚³ç©ºæ¸…å–®ï¼‰
 Core_Stocks = U.get("Core_Stocks", [])
 Crypto_Signal = U.get("Crypto_Signal", [])
 Macro_Risk = U.get("Macro_Risk", [])
@@ -12,7 +12,7 @@ Leverage_Tools = U.get("Leverage_Tools", [])
 IPO_Watch = U.get("IPO_Watch", [])
 
 def groups() -> dict:
-    """一次過取回所有清單"""
+    """ä¸€æ¬¡éŽå–å›žæ‰€æœ‰æ¸…å–®"""
     return {
         "Core_Stocks": Core_Stocks,
         "Crypto_Signal": Crypto_Signal,

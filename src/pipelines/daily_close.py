@@ -1,4 +1,4 @@
-# tests/export_prev_close.py
+﻿# tests/export_prev_close.py
 from __future__ import annotations
 
 import os
@@ -6,24 +6,24 @@ import json
 from datetime import datetime, timezone
 from typing import Dict, List, Any
 
-from utils.config import load_config
+from src.config.settings import load_config
 from utils.universe import Core_Stocks, Crypto_Signal, Macro_Risk, Leverage_Tools, IPO_Watch
-from utils.polygon import PolygonClient
-from utils.crypto import batch_prev_close # <--- 用於 Crypto_Signal 一次過抓
+from src.data.clients.polygon_client import PolygonClient
+from src.data.clients.coinapi_client import batch_prev_close # <--- ç”¨æ–¼ Crypto_Signal ä¸€æ¬¡éŽæŠ“
 
 def _ms_to_iso(ms: int) -> str:
-    """Polygon 回傳的 t 為毫秒 epoch，轉 ISO UTC 字串。"""
+    """Polygon å›žå‚³çš„ t ç‚ºæ¯«ç§’ epochï¼Œè½‰ ISO UTC å­—ä¸²ã€‚"""
     try:
         return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat()
     except Exception:
         return ""
 
 def main():
-    # 1) 載入設定 & 建立 client
+    # 1) è¼‰å…¥è¨­å®š & å»ºç«‹ client
     cfg = load_config()
     client = PolygonClient()
 
-    # 2) 組別清單
+    # 2) çµ„åˆ¥æ¸…å–®
     asset_groups: Dict[str, List[str]] = {
         "Core_Stocks": Core_Stocks,
         "Crypto_Signal": Crypto_Signal,
@@ -32,13 +32,13 @@ def main():
         "IPO_Watch": IPO_Watch,
     }
 
-    # 3) 逐組別抓前日收市，累積成 rows
+    # 3) é€çµ„åˆ¥æŠ“å‰æ—¥æ”¶å¸‚ï¼Œç´¯ç©æˆ rows
     rows: List[Dict[str, Any]] = []
 
     for group, symbols in asset_groups.items():
-        print(f"\n📥 取得 {group} ({len(symbols)})")
+        print(f"\nðŸ“¥ å–å¾— {group} ({len(symbols)})")
          
-        # ---- Crypto_Signal 用 CoinAPI：批次抓取 ----
+        # ---- Crypto_Signal ç”¨ CoinAPIï¼šæ‰¹æ¬¡æŠ“å– ----
         if group == "Crypto_Signal":
             try:
                 out = batch_prev_close(symbols, quote="USD")
@@ -55,13 +55,13 @@ def main():
                         "vwap": r.get("vwap"),
                         "status": r.get("status", "NO_DATA"),
                     })
-                print(f"✅ {group} done")
+                print(f"âœ… {group} done")
             except Exception as e:
-                print(f"❌ {group} error: {e}")
-            # 這組處理完就換下一組（跳過下面 Polygon 流程）
+                print(f"âŒ {group} error: {e}")
+            # é€™çµ„è™•ç†å®Œå°±æ›ä¸‹ä¸€çµ„ï¼ˆè·³éŽä¸‹é¢ Polygon æµç¨‹ï¼‰
         continue
 
-        # ---- 其他組別維持原本 Polygon 流程（逐隻 symbol）----
+        # ---- å…¶ä»–çµ„åˆ¥ç¶­æŒåŽŸæœ¬ Polygon æµç¨‹ï¼ˆé€éš» symbolï¼‰----
         for symbol in symbols:
             try:
                 data = client.prev_close(symbol)
@@ -80,29 +80,29 @@ def main():
                         "status": data.get("status", "OK"),
                     }
                     rows.append(row)
-                    print(f"✅ {symbol} close={row['close']} O/H/L={row['open']}/{row['high']}/{row['low']}")
+                    print(f"âœ… {symbol} close={row['close']} O/H/L={row['open']}/{row['high']}/{row['low']}")
                 else:
                     rows.append({
                         "group": group, "symbol": symbol, "asof": "",
                         "open": None, "high": None, "low": None, "close": None,
                         "volume": None, "vwap": None, "status": f"NO_DATA: {data}",
                     })
-                    print(f"⚠️ {symbol} 無數據")
+                    print(f"âš ï¸ {symbol} ç„¡æ•¸æ“š")
             except Exception as e:
                 rows.append({
                     "group": group, "symbol": symbol, "asof": "",
                     "open": None, "high": None, "low": None, "close": None,
                     "volume": None, "vwap": None, "status": f"ERROR: {e}",
                 })
-                print(f"❌ {symbol} 錯誤: {e}")    
+                print(f"âŒ {symbol} éŒ¯èª¤: {e}")    
         
-    # 4) 輸出 CSV / JSON 到 ./data
+    # 4) è¼¸å‡º CSV / JSON åˆ° ./data
     os.makedirs("data", exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = os.path.join("data", f"prev_close_{stamp}.csv")
     json_path = os.path.join("data", f"prev_close_{stamp}.json")
 
-    # CSV（標準庫寫，免依賴 pandas）
+    # CSVï¼ˆæ¨™æº–åº«å¯«ï¼Œå…ä¾è³´ pandasï¼‰
     import csv
     headers = ["group", "symbol", "asof", "open", "high", "low", "close", "volume", "vwap", "status"]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
@@ -114,7 +114,9 @@ def main():
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(rows, f, ensure_ascii=False, indent=2)
 
-    print(f"\n📂 已輸出：\n- {csv_path}\n- {json_path}")
+    print(f"\nðŸ“‚ å·²è¼¸å‡ºï¼š\n- {csv_path}\n- {json_path}")
 
 if __name__ == "__main__":
     main()
+
+
