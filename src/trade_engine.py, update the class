@@ -1,0 +1,26 @@
+from src.risk.black_swan_guard import BlackSwanGuard
+
+class TradeEngine:
+    def __init__(self, use_mock: bool = False):
+        self.risk_manager = RiskManager()
+        self.guard = BlackSwanGuard()   # <-- NEW
+        ...
+    
+    def run_strategy(self, symbol_id: str, qty: int = 1):
+        raw_signal = breakout_signal(symbol_id)
+        print(f"Raw signal: {raw_signal}")
+
+        # Pass through Black Swan Guard
+        guarded_signal = self.guard.filter_signal(raw_signal)
+
+        # Pass through Risk Manager
+        final_signal = self.risk_manager.control_signal(guarded_signal)
+        print(f"Final signal after risk/guard: {final_signal}")
+
+        if final_signal in ["BUY", "SELL"]:
+            order = self.broker.place_order(symbol_id, final_signal.lower(), qty)
+            print(f"Order result: {order}")
+            return order
+
+        print("No trade executed.")
+        return {"status": "no_trade", "symbol": symbol_id}

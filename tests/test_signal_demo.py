@@ -1,24 +1,59 @@
-# tests/test_signal_demo.py
-from __future__ import annotations
-import pandas as pd
-import glob, os
+﻿import unittest
+from unittest.mock import patch
+from src.signals.breakout_v1 import breakout_signal
 
-DATA_DIR = "data"
+class TestBreakoutSignal(unittest.TestCase):
 
-def latest_csv(pattern="prev_close_*.csv"):
-    files = sorted(glob.glob(os.path.join(DATA_DIR, pattern)))
-    return files[-1] if files else None
+    @patch("src.signals.breakout_v1.get_ohlcv_latest")
+    def test_breakout_detected(self, mock_get):
+        """Price breaks above resistance → BUY"""
+        mock_get.return_value = [
+            {"price_open": 100, "price_high": 101, "price_low": 99, "price_close": 100},
+            {"price_open": 101, "price_high": 102, "price_low": 100, "price_close": 102},
+            {"price_open": 108, "price_high": 111, "price_low": 107, "price_close": 110},
+        ]
+        signal = breakout_signal("FAKE")
+        self.assertEqual(signal, "BUY")
 
-def main():
-    csv_path = latest_csv()
-    df = pd.read_csv(csv_path)
-    print(f"使用最新數據檔案: {csv_path}")
+    @patch("src.signals.breakout_v1.get_ohlcv_latest")
+    def test_no_breakout(self, mock_get):
+        """Prices flat → HOLD"""
+        mock_get.return_value = [
+            {"price_open": 100, "price_high": 101, "price_low": 99, "price_close": 100},
+            {"price_open": 101, "price_high": 102, "price_low": 100, "price_close": 101},
+            {"price_open": 100, "price_high": 101, "price_low": 99, "price_close": 100},
+        ]
+        signal = breakout_signal("FAKE")
+        self.assertEqual(signal, "HOLD")
 
-    # 簡單策略：收市價 > 開市價 = 買入信號
-    df["signal"] = df["close"] > df["open"]
+    @patch("src.signals.breakout_v1.get_ohlcv_latest")
+    def test_false_breakout(self, mock_get):
+        """Spike then revert → HOLD"""
+        mock_get.return_value = [
+            {"price_open": 100, "price_high": 101, "price_low": 99, "price_close": 100},
+            {"price_open": 110, "price_high": 111, "price_low": 109, "price_close": 110},
+            {"price_open": 100, "price_high": 101, "price_low": 99, "price_close": 100},
+        ]
+        signal = breakout_signal("FAKE")
+        self.assertEqual(signal, "HOLD")
 
-    print("\n=== Demo 訊號 ===")
-    print(df[["group","symbol","open","close","signal"]].head(10).to_string(index=False))
+    @patch("src.signals.breakout_v1.get_ohlcv_latest")
+    def test_breakdown_detected(self, mock_get):
+        """Price breaks below support → SELL"""
+        mock_get.return_value = [
+            {"price_open": 100, "price_high": 101, "price_low": 99, "price_close": 100},
+            {"price_open": 98, "price_high": 99, "price_low": 97, "price_close": 98},
+            {"price_open": 90, "price_high": 91, "price_low": 89, "price_close": 90},
+        ]
+        signal = breakout_signal("FAKE")
+        self.assertEqual(signal, "SELL")
 
-if __name__ == "__main__":
-    main()
+    @patch("src.signals.breakout_v1.get_ohlcv_latest")
+    def test_short_history(self, mock_get):
+        """Not enough bars → HOLD"""
+        mock_get.return_value = [
+            {"price_open": 100, "price_high": 101, "price_low": 99, "price_close": 100}
+        ]
+        signal = breakout_signal("FAKE")
+        self.assertEqual(signal, "HOLD")
+

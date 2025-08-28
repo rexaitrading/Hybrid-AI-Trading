@@ -1,0 +1,11 @@
+symbol,raw_signal,guarded_signal,final_signal,executed
+AAPL,SELL,SELL,SELL,submitted
+TSLA,HOLD,HOLD,HOLD,no_trade
+NVDA,HOLD,HOLD,HOLD,no_trade
+AMZN,SELL,SELL,SELL,submitted
+MSFT,HOLD,HOLD,HOLD,no_trade
+BTCUSD,HOLD,HOLD,HOLD,no_trade
+ETHUSD,HOLD,HOLD,HOLD,no_trade
+EURUSD,HOLD,HOLD,HOLD,no_trade
+USDJPY,HOLD,HOLD,HOLD,no_trade
+AAPL,SELL,HOLD,HOLD,no_trade

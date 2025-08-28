@@ -1,0 +1,43 @@
+﻿project: HybridAI
+timezone: America/Vancouver
+
+trading_window:
+  start: "05:00"
+  end: "11:00"
+
+risk:
+  target_daily_return: 0.015
+  max_daily_loss: 0.02
+  max_position_risk: 0.01
+  max_leverage: 10
+
+leverage:
+  stocks: 2
+  crypto: 3
+  forex: 10
+  ipo: 5
+
+providers:
+  polygon:
+    api_key_env: POLYGON_KEY
+  alpaca:
+    key_id_env: ALPACA_KEY
+    secret_key_env: ALPACA_SECRET
+  coinapi:
+    api_key_env: COINAPI_KEY
+  benzinga:
+    api_key_env: BENZINGA_KEY
+
+universe:
+  stocks: ["AAPL", "TSLA", "NVDA", "AMZN", "MSFT"]
+  crypto: ["BTCUSD", "ETHUSD"]
+  forex: ["EURUSD", "USDJPY"]
+  ipo_watchlist: ["ARM", "KVYO", "CART"]
+
+features:
+  enable_black_swan_guard: true
+  black_swan_sources:
+    - "news_sentiment_ai"
+    - "orderbook_anomaly_ai"
+    - "macro_alert_ai"
+  enable_multi_ai_signals: true
