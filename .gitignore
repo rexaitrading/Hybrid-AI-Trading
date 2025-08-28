@@ -1,0 +1,73 @@
+# -------------------------
+# Python
+# -------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.dll
+
+# -------------------------
+# Virtual env
+# -------------------------
+.venv/
+venv/
+env/
+
+# -------------------------
+# Jupyter
+# -------------------------
+.ipynb_checkpoints/
+*.ipynb~*
+
+# -------------------------
+# Editors / OS
+# -------------------------
+.vscode/
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# Data & Logs (本地輸出、暫存)
+# -------------------------
+data/
+logs/
+*.sqlite3
+*.db
+*.csv
+*.json
+
+# -------------------------
+# Secrets / Keys
+# -------------------------
+.env
+.env.*
+*.key
+*.pem
+
+# -------------------------
+# Build / Packaging
+# -------------------------
+dist/
+build/
+*.egg-info/
+
+# -------------------------
+# Project-specific
+# -------------------------
+# Keep config/config.yaml under version control
+# Allow local overrides but ignore them
+config/*.local.*
+
+# Ignore SQLite or other DB backups
+*.bak
+*.backup
+
+# Ignore any notebook outputs saved as HTML/PDF
+*.html
+*.pdf
+
+# Ignore temp testing files
+tmp/
+tests/__pycache__/
