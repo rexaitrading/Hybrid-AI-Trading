@@ -1,4 +1,4 @@
-import os, json, datetime as dt
+﻿import os, json, datetime as dt
 from dateutil.relativedelta import relativedelta
 import requests
 from dotenv import load_dotenv
@@ -21,7 +21,7 @@ def fetch_earnings(start: str, end: str):
     return r.json()
 
 if __name__ == "__main__":
-    # 讀取上次抓到的日期，預設往前一天
+    # è®€å–ä¸Šæ¬¡æŠ“åˆ°çš„æ—¥æœŸï¼Œé è¨­å¾€å‰ä¸€å¤©
     start = load_checkpoint("earnings_day_ckpt", dt.date.today().strftime("%Y-%m-%d"))
     end = (dt.date.fromisoformat(start) + relativedelta(days=7)).strftime("%Y-%m-%d")
 
@@ -30,7 +30,8 @@ if __name__ == "__main__":
     day = dt.date.today().strftime("%Y-%m-%d")
     out_path = json_path(BASE_DIR, day, f"earnings_{start}_to_{end}")
     atomic_write_json(out_path, data, indent=2)
-    print("✅ Saved:", out_path, "items:", len(data.get("earnings", [])))
+    print("âœ… Saved:", out_path, "items:", len(data.get("earnings", [])))
 
-    # 更新 checkpoint
+    # æ›´æ–° checkpoint
     save_checkpoint("earnings_day_ckpt", dt.date.fromisoformat(end).strftime("%Y-%m-%d"))
+

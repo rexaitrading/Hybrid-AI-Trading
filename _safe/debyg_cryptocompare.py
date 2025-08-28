@@ -1,4 +1,4 @@
-import os, json, requests, sys
+﻿import os, json, requests, sys
 
 # Get API key from environment
 API_KEY = os.getenv("CRYPTOCOMPARE_KEY") or "PUT_YOUR_CRYPTOCOMPARE_KEY_HERE"
@@ -24,3 +24,4 @@ print("ERROR:", repr(e))
 
 if __name__ == "__main__":
     main()
+

@@ -1,4 +1,4 @@
-# utils/io_state.py
+﻿# utils/io_state.py
 import os, json, uuid, datetime as dt
 from pathlib import Path
 
@@ -8,13 +8,13 @@ def utc_now_str():
 def ensure_dir(path: str):
     Path(path).mkdir(parents=True, exist_ok=True)
 
-# 產生「不覆蓋」的新檔名（放在 day 子資料夾內）
+# ç”¢ç”Ÿã€Œä¸è¦†è“‹ã€çš„æ–°æª”åï¼ˆæ”¾åœ¨ day å­è³‡æ–™å¤¾å…§ï¼‰
 def json_path(base_dir: str, day: str, prefix: str):
     ensure_dir(os.path.join(base_dir, day))
     rid = utc_now_str() + "_" + uuid.uuid4().hex[:6]
     return os.path.join(base_dir, day, f"{prefix}_{rid}.json")
 
-# 原子寫入：先 .tmp 再改名，避免半檔
+# åŽŸå­å¯«å…¥ï¼šå…ˆ .tmp å†æ”¹åï¼Œé¿å…åŠæª”
 def atomic_write_json(path: str, obj, indent=2):
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -36,3 +36,4 @@ def load_checkpoint(name: str, default_value: str):
 def save_checkpoint(name: str, value: str):
     p = os.path.join(_ckpt_dir(), f"{name}.json")
     atomic_write_json(p, {"value": value})
+

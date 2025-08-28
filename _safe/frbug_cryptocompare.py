@@ -1,11 +1,11 @@
-import os
+﻿import os
 import time
 import csv
 import calendar
 from datetime import datetime
 from debug_cryptocompare import fetch_prices, print_and_save
 
-def loop_fetch(interval=240): # interval = 每 240 秒 (4 分鐘)
+def loop_fetch(interval=240): # interval = æ¯ 240 ç§’ (4 åˆ†é˜)
     while True:
         try:
             data = fetch_prices()
@@ -16,3 +16,4 @@ def loop_fetch(interval=240): # interval = 每 240 秒 (4 分鐘)
 
 if __name__== "__main__":
     loop_fetch()
+

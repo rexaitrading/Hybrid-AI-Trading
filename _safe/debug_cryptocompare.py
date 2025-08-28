@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 import os
 import json
 import csv
@@ -10,8 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-# ---- 設定 ----
-API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY") # 建議用環境變數；若沒有就填下一行
+# ---- è¨­å®š ----
+API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY") # å»ºè­°ç”¨ç’°å¢ƒè®Šæ•¸ï¼›è‹¥æ²’æœ‰å°±å¡«ä¸‹ä¸€è¡Œ
 # API_KEY = "11000"
 
 URL = "https://min-api.cryptocompare.com/data/pricemulti"
@@ -20,7 +20,7 @@ PARAMS = {"fsyms": ",".join(SYMBOLS), "tsyms": "USD"}
 HEADERS = {"authorization": f"Apikey {API_KEY}"} if API_KEY else {}
 
 def fetch_prices():
-    """呼叫 API（含簡單重試/退避）"""
+    """å‘¼å« APIï¼ˆå«ç°¡å–®é‡è©¦/é€€é¿ï¼‰"""
     for attempt in range(3):
         try:
             r = requests.get(URL, params=PARAMS, headers=HEADERS, timeout=10)
@@ -55,30 +55,30 @@ def print_and_save(data):
         })
 
 def days_in_month(year: int, month: int) -> int:
-    # 回傳當月天數，calendar 會自動處理閏年（8 月 18）
+    # å›žå‚³ç•¶æœˆå¤©æ•¸ï¼Œcalendar æœƒè‡ªå‹•è™•ç†é–å¹´ï¼ˆ8 æœˆ 18ï¼‰
     return calendar.monthrange(year, month)[1]
 
 def is_valid_date(y: int, m: int, d: int) -> bool:
-    # 試著建立 datetime；若日期非法（如 8/18）會丟 ValueError
+    # è©¦è‘—å»ºç«‹ datetimeï¼›è‹¥æ—¥æœŸéžæ³•ï¼ˆå¦‚ 8/18ï¼‰æœƒä¸Ÿ ValueError
     try:
         datetime(y, m, d)
         return True
     except ValueError:
         return False
 
-# ===== 配額設定（依你的方案調整）=====
-MONTHLY_CALLS = 11000 # 你現在畫面顯示是 11,000/月
+# ===== é…é¡è¨­å®šï¼ˆä¾ä½ çš„æ–¹æ¡ˆèª¿æ•´ï¼‰=====
+MONTHLY_CALLS = 11000 # ä½ ç¾åœ¨ç•«é¢é¡¯ç¤ºæ˜¯ 11,000/æœˆ
 
 def daily_budget(year: int, month: int, monthly_calls: int = MONTHLY_CALLS) -> int:
-    """回傳該月每日可用的平均呼叫數（整數）"""
+    """å›žå‚³è©²æœˆæ¯æ—¥å¯ç”¨çš„å¹³å‡å‘¼å«æ•¸ï¼ˆæ•´æ•¸ï¼‰"""
     d = days_in_month(year, month)
     return max(1, monthly_calls // d)
 
 def suggested_interval_seconds(year: int, month: int, monthly_calls: int = MONTHLY_CALLS) -> int:
-    """依每日配額，回傳建議的呼叫間隔秒數（同日均勻分散）"""
+    """ä¾æ¯æ—¥é…é¡ï¼Œå›žå‚³å»ºè­°çš„å‘¼å«é–“éš”ç§’æ•¸ï¼ˆåŒæ—¥å‡å‹»åˆ†æ•£ï¼‰"""
     per_day = daily_budget(year, month, monthly_calls)
     sec_per_day = 24 * 60 * 60
-    # 均勻分散；保底 1 秒，避免 0
+    # å‡å‹»åˆ†æ•£ï¼›ä¿åº• 1 ç§’ï¼Œé¿å… 0
     return max(1, sec_per_day // per_day)
 
 
@@ -90,6 +90,7 @@ def suggested_interval_seconds(year: int, month: int, monthly_calls: int = MONTH
         data = fetch_prices()
         print_and_save(data)
 
-# 這裡一定要是 2 個底線，不是 1 個
+# é€™è£¡ä¸€å®šè¦æ˜¯ 2 å€‹åº•ç·šï¼Œä¸æ˜¯ 1 å€‹
 if __name__ == "__main__":
     main()
+

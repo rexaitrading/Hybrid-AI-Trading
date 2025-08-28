@@ -1,38 +1,35 @@
-# tests/test_env.py
+﻿import unittest
+from unittest.mock import patch
+from src.data.clients.polygon_client import PolygonClient, PolygonAPIError
 
-import os
-from dotenv import load_dotenv
-import requests
+class TestEnv(unittest.TestCase):
 
-def fail(msg, code=1):
-    print("❌", msg)
-    exit(code)
+    @patch("src.data.clients.polygon_client.load_config")
+    def test_polygon_client_with_valid_key(self, mock_load):
+        """PolygonClient should init with a valid API key (mocked)"""
+        mock_load.return_value = {
+            "providers": {
+                "polygon": {"api_key_env": "TEST_KEY"}  # fake key for test
+            }
+        }
+        client = PolygonClient()
+        self.assertIn("Authorization", client.headers)
+        self.assertEqual(client.headers["Authorization"], "Bearer TEST_KEY")
 
-def main():
-    # 載入 .env 檔
-    load_dotenv()
+    @patch("src.data.clients.polygon_client.load_config")
+    def test_polygon_client_missing_key(self, mock_load):
+        """PolygonClient should raise RuntimeError if API key missing"""
+        mock_load.return_value = {
+            "providers": {
+                "polygon": {"api_key_env": None}
+            }
+        }
+        with self.assertRaises(RuntimeError):
+            PolygonClient()
 
-    # 從環境變數攞 CoinAPI key
-    key = os.getenv("COINAPI_KEY")
-    if not key:
-        fail("未找到 COINAPI_KEY，請先在 .env 填入 COINAPI_KEY")
-
-    # 測試 API 是否能用
-    url = "https://rest.coinapi.io/v1/exchangerate/BTC/USD"
-    headers = {"X-CoinAPI-Key": key}
-    try:
-        r = requests.get(url, headers=headers)
-    except Exception as e:
-        fail(f"請求失敗: {e}")
-
-    if r.status_code == 200:
-        print("✅ CoinAPI OK | 回應:", r.json())
-    elif r.status_code == 401:
-        fail("401 Unauthorized: 金鑰錯誤或無效")
-    elif r.status_code == 429:
-        fail("429 Too Many Requests: 免費額度用完")
-    else:
-        fail(f"API 其他錯誤: {r.status_code}, {r.text}")
-
-if __name__ == "__main__":
-    main()
+    @patch("src.data.clients.polygon_client.load_config")
+    def test_invalid_config_structure(self, mock_load):
+        """Invalid config structure should raise PolygonAPIError"""
+        mock_load.return_value = {}
+        with self.assertRaises(PolygonAPIError):
+            PolygonClient()

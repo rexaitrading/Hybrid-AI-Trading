@@ -1,10 +1,10 @@
-import os
+﻿import os
 from dotenv import load_dotenv
 
-# 載入 .env
+# è¼‰å…¥ .env
 load_dotenv()
 
-# 你想檢查的全部 key
+# ä½ æƒ³æª¢æŸ¥çš„å…¨éƒ¨ key
 keys = [
     "bd4e0dc3-8de0-44e2-8894-c6e3d491f8a3",
     "dg9YCsmMS3FIAwsf1OkjnBX2xvelb3fX",
@@ -19,4 +19,5 @@ for key in keys:
     if value:
         print(f"{key} present: True, preview: {value[:8]}...")
     else:
-        print(f"{key} MISSING ❌")
+        print(f"{key} MISSING âŒ")
+

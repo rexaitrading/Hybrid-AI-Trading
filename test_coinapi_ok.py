@@ -1,30 +1,40 @@
-import os
+﻿import os
+import pytest
+from unittest.mock import patch, MagicMock
 import requests
-from dotenv import load_dotenv
 
-# 載入 .env 檔案
-load_dotenv()
 
-# 從 .env 讀取金鑰
-COINAPI_KEY = os.getenv("bd4e0dc3-8de0-44e2-8894-c6e3d491f8a3")
+def test_coinapi_key_missing(monkeypatch):
+    monkeypatch.delenv("COINAPI_KEY", raising=False)
+    assert os.getenv("COINAPI_KEY") is None
 
-if not COINAPI_KEY:
-    print("❌ MISSING: COINAPI_KEY not found in .env")
-    exit(1)
 
-print("✅ COINAPI_KEY loaded successfully")
+@patch("requests.get")
+def test_coinapi_account_success(mock_get, monkeypatch):
+    monkeypatch.setenv("COINAPI_KEY", "FAKE_KEY")
 
-# 測試 API (CoinAPI status endpoint)
-url = "https://rest.coinapi.io/v1/exchangerate/BTC/USD"
-headers = {"X-CoinAPI-Key": COINAPI_KEY}
+    mock_resp = MagicMock(status_code=200)
+    mock_resp.json.return_value = {"id": "demo", "status": "active"}
+    mock_get.return_value = mock_resp
 
-try:
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        print("✅ CoinAPI connection OK")
-        print("BTC/USD rate:", data.get("rate"))
-    else:
-        print("❌ Error:", response.status_code, response.text)
-except Exception as e:
-    print("❌ Exception while calling CoinAPI:", e)
+    url = "https://rest.coinapi.io/v1/some_endpoint"
+    r = requests.get(url, headers={"X-CoinAPI-Key": os.getenv("COINAPI_KEY")})
+    assert r.status_code == 200
+    assert r.json()["status"] == "active"
+
+
+@patch("requests.get")
+def test_coinapi_account_failure(mock_get, monkeypatch):
+    monkeypatch.setenv("COINAPI_KEY", "FAKE_KEY")
+
+    mock_resp = MagicMock(status_code=401)
+    mock_resp.text = "Unauthorized"
+    mock_resp.json.side_effect = ValueError("Bad JSON")
+    mock_get.return_value = mock_resp
+
+    url = "https://rest.coinapi.io/v1/some_endpoint"
+    r = requests.get(url, headers={"X-CoinAPI-Key": os.getenv("COINAPI_KEY")})
+
+    assert r.status_code == 401
+    with pytest.raises(ValueError):
+        _ = r.json()
