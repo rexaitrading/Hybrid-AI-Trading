@@ -1,5 +1,14 @@
 <<<<<<< HEAD
 \# 🚀 Hybrid AI Trading
+# 🚀 Hybrid AI Trading
+
+![Python](https://img.shields.io/badge/python-3.12-blue)
+![Status](https://img.shields.io/badge/status-active-success)
+![License](https://img.shields.io/badge/license-private-lightgrey)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue)
+
+AI-driven trading system with **hybrid strategies** and **multi-asset integration** (equities, futures, forex, crypto).  
+Includes **risk management modules**, **backtesting pipelines**, and **interactive broker connectivity**.
 
 
 
