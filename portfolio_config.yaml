@@ -1,0 +1,108 @@
+# ================================
+# Hybrid AI Trading Project Config
+# ================================
+
+# --- Brokers & Execution ---
+brokers:
+  - binance           # Crypto via CCXT
+  - bybit             # Derivatives (optional)
+  # - ibkr            # Interactive Brokers (future use)
+  # - coinbase        # Additional broker
+
+dry_run: true           # true = simulate only, false = live orders
+max_daily_shift: 0.20   # max 20% capital shift per rebalance
+order_type: market      # market | limit | smart
+slippage: 0.001         # 0.1% slippage assumption
+trade_fees: 0.0005      # optional: average commission/fee per trade
+
+# --- Portfolio Strategy ---
+portfolio_choice: sharpe    # sharpe | minvol | equal | custom | hybrid
+
+# Optional: support hybrid weighting
+strategy_mix:
+  sharpe: 0.6
+  minvol: 0.4
+
+# Custom portfolio allocation (if "custom" selected)
+custom_weights:
+  BTC/USDT: 40
+  ETH/USDT: 20
+  SPY: 25
+  GLD: 10
+  TLT: 5
+
+# --- Assets to Include ---
+tickers:
+  # --- Crypto ---
+  - "BTC/USDT"
+  - "ETH/USDT"
+
+  # --- Equities & ETFs ---
+  - "SPY"
+  - "GLD"
+  - "TLT"
+
+  # --- Forex (prefix "C:") ---
+  - "C:EURUSD"
+  - "C:USDJPY"
+
+  # --- IPO Watchlist ---
+  - "ABNB"
+  - "ARM"
+
+# --- Backtest Window ---
+start: "2020-01-01"
+end:   "2025-01-01"
+
+# --- Risk-Free Rate ---
+risk_free_rate: 0.03      # 3% annualized for Sharpe/Sortino
+
+# --- Risk Management ---
+max_drawdown: 0.25        # stop trading if portfolio drawdown >25%
+var_confidence: 0.95      # Value-at-Risk confidence
+leverage: 1.0             # portfolio leverage multiplier
+daily_loss_limit: 0.03    # stop trading if daily loss >3%
+take_profit_target: 0.02  # optional: daily take profit 2%
+
+# --- Stress Scenarios ---
+stress_scenarios:
+  - name: "Crypto Crash"
+    shock: {"BTC/USDT": -0.30, "ETH/USDT": -0.40}
+  - name: "Equity Selloff"
+    shock: {"SPY": -0.20}
+  - name: "Bond Rally"
+    shock: {"TLT": 0.10, "GLD": 0.05}
+
+# --- Reporting Options ---
+report:
+  excel: true            # export to Excel
+  html: true             # generate HTML report
+  embed_plots: true      # embed plots into HTML
+  log_trades: true       # save executed trades log
+  summary_stats: true    # include Sharpe, Sortino, VaR
+  performance_db: true   # optional: store results in SQLite/DB
+
+# --- Alerts & Logging ---
+alerts:
+  email: true
+  slack: false
+  telegram: false
+
+logging:
+  level: INFO            # DEBUG | INFO | WARNING | ERROR
+  file: "logs/trading.log"
+
+# --- Email Settings ---
+email:
+  from: "rex@rexyeungai1544045bc.com"
+  to:   "rex@rexyeungai1544045bc.com"
+  smtp_user: "rex@rexyeungai1544045bc.com"
+  smtp_pass: "AsZx12!@333713"   # use app password, not raw password
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 587
+
+# --- Monitoring (Optional Future Extension) ---
+monitoring:
+  heartbeat_interval: 60    # seconds, system health check
+  auto_restart: true        # restart if crash detected
+  trade_audit: true         # audit trail for compliance

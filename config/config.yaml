@@ -2,20 +2,21 @@
 timezone: America/Vancouver
 
 trading_window:
-  start: "05:00"
-  end: "11:00"
+  start: "05:00"    # Pacific Time (8am New York pre-market)
+  end: "11:00"      # Pacific Time (2pm New York overlap)
 
 risk:
-  target_daily_return: 0.015
-  max_daily_loss: 0.02
-  max_position_risk: 0.01
-  max_leverage: 10
+  target_daily_return: 0.01      # +1% lock
+  max_daily_loss: -0.03          # -3% stop
+  max_position_risk: 0.01        # 1% equity/trade
+  max_leverage: 10               # portfolio cap
 
-leverage:
-  stocks: 2
-  crypto: 3
-  forex: 10
-  ipo: 5
+costs:
+  commission_per_share: 0.005    # $0.005/share
+  min_commission: 1.00
+  slippage_per_share: 0.01
+  margin_interest_rate: 0.06
+  trading_days_per_year: 252
 
 providers:
   polygon:
@@ -29,15 +30,15 @@ providers:
     api_key_env: BENZINGA_KEY
 
 universe:
-  stocks: ["AAPL", "TSLA", "NVDA", "AMZN", "MSFT"]
-  crypto: ["BTCUSD", "ETHUSD"]
-  forex: ["EURUSD", "USDJPY"]
-  ipo_watchlist: ["ARM", "KVYO", "CART"]
+  Core_Stocks: [AAPL, MSFT, NVDA, TSLA, AMD, META, AMZN, GOOGL]
+  Macro_Risk: [SPY, QQQ, DIA, VIXY, GLD, TLT]
+  Crypto_Signal: [BTCUSD, ETHUSD, SOLUSD, BNBUSD]
+  Leverage_Tools: [TQQQ, SQQQ, SOXL, SOXS, UVXY]
+  IPO_Watch: [ARM, ABNB, KVYO, CART]
 
 features:
   enable_black_swan_guard: true
-  black_swan_sources:
-    - "news_sentiment_ai"
-    - "orderbook_anomaly_ai"
-    - "macro_alert_ai"
+  enable_leverage_control: true
+  enable_emotional_filter: true
   enable_multi_ai_signals: true
+  enable_portfolio_guard: true

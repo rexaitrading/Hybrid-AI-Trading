@@ -1,234 +1,233 @@
-import os, requests, csv, math
-from dotenv import load_dotenv
-from datetime import datetime, timedelta
+"""
+Backtest Pipeline
+
+Unified intraday breakout backtester using TradeEngine, PaperSimulator,
+and PortfolioTracker.
+"""
+
+import os
+import math
+import yaml
+import requests
+import logging
 import statistics as stats
+import pandas as pd
 import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 
-load_dotenv()
-POLYGON_KEY = os.getenv("POLYGON_KEY")
+from src.trade_engine import TradeEngine
+from src.execution.portfolio_tracker import PortfolioTracker
+from src.execution.paper_simulator import PaperSimulator
+from src.risk.risk_manager import RiskManager
 
-# === CONFIG ===
-START_CAPITAL = 100000   # total portfolio starting capital (USD)
-CAPITAL_PER_TRADE = 10000  # how much to allocate per trade
-LEVERAGE = 2             # multiplier for exposure
+logger = logging.getLogger(__name__)
 
-def get_intraday_bars(ticker, start, end, interval="1", timespan="minute"):
-    url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/{interval}/{timespan}/{start}/{end}?limit=5000&apiKey={POLYGON_KEY}"
+
+# ==========================================================
+# Config & Environment
+# ==========================================================
+def load_config(path: str = "src/config/config.yaml") -> dict:
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
+
+
+cfg = load_config()
+POLYGON_KEY = os.getenv(cfg["providers"]["polygon"]["api_key_env"])
+
+START_CAPITAL = cfg["risk"].get("start_capital", 100000)
+RISK_PER_TRADE = cfg["risk"]["max_position_risk"]
+DAILY_STOP = cfg["risk"]["max_daily_loss"]
+DAILY_TARGET = cfg["risk"]["target_daily_return"]
+
+COMMISSION_PER_SHARE = cfg["costs"]["commission_per_share"]
+MIN_COMMISSION = cfg["costs"]["min_commission"]
+SLIPPAGE_PER_SHARE = cfg["costs"]["slippage_per_share"]
+MARGIN_INTEREST_RATE = cfg["costs"]["margin_interest_rate"]
+TRADING_DAYS_PER_YEAR = cfg["costs"]["trading_days_per_year"]
+
+US_HOLIDAYS = {"2025-01-01", "2025-07-04", "2025-11-27", "2025-12-25"}
+
+
+# ==========================================================
+# Data Fetchers
+# ==========================================================
+def get_intraday_bars(ticker: str, start: str, end: str, interval="1", timespan="minute"):
+    url = (
+        f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/"
+        f"{interval}/{timespan}/{start}/{end}?limit=5000&apiKey={POLYGON_KEY}"
+    )
     resp = requests.get(url)
     if resp.status_code != 200:
-        print(f"Error fetching {ticker}: {resp.text[:200]}")
+        logger.error(f"❌ Error fetching {ticker}: {resp.text[:200]}")
         return []
     return resp.json().get("results", [])
 
-def breakout_strategy(bars):
+
+# ==========================================================
+# Strategy
+# ==========================================================
+def breakout_strategy(bars) -> str:
+    """Simple breakout: buy new high, sell new low."""
     if len(bars) < 3:
         return "HOLD"
     closes = [b["c"] for b in bars]
     highs = [b["h"] for b in bars]
     lows = [b["l"] for b in bars]
-
     recent_close = closes[-1]
-    prev_high = max(highs[:-1])
-    prev_low = min(lows[:-1])
-
-    if recent_close > prev_high:
+    if recent_close > max(highs[:-1]):
         return "BUY"
-    elif recent_close < prev_low:
+    if recent_close < min(lows[:-1]):
         return "SELL"
     return "HOLD"
 
-def calc_trade_pnl(signal, entry_bar, exit_bar, capital, leverage):
-    """Return $ profit/loss given signal, price move, capital & leverage"""
-    entry_price = entry_bar["c"]
-    exit_price = exit_bar["c"]
 
-    position_size = (capital * leverage) / entry_price  # number of shares/contracts
-    if signal == "BUY":
-        return (exit_price - entry_price) * position_size
-    elif signal == "SELL":
-        return (entry_price - exit_price) * position_size
-    return 0
+# ==========================================================
+# Backtest Class
+# ==========================================================
+class IntradayBacktester:
+    def __init__(self, symbols, days=5):
+        self.symbols = symbols
+        self.days = days
+        self.results_summary = {}
+        self.reports_dir = "reports"
+        os.makedirs(self.reports_dir, exist_ok=True)
 
-def run_intraday_backtest(symbols, days=5):
-    end_date = datetime.today()
-    start_date = end_date - timedelta(days=days)
-
-    os.makedirs("logs", exist_ok=True)
-    logfile = "logs/intraday_backtest_multi.csv"
-
-    portfolio_curve = []
-    portfolio_daily = []
-    portfolio_wins, portfolio_losses = 0, 0
-    portfolio_cum = 0
-
-    with open(logfile, "w", newline="") as f:
-        writer = csv.DictWriter(
-            f, fieldnames=["symbol","date","time","signal","trade_pnl","daily_pnl","cum_pnl"]
+        # Engine stack
+        self.risk_manager = RiskManager(
+            daily_loss_limit=DAILY_STOP,
+            trade_loss_limit=None,
+            max_leverage=1.0,
+            equity=START_CAPITAL,
         )
-        writer.writeheader()
+        self.paper = PaperSimulator(slippage=SLIPPAGE_PER_SHARE, commission=COMMISSION_PER_SHARE)
+        self.portfolio = PortfolioTracker()
+        self.engine = TradeEngine(cfg)
 
-        summary = {}
+    def run(self):
+        end_date = datetime.today()
+        start_date = end_date - timedelta(days=self.days)
+        logfile = os.path.join(self.reports_dir, "intraday_backtest.csv")
 
-        for symbol in symbols:
-            cum_pnl = 0.0
-            daily_returns = []
-            wins, losses = 0, 0
-            peak, max_dd = 0, 0
-            equity_curve = []
+        with open(logfile, "w", newline="") as f:
+            writer = pd.DataFrame(
+                columns=["symbol", "date", "time", "signal", "trade_pnl", "daily_pnl", "cum_equity"]
+            )
+            writer.to_csv(logfile, index=False)
 
-            print(f"\n=== Backtesting {symbol} ===")
+        for symbol in self.symbols:
+            equity, cum_pnl, wins, losses = START_CAPITAL, 0, 0, 0
+            daily_returns, equity_curve = [], []
 
-            for i in range(days):
+            logger.info(f"\n=== Backtesting {symbol} ===")
+
+            for i in range(self.days):
                 day = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+                if day in US_HOLIDAYS:
+                    continue
+
                 bars = get_intraday_bars(symbol, day, day)
                 if not bars:
                     continue
 
-                daily_pnl = 0.0
-                for j in range(2, len(bars)-1):
-                    window = bars[j-2:j+1]
-                    signal = breakout_strategy(window)
+                daily_pnl, stop_day = 0, False
+                for j in range(2, len(bars) - 1):
+                    signal = breakout_strategy(bars[j - 2 : j + 1])
+                    entry_bar, exit_bar = bars[j], bars[j + 1]
 
-                    entry_bar = bars[j]
-                    exit_bar = bars[j+1]
-                    trade_pnl = calc_trade_pnl(signal, entry_bar, exit_bar, CAPITAL_PER_TRADE, LEVERAGE)
+                    # simulate fill
+                    fill = self.paper.simulate_fill(symbol, signal.lower(), 1, entry_bar["c"])
+                    trade_pnl = (
+                        (exit_bar["c"] - entry_bar["c"]) if signal == "BUY" else (entry_bar["c"] - exit_bar["c"])
+                    ) if signal in ["BUY", "SELL"] else 0
+
+                    trade_pnl -= fill["commission"]
 
                     daily_pnl += trade_pnl
                     cum_pnl += trade_pnl
-                    equity_curve.append(cum_pnl)
+                    equity += trade_pnl
+                    equity_curve.append(equity)
 
-                    # portfolio merge
-                    if len(portfolio_curve) < len(equity_curve):
-                        portfolio_curve.append(0)
-                    portfolio_curve[len(equity_curve)-1] += trade_pnl
-                    portfolio_cum += trade_pnl
+                    with open(logfile, "a") as f:
+                        pd.DataFrame(
+                            [[
+                                symbol,
+                                day,
+                                datetime.fromtimestamp(entry_bar["t"] / 1000).strftime("%H:%M"),
+                                signal,
+                                trade_pnl,
+                                daily_pnl,
+                                equity,
+                            ]],
+                            columns=["symbol", "date", "time", "signal", "trade_pnl", "daily_pnl", "cum_equity"],
+                        ).to_csv(f, header=False, index=False)
 
-                    if trade_pnl > 0: 
+                    if trade_pnl > 0:
                         wins += 1
-                        portfolio_wins += 1
-                    elif trade_pnl < 0: 
+                    elif trade_pnl < 0:
                         losses += 1
-                        portfolio_losses += 1
 
-                    peak = max(peak, cum_pnl)
-                    dd = peak - cum_pnl
-                    max_dd = max(max_dd, dd)
-
-                    writer.writerow({
-                        "symbol": symbol,
-                        "date": day,
-                        "time": datetime.fromtimestamp(entry_bar["t"]/1000).strftime("%H:%M"),
-                        "signal": signal,
-                        "trade_pnl": trade_pnl,
-                        "daily_pnl": daily_pnl,
-                        "cum_pnl": cum_pnl
-                    })
-
-                    # stop rules (scaled to $ capital_per_trade)
-                    if daily_pnl <= -0.03 * CAPITAL_PER_TRADE:
-                        print(f"{symbol} {day}: stopped trading at -3% daily loss")
+                    if daily_pnl <= DAILY_STOP * START_CAPITAL:
+                        stop_day = True
                         break
-                    if daily_pnl >= 0.01 * CAPITAL_PER_TRADE:
-                        print(f"{symbol} {day}: locked day at +1% profit")
+                    if daily_pnl >= DAILY_TARGET * START_CAPITAL:
+                        stop_day = True
                         break
 
-                daily_returns.append(daily_pnl)
+                if not stop_day:
+                    daily_returns.append(daily_pnl)
 
+            # metrics
             avg_daily = stats.mean(daily_returns) if daily_returns else 0
             stdev = stats.stdev(daily_returns) if len(daily_returns) > 1 else 0
             sharpe = (avg_daily / stdev) * math.sqrt(252) if stdev > 0 else 0
             win_rate = wins / (wins + losses) if (wins + losses) > 0 else 0
 
-            summary[symbol] = {
+            self.results_summary[symbol] = {
                 "trades": wins + losses,
                 "win_rate": win_rate,
                 "avg_daily": avg_daily,
                 "total_pnl": cum_pnl,
-                "max_dd": max_dd,
-                "sharpe": sharpe
+                "final_equity": equity,
+                "sharpe": sharpe,
             }
 
-            print(f"Finished {days} days for {symbol}. "
-                  f"Total PnL: ${cum_pnl:,.2f}, MaxDD: ${max_dd:,.2f}, Sharpe: {sharpe:.2f}")
-
-            # plots per symbol
+            # plots
             if equity_curve:
-                plt.figure(figsize=(10,5))
-                plt.plot(equity_curve, label=f"{symbol} Equity Curve")
-                plt.title(f"Equity Curve for {symbol}")
-                plt.xlabel("Trades")
-                plt.ylabel("PnL ($)")
+                plt.figure(figsize=(10, 5))
+                plt.plot(equity_curve, label=f"{symbol} Equity")
+                plt.title(f"Equity Curve – {symbol}")
                 plt.legend()
                 plt.grid(True)
-                plt.savefig(f"logs/{symbol}_equity_curve.png")
+                plt.savefig(os.path.join(self.reports_dir, f"{symbol}_equity_curve.png"))
                 plt.close()
 
-                drawdowns = [max(0, max(equity_curve[:i+1]) - x) for i,x in enumerate(equity_curve)]
-                plt.figure(figsize=(10,3))
-                plt.plot(drawdowns, color="red", label=f"{symbol} Drawdown")
-                plt.title(f"Drawdown for {symbol}")
-                plt.xlabel("Trades")
-                plt.ylabel("Drawdown ($)")
+                rolling_max = [max(equity_curve[: i + 1]) for i in range(len(equity_curve))]
+                drawdowns = [rm - x for rm, x in zip(rolling_max, equity_curve)]
+                plt.figure(figsize=(10, 3))
+                plt.plot(drawdowns, color="red", label=f"{symbol} DD")
+                plt.title(f"Drawdown – {symbol}")
                 plt.legend()
                 plt.grid(True)
-                plt.savefig(f"logs/{symbol}_drawdown.png")
+                plt.savefig(os.path.join(self.reports_dir, f"{symbol}_drawdown.png"))
                 plt.close()
 
-        # portfolio stats
-        portfolio_avg = stats.mean(portfolio_daily) if portfolio_daily else 0
-        stdev = stats.stdev(portfolio_daily) if len(portfolio_daily) > 1 else 0
-        sharpe = (portfolio_avg / stdev) * math.sqrt(252) if stdev > 0 else 0
-        portfolio_winrate = portfolio_wins / (portfolio_wins + portfolio_losses) if (portfolio_wins+portfolio_losses)>0 else 0
-        total_pnl = portfolio_cum
-        peak, max_dd = 0, 0
-        cum = 0
-        for x in portfolio_daily:
-            cum += x
-            peak = max(peak, cum)
-            max_dd = max(max_dd, peak - cum)
+        self.print_summary()
 
-        # portfolio plots
-        if portfolio_curve:
-            plt.figure(figsize=(10,5))
-            plt.plot(portfolio_curve, label="Portfolio Equity Curve", color="blue")
-            plt.title("Combined Portfolio Equity Curve")
-            plt.xlabel("Trades (across all symbols)")
-            plt.ylabel("PnL ($)")
-            plt.legend()
-            plt.grid(True)
-            plt.savefig("logs/portfolio_equity_curve.png")
-            plt.close()
+    def print_summary(self):
+        print("\n=== SUMMARY ===")
+        print(f"{'Symbol':<8}{'Trades':<8}{'WinRate':<10}{'AvgDaily':<12}{'PnL':<12}{'Equity':<12}{'Sharpe':<8}")
+        for sym, s in self.results_summary.items():
+            print(
+                f"{sym:<8}{s['trades']:<8}{s['win_rate']:.1%:<10}"
+                f"{s['avg_daily']:<12.2f}{s['total_pnl']:<12.2f}"
+                f"{s['final_equity']:<12.2f}{s['sharpe']:.2f}"
+            )
 
-            drawdowns = [max(0, max(portfolio_curve[:i+1]) - x) for i,x in enumerate(portfolio_curve)]
-            plt.figure(figsize=(10,3))
-            plt.plot(drawdowns, color="red", label="Portfolio Drawdown")
-            plt.title("Combined Portfolio Drawdown")
-            plt.xlabel("Trades")
-            plt.ylabel("Drawdown ($)")
-            plt.legend()
-            plt.grid(True)
-            plt.savefig("logs/portfolio_drawdown.png")
-            plt.close()
 
-        # console summary
-        print("\n=== SUMMARY TABLE ===")
-        print(f"{'Symbol':<8} {'Trades':<8} {'WinRate':<10} {'AvgDaily($)':<12} {'TotalPnL($)':<12} {'Sharpe':<8} {'MaxDD($)':<8}")
-        for sym, stats_dict in summary.items():
-            print(f"{sym:<8} "
-                  f"{stats_dict['trades']:<8} "
-                  f"{stats_dict['win_rate']:.1%:<10} "
-                  f"${stats_dict['avg_daily']:<12.2f} "
-                  f"${stats_dict['total_pnl']:<12.2f} "
-                  f"{stats_dict['sharpe']:.2f:<8} "
-                  f"${stats_dict['max_dd']:<8.2f}")
-        print(f"\nPORTFOLIO "
-              f"{portfolio_wins+portfolio_losses:<8} "
-              f"{portfolio_winrate:.1%:<10} "
-              f"${portfolio_avg:<12.2f} "
-              f"${total_pnl:<12.2f} "
-              f"{sharpe:.2f:<8} "
-              f"${max_dd:<8.2f}")
-
+# ==========================================================
+# Run
+# ==========================================================
 if __name__ == "__main__":
-    symbols = ["AAPL", "TSLA", "NVDA", "EURUSD", "BTCUSD"]
-    run_intraday_backtest(symbols, days=5)
+    symbols = cfg["universe"]["Core_Stocks"][:3]  # sample: first 3 symbols
+    backtester = IntradayBacktester(symbols, days=5)
+    backtester.run()

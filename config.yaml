@@ -2,34 +2,49 @@ project: HybridAI
 timezone: America/Vancouver
 
 trading_window:
-  start: "05:00"   # 開盤時間
-  end: "11:00"     # 收盤時間
+  start: "05:00"    # Pacific Time (8am New York pre-market)
+  end: "11:00"      # Pacific Time (2pm New York close overlap)
 
 risk:
-  target_daily_return: 0.02
-  max_daily_loss: 0.02
-  max_position_risk: 0.01
-  leverage:
-    stocks: 2
-    crypto: 3
-    forex: 10
+  target_daily_return: 0.01      # lock day if +1% equity reached
+  max_daily_loss: -0.03          # stop trading if -3% equity reached
+  max_position_risk: 0.01        # risk 1% of equity per trade
+  max_leverage: 10               # absolute cap (any asset)
+
+leverage:
+  stocks: 2
+  crypto: 3
+  forex: 10
+  ipo: 5
+
+costs:
+  commission_per_share: 0.005    # $0.005/share (IBKR)
+  min_commission: 1.00           # minimum $1 per trade
+  slippage_per_share: 0.01       # assume $0.01/share slippage
+  margin_interest_rate: 0.06     # 6% annual interest
+  trading_days_per_year: 252
 
 providers:
   polygon:
-    api_key_env: dg9YCsmMS3FIAwsf1OkjnBX2xvelb3fX
+    api_key_env: POLYGON_KEY
   alpaca:
-    key_id_env: PK66817E4JPYYI9BFVCR
-    secret_key_env: Nc7j4BramB0SXWTsHd3UcieLfelxLdWIEorkRboV**
+    key_id_env: ALPACA_KEY
+    secret_key_env: ALPACA_SECRET
+  coinapi:
+    api_key_env: COINAPI_KEY
+  benzinga:
+    api_key_env: BENZINGA_KEY
 
 universe:
   Core_Stocks: [AAPL, MSFT, NVDA, TSLA, AMD, META, AMZN, GOOGL]
   Macro_Risk: [SPY, QQQ, DIA, VIXY, GLD, TLT]
-  Crypto_Signal: [BTC.X, ETH.X, SOL.X, BNB.X]
+  Crypto_Signal: [BTCUSD, ETHUSD, SOLUSD, BNBUSD]
   Leverage_Tools: [TQQQ, SQQQ, SOXL, SOXS, UVXY]
-  IPO_Watch: [ARM, ABNB] # 視需要更新
+  IPO_Watch: [ARM, ABNB, KVYO, CART]
 
 features:
-  enable_black_swan_guard: true
-  enable_leverage_control: true
-  enable_emotional_filter: true
-  
+  enable_black_swan_guard: true   # halt trading on news anomalies
+  enable_leverage_control: true   # enforce max leverage
+  enable_emotional_filter: true   # skip low-liquidity chop days
+  enable_multi_ai_signals: true   # allow model voting
+  enable_portfolio_guard: true    # stop if portfolio drawdown breached
