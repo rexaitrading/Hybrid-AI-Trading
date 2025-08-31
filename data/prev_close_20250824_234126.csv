@@ -1,5 +1,0 @@
-group,symbol,asof,open,high,low,close,volume,vwap,status
-Crypto_Signal,BTC.X,,,,,,,,ERROR: 404 Client Error: Not Found for url: https://rest.coinapi.io/v1/ohlcv/BTC/USD/history?period_id=1DAY&limit=2
-Crypto_Signal,ETH.X,,,,,,,,ERROR: 404 Client Error: Not Found for url: https://rest.coinapi.io/v1/ohlcv/ETH/USD/history?period_id=1DAY&limit=2
-Crypto_Signal,SOL.X,,,,,,,,ERROR: 404 Client Error: Not Found for url: https://rest.coinapi.io/v1/ohlcv/SOL/USD/history?period_id=1DAY&limit=2
-Crypto_Signal,BNB.X,,,,,,,,ERROR: 404 Client Error: Not Found for url: https://rest.coinapi.io/v1/ohlcv/BNB/USD/history?period_id=1DAY&limit=2

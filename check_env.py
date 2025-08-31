@@ -1,23 +1,23 @@
-﻿import os
+import os
 from dotenv import load_dotenv
 
-# è¼‰å…¥ .env
+# Load .env if present
 load_dotenv()
 
-# ä½ æƒ³æª¢æŸ¥çš„å…¨éƒ¨ key
+# Environment variables to check (not raw keys!)
 keys = [
-    "bd4e0dc3-8de0-44e2-8894-c6e3d491f8a3",
-    "dg9YCsmMS3FIAwsf1OkjnBX2xvelb3fX",
-    "PK66817E4JPYYI9BFVCR",
-    "Nc7j4BramB0SXWTsHd3UcieLfelxLdWIEorkRboV**",
-    "bz.SOVFSXG7PUMSN57OBMVWLLRMU7XJNNZJ",
-    "110638",
-    "247542"]
+    "POLYGON_KEY",
+    "COINAPI_KEY",
+    "ALPACA_KEY",
+    "ALPACA_SECRET",
+    "BENZINGA_KEY",
+    "IBKR_ACCOUNT",
+    "BINANCE_API_KEY"
+]
 
 for key in keys:
     value = os.getenv(key)
     if value:
-        print(f"{key} present: True, preview: {value[:8]}...")
+        print(f"{key} present ✅, preview: ******{value[-6:]}")  # only show last 6 chars
     else:
-        print(f"{key} MISSING âŒ")
-
+        print(f"{key} MISSING ❌")

@@ -1,0 +1,237 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "17efc3e9-d846-4602-893b-0322b00a6a49",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "✅ Research env working\n",
+      "Pandas version: 2.3.2\n",
+      "Numpy version: 1.26.4\n"
+     ]
+    }
+   ],
+   "source": [
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "print(\"✅ Research env working\")\n",
+    "print(\"Pandas version:\", pd.__version__)\n",
+    "print(\"Numpy version:\", np.__version__)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "e2fca0fb-3d6e-457b-a2f7-a9c70a8c30b0",
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "ename": "TypeError",
+     "evalue": "RESTClient.__init__() got an unexpected keyword argument 'api_key'",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[31m---------------------------------------------------------------------------\u001b[39m",
+      "\u001b[31mTypeError\u001b[39m                                 Traceback (most recent call last)",
+      "\u001b[36mCell\u001b[39m\u001b[36m \u001b[39m\u001b[32mIn[14]\u001b[39m\u001b[32m, line 4\u001b[39m\n\u001b[32m      1\u001b[39m \u001b[38;5;28;01mfrom\u001b[39;00m\u001b[38;5;250m \u001b[39m\u001b[34;01mpolygon\u001b[39;00m\u001b[38;5;250m \u001b[39m\u001b[38;5;28;01mimport\u001b[39;00m RESTClient\n\u001b[32m      3\u001b[39m \u001b[38;5;66;03m# Load your key (must be set as env variable)\u001b[39;00m\n\u001b[32m----> \u001b[39m\u001b[32m4\u001b[39m client = \u001b[43mRESTClient\u001b[49m\u001b[43m(\u001b[49m\u001b[43mapi_key\u001b[49m\u001b[43m=\u001b[49m\u001b[33;43m\"\u001b[39;49m\u001b[33;43mdg9YCsmMS3FIAwsf1OkjnBX2xvelb3fX\u001b[39;49m\u001b[33;43m\"\u001b[39;49m\u001b[43m)\u001b[49m\n\u001b[32m      6\u001b[39m \u001b[38;5;66;03m# Get daily candles for SPY (2020–2025)\u001b[39;00m\n\u001b[32m      7\u001b[39m spy_bars = client.get_aggs(\u001b[33m\"\u001b[39m\u001b[33mSPY\u001b[39m\u001b[33m\"\u001b[39m, \u001b[32m1\u001b[39m, \u001b[33m\"\u001b[39m\u001b[33mday\u001b[39m\u001b[33m\"\u001b[39m, \u001b[33m\"\u001b[39m\u001b[33m2020-01-01\u001b[39m\u001b[33m\"\u001b[39m, \u001b[33m\"\u001b[39m\u001b[33m2025-01-01\u001b[39m\u001b[33m\"\u001b[39m)\n",
+      "\u001b[31mTypeError\u001b[39m: RESTClient.__init__() got an unexpected keyword argument 'api_key'"
+     ]
+    }
+   ],
+   "source": [
+    "from polygon import RESTClient\n",
+    "\n",
+    "# Load your key (must be set as env variable)\n",
+    "client = RESTClient(api_key=\"dg9YCsmMS3FIAwsf1OkjnBX2xvelb3fX\")\n",
+    "\n",
+    "# Get daily candles for SPY (2020–2025)\n",
+    "spy_bars = client.get_aggs(\"SPY\", 1, \"day\", \"2020-01-01\", \"2025-01-01\")\n",
+    "\n",
+    "print(len(spy_bars), \"rows of SPY data\")\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "32bc1050-3b8b-4cc7-9097-0480762d4040",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "No data loaded! Check ticker or internet.\n"
+     ]
+    }
+   ],
+   "source": [
+    "if btc.empty:\n",
+    "    print(\"No data loaded! Check ticker or internet.\")\n",
+    "else:\n",
+    "    print(\"Rows:\", len(btc))\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "2032e209-10b2-4e77-8531-fc4294900198",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import ta\n",
+    "\n",
+    "btc[\"rsi\"] = ta.momentum.RSIIndicator(btc[\"Close\"]).rsi()\n",
+    "btc[\"ema50\"] = ta.trend.EMAIndicator(btc[\"Close\"], 50).ema_indicator()\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "8572cd2f-c101-4e88-ba3a-e3006288a5cb",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<Axes: title={'center': 'Strategy vs Hold BTC'}, xlabel='Date'>"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAjcAAAG5CAYAAAByehWbAAAAOnRFWHRTb2Z0d2FyZQBNYXRwbG90bGliIHZlcnNpb24zLjEwLjYsIGh0dHBzOi8vbWF0cGxvdGxpYi5vcmcvq6yFwwAAAAlwSFlzAAAPYQAAD2EBqD+naQAAJeNJREFUeJzt3Qm0FdWZNuDN7BQgoIIgOMWIiiMI4m9CoiQYjYlxiBITFWldTohzxAGSjoZW24k4ELs7QTsSCWrsaCsJolEjxAFHVGy7WwUlTDGCShiE869vr3Vu3wuXSb0Mm+dZq7ycql11quriOi97f7tOo0qlUkkAAIVovK5PAADgsyTcAABFEW4AgKIINwBAUYQbAKAowg0AUBThBgAoinADABRFuAEAiiLcADSwH/3oR6lRo0ar1TbaRXvgkxNuYB16+eWX09FHH5222267tMkmm6SOHTumr33ta+lnP/tZnXY//elP03333dcg5zBhwoT8Yfr++++njdlbb72Vg8U///M/rzSgzJkzJ60v51p7admyZdp7773TTTfdlJYsWZLbjRw5crl29S3bb799zbFfeOGF9P3vfz916tQptWjRIrVp0yb16dMn/fKXv6w5Lqzvmq7rE4CNVYSKr371q6lz587plFNOSe3bt0/Tpk1Lf/7zn9ONN96YBg4cWCfcRAg64ogjGuQ8fvzjH6eTTjoptW7d+jM/Pg2nX79+6dBDD81/njt3bnrwwQfz35u33347XXPNNenLX/5y+vd///c6+/zDP/xD6tGjRzr11FNr1m2xxRb557/+67+m0047LbVr1y794Ac/SDvvvHP64IMP0vjx49OAAQPSX/7yl3TJJZes5auENSfcwDpy5ZVXplatWqVnnnlmuVAxa9asT3zcjz76KG2++eafwRmyvtt3331zL0vVGWeckXr27JlGjRqVw82OO+6Yl9oivMS62vuFCNWxrVevXjkkfe5zn6vZds4556Rnn302TZ48eS1cFXx6hqVgHfmf//mftPvuu9fbW7L11lvX/DmGDSKw3H777TXDCNHLUnuo5NVXX03f+9730uc///l04IEH5m0vvfRSbhcfZDHkFT1DJ598cvrrX/9ac+zY/8ILL8x/3mGHHWqOH8MeVb/61a9St27d0qabbpqHKI477rjcw7Ssm2++Ob9XtIuegSeeeCJ95StfyUv48MMPc+gaNGjQcvu+8847qUmTJmnYsGH13qvFixfn9+7fv/9y2+bNm5ev74ILLqhZF8N6cW8322yzfE+6d++eP/AbwpgxY2ruz5ZbbplDw7vvvrvK/RYuXJjOPffctNVWW+Ug8a1vfSvfh08jfnfR69K06Zr/uzV672L/O++8s06wqYp7WP17B+s7PTewjkSdzcSJE/O/hrt27brCdjGssOxQwk477VSnzTHHHJOHEGL4qlKp5HXjxo1L//u//5sDQQSbV155Jd122235Z/wrPT7IjjzyyPRf//Vf6de//nW6/vrr84dziA/cau/S5Zdfnr773e/mc5g9e3YODjHc8fzzz9cEs1tvvTWdddZZ6Utf+lL+wI5wFENoESy23XbbmqGP73znO2n06NHpuuuuy2GmKt4/zvv444+v9x40a9Ys73vvvfemn//856l58+Y126IWKYJChK7wL//yL+nss8/Ow3gRpBYsWJCD3lNPPZUD4KrMnz+/3rqaWL+sqGmJ+7vffvvlYDZz5sw8pPjkk0/WuT/1ifsZwTHO6YADDkiPPPJIOuyww1Z5fis61wh5Dz30UBo7dmwaPHjwGh8nhp7i9xrDpLDBqwDrxB/+8IdKkyZN8tKrV6/KRRddVPn9739fWbRo0XJtN99888qJJ5643PqhQ4dGkqn069dvuW3z589fbt2vf/3r3P7xxx+vWXfNNdfkdW+++Wadtm+99VY+tyuvvLLO+pdffrnStGnTmvULFy6stG3btrLffvtVFi9eXNNu5MiR+bi9e/euWRfXF+seeuihOsfcc88967SrT3Xf+++/v876Qw89tLLjjjvWvP72t79d2X333StrKq4/jr+qZfbs2bl9/J623nrrSteuXSt///vfa47zwAMP5HZDhgxZ7vdU9cILL+TXZ5xxRp1z+N73vpfXR/tPeq6nn356ZenSpSvct76/Sy+++GLed9CgQWtwx2D9ZVgK1pGYFRU9NzEc8eKLL6arr7469e3bN8+Y+t3vfrdGx4paiWXFMElV9F7Ev/D333///Pq5555b5TGjl2Tp0qW51yb2rS7RCxS9RI8++mhuF7UYMdQVRdG1h0OiFyZ6bmqLWTcdOnTIQx9V0XMVPSvL1oAs66CDDso9S9HzU/W3v/0t91Ade+yxNeuitySGd6KW6ZOI3rE45rJLFNjWFtcdtVFR5xLDYlXR+9KlS5f0n//5nyt8j6hpCdHDVFvUtnzSc73nnnvSmWeemXu2zjvvvDU6TvT6hPqGo2BDZFgK1qEYzogQsWjRohxwfvvb3+bhoRhSiSm5u+2222odJ+pllvXee+/lOoq77rpruQLlmFmzKm+88UYeKoogs6KhohAzc8IXvvCFOtsj6NSeYhwaN26cQ08MY8VQSNTERNCJcBBDaysTxzvqqKNy7UwMQ8U05bh3UY9TO9z88Ic/TA8//HAexotz+vrXv56Hfv7f//t/aXXE9UYIW9af/vSnOq+r173LLrss1zbCzbLtl9037sWyw4v1HWtNzjWGGWO48YYbbsj1VXvsscdqHSemkYeYGQUl0HMD64GoIYmgEzUz8cEfH9hRqLq6avfSVEWPS9SfRK9OhIA//OEPuR4jRI/MqkSb+KCMferryYgegk/ihBNOyMXFUSsT4SnCyje/+c08c2xVoq4mPoCjtiT85je/yUFir732qmmz6667ptdffz2Huiiujh6N+Dl06NC0MTj44IPzz8cff3y194kQGOExnrsEJdBzA+uZmJUS4pkiVav7dNvawzVRIBo9N0OGDKnTG7OsFR07ehUifESv0Be/+MWVFkaH//7v/87P7an6+OOPc2HxnnvuWad9FE/vs88+uccmio2nTp263EMLVyQKXrfZZps8NBWBJYpwL7300uXaxays6M2JJXrFokcjiqOj0Lb2ENKnUb3uCFIxZFZbrKtuX9G+ER5jxlzt3prY79OK+x4iQK6u6EGLa4j7GTPh4gF+sCHTcwPrSNSsVGc21VePUftDLz6s1+QJwtWZSMseP4YrllV9Js6yx49AEMeJgLTsceJ1dUp5hLG2bdvmXqLqB2uI8BIhqz5RvxI9SXE+se83vvGN1bquGMqJIbv7778/zyKL96s9JBVqT3Wv9orF8F6cc/SIfVbiumPK/ogRI/IwWVX0Kr322msrnflUvd7hw4ev8vezpuLehNq9WasjerbiHsXvpr5gNGnSpPw4AtgQ6LmBdSSeJBt1JzHFOYZWoochnhYcvRJRq1L7mS7xHJWoI4kp1FGQG70p8bC2ldVQRC9HFCnHB3oUKUeYePPNN5drG8cO0QMSwz5RS3P44Yfnnpsrrrgi93ZUp3ZHwWkcI2qDopg1ni0T4SGelxPXE//6j+GwaB/TpOMY9fUMRQ3MRRddlI9z+umn19TvrI4IM9HTEx/GUVMSw1C1RY1NFD1HjU088yWCRnwlQYSNz7JgNs75qquuyr+n3r1756cFV6eCx+8vpsSvSHxNQrS/5ZZbcv1TTAWPnrbo/VoTURge08lD9UnCMQwXx4v7sCZin3hWURRIx9/H2k8o/uMf/5iL3OPvA2wQ1vV0LdhYxXTok08+udKlS5fKFltsUWnevHnlC1/4QmXgwIGVmTNn1mk7ZcqUype//OXKpptumqfsVqfyVqcYV6cn1/bOO+9UvvOd71Rat25dadWqVeWYY46pTJ8+vd6pxj/5yU8qHTt2rDRu3Hi5aeH33HNP5cADD8xTiGOJ8z3zzDMrr7/+ep1jDB8+vLLddttVWrRoUenRo0flySefrHTr1q1yyCGH1Hv9MYU73mvChAlrdN9imnOnTp3yvldcccVy23/+85/nexXT0+Ncdtppp8qFF15YmTt37mpNr46p8fVZ0b0ePXp0ZZ999snv1aZNm8rxxx+f7319+9YW08fPPvvsfJ5xXw8//PDKtGnTPvFU8JieH1Pi41o/+OCDFe67oscKVE2aNClPSe/QoUOlWbNmlc9//vOVgw8+uHL77bdXlixZstLzgvVFo/jPug5YQHmipiQeBhjDWzFktazosYoC1jXtrQBYFTU3wKcWz9FZ9t9Jd9xxR56OXv36hdqiWDqeA7Pss2MAPgt6boBPLWoyosYknlUTBcJRC/Jv//ZvuR4mClGrX5cQ9Trx1QTx7dPxkL2YLRT1MQCfJQXFwKcWBbQxfThm/0RvTXzJZTzP5p/+6Z/qfA/UY489lgtw4/uLYuaNYAM0BD03AEBR1NwAAEURbgCAojTdWKeoTp8+PT/Qa00faw8ArBtRSRMPloyHmcYTy1dkoww3EWx8dwoAbJjiO9Diu+lWZKMMN9VHsMfNicfUAwDrv3nz5uXOiVV9lcpGGW6qQ1ERbIQbANiwrKqkREExAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAUZa2Em5tvvjltv/32aZNNNkk9e/ZMTz/99ErbjxkzJnXp0iW332OPPdKDDz64wrannXZaatSoUbrhhhsa4MwBgA1Ng4eb0aNHp/POOy8NHTo0Pffcc2mvvfZKffv2TbNmzaq3/YQJE1K/fv3SgAED0vPPP5+OOOKIvEyePHm5tr/97W/Tn//859ShQ4eGvgwAYAPR4OHmuuuuS6ecckrq379/2m233dKIESPSZpttln7xi1/U2/7GG29MhxxySLrwwgvTrrvumn7yk5+kfffdN91000112r377rtp4MCB6c4770zNmjVr6MsAADYQDRpuFi1alCZNmpT69Onzf2/YuHF+PXHixHr3ifW124fo6andfunSpekHP/hBDkC77757A14BALChadqQB58zZ05asmRJateuXZ318XrKlCn17jNjxox628f6qquuuio1bdo0nX322at1HgsXLsxL1bx589bwSgCADcUGN1sqeoJi6GrkyJG5kHh1DBs2LLVq1apm6dSpU4OfJwBQYLjZcsstU5MmTdLMmTPrrI/X7du3r3efWL+y9k888UQuRu7cuXPuvYnl7bffTueff36ekVWfwYMHp7lz59Ys06ZN+8yuEQDYiMJN8+bNU7du3dL48ePr1MvE6169etW7T6yv3T6MGzeupn3U2rz00kvphRdeqFlitlTU3/z+97+v95gtWrRILVu2rLMAAGVq0JqbENPATzzxxNS9e/fUo0eP/Dyajz76KM+eCieccELq2LFjHjoKgwYNSr17907XXnttOuyww9Jdd92Vnn322XTbbbfl7W3bts1LbTFbKnp2dtlll4a+HABgYw83xx57bJo9e3YaMmRILgree++909ixY2uKhqdOnZpnUFUdcMABadSoUemyyy5Ll1xySdp5553Tfffdl7p27drQpwoAFKBRpVKppI1MzJaKwuKovzFEBQBlfX5vcLOlAABWRrgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKIpwAwAURbgBAIoi3AAARRFuAICiCDcAQFGEGwCgKMINAFAU4QYAKMpaCTc333xz2n777dMmm2ySevbsmZ5++umVth8zZkzq0qVLbr/HHnukBx98sGbb4sWL0w9/+MO8fvPNN08dOnRIJ5xwQpo+ffpauBIAIG3s4Wb06NHpvPPOS0OHDk3PPfdc2muvvVLfvn3TrFmz6m0/YcKE1K9fvzRgwID0/PPPpyOOOCIvkydPztvnz5+fj3P55Zfnn/fee296/fXX07e+9a2GvhQAYAPQqFKpVBryDaKnZr/99ks33XRTfr106dLUqVOnNHDgwHTxxRcv1/7YY49NH330UXrggQdq1u2///5p7733TiNGjKj3PZ555pnUo0eP9Pbbb6fOnTuv8pzmzZuXWrVqlebOnZtatmz5qa4PAFg7Vvfzu0F7bhYtWpQmTZqU+vTp839v2Lhxfj1x4sR694n1tduH6OlZUfsQF9moUaPUunXrz/DsAYANUdOGPPicOXPSkiVLUrt27eqsj9dTpkypd58ZM2bU2z7W12fBggW5BieGslaU4hYuXJiX2skPACjTBj1bKoqLv/vd76YYWbv11ltX2G7YsGG5G6u6xLAYAFCmBg03W265ZWrSpEmaOXNmnfXxun379vXuE+tXp3012ESdzbhx41Y69jZ48OA8dFVdpk2b9qmuCwDYSMNN8+bNU7du3dL48eNr1kVBcbzu1atXvfvE+trtQ4SX2u2rweaNN95IDz/8cGrbtu1Kz6NFixY5/NReAIAyNWjNTYhp4CeeeGLq3r17ntF0ww035NlQ/fv3z9vjGTUdO3bMQ0dh0KBBqXfv3unaa69Nhx12WLrrrrvSs88+m2677baaYHP00UfnaeAxoypqeqr1OG3atMmBCgDYeDV4uImp3bNnz05DhgzJISSmdI8dO7amaHjq1Kl5BlXVAQcckEaNGpUuu+yydMkll6Sdd9453Xfffalr1655+7vvvpt+97vf5T/HsWp79NFH01e+8pWGviQAYGN+zs36yHNuAGDDs1485wYAYG0TbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEVZK+Hm5ptvTttvv33aZJNNUs+ePdPTTz+90vZjxoxJXbp0ye332GOP9OCDD9bZXqlU0pAhQ9I222yTNt1009SnT5/0xhtvNPBVAAAbggYPN6NHj07nnXdeGjp0aHruuefSXnvtlfr27ZtmzZpVb/sJEyakfv36pQEDBqTnn38+HXHEEXmZPHlyTZurr746DR8+PI0YMSI99dRTafPNN8/HXLBgQUNfDgCwnmtUiW6QBhQ9Nfvtt1+66aab8uulS5emTp06pYEDB6aLL754ufbHHnts+uijj9IDDzxQs27//fdPe++9dw4zcbodOnRI559/frrgggvy9rlz56Z27dqlkSNHpuOOO26V5zRv3rzUqlWrvF/Lli0/0+sFABrG6n5+N2jPzaJFi9KkSZPysFHNGzZunF9PnDix3n1ife32IXplqu3ffPPNNGPGjDpt4kIjRK3omAsXLsw3pPYCAJSpQcPNnDlz0pIlS3KvSm3xOgJKfWL9ytpXf67JMYcNG5YDUHWJniMAoEwbxWypwYMH5y6s6jJt2rR1fUoAwIYYbrbccsvUpEmTNHPmzDrr43X79u3r3SfWr6x99eeaHLNFixZ5bK72AgCUqUHDTfPmzVO3bt3S+PHja9ZFQXG87tWrV737xPra7cO4ceNq2u+www45xNRuEzU0MWtqRccEADYeTRv6DWIa+Iknnpi6d++eevTokW644YY8G6p///55+wknnJA6duyY62LCoEGDUu/evdO1116bDjvssHTXXXelZ599Nt122215e6NGjdI555yTrrjiirTzzjvnsHP55ZfnGVQxZRwA2Lg1eLiJqd2zZ8/OD92Lgt+Y0j127NiaguCpU6fmGVRVBxxwQBo1alS67LLL0iWXXJIDzH333Ze6du1a0+aiiy7KAenUU09N77//fjrwwAPzMeOhfwDAxq3Bn3OzPvKcGwDY8KwXz7kBAFjbhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAojRYuHnvvffS8ccfn1q2bJlat26dBgwYkD788MOV7rNgwYJ05plnprZt26YtttgiHXXUUWnmzJk121988cXUr1+/1KlTp7TpppumXXfdNd14440NdQkAwAaowcJNBJtXXnkljRs3Lj3wwAPp8ccfT6eeeupK9zn33HPT/fffn8aMGZMee+yxNH369HTkkUfWbJ80aVLaeuut069+9at87EsvvTQNHjw43XTTTQ11GQDABqZRpVKpfNYHfe2119Juu+2WnnnmmdS9e/e8buzYsenQQw9N77zzTurQocNy+8ydOzdttdVWadSoUenoo4/O66ZMmZJ7ZyZOnJj233//et8renri/R555JHVPr958+alVq1a5feMniUAYP23up/fDdJzE2EkhqKqwSb06dMnNW7cOD311FP17hO9MosXL87tqrp06ZI6d+6cj7cicYFt2rRZ6fksXLgw35DaCwBQpgYJNzNmzMjDR7U1bdo0h5DYtqJ9mjdvnkNRbe3atVvhPhMmTEijR49e5XDXsGHDctKrLlGzAwCUaY3CzcUXX5waNWq00iWGktaGyZMnp29/+9tp6NCh6etf//pK20ZdTvTwVJdp06atlXMEANa+pmvS+Pzzz08nnXTSStvsuOOOqX379mnWrFl11n/88cd5BlVsq0+sX7RoUXr//ffr9N7EbKll93n11VfTwQcfnHtsLrvsslWed4sWLfICAJRvjcJNFPzGsiq9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tUtf+9rX0i9+8Yu0dOnS1T7OyJEjU+vWrRv0XIH1i3ADrLcOOeSQ9Je//CW99dZb6aGHHkpf/epX06BBg9I3v/nN9PHHH6/r0wPWU8INsN6KLwts37596tixY9p3333TJZdckv7jP/4jB53okQnXXXdd2mOPPdLmm2+eOnXqlM4444z04Ycf5m1//OMfU//+/dPcuXNreoF+9KMf5W0LFy5MF1xwQT527NuzZ8/cHtjwCTfABuWggw5Ke+21V7r33nvz68aNG6fhw4enV155Jd1+++3pkUceSRdddFHedsABB6QbbrghtWzZMvcAxRKBJpx11llp4sSJ6a677kovvfRSOuaYY3JP0RtvvLFOrw/49HwrOLDe1ty8//776b777ltu23HHHZcDyauvvrrctrvvvjuddtppac6cOfl19PCcc845+VhVU6dOTTvuuGP+2aFDh5r1ffr0ST169Eg//elPG+y6gIbXdC28B8BnKv5NFkNM4eGHH07Dhg1LU6ZMSfPmzcu1OAsWLEjz589Pm222Wb37v/zyy2nJkiXpi1/8Yp31MVTVtm3btXINQMMRboANzmuvvZZ22GGHXGgcxcWnn356uvLKK1ObNm3Sn/70pzRgwIC0aNGiFYabqMlp0qRJmjRpUv5Z2xZbbLGWrgJoKMINsEGJmproeTn33HNzOIlp4ddee22uvQm/+c1v6rRv3rx57qWpbZ999snrZs2alb70pS+t1fMHGp5wA6y3YphoxowZOYjMnDkzjR07Ng9BRW/NCSeckCZPnpwWL16cfvazn6XDDz88Pfnkk2nEiBF1jrH99tvnnprx48fnQuTozYnhqOOPPz4fI4JRhJ3Zs2fnNnvuuWc67LDD1tk1A5+e2VLAeivCzDbbbJMDSsxkevTRR/PMqJgOHsNJEVZiKvhVV12Vunbtmu68884cfmqLGVNRYHzsscemrbbaKl199dV5/S9/+cscbs4///y0yy67pCOOOCI988wzqXPnzuvoaoHPitlSAEBR9NwAAEURbgCAogg3AEBRhBsAoCjCDQBQFOEGACiKcAMAFEW4AQCKItwAAEURbgCAogg3AEBRhBsAIJXk/wNXR53aolotvwAAAABJRU5ErkJggg==",
+      "text/plain": [
+       "<Figure size 640x480 with 1 Axes>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "btc[\"signal\"] = (btc[\"Close\"] > btc[\"ema50\"]).astype(int)  # long if price > ema50\n",
+    "btc[\"returns\"] = btc[\"Close\"].pct_change()\n",
+    "btc[\"strategy\"] = btc[\"signal\"].shift(1) * btc[\"returns\"]\n",
+    "\n",
+    "cumulative_return = (1 + btc[\"strategy\"]).cumprod()\n",
+    "cumulative_return.plot(title=\"Strategy vs Hold BTC\")\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "d36e4e85-88ce-499d-92db-de53772849ab",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Max Drawdown: nan\n"
+     ]
+    }
+   ],
+   "source": [
+    "max_drawdown = (cumulative_return / cumulative_return.cummax() - 1).min()\n",
+    "print(\"Max Drawdown:\", max_drawdown)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "70892d78-ccec-4146-81ac-355771d8dce0",
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "ValueError",
+     "evalue": "With n_samples=0, test_size=0.2 and train_size=None, the resulting train set will be empty. Adjust any of the aforementioned parameters.",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[31m---------------------------------------------------------------------------\u001b[39m",
+      "\u001b[31mValueError\u001b[39m                                Traceback (most recent call last)",
+      "\u001b[36mCell\u001b[39m\u001b[36m \u001b[39m\u001b[32mIn[7]\u001b[39m\u001b[32m, line 7\u001b[39m\n\u001b[32m      4\u001b[39m X = btc[[\u001b[33m\"\u001b[39m\u001b[33mrsi\u001b[39m\u001b[33m\"\u001b[39m, \u001b[33m\"\u001b[39m\u001b[33mema50\u001b[39m\u001b[33m\"\u001b[39m]].dropna()\n\u001b[32m      5\u001b[39m y = (btc[\u001b[33m\"\u001b[39m\u001b[33mreturns\u001b[39m\u001b[33m\"\u001b[39m].shift(-\u001b[32m1\u001b[39m) > \u001b[32m0\u001b[39m).astype(\u001b[38;5;28mint\u001b[39m).dropna()\n\u001b[32m----> \u001b[39m\u001b[32m7\u001b[39m X_train, X_test, y_train, y_test = \u001b[43mtrain_test_split\u001b[49m\u001b[43m(\u001b[49m\u001b[43mX\u001b[49m\u001b[43m.\u001b[49m\u001b[43miloc\u001b[49m\u001b[43m[\u001b[49m\u001b[43m:\u001b[49m\u001b[43m-\u001b[49m\u001b[32;43m1\u001b[39;49m\u001b[43m]\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43my\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43mtest_size\u001b[49m\u001b[43m=\u001b[49m\u001b[32;43m0.2\u001b[39;49m\u001b[43m)\u001b[49m\n\u001b[32m      8\u001b[39m model = RandomForestClassifier().fit(X_train, y_train)\n\u001b[32m      9\u001b[39m \u001b[38;5;28mprint\u001b[39m(\u001b[33m\"\u001b[39m\u001b[33mAccuracy:\u001b[39m\u001b[33m\"\u001b[39m, model.score(X_test, y_test))\n",
+      "\u001b[36mFile \u001b[39m\u001b[32m~\\Documents\\HybridAITrading\\research-env\\Lib\\site-packages\\sklearn\\utils\\_param_validation.py:218\u001b[39m, in \u001b[36mvalidate_params.<locals>.decorator.<locals>.wrapper\u001b[39m\u001b[34m(*args, **kwargs)\u001b[39m\n\u001b[32m    212\u001b[39m \u001b[38;5;28;01mtry\u001b[39;00m:\n\u001b[32m    213\u001b[39m     \u001b[38;5;28;01mwith\u001b[39;00m config_context(\n\u001b[32m    214\u001b[39m         skip_parameter_validation=(\n\u001b[32m    215\u001b[39m             prefer_skip_nested_validation \u001b[38;5;129;01mor\u001b[39;00m global_skip_validation\n\u001b[32m    216\u001b[39m         )\n\u001b[32m    217\u001b[39m     ):\n\u001b[32m--> \u001b[39m\u001b[32m218\u001b[39m         \u001b[38;5;28;01mreturn\u001b[39;00m \u001b[43mfunc\u001b[49m\u001b[43m(\u001b[49m\u001b[43m*\u001b[49m\u001b[43margs\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43m*\u001b[49m\u001b[43m*\u001b[49m\u001b[43mkwargs\u001b[49m\u001b[43m)\u001b[49m\n\u001b[32m    219\u001b[39m \u001b[38;5;28;01mexcept\u001b[39;00m InvalidParameterError \u001b[38;5;28;01mas\u001b[39;00m e:\n\u001b[32m    220\u001b[39m     \u001b[38;5;66;03m# When the function is just a wrapper around an estimator, we allow\u001b[39;00m\n\u001b[32m    221\u001b[39m     \u001b[38;5;66;03m# the function to delegate validation to the estimator, but we replace\u001b[39;00m\n\u001b[32m    222\u001b[39m     \u001b[38;5;66;03m# the name of the estimator by the name of the function in the error\u001b[39;00m\n\u001b[32m    223\u001b[39m     \u001b[38;5;66;03m# message to avoid confusion.\u001b[39;00m\n\u001b[32m    224\u001b[39m     msg = re.sub(\n\u001b[32m    225\u001b[39m         \u001b[33mr\u001b[39m\u001b[33m\"\u001b[39m\u001b[33mparameter of \u001b[39m\u001b[33m\\\u001b[39m\u001b[33mw+ must be\u001b[39m\u001b[33m\"\u001b[39m,\n\u001b[32m    226\u001b[39m         \u001b[33mf\u001b[39m\u001b[33m\"\u001b[39m\u001b[33mparameter of \u001b[39m\u001b[38;5;132;01m{\u001b[39;00mfunc.\u001b[34m__qualname__\u001b[39m\u001b[38;5;132;01m}\u001b[39;00m\u001b[33m must be\u001b[39m\u001b[33m\"\u001b[39m,\n\u001b[32m    227\u001b[39m         \u001b[38;5;28mstr\u001b[39m(e),\n\u001b[32m    228\u001b[39m     )\n",
+      "\u001b[36mFile \u001b[39m\u001b[32m~\\Documents\\HybridAITrading\\research-env\\Lib\\site-packages\\sklearn\\model_selection\\_split.py:2919\u001b[39m, in \u001b[36mtrain_test_split\u001b[39m\u001b[34m(test_size, train_size, random_state, shuffle, stratify, *arrays)\u001b[39m\n\u001b[32m   2916\u001b[39m arrays = indexable(*arrays)\n\u001b[32m   2918\u001b[39m n_samples = _num_samples(arrays[\u001b[32m0\u001b[39m])\n\u001b[32m-> \u001b[39m\u001b[32m2919\u001b[39m n_train, n_test = \u001b[43m_validate_shuffle_split\u001b[49m\u001b[43m(\u001b[49m\n\u001b[32m   2920\u001b[39m \u001b[43m    \u001b[49m\u001b[43mn_samples\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43mtest_size\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43mtrain_size\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43mdefault_test_size\u001b[49m\u001b[43m=\u001b[49m\u001b[32;43m0.25\u001b[39;49m\n\u001b[32m   2921\u001b[39m \u001b[43m\u001b[49m\u001b[43m)\u001b[49m\n\u001b[32m   2923\u001b[39m \u001b[38;5;28;01mif\u001b[39;00m shuffle \u001b[38;5;129;01mis\u001b[39;00m \u001b[38;5;28;01mFalse\u001b[39;00m:\n\u001b[32m   2924\u001b[39m     \u001b[38;5;28;01mif\u001b[39;00m stratify \u001b[38;5;129;01mis\u001b[39;00m \u001b[38;5;129;01mnot\u001b[39;00m \u001b[38;5;28;01mNone\u001b[39;00m:\n",
+      "\u001b[36mFile \u001b[39m\u001b[32m~\\Documents\\HybridAITrading\\research-env\\Lib\\site-packages\\sklearn\\model_selection\\_split.py:2499\u001b[39m, in \u001b[36m_validate_shuffle_split\u001b[39m\u001b[34m(n_samples, test_size, train_size, default_test_size)\u001b[39m\n\u001b[32m   2496\u001b[39m n_train, n_test = \u001b[38;5;28mint\u001b[39m(n_train), \u001b[38;5;28mint\u001b[39m(n_test)\n\u001b[32m   2498\u001b[39m \u001b[38;5;28;01mif\u001b[39;00m n_train == \u001b[32m0\u001b[39m:\n\u001b[32m-> \u001b[39m\u001b[32m2499\u001b[39m     \u001b[38;5;28;01mraise\u001b[39;00m \u001b[38;5;167;01mValueError\u001b[39;00m(\n\u001b[32m   2500\u001b[39m         \u001b[33m\"\u001b[39m\u001b[33mWith n_samples=\u001b[39m\u001b[38;5;132;01m{}\u001b[39;00m\u001b[33m, test_size=\u001b[39m\u001b[38;5;132;01m{}\u001b[39;00m\u001b[33m and train_size=\u001b[39m\u001b[38;5;132;01m{}\u001b[39;00m\u001b[33m, the \u001b[39m\u001b[33m\"\u001b[39m\n\u001b[32m   2501\u001b[39m         \u001b[33m\"\u001b[39m\u001b[33mresulting train set will be empty. Adjust any of the \u001b[39m\u001b[33m\"\u001b[39m\n\u001b[32m   2502\u001b[39m         \u001b[33m\"\u001b[39m\u001b[33maforementioned parameters.\u001b[39m\u001b[33m\"\u001b[39m.format(n_samples, test_size, train_size)\n\u001b[32m   2503\u001b[39m     )\n\u001b[32m   2505\u001b[39m \u001b[38;5;28;01mreturn\u001b[39;00m n_train, n_test\n",
+      "\u001b[31mValueError\u001b[39m: With n_samples=0, test_size=0.2 and train_size=None, the resulting train set will be empty. Adjust any of the aforementioned parameters."
+     ]
+    }
+   ],
+   "source": [
+    "from sklearn.ensemble import RandomForestClassifier\n",
+    "from sklearn.model_selection import train_test_split\n",
+    "\n",
+    "X = btc[[\"rsi\", \"ema50\"]].dropna()\n",
+    "y = (btc[\"returns\"].shift(-1) > 0).astype(int).dropna()\n",
+    "\n",
+    "X_train, X_test, y_train, y_test = train_test_split(X.iloc[:-1], y, test_size=0.2)\n",
+    "model = RandomForestClassifier().fit(X_train, y_train)\n",
+    "print(\"Accuracy:\", model.score(X_test, y_test))\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2524b9f5-614c-4ef4-96bf-a43a6e864633",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer\n",
+    "analyzer = SentimentIntensityAnalyzer()\n",
+    "headline = \"Bitcoin rallies as Fed signals pause in rate hikes\"\n",
+    "print(analyzer.polarity_scores(headline))\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "9bc7d321-abbc-4d72-9132-5823c5e68d6c",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sharpe = btc[\"strategy\"].mean() / btc[\"strategy\"].std() * (252**0.5)\n",
+    "print(f\"CAGR: {cumulative_return.iloc[-1]-1:.2%}, Sharpe: {sharpe:.2f}\")\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "fbe624a8-9e0a-4906-b1b0-dc1e5d4dc219",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.10"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
