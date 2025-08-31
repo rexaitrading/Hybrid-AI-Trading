@@ -1,1 +1,5 @@
-mkdir -p .github/workflows
+- name: Checkout repository
+  uses: actions/checkout@v4
+  with:
+    fetch-depth: 0              # fetch full history
+    token: ${{ secrets.GITHUB_TOKEN }}  # ensures private repo access
