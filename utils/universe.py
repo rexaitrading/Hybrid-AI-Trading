@@ -1,31 +1,74 @@
-﻿# utils/universe.py
-from src.config.settings import load_config
+﻿# ==============================
+# universe.py
+# Hybrid AI Trading Project
+# ==============================
 
-_cfg = load_config() # è®€ config.yaml
-U = _cfg.get("universe", {}) # åªå– universe å€å¡Š
+"""
+Defines the trading universe of assets across categories:
+- Core stocks
+- Crypto majors
+- Macro risk indicators
+- IPO watchlist
+"""
 
-# å€‹åˆ¥æ¸…å–®ï¼ˆå†‡å°±å›žå‚³ç©ºæ¸…å–®ï¼‰
-Core_Stocks = U.get("Core_Stocks", [])
-Crypto_Signal = U.get("Crypto_Signal", [])
-Macro_Risk = U.get("Macro_Risk", [])
-Leverage_Tools = U.get("Leverage_Tools", [])
-IPO_Watch = U.get("IPO_Watch", [])
+# --- Core Stocks (diversified large-cap & growth) ---
+Core_Stocks = [
+    # Tech & Growth
+    "AAPL",   # Apple
+    "MSFT",   # Microsoft
+    "GOOGL",  # Alphabet
+    "AMZN",   # Amazon
+    "TSLA",   # Tesla
+    "NVDA",   # Nvidia
+    "META",   # Meta Platforms
 
-def groups() -> dict:
-    """ä¸€æ¬¡éŽå–å›žæ‰€æœ‰æ¸…å–®"""
-    return {
-        "Core_Stocks": Core_Stocks,
-        "Crypto_Signal": Crypto_Signal,
-        "Macro_Risk": Macro_Risk,
-        "Leverage_Tools": Leverage_Tools,
-        "IPO_Watch": IPO_Watch,
-    }
+    # Defensive & Dividend
+    "JNJ",    # Johnson & Johnson
+    "PG",     # Procter & Gamble
+    "KO",     # Coca-Cola
 
-__all__ = [
-    "Core_Stocks", 
-    "Crypto_Signal", 
-    "Macro_Risk",
-    "Leverage_Tools", 
-    "IPO_Watch", 
-    "groups"
+    # Financials
+    "JPM",    # JPMorgan Chase
+    "GS",     # Goldman Sachs
 ]
+
+# --- Core Crypto Majors ---
+Core_Crypto = [
+    "BTC/USDT",  # Bitcoin
+    "ETH/USDT",  # Ethereum
+    "SOL/USDT",  # Solana
+    "BNB/USDT",  # Binance Coin
+    "XRP/USDT",  # XRP
+]
+
+# --- Macro Risk Indicators ---
+Macro_Risk = [
+    "SPY",   # S&P 500 ETF
+    "QQQ",   # Nasdaq 100 ETF
+    "DIA",   # Dow Jones ETF
+    "GLD",   # Gold ETF
+    "TLT",   # 20yr Treasury Bond ETF
+    "USO",   # Crude Oil ETF
+    "UUP",   # US Dollar Index ETF
+]
+
+# --- IPO Watchlist (update quarterly) ---
+IPO_Watch = [
+    "ABNB",  # Airbnb
+    "ARM",   # Arm Holdings
+    "SNOW",  # Snowflake
+    "RIVN",  # Rivian
+    "BIRK",  # Birkenstock
+]
+
+# --- Universe Groups ---
+def groups():
+    """
+    Returns a dictionary of asset groups for strategy modules.
+    """
+    return {
+        "stocks": Core_Stocks,
+        "crypto": Core_Crypto,
+        "macro": Macro_Risk,
+        "ipo": IPO_Watch,
+    }
