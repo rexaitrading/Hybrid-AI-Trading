@@ -1,4 +1,13 @@
-﻿# ===========================
+﻿# ===============================
+# Script: update_gitignore.ps1
+# Purpose: Overwrite .gitignore with v4.4 (Hedge-Fund Grade)
+# ===============================
+
+$gitignorePath = ".\.gitignore"
+
+# Content for v4.4
+$gitignoreContent = @"
+# ===========================
 # Hybrid AI Trading – .gitignore v4.4
 # Hedge-Fund Grade (Datasets + Models + CI)
 # ===========================
@@ -8,7 +17,7 @@
 # -------------------------
 __pycache__/
 *.py[cod]
-*.class
+*$py.class
 *.pyo
 *.pyd
 *.so
@@ -214,3 +223,9 @@ cython_debug/
 .idea/
 .cursorignore
 .cursorindexingignore
+"@
+
+# Write file
+$gitignoreContent | Set-Content $gitignorePath -Encoding UTF8
+
+Write-Host "✅ .gitignore updated to v4.4 at $gitignorePath"
