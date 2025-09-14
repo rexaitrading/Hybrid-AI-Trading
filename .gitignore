@@ -1,3 +1,17 @@
+# ===============================
+# Script: update_gitignore.ps1
+# Purpose: Overwrite .gitignore with v4.4 (Hedge-Fund Grade)
+# ===============================
+
+$gitignorePath = ".\.gitignore"
+
+# Content for v4.4
+$gitignoreContent = @"
+# ===========================
+# Hybrid AI Trading – .gitignore v4.4
+# Hedge-Fund Grade (Datasets + Models + CI)
+# ===========================
+
 # -------------------------
 # Python cache & bytecode
 # -------------------------
@@ -20,10 +34,17 @@ env.bak/
 venv.bak/
 
 # -------------------------
-# Jupyter
+# Jupyter / Research
 # -------------------------
 .ipynb_checkpoints/
 *.ipynb~*
+*.parquet
+*.feather
+*.h5
+*.pkl
+*.joblib
+*.npy
+*.npz
 
 # -------------------------
 # Editors / OS
@@ -34,7 +55,7 @@ venv.bak/
 Thumbs.db
 
 # -------------------------
-# Data & Logs (local output/temp)
+# Data & Logs
 # -------------------------
 data/
 logs/
@@ -42,15 +63,24 @@ logs/
 *.db
 *.csv
 *.json
+# 🔒 Execution audit trails
+logs/trade_blotter.csv
+logs/trade_blotter_backup.csv
 
 # -------------------------
 # Secrets / Keys
 # -------------------------
 .env
-.env.*
+.env.*           # any environment variations
 *.key
 *.pem
+*.p12
+*.crt
 .pypirc
+.ssh/
+.aws/
+.gcp/
+.azure/
 
 # -------------------------
 # Build / Packaging
@@ -90,18 +120,46 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+coverage/
+reports/
+test_results/
 
 # -------------------------
 # Project-specific
 # -------------------------
-# Keep config/config.yaml under version control
+# Keep config/config.yaml tracked
 config/*.local.*
+config/*.backup
+config/*.bak
+
 *.bak
 *.backup
 *.html
 *.pdf
 tmp/
 tests/__pycache__/
+
+# -------------------------
+# Models / Checkpoints
+# -------------------------
+*.pt
+*.onnx
+*.ckpt
+*.weights
+*.model
+checkpoints/
+models/
+artifacts/
+
+# -------------------------
+# CI/CD / Caches
+# -------------------------
+.github/
+.gitlab/
+__pycache__/
+.cache/
+*.log
+*.tmp
 
 # -------------------------
 # Framework-specific
@@ -165,3 +223,9 @@ cython_debug/
 .idea/
 .cursorignore
 .cursorindexingignore
+"@
+
+# Write file
+$gitignoreContent | Set-Content $gitignorePath -Encoding UTF8
+
+Write-Host "✅ .gitignore updated to v4.4 at $gitignorePath"
