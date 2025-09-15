@@ -71,12 +71,23 @@ def test_choose_route_crypto_equity_and_fallback(brokers):
     r = SmartOrderRouter(brokers)
     assert r.choose_route("BTC/USDT") == "binance"
     assert r.choose_route("SPY") == "polygon"
+    assert r.choose_route("XYZ") == "alpaca"  # Test fallback to alpaca
+    r2 = SmartOrderRouter({"other": DummyClient()})
+    assert r2.choose_route("XYZ") == "other"
+    r = SmartOrderRouter(brokers)
+    assert r.choose_route("BTC/USDT") == "binance"
+    assert r.choose_route("SPY") == "polygon"
     r2 = SmartOrderRouter({"other": DummyClient()})
     assert r2.choose_route("XYZ") == "other"
 
 
 # --- Tests: timeout wrapper -------------------------------------------
 def test_timeout_wrapper_success_and_exception(router):
+    assert router._timeout_wrapper(lambda: 42) == 42
+    result = router._timeout_wrapper(lambda: (_ for _ in ()).throw(Exception("boom")))
+    assert result["status"] == "blocked"
+    # Test successful execution without exceptions
+    assert router._timeout_wrapper(lambda: "success") == "success"
     assert router._timeout_wrapper(lambda: 42) == 42
     result = router._timeout_wrapper(lambda: (_ for _ in ()).throw(Exception("boom")))
     assert result["status"] == "blocked"
@@ -134,6 +145,27 @@ def test_route_order_non_dict_result():
 
 
 def test_route_order_exception_and_failover(caplog):
+    brokers = {
+        "alpaca": DummyClient("error"),
+        "binance": DummyClient("error"),
+        "polygon": DummyClient("error"),
+    }
+    r = SmartOrderRouter(brokers)
+    caplog.set_level(logging.ERROR, logger="hybrid_ai_trading.execution.smart_router")
+    res = r.route_order("AAPL", "BUY", 1, 100)
+    assert res["status"] == "blocked"
+    assert res["reason"] == "All brokers failed"
+    assert any("All brokers failed" in rec.message for rec in caplog.records)
+    # Test all brokers fail due to exceptions
+    brokers = {
+        "alpaca": DummyClient("error"),
+        "binance": DummyClient("error"),
+        "polygon": DummyClient("error"),
+    }
+    r = SmartOrderRouter(brokers)
+    res = r.route_order("AAPL", "BUY", 1, 100)
+    assert res["status"] == "blocked"
+    assert res["reason"] == "All brokers failed"
     brokers = {
         "alpaca": DummyClient("error"),
         "binance": DummyClient("error"),
