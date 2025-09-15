@@ -247,12 +247,12 @@ import os
 import unittest
 from unittest.mock import patch, MagicMock
 import pandas as pd
-from src.pipelines.backtest import IntradayBacktester, load_config
+from hybrid_ai_trading.pipelines.backtest import IntradayBacktester, load_config
 
 class TestIntradayBacktester(unittest.TestCase):
 
-    @patch('src.pipelines.backtest.get_intraday_bars')
-    @patch('src.pipelines.backtest.load_config')
+    @patch('hybrid_ai_trading.pipelines.backtest.get_intraday_bars')
+    @patch('hybrid_ai_trading.pipelines.backtest.load_config')
     def test_run_with_no_api_key(self, mock_load_config, mock_get_intraday_bars):
         mock_load_config.return_value = {
             "providers": {"polygon": {"api_key_env": "POLYGON_API_KEY"}},
@@ -266,8 +266,8 @@ class TestIntradayBacktester(unittest.TestCase):
             backtester.run()
             self.assertEqual(len(backtester.results_summary), 6)  # 6 strategies
 
-    @patch('src.pipelines.backtest.get_intraday_bars')
-    @patch('src.pipelines.backtest.load_config')
+    @patch('hybrid_ai_trading.pipelines.backtest.get_intraday_bars')
+    @patch('hybrid_ai_trading.pipelines.backtest.load_config')
     def test_run_with_empty_bars(self, mock_load_config, mock_get_intraday_bars):
         mock_load_config.return_value = {
             "providers": {"polygon": {"api_key_env": "POLYGON_API_KEY"}},
@@ -281,8 +281,8 @@ class TestIntradayBacktester(unittest.TestCase):
             backtester.run()
             self.assertEqual(len(backtester.results_summary), 6)  # 6 strategies
 
-    @patch('src.pipelines.backtest.get_intraday_bars')
-    @patch('src.pipelines.backtest.load_config')
+    @patch('hybrid_ai_trading.pipelines.backtest.get_intraday_bars')
+    @patch('hybrid_ai_trading.pipelines.backtest.load_config')
     def test_run_with_valid_bars(self, mock_load_config, mock_get_intraday_bars):
         mock_load_config.return_value = {
             "providers": {"polygon": {"api_key_env": "POLYGON_API_KEY"}},
