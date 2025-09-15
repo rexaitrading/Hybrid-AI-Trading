@@ -1,0 +1,9 @@
+import yaml
+from src.trade_engine import TradeEngine
+
+with open("config.yaml", "r", encoding="utf-8-sig") as f:
+    cfg = yaml.safe_load(f)
+
+engine = TradeEngine(cfg)
+result = engine.process_signal("BTC/USDT", "BUY", size=1, price=60000)
+print(result)

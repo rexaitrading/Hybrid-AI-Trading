@@ -1,0 +1,135 @@
+project: HybridAI
+version: 7.2
+timezone: America/Vancouver
+
+# === Trading Window ===
+trading_window:
+  start: "05:00"    # Pacific Time (8am New York pre-market)
+  end: "11:00"      # Pacific Time (2pm New York overlap)
+
+# === Ensemble AI Voting (GateScore) ===
+gatescore:
+  enabled: true
+  threshold: 0.85        # base requirement for ensemble confidence
+  adaptive: true         # ✅ regime-aware threshold (bull, bear, crisis adjust)
+  models:                # all AI components contributing votes
+    - sentiment          # news-based sentiment filter
+    - price              # price prediction AI
+    - macro              # macro regime AI
+    - regime             # volatility/trend detector
+  weights:               # ✅ weighted voting (must sum to 1.0)
+    sentiment: 0.25
+    price: 0.35
+    macro: 0.25
+    regime: 0.15
+
+# === Risk Management ===
+risk:
+  target_daily_return: 0.01      # lock day if +1% equity reached
+  max_daily_loss: -0.03          # stop trading if -3% equity reached
+  max_position_risk: 0.01        # risk 1% of equity per trade
+  max_leverage: 10               # absolute leverage cap
+  max_portfolio_exposure: 0.5    # cap total exposure vs equity
+
+  # --- Kelly Sizing ---
+  kelly:
+    enabled: true
+    win_rate: 0.55      # estimated win probability
+    payoff: 1.6         # avg win / avg loss
+    fraction: 0.5       # 0.5 = half-Kelly (safer)
+
+# === Costs ===
+costs:
+  commission_per_share: 0.005    # $0.005/share (IBKR)
+  min_commission: 1.00           # minimum $1 per trade
+  slippage_per_share: 0.01       # assume $0.01/share slippage
+  margin_interest_rate: 0.06     # 6% annual interest
+  trading_days_per_year: 252
+
+# === Providers (API keys from .env) ===
+providers:
+  polygon:
+    api_key_env: POLYGON_KEY
+  alpaca:
+    key_id_env: ALPACA_KEY
+    secret_key_env: ALPACA_SECRET
+  coinapi:
+    api_key_env: COINAPI_KEY
+  benzinga:
+    api_key_env: BENZINGA_KEY
+
+# === Portfolio Strategy ===
+portfolio_choice: sharpe   # options: sharpe, minvol, equal, custom
+
+custom_weights:            # only used if portfolio_choice = custom
+  BTC/USDT: 40
+  ETH/USDT: 20
+  SPY: 25
+  GLD: 10
+  TLT: 5
+
+max_daily_shift: 0.2       # max 20% capital shift in one rebalance
+order_type: market         # market or limit
+slippage: 0.001            # 0.1% assumed slippage
+
+# === Asset Universe ===
+universe:
+  Core_Stocks:
+    - AAPL
+    - MSFT
+    - GOOGL
+    - AMZN
+    - TSLA
+    - NVDA
+    - META
+    - JPM
+    - JNJ
+  Crypto_Signal:
+    - BTC/USDT
+    - ETH/USDT
+    - SOL/USDT
+    - BNB/USDT
+    - XRP/USDT
+  Macro_Risk:
+    - SPY
+    - QQQ
+    - GLD
+    - TLT
+    - USO
+    - UUP
+  Leverage_Tools:
+    - TQQQ
+    - SPXL
+    - UVXY
+  IPO_Watch:
+    - ABNB
+    - ARM
+    - SNOW
+    - RIVN
+    - BIRK
+
+# === Features / Filters ===
+features:
+  enable_black_swan_guard: true   # halt trading on anomalies
+  enable_leverage_control: true   # enforce max leverage
+  enable_emotional_filter: true   # ✅ activates sentiment filter
+  enable_multi_ai_signals: true   # ensemble AI signal voting
+  enable_portfolio_guard: true    # stop if portfolio drawdown breached
+
+# === Sentiment Filter Settings ===
+sentiment:
+  model: vader         # options: vader, finbert
+  threshold: 0.8       # block if |sentiment| >= 0.8
+  neutral_zone: 0.2    # treat scores between -0.2 ↔ +0.2 as noise
+  bias: none           # options: none, long, short → trading directional bias
+  smoothing: 3         # ✅ average last 3 headlines to reduce noise
+
+# === Regime Detection ===
+regime:
+  enabled: true
+  method: hybrid          # volatility + trend combo
+  lookback_days: 90
+  bull_threshold: 0.02    # +2% avg return = bull
+  bear_threshold: -0.02   # -2% avg return = bear
+  crisis_volatility: 0.03 # >3% daily std = crisis
+  min_samples: 60         # ✅ avoid false signals on short lookback
