@@ -1,2 +1,39 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+﻿# ===========================
+# Hybrid AI Quant Pro – .gitattributes
+# Hedge-Fund Grade (Line Endings + Diffing)
+# ===========================
+
+# Force LF line endings for code & configs
+*.py     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.toml   text eol=lf
+*.ini    text eol=lf
+*.cfg    text eol=lf
+*.json   text eol=lf
+*.md     text eol=lf
+*.sh     text eol=lf
+
+# PowerShell & Windows scripts keep CRLF
+*.ps1    text eol=crlf
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+
+# Jupyter Notebooks
+*.ipynb  text eol=lf
+
+# Binary files (no line ending changes)
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.xlsx   binary
+*.xls    binary
+*.zip    binary
+*.gz     binary
+*.pkl    binary
+*.pt     binary
+*.onnx   binary
+*.ckpt   binary
