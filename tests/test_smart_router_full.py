@@ -250,3 +250,46 @@ def test_alert_is_logged_and_message_returned(router, caplog):
     msg = "final coverage alert"
     router._send_alert(msg)
     assert any(msg in rec.message for rec in caplog.records)
+
+def test_route_order_unknown_dict_triggers_veto(caplog):
+    class WeirdClient:
+        def submit_order(self, *a, **k):
+            return {}  # empty dict → triggers Unknown broker veto
+
+    r = SmartOrderRouter({"odd": WeirdClient()})
+    caplog.set_level(logging.WARNING, logger="hybrid_ai_trading.execution.smart_router")
+    res = r.route_order("AAPL", "BUY", 1, 100)
+
+    assert res["status"] == "blocked"
+    assert any("Unknown broker veto" in rec.message for rec in caplog.records)
+
+
+def test_send_alert_logs_message(caplog):
+    r = SmartOrderRouter({})
+    caplog.set_level(logging.ERROR, logger="hybrid_ai_trading.execution.smart_router")
+
+    r._send_alert("manual test alert")
+
+    assert any("manual test alert" in rec.message for rec in caplog.records)
+
+def test_route_order_empty_dict_triggers_unknown_veto(caplog):
+    class EmptyDictClient:
+        def submit_order(self, *a, **k):
+            return {}  # No status, no reason → Unknown broker veto
+
+    r = SmartOrderRouter({"odd": EmptyDictClient()})
+    caplog.set_level(logging.WARNING, logger="hybrid_ai_trading.execution.smart_router")
+    res = r.route_order("AAPL", "BUY", 1, 100)
+
+    assert res["status"] == "blocked"
+    # Must confirm fallback reason logged
+    assert any("Unknown broker veto" in rec.message for rec in caplog.records)
+
+
+def test_send_alert_captures_message(caplog):
+    r = SmartOrderRouter({})
+    caplog.set_level(logging.ERROR, logger="hybrid_ai_trading.execution.smart_router")
+
+    r._send_alert("final alert test")
+
+    assert any("final alert test" in rec.message for rec in caplog.records)
