@@ -173,10 +173,8 @@ class IntradayBacktester:
 
             # ✅ FIXED: Safe empty DataFrame init
             pd.DataFrame(
-                data=[],
                 columns=["symbol", "date", "time", "signal",
-                         "trade_pnl", "daily_pnl", "cum_equity"],
-                index=pd.RangeIndex(0)
+                         "trade_pnl", "daily_pnl", "cum_equity"]
             ).to_csv(logfile, index=False)
 
             # ... rest of run() unchanged ...
