@@ -243,3 +243,66 @@ def test_export_leaderboard_empty(tmp_path, caplog):
     with caplog.at_level("WARNING"):
         bt.export_leaderboard(pd.DataFrame())
     assert any("leaderboard empty" in m for m in caplog.messages)
+import os
+import unittest
+from unittest.mock import patch, MagicMock
+import pandas as pd
+from src.pipelines.backtest import IntradayBacktester, load_config
+
+class TestIntradayBacktester(unittest.TestCase):
+
+    @patch('src.pipelines.backtest.get_intraday_bars')
+    @patch('src.pipelines.backtest.load_config')
+    def test_run_with_no_api_key(self, mock_load_config, mock_get_intraday_bars):
+        mock_load_config.return_value = {
+            "providers": {"polygon": {"api_key_env": "POLYGON_API_KEY"}},
+            "risk": {"start_capital": 100000, "max_daily_loss": -0.03, "target_daily_return": 0.02},
+            "costs": {"commission_per_share": 0.0, "slippage_per_share": 0.0}
+        }
+        mock_get_intraday_bars.return_value = []
+
+        with patch.dict(os.environ, {"POLYGON_API_KEY": ""}):
+            backtester = IntradayBacktester(["AAPL"], days=1)
+            backtester.run()
+            self.assertEqual(len(backtester.results_summary), 6)  # 6 strategies
+
+    @patch('src.pipelines.backtest.get_intraday_bars')
+    @patch('src.pipelines.backtest.load_config')
+    def test_run_with_empty_bars(self, mock_load_config, mock_get_intraday_bars):
+        mock_load_config.return_value = {
+            "providers": {"polygon": {"api_key_env": "POLYGON_API_KEY"}},
+            "risk": {"start_capital": 100000, "max_daily_loss": -0.03, "target_daily_return": 0.02},
+            "costs": {"commission_per_share": 0.0, "slippage_per_share": 0.0}
+        }
+        mock_get_intraday_bars.return_value = []
+
+        with patch.dict(os.environ, {"POLYGON_API_KEY": "dummy_key"}):
+            backtester = IntradayBacktester(["AAPL"], days=1)
+            backtester.run()
+            self.assertEqual(len(backtester.results_summary), 6)  # 6 strategies
+
+    @patch('src.pipelines.backtest.get_intraday_bars')
+    @patch('src.pipelines.backtest.load_config')
+    def test_run_with_valid_bars(self, mock_load_config, mock_get_intraday_bars):
+        mock_load_config.return_value = {
+            "providers": {"polygon": {"api_key_env": "POLYGON_API_KEY"}},
+            "risk": {"start_capital": 100000, "max_daily_loss": -0.03, "target_daily_return": 0.02},
+            "costs": {"commission_per_share": 0.0, "slippage_per_share": 0.0}
+        }
+        mock_get_intraday_bars.return_value = [
+            {"t": 1609459200000, "c": 150},
+            {"t": 1609462800000, "c": 155},
+            {"t": 1609466400000, "c": 152},
+        ]
+
+        with patch.dict(os.environ, {"POLYGON_API_KEY": "dummy_key"}):
+            backtester = IntradayBacktester(["AAPL"], days=1)
+            backtester.run()
+            self.assertTrue(all(strategy in backtester.results_summary for strategy in backtester.strategies))
+
+    def test_load_config_missing_file(self):
+        config = load_config("non_existent_file.yaml")
+        self.assertEqual(config, {})
+
+if __name__ == '__main__':
+    unittest.main()
