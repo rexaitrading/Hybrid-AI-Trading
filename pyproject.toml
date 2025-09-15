@@ -1,0 +1,99 @@
+# ===============================
+# Build System
+# ===============================
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+# ===============================
+# Pytest Options
+# ===============================
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+pythonpath = ["src"]
+
+# --- Global Options ---
+addopts = [
+    "--maxfail=1",
+    "--disable-warnings",
+    "--import-mode=importlib",
+    "--cov=hybrid_ai_trading",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=95",
+    "-ra",
+    "-q",
+    "-s"
+]
+
+# ===============================
+# Coverage Settings
+# ===============================
+[tool.coverage.run]
+branch = true
+source = ["hybrid_ai_trading"]
+omit = [
+    "src/__init__.py",
+    "src/core_init_.py",
+    "src/hybrid_ai_trading/config/*"
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 95
+precision = 2
+
+# --- Path Mapping (local vs venv) ---
+[tool.coverage.paths]
+source = [
+    "src/hybrid_ai_trading",
+    "*/site-packages/hybrid_ai_trading"
+]
+
+# --- Per-Module Enforcement ---
+[tool.coverage.fail_under]
+"hybrid_ai_trading.pipelines.backtest" = 100
+"hybrid_ai_trading.risk.*" = 100
+"hybrid_ai_trading.execution.*" = 100
+"hybrid_ai_trading.trade_engine" = 100
+
+# ===============================
+# Warnings Handling
+# ===============================
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning"
+]
+
+# ===============================
+# Custom Markers
+# ===============================
+markers = [
+    "unit: fast, isolated tests (no DB, no network)",
+    "integration: multi-module tests (slower, may use DB or APIs)",
+    "db: tests that require database/SQLAlchemy",
+    "perf: performance/stress tests",
+    "trading: strategy/trading logic tests",
+    "risk: risk management tests"
+]
+
+# ===============================
+# Runtime Control
+# ===============================
+timeout = 15
+
+# ===============================
+# Logging
+# ===============================
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
