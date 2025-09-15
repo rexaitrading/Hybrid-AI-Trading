@@ -1,27 +1,84 @@
-﻿name: Basic Python Test
+name: Python Tests
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ]         # Run on pushes to main
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main" ]         # Run on PRs targeting main
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12" ]   # Test across multiple versions
+
     steps:
+      # -----------------------------
+      # Checkout repo
+      # -----------------------------
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Full history for coverage reports & blame
 
-      - name: Set up Python 3.12
+      # -----------------------------
+      # Python setup
+      # -----------------------------
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"     # Built-in cache speeds up installs
 
+      # -----------------------------
+      # Install dependencies
+      # -----------------------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
-      - name: Run pytest
-        run: pytest -v
+      # -----------------------------
+      # Run pytest with coverage
+      # -----------------------------
+      - name: Run tests with coverage
+        run: |
+          mkdir -p test-results
+          pytest -v \
+            --cov=src --cov-branch \
+            --cov-report=xml --cov-report=term-missing \
+            --cov-fail-under=100 -W error::DeprecationWarning \
+            --junitxml=test-results/junit.xml \
+            --html=test-results/report.html --self-contained-html
+
+      # -----------------------------
+      # Upload artifacts (always keep reports)
+      # -----------------------------
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-${{ matrix.python-version }}
+          path: test-results/
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+
+      # -----------------------------
+      # Upload to Codecov (optional, if you want PR coverage diffs)
+      # -----------------------------
+      - name: Upload to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          fail_ci_if_error: true
