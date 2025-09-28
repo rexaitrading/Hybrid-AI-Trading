@@ -1,0 +1,64 @@
+# ============================================================
+# Hybrid AI Trading – Pre-Commit Config (Hedge-Fund Grade)
+# ============================================================
+
+repos:
+  # ----------------------------
+  # Black: Python auto-formatter
+  # ----------------------------
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3
+        args: ["--line-length=120"]
+
+  # ----------------------------
+  # Flake8: Linter + bug finder
+  # ----------------------------
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-bugbear]
+        args:
+          - "--max-line-length=120"
+          - "--exclude=_safe,archive,research-env,.venv,.ipynb_checkpoints"
+
+  # ----------------------------
+  # Pre-commit housekeeping
+  # ----------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+
+  # ----------------------------
+  # Detect Secrets (API keys, creds)
+  # ----------------------------
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: >
+          (?x)(
+            ^archive/|
+            ^research-env/|
+            ^\.ipynb_checkpoints/|
+            ^tests/old_|
+            \.orig$|
+            \.js$
+          )
+
+# .pre-commit-config.yaml (add or edit detect-secrets hook)
+repos:
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
