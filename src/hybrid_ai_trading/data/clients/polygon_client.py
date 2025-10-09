@@ -1,3 +1,4 @@
+﻿from __future__ import annotations
 """
 Polygon Client (Hybrid AI Quant Pro v1.5 - Safe & Test-Friendly)
 ----------------------------------------------------------------
@@ -13,7 +14,6 @@ Polygon Client (Hybrid AI Quant Pro v1.5 - Safe & Test-Friendly)
 - ping(): True on success; warns and False on PolygonAPIError; False on generic Exception
 """
 
-from __future__ import annotations
 from typing import Any, Dict, Optional
 import os
 import logging

@@ -1,3 +1,4 @@
+﻿from __future__ import annotations
 """
 IBKR Ops (Hybrid AI Quant Pro v1.0 - Practical Ops Tools)
 - --account
@@ -9,12 +10,11 @@ Notes:
 - Override with IBKR_HOST, IBKR_PORT, IBKR_CLIENT_ID if needed.
 """
 
-from __future__ import annotations
 import argparse
 import json
 import os
 from ib_insync import IB
-from .ibkr_client import connect_ib, account_summary, positions, open_orders, cancel_all
+from hybrid_ai_trading.data.clients.ibkr_client import connect_ib, account_summary, positions, open_orders, cancel_all
 
 
 def _print(obj):

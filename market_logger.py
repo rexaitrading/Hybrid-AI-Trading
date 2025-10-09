@@ -3,17 +3,17 @@ from datetime import datetime
 from ib_insync import *
 
 ib = IB()
-ib.connect('127.0.0.1', 7496, clientId=1)
+ib.connect("127.0.0.1", 7496, clientId=1)
 
 ib.reqMarketDataType(3)
 
 # Define multiple contracts
 contracts = [
-    Stock('AAPL', 'SMART', 'USD'),
-    Stock('MSFT', 'SMART', 'USD'),
-    Stock('TSLA', 'SMART', 'USD'),
-    Stock('AMZN', 'SMART', 'USD'),
-    Stock('GOOG', 'SMART', 'USD')
+    Stock("AAPL", "SMART", "USD"),
+    Stock("MSFT", "SMART", "USD"),
+    Stock("TSLA", "SMART", "USD"),
+    Stock("AMZN", "SMART", "USD"),
+    Stock("GOOG", "SMART", "USD"),
 ]
 
 

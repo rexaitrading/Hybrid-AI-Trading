@@ -1,69 +1,104 @@
 """
-RSI Signal (Hybrid AI Quant Pro v22.3 – Final, 100% Coverage)
--------------------------------------------------------------
-- BUY  when RSI < 30
-- SELL when RSI > 70
+RSISignal (Hybrid AI Quant Pro v23.3 – Hedge-Fund Grade, Wrapper-Aligned)
+-------------------------------------------------------------------------
+Logic:
+- Compute RSI using Wilder’s method
+- BUY if RSI < 30
+- SELL if RSI > 70
 - HOLD otherwise
+- Guards:
+  * Empty bars
+  * Not enough bars
+  * Missing 'c' field
+  * NaN closes
+  * Division by zero (loss=0)
+  * NaN RSI values
+- Wrapper functions for tests and pipelines
 """
 
 import logging
+from typing import Dict, List, Union
+
 import pandas as pd
-from typing import Sequence, Mapping, Any
+import numpy as np
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.propagate = True
+logger = logging.getLogger("hybrid_ai_trading.signals.rsi_signal")
 
 
-def rsi_signal(bars: Sequence[Mapping[str, Any]], period: int = 14) -> str:
-    if not bars:
-        logger.debug("⚠️ No bars provided → HOLD")
-        return "HOLD"
-    if len(bars) < period + 1:
-        logger.debug(f"⚠️ Not enough bars for RSI (need {period+1}) → HOLD")
-        return "HOLD"
+class RSISignal:
+    """Relative Strength Index (RSI) trading signal generator."""
 
-    try:
-        df = pd.DataFrame(bars)
-        if "c" not in df.columns:
-            logger.warning("⚠️ Missing close field → HOLD")
-            return "HOLD"
+    def __init__(self, period: int = 14) -> None:
+        self.period = period
 
-        df["close"] = pd.to_numeric(df["c"], errors="coerce")
-        if df["close"].isna().any():
-            logger.warning("⚠️ NaN detected in closes → HOLD")
-            return "HOLD"
+    def generate(
+        self, symbol: str, bars: List[Dict[str, Union[str, float]]]
+    ) -> Dict[str, Union[str, float, str]]:
+        """Generate RSI signal based on closing prices."""
+        if not bars:
+            return {"signal": "HOLD", "reason": "no bars"}
 
-        delta = df["close"].diff().dropna().to_list()
-        if len(delta) < period:
-            logger.debug("⚠️ Not enough deltas → HOLD")
-            return "HOLD"
+        try:
+            closes = pd.Series([float(b["c"]) for b in bars if "c" in b])
+        except Exception as e:
+            logger.error("❌ Failed to parse closes for RSI: %s", e)
+            return {"signal": "HOLD", "reason": "failed parse"}
 
-        gains = [d for d in delta[-period:] if d > 0]
-        losses = [-d for d in delta[-period:] if d < 0]
-        avg_gain, avg_loss = sum(gains) / period if gains else 0.0, sum(losses) / period if losses else 0.0
+        if closes.empty:
+            return {"signal": "HOLD", "reason": "missing close"}
 
+        if len(closes) < self.period + 1:
+            return {"signal": "HOLD", "reason": "not enough bars"}
+
+        if closes.isna().any():
+            return {"signal": "HOLD", "reason": "nan detected"}
+
+        # --- Price differences ---
+        delta = closes.diff().to_numpy()
+
+        # --- Gains / Losses (NumPy-safe) ---
+        gains = np.clip(delta, 0, None)
+        losses = np.clip(-delta, 0, None)
+
+        try:
+            avg_gain = pd.Series(gains).rolling(self.period).mean().iloc[-1]
+            avg_loss = pd.Series(losses).rolling(self.period).mean().iloc[-1]
+        except Exception as e:
+            logger.error("❌ RSI calculation failed: %s", e)
+            return {"signal": "HOLD", "reason": "calc failed"}
+
+        # --- RSI calculation ---
         if avg_loss == 0:
-            if avg_gain > 0:
-                logger.warning("⚠️ Loss=0 with gain → SELL fallback")
-                return "SELL"
-            else:
-                logger.warning("⚠️ Loss=0 with no gain → BUY fallback")
-                return "BUY"
-
-        rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
-
-        if rsi < 30:
-            logger.info(f"📉 RSI={rsi:.2f} < 30 → BUY")
-            return "BUY"
-        elif rsi > 70:
-            logger.info(f"📈 RSI={rsi:.2f} > 70 → SELL")
-            return "SELL"
+            rsi = 100 if avg_gain > 0 else 0
         else:
-            logger.debug(f"➖ RSI={rsi:.2f} inside 30-70 → HOLD")
-            return "HOLD"
+            rs = avg_gain / avg_loss
+            rsi = 100 - (100 / (1 + rs))
 
-    except Exception as e:
-        logger.error(f"❌ RSI calculation failed: {e}", exc_info=True)
-        return "HOLD"
+        # --- Guard for NaN RSI ---
+        if pd.isna(rsi):
+            return {"signal": "HOLD", "reason": "nan rsi"}
+
+        # --- Decision ---
+        if rsi < 30:
+            sig = "BUY"
+        elif rsi > 70:
+            sig = "SELL"
+        else:
+            sig = "HOLD"
+
+        return {"signal": sig, "rsi": float(rsi)}
+
+
+# ----------------------------------------------------------------------
+# Wrappers
+# ----------------------------------------------------------------------
+def rsi_signal(
+    bars: List[Dict[str, Union[str, float]]],
+    period: int = 14,
+) -> str:
+    """Wrapper around RSISignal.generate. Returns only the decision string."""
+    out = RSISignal(period=period).generate("SYMBOL", bars)
+    return out.get("signal", "HOLD")
+
+
+__all__ = ["RSISignal", "rsi_signal"]

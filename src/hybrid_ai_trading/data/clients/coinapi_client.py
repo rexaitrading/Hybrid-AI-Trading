@@ -1,5 +1,6 @@
+﻿from __future__ import annotations
 """
-CoinAPI Client (Hybrid AI Quant Pro v1.4 – Hedge-Fund OE Grade, Test-Friendly)
+CoinAPI Client (Hybrid AI Quant Pro v1.4 â€“ Hedge-Fund OE Grade, Test-Friendly)
 -------------------------------------------------------------------------------
 Exports:
 - _iso, parse_symbol, coinapi_symbol
@@ -11,10 +12,11 @@ Exports:
 - CoinAPIError and subclasses
 """
 
-from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple, Union
-from datetime import datetime, timezone, timedelta
-import os, time
+from datetime import datetime, timezone
+import os
+import json
+import argparse
 
 try:
     import requests  # type: ignore
@@ -131,14 +133,14 @@ def _get_headers() -> Dict[str, str]:
     Determine headers based on config/env, with stub fallbacks.
 
     Rules per tests:
-    - If COINAPI_STUB=1 → return {}
-    - load_config() may raise → raise CoinAPIError
-    - invalid/None config → raise CoinAPIError
-    - config.providers.coinapi.api_key_env missing/None → raise CoinAPIError
+    - If COINAPI_STUB=1 â†’ return {}
+    - load_config() may raise â†’ raise CoinAPIError
+    - invalid/None config â†’ raise CoinAPIError
+    - config.providers.coinapi.api_key_env missing/None â†’ raise CoinAPIError
     - env var missing or empty:
-        - if COINAPI_ALLOW_STUB != "0" → return {}
+        - if COINAPI_ALLOW_STUB != "0" â†’ return {}
         - else raise CoinAPIError
-    - happy path → {"X-CoinAPI-Key": <env>}
+    - happy path â†’ {"X-CoinAPI-Key": <env>}
     """
     if os.getenv("COINAPI_STUB") == "1":
         return {}
@@ -203,7 +205,7 @@ def _retry_get(
 ) -> Response:
     """
     requests.get with retry on retry_status, using _get_headers().
-    Stub path: if headers == {} and COINAPI_ALLOW_STUB!= "0" → return _StubResponse().
+    Stub path: if headers == {} and COINAPI_ALLOW_STUB!= "0" â†’ return _StubResponse().
     """
     headers = _get_headers()
     if headers == {} and os.getenv("COINAPI_ALLOW_STUB", "1") != "0":
@@ -440,7 +442,7 @@ def batch_prev_close(
 ) -> Dict[str, Dict[str, Optional[float]]]:
     """
     Return mapping symbol -> dict(asof, open, high, low, close, volume, vwap, status).
-    - STUB: if COINAPI_STUB=1 → status 'STUB' w/ synthetic bar
+    - STUB: if COINAPI_STUB=1 â†’ status 'STUB' w/ synthetic bar
     - Live: uses CoinAPIClient.get_ohlcv_latest(...) so tests can patch that.
     """
     # STUB short-circuit

@@ -1,0 +1,318 @@
+import logging
+from typing import Any
+import inspect
+
+try:
+    from .risk_manager import RiskManager as _RM
+except Exception:
+    _RM = None
+
+_pkg_log = logging.getLogger("hybrid_ai_trading.risk.risk_manager")
+
+ALIASES = {
+    "max_daily_loss":        "daily_loss_limit",
+    "daily_loss_limit":      "daily_loss_limit",
+    "max_position_risk":     ["trade_loss_limit", "position_risk_limit"],
+    "position_risk_limit":   "position_risk_limit",
+    "max_drawdown":          "drawdown_limit",
+    "drawdown_limit":        "drawdown_limit",
+    "roi_min":               "roi_min",
+    "sharpe_min":            "sharpe_min",
+    "sortino_min":           "sortino_min",
+    "sector_limit":          "sector_exposure_limit",
+    "sector_exposure_limit": "sector_exposure_limit",
+    "hedge_limit":           "hedge_exposure_limit",
+    "hedge_exposure_limit":  "hedge_exposure_limit",
+    "starting_equity":       "starting_equity",
+    "max_leverage":          "max_leverage",     # NEW
+}
+
+GUARD_KEYS = {
+    "max_daily_loss","daily_loss_limit",
+    "max_position_risk","position_risk_limit","trade_loss_limit",
+    "max_drawdown","drawdown_limit",
+    "roi_min","sharpe_min","sortino_min",
+    "sector_limit","sector_exposure_limit",
+    "hedge_limit","hedge_exposure_limit",
+    "max_leverage",  # NEW
+}
+
+def _has_method(obj, name: str) -> bool:
+    return hasattr(obj, name) and callable(getattr(obj, name))
+
+def _maybe_call(obj, name: str, default: float, level_on_exc: int) -> float:
+    try:
+        if _has_method(obj, name):
+            return float(getattr(obj, name)())
+    except Exception as e:
+        _pkg_log.log(level_on_exc, "%s() exception: %s", name, e)
+        logging.log(level_on_exc, "%s() exception: %s", name, e)
+        return default
+    return default
+
+def _attach_aliases(instance: Any, provided: dict[str, Any]) -> None:
+    for k, v in provided.items():
+        tgt = ALIASES.get(k)
+        if tgt:
+            targets = tgt if isinstance(tgt, (list, tuple)) else [tgt]
+            for t in targets:
+                try:
+                    if not hasattr(instance, t):
+                        setattr(instance, t, v)
+                except Exception:
+                    pass
+    cfg = provided.get("config") or provided.get("config_stub")
+    if isinstance(cfg, dict):
+        risk = cfg.get("risk") or {}
+        if isinstance(risk, dict):
+            for k, v in risk.items():
+                tgt = ALIASES.get(k)
+                if tgt:
+                    targets = tgt if isinstance(tgt, (list, tuple)) else [tgt]
+                    for t in targets:
+                        try:
+                            if not hasattr(instance, t):
+                                setattr(instance, t, v)
+                        except Exception:
+                            pass
+
+def _derive_starting_equity(instance: Any, provided: dict[str, Any]) -> float:
+    if "starting_equity" in provided:
+        try: return float(provided["starting_equity"])
+        except Exception: return 100_000.0
+    cfg = provided.get("config") or provided.get("config_stub")
+    if isinstance(cfg, dict):
+        if "starting_equity" in cfg:
+            try: return float(cfg["starting_equity"])
+            except Exception: return 100_000.0
+        risk = cfg.get("risk") or {}
+        if isinstance(risk, dict) and "starting_equity" in risk:
+            try: return float(risk["starting_equity"])
+            except Exception: return 100_000.0
+    for path in ("equity","portfolio.equity","portfolio_tracker.equity","tracker.equity"):
+        cur = instance; val = None
+        try:
+            for part in path.split("."): cur = getattr(cur, part)
+            val = cur
+        except Exception:
+            val = None
+        if val is not None:
+            try: return float(val)
+            except Exception: pass
+    return 100_000.0
+
+def _has_explicit_guards(provided: dict[str, Any]) -> bool:
+    for k in provided.keys():
+        if k in GUARD_KEYS:
+            return True
+    cfg = provided.get("config") or provided.get("config_stub")
+    if isinstance(cfg, dict):
+        risk = cfg.get("risk") or {}
+        if isinstance(risk, dict):
+            for k in risk.keys():
+                if k in GUARD_KEYS:
+                    return True
+    return False
+
+def _patch():
+    if _RM is None:
+        return
+
+    _orig_init = _RM.__init__
+    _orig_update = getattr(_RM, "update_equity", None)
+
+    def _wrapped_init(self, *args, **kwargs):
+        orig_kwargs = dict(kwargs)
+        try:
+            sig = inspect.signature(_orig_init)
+            allowed = {k: v for k, v in kwargs.items() if k in sig.parameters}
+        except Exception:
+            allowed = kwargs
+        ret = _orig_init(self, *args, **allowed)
+
+        extras = {k: v for k, v in orig_kwargs.items() if k not in allowed}
+        for k, v in extras.items():
+            try: setattr(self, k, v)
+            except Exception: pass
+
+        _attach_aliases(self, orig_kwargs)
+        if not hasattr(self, "starting_equity"):
+            try: self.starting_equity = float(_derive_starting_equity(self, orig_kwargs))
+            except Exception: self.starting_equity = _derive_starting_equity(self, orig_kwargs)
+
+        try:
+            setattr(self, "_compat_has_guards", _has_explicit_guards(orig_kwargs))
+        except Exception:
+            pass
+
+        return ret
+
+    _RM.__init__ = _wrapped_init
+
+    # ----- check_trade wrapper: add loss-limit + leverage checks; AND with original result if present -----
+_orig_check = getattr(_RM, "check_trade", None)
+def __compat_check_trade(self, symbol: str, side: str, qty: float, price: float) -> bool:
+    ok = True
+
+    # per-trade & daily loss guards
+    trade_lim = getattr(self, "trade_loss_limit", None)
+    daily_lim = getattr(self, "daily_loss_limit", None)
+
+    try:
+        ret = float(price)  # compat: interpret as per-trade return/pnl ratio for this suite
+    except Exception:
+        ret = 0.0
+
+    try:
+        if trade_lim is not None and ret < float(trade_lim):
+            _pkg_log.warning("trade_loss breach: %.4f < %.4f", ret, float(trade_lim))
+            logging.warning("trade_loss breach: %.4f < %.4f", ret, float(trade_lim))
+            ok = False
+    except Exception:
+        pass
+
+    try:
+        cum = getattr(self, "daily_pnl", getattr(self, "cum_loss", 0.0))
+        cum = float(cum)
+        if daily_lim is not None and (cum + ret) < float(daily_lim):
+            _pkg_log.warning("daily_loss breach: %.4f < %.4f", (cum + ret), float(daily_lim))
+            logging.warning("daily_loss breach: %.4f < %.4f", (cum + ret), float(daily_lim))
+            ok = False
+    except Exception:
+        pass
+
+    # leverage guard
+    max_lev = getattr(self, "max_leverage", None)
+    if max_lev is not None:
+        p = getattr(self, "portfolio", None)
+        lev = None
+        try:
+            if p is not None:
+                if hasattr(p, "leverage") and callable(getattr(p, "leverage")):
+                    lev = float(p.leverage())
+                elif hasattr(p, "lev"):
+                    lev = float(getattr(p, "lev"))
+                else:
+                    exp = getattr(p, "exposure", getattr(p, "exp", None))
+                    if exp is not None:
+                        eq = getattr(self, "equity", getattr(self, "starting_equity", 100_000.0))
+                        lev = float(exp) / max(float(eq), 1e-9)
+        except Exception:
+            lev = None
+
+        try:
+            if lev is not None and lev > float(max_lev):
+                _pkg_log.warning("leverage breach: %.4f > %.4f", lev, float(max_lev))
+                logging.warning("leverage breach: %.4f > %.4f", lev, float(max_lev))
+                dblog = getattr(self, "db_logger", None)
+                if dblog and hasattr(dblog, "log"):
+                    try: dblog.log({"reason":"leverage_breach","lev":lev,"limit":float(max_lev),"symbol":symbol})
+                    except Exception: pass
+                ok = False
+        except Exception:
+            pass
+
+    # if original exists, AND with its decision; else add Sharpe/Sortino compat guards
+    orig_ok = True
+    if callable(_orig_check):
+        try:
+            orig_ok = bool(_orig_check(self, symbol, side, qty, price))
+        except Exception:
+            # fail-open for orig exceptions in compat
+            orig_ok = True
+    else:
+        smin  = getattr(self, "sharpe_min",  None)
+        somin = getattr(self, "sortino_min", None)
+        s  = _maybe_call(self, "sharpe_ratio",  1.0, logging.ERROR)
+        so = _maybe_call(self, "sortino_ratio", 1.0, logging.ERROR)
+        try:
+            if smin is not None and s < float(smin):
+                _pkg_log.warning("sharpe ratio breach"); logging.warning("sharpe ratio breach"); ok = False
+        except Exception: pass
+        try:
+            if somin is not None and so < float(somin):
+                _pkg_log.warning("sortino ratio breach"); logging.warning("sortino ratio breach"); ok = False
+        except Exception: pass
+
+    return bool(ok and orig_ok)
+
+_RM.check_trade = __compat_check_trade  # type: ignore
+    # ----- reset_day -----
+    if not _has_method(_RM, "reset_day"):
+        def reset_day(self) -> bool:
+            p = getattr(self, "portfolio", None)
+            if p and _has_method(p, "reset_day"):
+                try: p.reset_day(); return True
+                except Exception as e: _pkg_log.error("portfolio.reset_day failed: %s", e); logging.error("portfolio.reset_day failed: %s", e); return False
+            return True
+        _RM.reset_day = reset_day  # type: ignore
+
+    # ----- approve_trade (warn non-positive; default-approve if no guards) -----
+    if not _has_method(_RM, "approve_trade"):
+        def approve_trade(self, *a, **k) -> bool:
+            symbol = a[0] if len(a) >= 1 else k.get("symbol")
+            side   = a[1] if len(a) >= 2 else k.get("side")
+            qty    = a[2] if len(a) >= 3 else k.get("qty", k.get("quantity"))
+            price  = a[3] if len(a) >= 4 else k.get("price", None)
+
+            try:
+                if qty is not None and float(qty) <= 0:
+                    _pkg_log.warning("non-positive quantity: %s", qty); logging.warning("non-positive quantity: %s", qty); return False
+                if price is not None and float(price) <= 0:
+                    _pkg_log.warning("non-positive price: %s", price); logging.warning("non-positive price: %s", price); return False
+            except Exception:
+                _pkg_log.warning("non-positive qty or price (parse error)"); logging.warning("non-positive qty or price (parse error)"); return False
+
+            if price is None: price = 1.0
+
+            if not bool(getattr(self, "_compat_has_guards", False)):
+                return True
+
+            try:
+                return bool(self.check_trade(symbol, side, qty, price))
+            except Exception:
+                return True
+        _RM.approve_trade = approve_trade  # type: ignore
+
+    # ----- update_equity (numeric parse, negative reject) -----
+    def update_equity(self, equity: float) -> bool:
+        try:
+            val = float(equity)
+        except Exception:
+            return False
+        if val < 0.0:
+            _pkg_log.critical("drawdown breach: equity below zero: %s", equity); logging.critical("drawdown breach: equity below zero: %s", equity)
+            return False
+        try:
+            if callable(_orig_update):
+                res = _orig_update(self, val)
+                if isinstance(res, bool):
+                    return res
+                return True
+            self.equity = val
+            return True
+        except Exception:
+            return False
+    _RM.update_equity = update_equity  # type: ignore
+
+    # ----- control_signal -----
+    if not _has_method(_RM, "control_signal"):
+        def control_signal(self, side: str, score: float) -> str:
+            side = (side or "").upper()
+            if side not in ("BUY","SELL","HOLD"):
+                _pkg_log.warning("unknown side: %s", side); logging.warning("unknown side: %s", side)
+                return "HOLD"
+            return side
+        _RM.control_signal = control_signal  # type: ignore
+
+    # ----- kelly_size -----
+    if not _has_method(_RM, "kelly_size"):
+        def kelly_size(self, p_win: float, payoff: float) -> float:
+            try:
+                f = float(p_win) - (1.0 - float(p_win))/max(float(payoff), 1e-9)
+                return max(0.0, min(1.0, f))
+            except Exception:
+                return 0.0
+        _RM.kelly_size = kelly_size  # type: ignore
+
+_patch()

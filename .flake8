@@ -1,0 +1,33 @@
+[flake8]
+# ======================================================================
+# Hybrid AI Quant Pro – Flake8 Configuration (Hedge-Fund Grade)
+# ----------------------------------------------------------------------
+# Enforces strict linting with selective relaxations for tests/archive.
+# ----------------------------------------------------------------------
+# Key rules:
+# - max line length = 120 (aligned with Black formatting)
+# - exclude virtualenvs, notebooks, debug folders
+# - per-file ignores for tests and archived scripts
+# ======================================================================
+
+# Max characters per line
+max-line-length = 120
+
+# Directories/files excluded from linting
+exclude =
+    .venv,
+    archive,
+    _safe,
+    research-env,
+    .ipynb_checkpoints,
+    tests/old_*,
+    debug_*.py,
+    **/pwiz.py,
+    **/pywin32_postinstall.py
+
+# Per-file ignores:
+# - tests: allow unused imports, function redefinitions, import order hacks
+# - archive: ignore debug noise, unused vars, undefined names
+per-file-ignores =
+    tests/*: F401,F811,E402
+    archive/*: F401,F841,F821,E402,E401

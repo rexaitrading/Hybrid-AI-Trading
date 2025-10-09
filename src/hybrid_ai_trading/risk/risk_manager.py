@@ -1,5 +1,6 @@
+﻿from __future__ import annotations
 """
-RiskManager (Hybrid AI Quant Pro Ã¢â‚¬â€œ OE Grade Halts)
+RiskManager (Hybrid AI Quant Pro ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ OE Grade Halts)
 --------------------------------------------------
 - Daily loss cap (% of day-start equity) [TOP PRIORITY]
 - Max drawdown cap (rolling peak)        [TOP PRIORITY]
@@ -10,7 +11,6 @@ RiskManager (Hybrid AI Quant Pro Ã¢â‚¬â€œ OE Grade Halts)
 - Persistent state in logs/risk_state.json
 """
 
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, Tuple
 import json, os

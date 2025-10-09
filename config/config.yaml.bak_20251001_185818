@@ -1,0 +1,18 @@
+news_providers:
+  aggregate: true
+  benzinga:
+    enabled: false
+  polygon:
+    enabled: false
+  alpaca:
+    enabled: false
+  rss:
+    enabled: false
+  kraken_rss:
+    enabled: true
+    feeds:
+    - http://k
+  cme_rss:
+    enabled: true
+    feeds:
+    - http://c

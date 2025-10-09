@@ -1,3 +1,4 @@
+﻿from __future__ import annotations
 """
 IBKR Executor (Hybrid AI Quant Pro v1.0 - DRY-RUN Safe)
 - Dry-run by default; --live requires env IBKR_LIVE=1
@@ -5,13 +6,12 @@ IBKR Executor (Hybrid AI Quant Pro v1.0 - DRY-RUN Safe)
 - Connects to paper TWS by default (127.0.0.1:7497)
 """
 
-from __future__ import annotations
 import argparse
 import json
 import os
 import sys
 from ib_insync import IB
-from .ibkr_client import connect_ib, place_market_stock, place_limit_stock, cancel_all
+from hybrid_ai_trading.data.clients.ibkr_client import connect_ib, place_market_stock, place_limit_stock, cancel_all
 
 
 def _require_live(args: argparse.Namespace) -> bool:
