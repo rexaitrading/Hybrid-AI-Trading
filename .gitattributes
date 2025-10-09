@@ -24,4 +24,3 @@
 *.cmd       text eol=crlf
 
 # Misc
-*.ps1 (PowerShell Script) text eol=crlf
