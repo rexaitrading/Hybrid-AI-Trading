@@ -12,7 +12,7 @@ keys = [
     "ALPACA_SECRET",
     "BENZINGA_KEY",
     "IBKR_ACCOUNT",
-    "BINANCE_API_KEY"
+    "BINANCE_API_KEY",
 ]
 
 for key in keys:

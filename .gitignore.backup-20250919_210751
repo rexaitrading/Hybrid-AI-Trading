@@ -1,0 +1,218 @@
+﻿# ===========================
+# Hybrid AI Trading – .gitignore v5.0 (OE Hedge-Fund Grade)
+# ===========================
+
+# -------------------------
+# Python cache & bytecode
+# -------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.dll
+*.class
+*.p          # stray compiled partials
+
+# -------------------------
+# Virtual environments
+# -------------------------
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# -------------------------
+# Jupyter / Research
+# -------------------------
+.ipynb_checkpoints/
+*.ipynb~*
+notebooks/outputs/
+*.parquet
+*.feather
+*.h5
+*.pkl
+*.joblib
+*.npy
+*.npz
+
+# -------------------------
+# Editors / OS
+# -------------------------
+.vscode/
+.idea/
+.cursorignore
+.cursorindexingignore
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# Data & Logs
+# -------------------------
+data/
+logs/
+reports/
+*.sqlite3
+*.db
+*.csv
+*.json
+
+# Execution audit trails
+logs/trade_blotter.csv
+logs/trade_blotter_backup.csv
+
+# -------------------------
+# Secrets / Keys
+# -------------------------
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.crt
+.pypirc
+.ssh/
+.aws/
+.gcp/
+.azure/
+
+# -------------------------
+# Build / Packaging
+# -------------------------
+.Python
+dist/
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# -------------------------
+# Coverage / Testing
+# -------------------------
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.pytest_cache/
+.hypothesis/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.coverage.*
+test_results/
+
+# -------------------------
+# Project-specific
+# -------------------------
+# Keep main config tracked
+config/config.yaml
+# Ignore personal overrides
+config/*.local.*
+config/*.backup
+config/*.bak
+
+*.bak
+*.backup
+*.html
+*.pdf
+tmp/
+tests/__pycache__/
+
+# Legacy cleanup
+src/execution/
+
+# -------------------------
+# Models / Checkpoints
+# -------------------------
+*.pt
+*.onnx
+*.ckpt
+*.weights
+*.model
+checkpoints/
+models/
+artifacts/
+wandb/
+huggingface/
+
+# -------------------------
+# CI/CD / Caches
+# -------------------------
+.github/
+.gitlab/
+.cache/
+*.log
+*.tmp
+
+# -------------------------
+# Framework-specific
+# -------------------------
+# Django
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask
+instance/
+.webassets-cache
+
+# Scrapy
+.scrapy
+
+# Sphinx docs
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Poetry / Pipenv / PDM
+poetry.lock
+Pipfile.lock
+.uv.lock
+.pdm.toml
+.pdm-python
+.pdm-build/
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Type checker caches
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Cython
+cython_debug/
+
+# Ruff linter
+.ruff_cache/

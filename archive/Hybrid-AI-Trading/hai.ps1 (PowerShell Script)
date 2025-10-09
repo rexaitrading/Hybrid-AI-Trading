@@ -1,0 +1,78 @@
+Param(
+  [Parameter(Position=0)]
+  [ValidateSet("init","check","test:polygon","test:prevclose","open:stocktwits","open:ibkr","open:tradovate","open:gcp","open:azure","open:all")]
+  [string]$task = "check"
+)
+
+$ErrorActionPreference = "Stop"
+
+# --- 基本路徑 / 環境 ---
+$ROOT = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $ROOT
+$env:PYTHONPATH = $ROOT # 令 from utils.xxx 可以直接 import
+
+function Load-DotEnv([string]$path = ".env") {
+  if (-not (Test-Path $path)) { return }
+  Get-Content $path | ForEach-Object {
+    if ($_ -match '^\s*#') { return }
+    if ($_ -match '^\s*$') { return }
+    if ($_ -match '^\s*([^=]+)\s*=\s*(.*)\s*$') {
+      $k = $Matches[1].Trim()
+      $v = $Matches[2].Trim().Trim("'").Trim('"')
+      Set-Item -Path Env:$k -Value $v
+    }
+  }
+}
+
+function Ensure-Venv() {
+  if (!(Test-Path ".\.venv\Scripts\python.exe")) {
+    py -3 -m venv .venv
+  }
+  .\.venv\Scripts\Activate.ps1
+  python -m pip install --upgrade pip
+  if (Test-Path "requirements.txt") { pip install -r requirements.txt }
+}
+
+function Check-ConfigYaml() {
+  $code = @'
+import yaml, json
+with open("config.yaml","r",encoding="utf-8") as f:
+    cfg = yaml.safe_load(f)
+print(json.dumps({"ok": True, "top_keys": list(cfg.keys())}, ensure_ascii=False))
+'@
+  python - <<PY
+$code
+PY
+}
+
+function Test-Polygon() {
+  python - <<'PY'
+from utils.polygon import PolygonClient
+client = PolygonClient()
+resp = client.prev_close("AAPL")
+print("✅ Polygon key OK，回傳簡要：")
+print({k:resp.get(k) for k in ("status","queryCount","resultsCount")})
+PY
+}
+
+switch ($task) {
+  "init"           { Ensure-Venv; Load-DotEnv; Check-ConfigYaml; break }
+  "check"          { Load-DotEnv; Check-ConfigYaml; break }
+  "test:polygon"   { Load-DotEnv; Test-Polygon; break }
+  "test:prevclose" { Load-DotEnv; python .\tests\test_prev_close.py; break }
+
+  "open:stocktwits"{ Start-Process "https://stocktwits.com"; break }
+  "open:ibkr"      { Start-Process "https://www.interactivebrokers.com/"; break }
+  "open:tradovate" { Start-Process "https://trader.tradovate.com/"; break }
+  "open:gcp"       { Start-Process "https://console.cloud.google.com/"; break }
+  "open:azure"     { Start-Process "https://portal.azure.com/"; break }
+  "open:all"       {
+                      & $MyInvocation.MyCommand.Path open:stocktwits
+                      & $MyInvocation.MyCommand.Path open:ibkr
+                      & $MyInvocation.MyCommand.Path open:tradovate
+                      & $MyInvocation.MyCommand.Path open:gcp
+                      & $MyInvocation.MyCommand.Path open:azure
+                      break
+                   }
+  default { Write-Host "Unknown task: $task"; break }
+}

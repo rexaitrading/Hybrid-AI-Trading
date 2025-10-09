@@ -1,3 +1,4 @@
+﻿from __future__ import annotations
 """
 IBKR Client (Hybrid AI Quant Pro v1.0 - Safe & Test-Friendly)
 - Connects to TWS/Gateway (defaults to paper: 127.0.0.1:7497, clientId=1)
@@ -5,7 +6,6 @@ IBKR Client (Hybrid AI Quant Pro v1.0 - Safe & Test-Friendly)
 - Uses ib_insync synchronous style for simplicity
 """
 
-from __future__ import annotations
 
 import os
 from typing import Any, Dict, List, Optional

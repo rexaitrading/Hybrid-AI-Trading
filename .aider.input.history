@@ -112,10 +112,10 @@
 # 2025-09-15 09:25:40.210820
 +add src/hybrid_ai_trading/pipelines/backtest.py
 +add tests/test_backtest_full.py
-+Please review backtest.py and test_backtest_full.py.  
-+Add missing tests to cover *all branches* in backtest.py and push coverage to 100%.  
-+Make sure the tests integrate smoothly with the current repo, no duplicated imports, and  
-+resolve the pandas DataFrame bug from before.  
++Please review backtest.py and test_backtest_full.py.
++Add missing tests to cover *all branches* in backtest.py and push coverage to 100%.
++Make sure the tests integrate smoothly with the current repo, no duplicated imports, and
++resolve the pandas DataFrame bug from before.
 +
 
 # 2025-09-15 09:25:44.909579

@@ -27,9 +27,9 @@ def simulate_trades(engine, n_trades=50, seed=42):
     for i in range(n_trades):
         # Random PnL: ~55% win rate, wins bigger than losses
         if random.random() < 0.55:
-            pnl = random.uniform(100, 600)   # win
+            pnl = random.uniform(100, 600)  # win
         else:
-            pnl = -random.uniform(50, 300)   # loss
+            pnl = -random.uniform(50, 300)  # loss
 
         # Execute trade
         result = engine.process_signal("BTC/USDT", "BUY", size=1, price=60000)
@@ -47,10 +47,12 @@ def simulate_trades(engine, n_trades=50, seed=42):
         kelly_frac_history.append(engine.kelly_sizer.fraction if engine.kelly_sizer else 0)
 
         # Print console log
-        print(f"Trade {i+1:02d}: PnL={pnl:+.2f} | Equity={equity:.2f} | "
-              f"WinRate={engine.performance_tracker.win_rate():.2f} | "
-              f"Payoff={engine.performance_tracker.payoff_ratio():.2f} | "
-              f"Kelly fraction={kelly_frac_history[-1]:.2f}")
+        print(
+            f"Trade {i+1:02d}: PnL={pnl:+.2f} | Equity={equity:.2f} | "
+            f"WinRate={engine.performance_tracker.win_rate():.2f} | "
+            f"Payoff={engine.performance_tracker.payoff_ratio():.2f} | "
+            f"Kelly fraction={kelly_frac_history[-1]:.2f}"
+        )
         print("   Result:", result)
 
     return equity_history, pnl_history, kelly_frac_history
@@ -99,8 +101,15 @@ def save_report(equity_history, pnl_history, kelly_frac_history, summary):
     plt.subplot(3, 1, 1)
     plt.plot(trades, equity_history, label="Equity Curve", linewidth=2, color="blue")
     dd = (peak - np.array(equity_history)) / peak
-    plt.fill_between(trades, equity_history, peak, where=equity_history < peak,
-                     color="red", alpha=0.3, label="Drawdowns")
+    plt.fill_between(
+        trades,
+        equity_history,
+        peak,
+        where=equity_history < peak,
+        color="red",
+        alpha=0.3,
+        label="Drawdowns",
+    )
     plt.title("Equity Curve with Drawdowns", fontsize=14)
     plt.xlabel("Trades")
     plt.ylabel("Equity")

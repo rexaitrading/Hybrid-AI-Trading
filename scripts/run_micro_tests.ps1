@@ -1,4 +1,4 @@
-param(
+﻿param(
   [switch]$Install,
   [ValidateSet("Isolated","RespectIni")]
   [string]$Mode = "Isolated"
@@ -56,7 +56,7 @@ if ($Mode -eq "RespectIni") {
     if ($Install) { python -m pip install -U pytest-cov --disable-pip-version-check --no-color | Out-Null }
     if (Test-PytestCovAvailable) {
       $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = $null
-      python -m pytest -p pytest_cov $t1 $t2
+      python -m pytest -p pytest_cov --cov=hybrid_ai_trading.broker.ib_safe $t1 $t2
     } else {
       Write-Host "pytest-cov not available; stripping --cov* from repo pytest.ini and running without coverage." -ForegroundColor Yellow
       $tmpDir = Join-Path $env:TEMP ("pytest_respect_no_cov_{0}" -f ([Guid]::NewGuid()))

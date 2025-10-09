@@ -1328,7 +1328,7 @@
                 }
             `))};const Tn=(e,t)=>{const o=e.name===e.tagFor(be.Select);return(0,Za.css)`
   ${(0,be.display)("inline-flex")}
-  
+
   :host {
     --elevation: 14;
     background: ${Rr};
@@ -1348,11 +1348,11 @@
   :host([aria-invalid='true']) {
     border-color: ${$a};
   }
-  
+
   :host(:not([autowidth])) {
     min-width: 250px;
   }
-  
+
   ${o?(0,Za.css)`
   :host(:not([aria-haspopup])) {
     --elevation: 0;
@@ -1361,9 +1361,9 @@
     min-width: 0;
   }
   `:""}
-  
+
   ${Sn(e,t)}
-  
+
   :host .listbox {
     ${vn}
     border: none;
@@ -1373,14 +1373,14 @@
     width: 100%;
     z-index: 1;
   }
-  
+
   .control + .listbox {
     --stroke-size: calc(${qt} * ${Zt} * 2);
     max-height: calc(
       (var(--listbox-max-height) * ${Ka} + var(--stroke-size)) * 1px
       );
   }
-  
+
   ${o?(0,Za.css)`
   :host(:not([aria-haspopup])) .listbox {
     left: auto;
@@ -1388,20 +1388,20 @@
     z-index: auto;
   }
   `:""}
-  
+
   :host(:not([autowidth])) .listbox {
     width: 100%;
   }
-  
+
   :host([autowidth]) ::slotted([role='option']),
   :host([autowidth]) ::slotted(option) {
     padding: 0 calc(1em + ${qt} * 1.25px + 1px);
   }
-  
+
   .listbox[hidden] {
     display: none;
   }
-  
+
   .control {
     align-items: center;
     box-sizing: border-box;
@@ -1435,85 +1435,85 @@
   :host([scale='xlarge']) {
     --element-scale: 4;
   }
-  
+
   :host(:not([disabled]):hover) {
     background: ${Ir};
     border-color: ${Zr};
   }
-  
+
   :host([aria-invalid='true']:not([disabled]):hover) {
     border-color: ${xa};
   }
-  
+
   :host(:${be.focusVisible}) {
     border-color: ${gr};
     box-shadow: 0 0 0 calc((${Yt} - ${Zt}) * 1px)
     ${gr};
   }
-  
+
   :host([aria-invalid='true']:${be.focusVisible}) {
     border-color: ${wa};
     box-shadow: 0 0 0 calc((${Yt} - ${Zt}) * 1px)
     ${wa};
   }
-  
+
   :host(:not([size]):not([multiple]):not([open]):${be.focusVisible}),
   :host([multiple]:${be.focusVisible}),
   :host([size]:${be.focusVisible}) {
     box-shadow: 0 0 0 calc((${Yt} - ${Zt}) * 1px)
     ${gr};
   }
-  
+
   :host([aria-invalid='true']:not([size]):not([multiple]):not([open]):${be.focusVisible}),
   :host([aria-invalid='true'][multiple]:${be.focusVisible}),
   :host([aria-invalid='true'][size]:${be.focusVisible}) {
     box-shadow: 0 0 0 calc((${Yt} - ${Zt}) * 1px)
     ${wa};
   }
-  
+
   :host(:not([multiple]):not([size]):${be.focusVisible}) ::slotted(${e.tagFor(be.ListboxOption)}[aria-selected="true"]:not([disabled])) {
     box-shadow: 0 0 0 calc(${Yt} * 1px) inset ${gr};
     border-color: ${gr};
     background: ${gr};
     color: ${xr};
   }
-    
+
   :host([disabled]) {
     cursor: ${be.disabledCursor};
     opacity: ${Xt};
   }
-  
+
   :host([disabled]) .control {
     cursor: ${be.disabledCursor};
     user-select: none;
   }
-  
+
   :host([disabled]:hover) {
     background: ${Er};
     color: ${la};
     fill: currentcolor;
   }
-  
+
   :host(:not([disabled])) .control:active {
     background: ${Ar};
     border-color: ${pr};
     border-radius: calc(${Et} * 1px);
   }
-  
+
   :host([open][position="above"]) .listbox {
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     border-bottom: 0;
     bottom: calc(${Ka} * 1px);
   }
-  
+
   :host([open][position="below"]) .listbox {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
     border-top: 0;
     top: calc(${Ka} * 1px);
   }
-  
+
   .selected-value {
     flex: 1 1 auto;
     font-family: inherit;
@@ -1522,27 +1522,27 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  
+
   .indicator {
     flex: 0 0 auto;
     margin-inline-start: 1em;
   }
-  
+
   slot[name="listbox"] {
     display: none;
     width: 100%;
   }
-  
+
   :host([open]) slot[name="listbox"] {
     display: flex;
     position: absolute;
     ${vn}
   }
-  
+
   .end {
     margin-inline-start: auto;
   }
-  
+
   .start,
   .end,
   .indicator,
@@ -1555,7 +1555,7 @@
     min-width: calc(${qt} * 4px);
     width: 1em;
   }
-  
+
   ::slotted([role="option"]),
   ::slotted(option) {
     flex: 0 0 auto;
@@ -1569,7 +1569,7 @@
       :host([aria-invalid='true']) {
         border-style: dashed;
       }
-      
+
       :host(:not([disabled]):${be.focusVisible}) {
         background-color: ${Ja.ButtonFace};
         box-shadow: 0 0 0 calc(${Yt} * 1px) ${Ja.Highlight};
@@ -1577,11 +1577,11 @@
         fill: currentcolor;
         forced-color-adjust: none;
       }
-      
+
       :host(:not([disabled]):${be.focusVisible}) .listbox {
         background: ${Ja.ButtonFace};
       }
-      
+
       :host([disabled]) {
         border-color: ${Ja.GrayText};
         background-color: ${Ja.ButtonFace};
@@ -1590,20 +1590,20 @@
         opacity: 1;
         forced-color-adjust: none;
       }
-      
+
       :host([disabled]:hover) {
         background: ${Ja.ButtonFace};
       }
-      
+
       :host([disabled]) .control {
         color: ${Ja.GrayText};
         border-color: ${Ja.GrayText};
       }
-      
+
       :host([disabled]) .control .select-indicator {
         fill: ${Ja.GrayText};
       }
-      
+
       :host(:${be.focusVisible}) ::slotted([aria-selected="true"][role="option"]),
       :host(:${be.focusVisible}) ::slotted(option[aria-selected="true"]),
       :host(:${be.focusVisible}) ::slotted([aria-selected="true"][role="option"]:not([disabled])) {
@@ -1614,7 +1614,7 @@
         color: ${Ja.HighlightText};
         fill: currentcolor;
       }
-      
+
       .start,
       .end,
       .indicator,

@@ -7,6 +7,3 @@ To keep this project’s Git history clean and professional, follow this commit 
 
 
 <!-- Updated usage example for testing commit guide -->
-
-
-

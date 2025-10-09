@@ -1,14 +1,17 @@
 ﻿# tests/check_prev_close.py
 from __future__ import annotations
-import json, glob, os
+import json
+import glob
+import os
 import pandas as pd
-from src.data.clients.coinapi_client import some_function
 
 DATA_DIR = "data"
+
 
 def latest_file(pattern: str) -> str | None:
     files = sorted(glob.glob(os.path.join(DATA_DIR, pattern)))
     return files[-1] if files else None
+
 
 def main():
     csv_path = latest_file("prev_close_*.csv")
@@ -25,7 +28,18 @@ def main():
     print(df.head(3).to_string(index=False))
     print("\næ¬„ä½ï¼š", list(df.columns))
 
-    required_cols = ["group","symbol","asof","open","high","low","close","volume","vwap","status"]
+    required_cols = [
+        "group",
+        "symbol",
+        "asof",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "vwap",
+        "status",
+    ]
     missing_cols = [c for c in required_cols if c not in df.columns]
     assert not missing_cols, f"âŒ ç¼ºå°‘æ¬„ä½: {missing_cols}"
 
@@ -42,7 +56,7 @@ def main():
     bad = df[df["status"].astype(str).str.upper() != "OK"]
     if not bad.empty:
         print("\nâš ï¸ éž OK ç‹€æ…‹ç­†æ•¸ï¼š", len(bad))
-        print(bad[["group","symbol","status"]].to_string(index=False))
+        print(bad[["group", "symbol", "status"]].to_string(index=False))
     else:
         print("\nâœ… æ‰€æœ‰ç­†æ•¸ status éƒ½æ˜¯ OK")
 
@@ -50,6 +64,3 @@ def main():
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     print(f"\nJSON ç­†æ•¸ï¼š{len(data)} âœ…")
-
-
-

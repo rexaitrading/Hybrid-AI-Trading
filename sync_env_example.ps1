@@ -63,4 +63,3 @@ Write-Host "✅ .env.example synced from .env → $examplePath"
 )
 
 Write-Host "🔑 OPENAI_API_KEY has been set permanently for this user."
-

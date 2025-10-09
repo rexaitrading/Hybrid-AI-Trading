@@ -1,167 +1,118 @@
-"""
-Sentiment Filter (Hybrid AI Quant Pro v14.6 – Final Stable, AAA Grade)
-----------------------------------------------------------------------
-- Supports VADER (default) and FinBERT sentiment scoring
-- Threshold priority: threshold → neutral zone → bias
-- Rolling smoothing (history-based averaging)
-- Defensive guards for missing/malformed analyzers
-- Safe fallbacks when vader/transformers not installed
-"""
+from __future__ import annotations
 
 import logging
+from typing import Optional, Any, Dict
 
 logger = logging.getLogger(__name__)
 
-# Safe optional imports
+# Optional deps — tests may monkeypatch these names to None
 try:
-    from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-except ImportError:
-    SentimentIntensityAnalyzer = None
-    logger.warning("⚠️ vaderSentiment not installed → VADER unavailable")
+    from nltk.sentiment import SentimentIntensityAnalyzer  # type: ignore
+except Exception:  # pragma: no cover
+    SentimentIntensityAnalyzer = None  # type: ignore
 
 try:
-    from transformers import pipeline
-except ImportError:
-    pipeline = None
-    logger.warning("⚠️ transformers not installed → FinBERT unavailable")
+    from transformers import pipeline  # type: ignore
+except Exception:  # pragma: no cover
+    pipeline = None  # type: ignore
 
 
 class SentimentFilter:
-    def __init__(
-        self,
-        enabled: bool = True,
-        threshold: float = 0.8,
-        neutral_zone: float = 0.2,
-        bias: str = "none",
-        model: str = "vader",
-        smoothing: int = 1,
-    ):
-        self.enabled = enabled
-        self.threshold = threshold
-        self.neutral_zone = neutral_zone
-        self.bias = bias
-        self.model = model
-        self.smoothing = max(1, smoothing)
-        self.history = []
+    """
+    Config-robust sentiment filter:
+    - Accepts arbitrary kwargs from config (enabled, model, threshold, neutral_zone, etc.)
+    - Ignores unknown keys safely so future config additions won't crash
+    - Falls back to neutral scoring (0.0) when analyzer is unavailable
+    """
 
-        if not enabled:
+    def __init__(self, **cfg: Any) -> None:
+        # Known knobs (with sensible defaults)
+        self.enabled: bool = bool(cfg.pop("enabled", True))
+        self.model: str = str(cfg.pop("model", "vader"))
+        self.threshold: float = float(cfg.pop("threshold", 0.0))
+        self.neutral_zone: float = float(cfg.pop("neutral_zone", 0.0))
+
+        # Anything else is accepted and ignored to maintain forward compatibility
+        # (kept for potential debugging/inspection)
+        self._extra_cfg: Dict[str, Any] = dict(cfg)
+
+        self.analyzer: Optional[Any] = None
+        self._init_analyzer()
+
+    def _init_analyzer(self) -> None:
+        """Initialize analyzer based on model; if unavailable, fall back to neutral."""
+        m = (self.model or "vader").lower()
+
+        if not self.enabled:
             self.analyzer = None
             return
 
-        # --- Safe model selection ---
-        if model == "vader" and SentimentIntensityAnalyzer:
-            self.analyzer = SentimentIntensityAnalyzer()
-        elif model == "finbert" and pipeline:
-            try:
-                self.analyzer = pipeline("sentiment-analysis", model="ProsusAI/finbert")
-            except Exception as e:
-                self.analyzer = None
-                logger.warning(f"⚠️ SentimentFilter fallback: FinBERT unavailable → {e}")
-        elif model not in ("vader", "finbert"):
-            raise ValueError(f"Unknown model: {model}")
-        else:
+        if m == "vader":
+            if SentimentIntensityAnalyzer is not None:
+                try:
+                    self.analyzer = SentimentIntensityAnalyzer()
+                    return
+                except Exception:  # pragma: no cover
+                    self.analyzer = None
+            logger.warning(
+                "Analyzer unavailable for model=vader; fallback to neutral scoring (analyzer=None)."
+            )
             self.analyzer = None
-            logger.warning(f"⚠️ SentimentFilter fallback: model={model} unavailable")
+            return
 
-        logger.info(
-            f"✅ SentimentFilter initialized | model={self.model} | "
-            f"threshold={self.threshold} | neutral_zone={self.neutral_zone} | "
-            f"bias={self.bias} | smoothing={self.smoothing}"
+        if m in ("hf", "transformers", "bert", "distilbert"):
+            if pipeline is not None:
+                try:
+                    self.analyzer = pipeline("sentiment-analysis")
+                    return
+                except Exception:  # pragma: no cover
+                    self.analyzer = None
+            logger.warning(
+                "Analyzer unavailable for model=hf; fallback to neutral scoring (analyzer=None)."
+            )
+            self.analyzer = None
+            return
+
+        # Unknown model → neutral fallback with explicit wording
+        logger.warning(
+            "Unknown sentiment model=%s; fallback to neutral scoring (analyzer=None).", m
         )
+        self.analyzer = None
 
-    # ------------------------------------------------------------------
     def score(self, text: str) -> float:
-        """Return sentiment score ∈ [0,1]."""
-        if not self.enabled:
-            return 0.5
+        """
+        Return sentiment score in [-1, 1].
+        - Disabled or missing analyzer → 0.0 (neutral fallback)
+        - VADER: compound score
+        - HF pipeline: map POSITIVE to +score, NEGATIVE to -score (else 0)
+        NOTE: `threshold` / `neutral_zone` are accepted for config compatibility; this returns raw score.
+        """
+        if not self.enabled or not text:
+            return 0.0
         if self.analyzer is None:
-            logger.debug("ℹ️ Analyzer=None → default neutral 0.5")
-            return 0.5
-
-        try:
-            if self.model == "vader":
-                if not hasattr(self.analyzer, "polarity_scores"):
-                    logger.error("❌ VADER analyzer missing polarity_scores → 0.0")
-                    return 0.0
-                result = self.analyzer.polarity_scores(text)
-                if not isinstance(result, dict) or "compound" not in result:
-                    logger.error("❌ Invalid VADER output → 0.0")
-                    return 0.0
-                compound = result["compound"]
-                normalized = (compound + 1) / 2
-            elif self.model == "finbert":
-                if not callable(self.analyzer):
-                    logger.error("❌ FinBERT analyzer not callable → 0.0")
-                    return 0.0
-                result = self.analyzer(text)
-                if not isinstance(result, list) or not result:
-                    logger.error("❌ FinBERT output not list → 0.0")
-                    return 0.0
-                res = result[0]
-                if not isinstance(res, dict) or "label" not in res or "score" not in res:
-                    logger.error("❌ Malformed FinBERT dict → 0.0")
-                    return 0.0
-                label, sc = res["label"].lower(), res["score"]
-                if label == "positive":
-                    normalized = sc
-                elif label == "negative":
-                    normalized = 1 - sc
-                else:
-                    normalized = 0.5
-            else:
-                return 0.5
-        except Exception as e:
-            logger.error(f"❌ Sentiment scoring failed: {e}")
             return 0.0
 
-        # --- Smoothing ---
-        if self.smoothing > 1:
-            self.history.append(normalized)
-            if len(self.history) > self.smoothing:
-                self.history.pop(0)
-            return sum(self.history) / len(self.history)
+        # VADER path
+        if hasattr(self.analyzer, "polarity_scores"):
+            try:
+                return float(self.analyzer.polarity_scores(text).get("compound", 0.0))
+            except Exception:
+                logger.exception("VADER scoring failed; fallback to neutral (0.0).")
+                return 0.0
 
-        return normalized
-
-    # ------------------------------------------------------------------
-    def allow_trade(self, headline: str, side: str = "BUY") -> bool:
-        """Return True if trade is allowed under sentiment rules."""
-        if not self.enabled:
-            return True
-        if self.analyzer is None:
-            logger.debug("ℹ️ Analyzer=None → allow all trades")
-            return True
-
-        score = self.score(headline)
-        side = side.upper()
-
-        # HOLD always allowed
-        if side == "HOLD":
-            return True
-
-        # Unknown side allowed
-        if side not in {"BUY", "SELL", "HOLD"}:
-            logger.debug("ℹ️ Unknown side → allowed")
-            return True
-
-        # --- Threshold veto ---
-        if score < self.threshold:
-            logger.warning(
-                f"⚠️ Emotional Filter blocked {side} | score={score:.2f} | threshold={self.threshold}"
-            )
-            return False
-
-        # --- Neutral zone → allow ---
-        if abs(score) <= self.neutral_zone:
-            logger.debug(f"ℹ️ Score={score:.2f} inside neutral zone → allowed")
-            return True
-
-        # --- Bias overrides ---
-        if self.bias == "bullish" and side == "SELL":
-            logger.warning(f"⚠️ Bullish bias blocks SELL | score={score:.2f}")
-            return False
-        if self.bias == "bearish" and side == "BUY":
-            logger.warning(f"⚠️ Bearish bias blocks BUY | score={score:.2f}")
-            return False
-
-        return True
+        # HF pipeline path
+        try:
+            out = self.analyzer(text)
+            if not out:
+                return 0.0
+            r0: Dict[str, Any] = out[0]
+            label = str(r0.get("label", "")).upper()
+            val = float(r0.get("score", 0.0))
+            if "POS" in label:
+                return +val
+            if "NEG" in label:
+                return -val
+            return 0.0
+        except Exception:
+            logger.exception("HF scoring failed; fallback to neutral (0.0).")
+            return 0.0

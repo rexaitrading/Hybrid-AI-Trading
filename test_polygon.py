@@ -1,10 +1,11 @@
-﻿import os
+import os
 import requests
 from dotenv import load_dotenv
 
 # Load keys from .env
 load_dotenv()
 API_KEY = os.getenv("POLYGON_KEY")
+
 
 def get_prev_bar(ticker: str):
     url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/prev?adjusted=true&apiKey={API_KEY}"

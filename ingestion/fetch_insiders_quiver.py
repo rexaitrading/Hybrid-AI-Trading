@@ -2,21 +2,30 @@
 from dateutil.relativedelta import relativedelta
 import requests
 from dotenv import load_dotenv
-from utils.io_state import versioned_json_path, atomic_write_json, load_checkpoint, save_checkpoint
+from utils.io_state import (
+    versioned_json_path,
+    atomic_write_json,
+    load_checkpoint,
+    save_checkpoint,
+)
 
 load_dotenv()
 API_KEY = os.getenv("BENZINGA_API_KEY")
 BASE_DIR = os.path.join("data", "earnings_calendar")
 
+
 def fetch_earnings(start: str, end: str):
     url = "https://api.benzinga.com/api/v2.1/calendar/earnings"
-    params = {"token": API_KEY,
-            "parameters[date_from]": start,
-            "parameters[date_to]": end,
-            "pagesize": 1000}
+    params = {
+        "token": API_KEY,
+        "parameters[date_from]": start,
+        "parameters[date_to]": end,
+        "pagesize": 1000,
+    }
     r = requests.get(url, params=params, timeout=30)
     r.raise_for_status()
     return r.json()
+
 
 if __name__ == "__main__":
     # è®€å–ä¸Šæ¬¡æŠ“å–åˆ°ã€Œå“ªä¸€å¤©ã€

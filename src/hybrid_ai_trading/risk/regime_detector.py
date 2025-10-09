@@ -1,35 +1,41 @@
+from hybrid_ai_trading.utils.time_utils import utc_now
 """
-Regime Detector (Hybrid AI Quant Pro v10.1 – Polished & Testable)
------------------------------------------------------------------
-- Detects regimes via DB (production) or price series (tests)
-- Tracks per-symbol history
-- Supports reset() for clearing state
-- Confidence scores aligned with GateScore + tests
-- Polished logging, explicit all-equal handling, and safer DB branch
+Regime Detector (Hybrid AI Quant Pro v16.13 â€“ Suite-Aligned, Fully Covered)
+----------------------------------------------------------------------------
+- Classifies regimes (bull, bear, sideways, crisis, transition, neutral)
+- Configurable thresholds (return, volatility, min_samples)
+- Fetches price history from DB (production) or array (tests)
+- Structured, audit-friendly outputs with metrics
+- Confidence scores aligned with GateScore
+- Guards for flat, missing, insufficient, or invalid data
 """
 
 import logging
-import pandas as pd
 from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Union
 
-from hybrid_ai_trading.data.store.database import SessionLocal, Price
+import pandas as pd
+
 from hybrid_ai_trading.config.settings import CONFIG
+from hybrid_ai_trading.data.store.database import Price, SessionLocal
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("hybrid_ai_trading.risk.regime_detector")
 
 
 class RegimeDetector:
+    """Market regime classifier with audit-friendly outputs."""
+
     def __init__(
         self,
-        enabled: bool = None,
-        method: str = None,
-        lookback_days: int = None,
-        bull_threshold: float = None,
-        bear_threshold: float = None,
-        crisis_volatility: float = None,
-        min_samples: int = None,
+        enabled: Optional[bool] = None,
+        method: Optional[str] = None,
+        lookback_days: Optional[int] = None,
+        bull_threshold: Optional[float] = None,
+        bear_threshold: Optional[float] = None,
+        crisis_volatility: Optional[float] = None,
+        min_samples: Optional[int] = None,
         neutral_tolerance: float = 1e-4,
-    ):
+    ) -> None:
         cfg = CONFIG.get("regime", {})
 
         self.enabled = enabled if enabled is not None else cfg.get("enabled", True)
@@ -44,11 +50,11 @@ class RegimeDetector:
             else cfg.get("min_samples", int(self.lookback_days * 0.7))
         )
         self.neutral_tolerance = neutral_tolerance
-        self.history: dict[str, list[str]] = {}
+        self.history: Dict[str, List[str]] = {}
 
         logger.info(
-            "✅ RegimeDetector initialized | enabled=%s | method=%s | lookback=%dd | "
-            "bull>%s | bear<%s | crisis_vol>%s | min_samples=%s",
+            "âœ… RegimeDetector initialized | enabled=%s | method=%s | "
+            "lookback=%dd | bull>%s | bear<%s | crisis_vol>%s | min_samples=%s",
             self.enabled,
             self.method,
             self.lookback_days,
@@ -59,89 +65,127 @@ class RegimeDetector:
         )
 
     # ------------------------------------------------------------------
-    def detect(self, symbol: str, prices=None) -> str:
-        """Detect market regime from DB or provided price list."""
+    def detect(self, symbol: str, prices: Optional[List[float]] = None) -> str:
+        """Detect regime (bull, bear, sideways, crisis, transition, neutral)."""
         if not self.enabled:
-            logger.debug("Regime detection disabled → neutral")
             return "neutral"
 
-        # --- Use provided prices (tests) ---
-        if prices is not None:
-            closes = pd.Series(prices, dtype="float64").dropna()
-        else:
-            # --- Production DB fetch ---
-            since = datetime.utcnow() - timedelta(days=self.lookback_days)
-            session = SessionLocal()
-            try:
-                rows = (
-                    session.query(Price)
-                    .filter(Price.symbol == symbol, Price.timestamp >= since)
-                    .order_by(Price.timestamp.asc())
-                    .all()
-                )
-            except Exception as e:
-                logger.error("❌ RegimeDetector DB error for %s: %s", symbol, e)
-                return "neutral"
-            finally:
-                session.close()
-            closes = pd.Series([r.close for r in rows], dtype="float64")
+        closes = self._get_prices(symbol, prices)
+        if closes.empty:
+            logger.warning("No data for %s â†’ returning neutral", symbol)
+            return "neutral"
 
-        # --- Data sufficiency check ---
         if len(closes) < self.min_samples:
             logger.warning(
-                "⚠️ Insufficient data for %s: have %d, need ≥ %d",
-                symbol, len(closes), self.min_samples
+                "Insufficient data for %s: have %d, need â‰¥ %d â†’ returning neutral",
+                symbol,
+                len(closes),
+                self.min_samples,
             )
-            return "sideways"
+            return "neutral"
 
         rets = closes.pct_change().dropna()
         if rets.empty:
-            logger.info("ℹ️ No returns data for %s → sideways", symbol)
+            logger.warning("Empty returns for %s â†’ returning sideways", symbol)
             return "sideways"
 
-        avg_return = rets.mean()
-        vol = rets.std()
+        try:
+            avg_return = float(rets.mean())
+            vol = float(rets.std())
+        except Exception as e:
+            logger.error("Return stats failed for %s: %s â†’ returning neutral", symbol, e)
+            return "neutral"
 
-        logger.debug(
-            "📊 Regime calc for %s | avg_return=%.4f, vol=%.4f, n=%d",
-            symbol, avg_return, vol, len(rets)
-        )
-
-        # --- All equal fallback ---
+        # --- Classification ---
         if rets.abs().sum() < self.neutral_tolerance:
-            logger.info("ℹ️ All-equal or flat prices for %s → sideways", symbol)
             regime = "sideways"
-        # --- Crisis regime ---
         elif vol >= self.crisis_volatility:
-            logger.warning("🚨 Crisis regime for %s | vol=%.3f", symbol, vol)
             regime = "crisis"
         elif avg_return >= self.bull_threshold:
             regime = "bull"
         elif avg_return <= self.bear_threshold:
             regime = "bear"
         else:
-            regime = "sideways"
+            regime = "transition"
 
-        # --- Track history ---
         self.history.setdefault(symbol, []).append(regime)
+
+        logger.info(
+            "ðŸ“Š Regime calc %s | regime=%s | avg_ret=%.4f | vol=%.4f | n=%d",
+            symbol,
+            regime,
+            avg_return,
+            vol,
+            len(rets),
+        )
         return regime
 
     # ------------------------------------------------------------------
-    def confidence(self, symbol: str, prices=None) -> float:
-        """Return confidence score aligned with test expectations."""
-        if not self.enabled:
-            return 0.0
-        regime = self.detect(symbol, prices=prices)
-        if regime == "bull":
-            return 0.9
-        if regime == "bear":
-            return 0.1
-        if regime == "crisis":
-            return 0.5
-        return 0.5
+    def detect_with_metrics(
+        self, symbol: str, prices: Optional[List[float]] = None
+    ) -> Dict[str, Union[str, float, int]]:
+        """Return regime with metrics for audit trail."""
+        closes = self._get_prices(symbol, prices)
+        if closes.empty:
+            return {"symbol": symbol, "regime": "neutral", "reason": "no_data"}
+
+        rets = closes.pct_change().dropna()
+        if rets.empty:
+            return {"symbol": symbol, "regime": "sideways", "reason": "flat"}
+
+        try:
+            avg_return = float(rets.mean())
+            vol = float(rets.std())
+        except Exception:
+            return {"symbol": symbol, "regime": "neutral", "reason": "bad_data"}
+
+        regime = self.detect(symbol, prices)
+        return {
+            "symbol": symbol,
+            "regime": regime,
+            "avg_return": avg_return,
+            "volatility": vol,
+            "n_samples": int(len(rets)),
+        }
 
     # ------------------------------------------------------------------
-    def reset(self):
+    def confidence(self, symbol: str, prices: Optional[List[float]] = None) -> float:
+        """Return confidence score aligned with GateScore expectations."""
+        if not self.enabled:
+            return 0.0
+        regime = self.detect(symbol, prices)
+        mapping = {"bull": 0.9, "bear": 0.1, "crisis": 0.3, "transition": 0.5, "sideways": 0.5}
+        return mapping.get(regime, 0.5)
+
+    # ------------------------------------------------------------------
+    def reset(self) -> None:
         """Clear internal history."""
-        logger.info("🔄 Resetting regime history")
+        logger.info("ðŸ”„ Resetting regime history")
         self.history.clear()
+
+    # ------------------------------------------------------------------
+    def _get_prices(self, symbol: str, prices: Optional[List[float]] = None) -> pd.Series:
+        """Return price series from list or DB, coerced to floats with guards."""
+        if prices is not None:
+            try:
+                return pd.Series([float(p) for p in prices], dtype="float64").dropna()
+            except Exception as e:
+                logger.error("âŒ Bad price data for %s: %s", symbol, e)
+                return pd.Series(dtype="float64")
+
+        since = utc_now() - timedelta(days=self.lookback_days)
+        session = SessionLocal()
+        try:
+            rows = (
+                session.query(Price)
+                .filter(Price.symbol == symbol, Price.timestamp >= since)
+                .order_by(Price.timestamp.asc())
+                .all()
+            )
+            closes = pd.Series([r.close for r in rows], dtype="float64")
+        except Exception as e:
+            logger.error("âŒ DB error for %s: %s", symbol, e)
+            return pd.Series(dtype="float64")
+        finally:
+            session.close()
+        return closes

@@ -1,0 +1,77 @@
+from __future__ import annotations
+from typing import Optional, Callable, Any
+try:
+    from ib_insync import IB  # type: ignore
+except Exception as _e:  # pragma: no cover (import-time env)
+    IB = None  # type: ignore
+
+def reconnect(ib: "IB",
+              host: str = "127.0.0.1",
+              port: int = 4002,
+              client_id: Optional[int] = None,
+              timeout: float = 30.0) -> "IB":
+    """
+    Idempotent reconnect using ib_insync.IB
+
+    - If already connected: returns ib as-is.
+    - Else: disconnect (safe), connect(host, port, clientId, timeout).
+    - Raises RuntimeError if connect does not succeed.
+    """
+    if ib is None:
+        raise ValueError("ib instance is required")
+    # Happy-path: already connected
+    try:
+        if getattr(ib, "isConnected", lambda: False)():
+            return ib
+    except Exception:
+        pass
+
+    # Best-effort clean disconnect
+    try:
+        ib.disconnect()
+    except Exception:
+        pass
+
+    # Pick a clientId: use provided, else keep existing if present, else 0
+    cid = client_id
+    if cid is None:
+        # try existing IB.clientId attribute; fallback to 0
+        cid = getattr(ib, "clientId", 0) or 0
+
+    ok = ib.connect(host, int(port), clientId=int(cid), timeout=float(timeout))
+    if not ok and not getattr(ib, "isConnected", lambda: False)():
+        raise RuntimeError(f"reconnect failed (host={host} port={port} clientId={cid})")
+    return ib
+
+def with_ib_reconnect(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    Decorator that ensures there is a connected IB instance before calling func.
+
+    It looks for an 'ib' kwarg or a positional arg with connect()/isConnected().
+    Optional kwargs recognized (and popped before calling func):
+        host (str), port (int), client_id (int), timeout (float)
+    """
+    def _wrapper(*args: Any, **kwargs: Any) -> Any:
+        _ib = kwargs.get("ib", None)
+        if _ib is None:
+            # try to find an IB-like arg in positionals
+            for a in args:
+                if hasattr(a, "connect") and hasattr(a, "isConnected"):
+                    _ib = a
+                    break
+        if _ib is None:
+            if IB is None:
+                raise RuntimeError("ib_insync.IB not available and no 'ib' instance provided")
+            _ib = IB()
+
+        host     = kwargs.pop("host", "127.0.0.1")
+        port     = int(kwargs.pop("port", 4002))
+        clientId = kwargs.pop("client_id", None)
+        timeout  = float(kwargs.pop("timeout", 30.0))
+
+        reconnect(_ib, host=host, port=port, client_id=clientId, timeout=timeout)
+        kwargs["ib"] = _ib
+        return func(*args, **kwargs)
+    _wrapper.__name__ = getattr(func, "__name__", "wrapped")
+    _wrapper.__doc__  = getattr(func, "__doc__", None)
+    return _wrapper

@@ -1,0 +1,181 @@
+﻿# =================================
+# Hybrid AI Trading – Config v4.2
+# Hedge-Fund Grade, Env-Synced, Multi-Strategy
+# =================================
+
+project: HybridAI
+timezone: America/Vancouver
+mode: paper                     # options: live, paper, backtest
+audit_log_path: logs/trade_blotter.csv
+backup_log_path: logs/trade_blotter_backup.csv
+
+# === Trading Window ===
+trading_window:
+  start: "05:00"    # Pacific Time (8am NY pre-market)
+  end: "11:00"      # Pacific Time (2pm NY overlap)
+
+# === Risk Management ===
+risk:
+  target_daily_return: 0.01
+  max_daily_loss: -0.03
+  max_position_risk: 0.01
+  max_leverage: 10
+  max_portfolio_exposure: 0.5
+
+  # --- Kelly Sizing ---
+  kelly:
+    enabled: true
+    win_rate: 0.55
+    payoff: 1.6
+    fraction: 0.5
+
+  # --- Profitability Guardrails ---
+  sharpe_min: 0.5
+  sortino_min: 0.5
+  roi_min: 0.01                # require ≥ +1% cumulative ROI
+  max_drawdown: 0.5
+
+  # --- Regime-Aware Leverage ---
+  regime_leverage:
+    bull: 5.0
+    bear: 1.0
+    chop: 0.5
+    crisis: 0.25
+
+  # --- Advanced ---
+  intraday_sector_exposure: 0.3     # max 30% per sector
+  hedge_rules:
+    equities_vol_spike: [SPY, VIXY, UVXY]
+    crypto_crash: [BTCUSD, ETHUSD]
+    forex_shock: [EURUSD, USDJPY]
+
+# === Trading Costs ===
+costs:
+  commission_per_share: 0.005
+  min_commission: 1.00
+  slippage_per_share: 0.01
+  margin_interest_rate: 0.06
+  trading_days_per_year: 252
+
+# === Data & Broker Providers ===
+providers:
+  polygon:
+    api_key_env: POLYGON_KEY
+
+  alpaca:
+    key_id_env: APCA_API_KEY_ID
+    secret_key_env: APCA_API_SECRET_KEY
+    base_url_env: ALPACA_BASE_URL
+    data_url_env: ALPACA_DATA_URL
+
+  coinapi:
+    api_key_env: COINAPI_KEY
+
+  benzinga:
+    api_key_env: BENZINGA_KEY
+
+  binance:
+    api_key_env: BINANCE_KEY
+    secret_key_env: BINANCE_SECRET
+
+  cryptocompare:
+    api_key_env: CRYPTOCOMPARE_KEY
+
+  cmegroup:
+    token_env: CMEGROUP_TOKEN
+    access_env: CMEGROUP_ACCESS
+
+# === Trading Universe ===
+universe:
+  Core_Stocks:        [AAPL, MSFT, NVDA, TSLA, AMD, META, AMZN, GOOGL]
+  Macro_Risk:         [SPY, QQQ, DIA, VIXY, GLD, TLT]
+  Crypto_Signal:      [BTCUSD, ETHUSD, SOLUSD, BNBUSD]
+  Leverage_Tools:     [TQQQ, SQQQ, SOXL, SOXS, UVXY]
+  IPO_Watch:          [ARM, ABNB, KVYO, CART]
+  Forex:              [EURUSD, USDJPY, GBPUSD, AUDUSD]
+
+# === Sector Mapping (for exposure guardrails) ===
+sectors:
+  Tech: [AAPL, MSFT, NVDA, AMD, META, GOOGL]
+  Consumer: [AMZN, TSLA, ABNB]
+  Finance: [JPM, GS, MS]
+  Energy: [XOM, CVX, BP]
+  Healthcare: [PFE, JNJ, MRK]
+  ETFs: [SPY, QQQ, DIA, TLT, GLD, VIXY, UVXY]
+  Crypto: [BTCUSD, ETHUSD, SOLUSD, BNBUSD]
+  Forex: [EURUSD, USDJPY, GBPUSD, AUDUSD]
+
+# === Execution Algos ===
+execution:
+  default_algo: direct
+  twap:
+    slices: 5
+    delay: 1.0
+  vwap:
+    slices: 5
+  iceberg:
+    display_size: 100
+    delay: 0.5
+  sor_enabled: true
+  max_order_retries: 3
+  timeout_sec: 2.0
+  max_latency_breaches: 5
+  broker_weights:
+    latency: 0.4
+    commission: 0.4
+    liquidity: 0.2
+
+# === Strategy Flags ===
+strategies:
+  breakout: true
+  mean_reversion: true
+  arbitrage: true
+  event_driven: true
+  volatility: true
+  microstructure_scalping: true
+  hedging_strategy: true
+  weights:
+    breakout: 0.20
+    mean_reversion: 0.20
+    arbitrage: 0.15
+    event_driven: 0.15
+    volatility: 0.15
+    microstructure_scalping: 0.10
+    hedging_strategy: 0.05
+
+# === Feature Flags ===
+features:
+  enable_black_swan_guard: true
+  enable_leverage_control: true
+  enable_emotional_filter: true
+  enable_multi_ai_signals: true
+  enable_portfolio_guard: true
+  enable_latency_monitor: true
+  enable_alerts: true
+
+# === Alerts ===
+alerts:
+  slack_webhook_env: SLACK_WEBHOOK
+  telegram_bot_env: TELEGRAM_BOT_KEY
+  telegram_chat_id_env: TELEGRAM_CHAT_ID
+  email_env: ALERT_EMAIL
+  latency_threshold_ms: 500
+  log_level: INFO
+  retention_days: 90
+  escalation_threshold: 3   # trigger hard alert after 3 consecutive fails
+sentiment_filter:
+  enabled: true
+  model: vader
+  threshold: 0.6
+  neutral_zone: 0.25
+  smoothing: 3
+sentiment_filter_sweep:
+  - threshold: 0.60
+    neutral_zone: 0.25
+    smoothing: 3
+  - threshold: 0.65
+    neutral_zone: 0.25
+    smoothing: 3
+  - threshold: 0.70
+    neutral_zone: 0.20
+    smoothing: 3

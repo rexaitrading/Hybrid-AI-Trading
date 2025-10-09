@@ -35,9 +35,7 @@ def find_and_run(possible_locations, extras):
             run_test(maybe, extras)
             break
     else:
-        raise RuntimeError(
-            "Failed to locate a test script in one of %s" % possible_locations
-        )
+        raise RuntimeError("Failed to locate a test script in one of %s" % possible_locations)
 
 
 def main():
@@ -45,9 +43,7 @@ def main():
 
     code_directories = [project_root] + site_packages
 
-    parser = argparse.ArgumentParser(
-        description="A script to trigger tests in all subprojects of PyWin32."
-    )
+    parser = argparse.ArgumentParser(description="A script to trigger tests in all subprojects of PyWin32.")
     parser.add_argument(
         "-no-user-interaction",
         default=False,
@@ -94,17 +90,13 @@ def main():
 
     # adodbapi
     if not args.skip_adodbapi:
-        maybes = [
-            os.path.join(directory, "adodbapi", "test", "adodbapitest.py")
-            for directory in code_directories
-        ]
+        maybes = [os.path.join(directory, "adodbapi", "test", "adodbapitest.py") for directory in code_directories]
         find_and_run(maybes, remains)
         # This script has a hard-coded sql server name in it, (and markh typically
         # doesn't have a different server to test on) but there is now supposed to be a server out there on the Internet
         # just to run these tests, so try it...
         maybes = [
-            os.path.join(directory, "adodbapi", "test", "test_adodbapi_dbapi20.py")
-            for directory in code_directories
+            os.path.join(directory, "adodbapi", "test", "test_adodbapi_dbapi20.py") for directory in code_directories
         ]
         find_and_run(maybes, remains)
 

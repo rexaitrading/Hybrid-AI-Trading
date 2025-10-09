@@ -15,9 +15,9 @@ def run_test():
 
     # Simulate trades
     test_trades = [
-        ("BTC/USDT", "BUY", 1, 60000, +500),   # win $500
-        ("ETH/USDT", "BUY", 10, 3000, -200),   # loss $200
-        ("SPY", "BUY", 100, 500, +100),        # win $100
+        ("BTC/USDT", "BUY", 1, 60000, +500),  # win $500
+        ("ETH/USDT", "BUY", 10, 3000, -200),  # loss $200
+        ("SPY", "BUY", 100, 500, +100),  # win $100
         ("BTC/USDT", "SELL", 1, 60000, -300),  # loss $300
     ]
 
@@ -27,10 +27,12 @@ def run_test():
         engine.performance_tracker.record_equity(engine.get_equity())
         print(f"\nSignal: {side} {symbol} @ {price}")
         print("Result:", result)
-        print(f"WinRate={engine.performance_tracker.win_rate():.2f} | "
-              f"Payoff={engine.performance_tracker.payoff_ratio():.2f} | "
-              f"Sharpe={engine.performance_tracker.sharpe_ratio():.2f} | "
-              f"Sortino={engine.performance_tracker.sortino_ratio():.2f}")
+        print(
+            f"WinRate={engine.performance_tracker.win_rate():.2f} | "
+            f"Payoff={engine.performance_tracker.payoff_ratio():.2f} | "
+            f"Sharpe={engine.performance_tracker.sharpe_ratio():.2f} | "
+            f"Sortino={engine.performance_tracker.sortino_ratio():.2f}"
+        )
 
 
 if __name__ == "__main__":

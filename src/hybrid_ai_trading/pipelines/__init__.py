@@ -1,6 +1,18 @@
-﻿"""
-Pipelines package for Hybrid AI Quant Pro.
-Provides backtesting, paper trading, and orchestration utilities.
+"""
+Pipelines package initializer (Hybrid AI Quant Pro – Polished).
+---------------------------------------------------------------
+Exposes pipeline modules for clean imports, with safe guards.
 """
 
-__all__ = ["backtest", "daily_close", "paper_trade_demo"]
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Try safe import of daily_close, but don't block package if it fails
+try:
+    from . import daily_close
+except Exception as e:  # noqa: BLE001
+    daily_close = None  # fallback
+    logger.warning("⚠️ Failed to import daily_close pipeline: %s", e)
+
+__all__ = ["daily_close"]
