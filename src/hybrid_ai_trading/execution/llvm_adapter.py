@@ -1,4 +1,4 @@
-﻿"""
+"""
 LLVM Engine Adapter (Hybrid AI Quant Pro v3.2 – Hedge Fund Level)
 -----------------------------------------------------------------
 - Wraps llvmlite ExecutionEngine for JIT compilation
@@ -8,6 +8,7 @@ LLVM Engine Adapter (Hybrid AI Quant Pro v3.2 – Hedge Fund Level)
 """
 
 import logging
+
 from llvmlite import binding
 
 logger = logging.getLogger(__name__)

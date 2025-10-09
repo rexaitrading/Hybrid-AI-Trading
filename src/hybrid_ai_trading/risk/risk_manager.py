@@ -1,4 +1,5 @@
-﻿from __future__ import annotations
+from __future__ import annotations
+
 """
 RiskManager (Hybrid AI Quant Pro ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ OE Grade Halts)
 --------------------------------------------------
@@ -11,23 +12,24 @@ RiskManager (Hybrid AI Quant Pro ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ OE Grad
 - Persistent state in logs/risk_state.json
 """
 
+import json
+import os
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, Tuple
-import json, os
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Tuple
 
 
 @dataclass
 class RiskConfig:
-    day_loss_cap_pct: float = 0.02            # 2% of day-start equity
+    day_loss_cap_pct: float = 0.02  # 2% of day-start equity
     per_trade_notional_cap: Optional[float] = None
     max_trades_per_day: int = 6
     max_consecutive_losers: int = 3
-    cooldown_bars: int = 2                    # bars to halt after max losers
-    max_drawdown_pct: float = 0.08            # 8% from rolling equity peak
+    cooldown_bars: int = 2  # bars to halt after max losers
+    max_drawdown_pct: float = 0.08  # 8% from rolling equity peak
     fail_closed: bool = True
     state_path: str = os.path.join("logs", "risk_state.json")
-    base_equity_fallback: float = 10_000.0    # used if day_start_equity unknown
+    base_equity_fallback: float = 10_000.0  # used if day_start_equity unknown
 
 
 class RiskManager:
@@ -49,7 +51,10 @@ class RiskManager:
         self._state.setdefault("halted_until_bar_ts", None)
         self._state.setdefault("halted_reason", None)
         # initialize rolling peak to known anchor
-        self._state.setdefault("rolling_peak_equity", float(self._state.get("day_start_equity", self.cfg.base_equity_fallback)))
+        self._state.setdefault(
+            "rolling_peak_equity",
+            float(self._state.get("day_start_equity", self.cfg.base_equity_fallback)),
+        )
         self._state.setdefault("last_trade_bar_ts", None)
         self._save_state()
 
@@ -86,7 +91,9 @@ class RiskManager:
         if self._state.get("day") != today:
             self._state["day"] = today
             # carry forward last equity as new day start equity
-            self._state["day_start_equity"] = float(self._state.get("last_equity", self.cfg.base_equity_fallback))
+            self._state["day_start_equity"] = float(
+                self._state.get("last_equity", self.cfg.base_equity_fallback)
+            )
             self._state["day_realized_pnl"] = 0.0
             self._state["trades_today"] = 0
             self._state["consecutive_losers"] = 0
@@ -116,11 +123,18 @@ class RiskManager:
     def record_close_pnl(self, pnl: float, bar_ts_ms: Optional[int] = None) -> None:
         """Call when a position is closed to update daily pnl and losers streak."""
         pnl = float(pnl)
-        self._state["day_realized_pnl"] = float(self._state.get("day_realized_pnl", 0.0)) + pnl
+        self._state["day_realized_pnl"] = (
+            float(self._state.get("day_realized_pnl", 0.0)) + pnl
+        )
         if pnl < 0:
-            self._state["consecutive_losers"] = int(self._state.get("consecutive_losers", 0)) + 1
+            self._state["consecutive_losers"] = (
+                int(self._state.get("consecutive_losers", 0)) + 1
+            )
             # mark the bar for cooldown window start; reason remains losers
-            if self._state["consecutive_losers"] >= self.cfg.max_consecutive_losers and bar_ts_ms:
+            if (
+                self._state["consecutive_losers"] >= self.cfg.max_consecutive_losers
+                and bar_ts_ms
+            ):
                 self._state["halted_until_bar_ts"] = int(bar_ts_ms)
                 self._state["halted_reason"] = "MAX_CONSECUTIVE_LOSERS"
         else:
@@ -128,7 +142,9 @@ class RiskManager:
         self._save_state()
 
     # ------------------------- core gate (PRIORITIZED) -------------------------
-    def allow_trade(self, *, notional: float, side: str, bar_ts: int) -> Tuple[bool, Optional[str]]:
+    def allow_trade(
+        self, *, notional: float, side: str, bar_ts: int
+    ) -> Tuple[bool, Optional[str]]:
         """
         Returns (ok, reason). Priority:
         1) FORCE_RISK_HALT
@@ -150,7 +166,9 @@ class RiskManager:
                 return False, force
 
             # 2) Daily loss cap (TOP priority)
-            start_eq = float(self._state.get("day_start_equity", self.cfg.base_equity_fallback))
+            start_eq = float(
+                self._state.get("day_start_equity", self.cfg.base_equity_fallback)
+            )
             day_pnl = float(self._state.get("day_realized_pnl", 0.0))
             daily_cap = -abs(self.cfg.day_loss_cap_pct) * start_eq
             if day_pnl <= daily_cap:
@@ -162,7 +180,10 @@ class RiskManager:
             self.daily_loss_breached = False
 
             # 3) Max drawdown (TOP priority)
-            if self.current_drawdown is not None and self.current_drawdown >= self.cfg.max_drawdown_pct:
+            if (
+                self.current_drawdown is not None
+                and self.current_drawdown >= self.cfg.max_drawdown_pct
+            ):
                 self._state["halted_reason"] = "MAX_DRAWDOWN"
                 self._state["halted_until_bar_ts"] = int(bar_ts)
                 self._save_state()
@@ -181,11 +202,15 @@ class RiskManager:
                     self._save_state()
 
             # 5) Max trades per day
-            if int(self._state.get("trades_today", 0)) >= int(self.cfg.max_trades_per_day):
+            if int(self._state.get("trades_today", 0)) >= int(
+                self.cfg.max_trades_per_day
+            ):
                 return False, "TRADES_PER_DAY"
 
             # 6) Per-trade notional cap
-            if self.cfg.per_trade_notional_cap is not None and float(notional) > float(self.cfg.per_trade_notional_cap):
+            if self.cfg.per_trade_notional_cap is not None and float(notional) > float(
+                self.cfg.per_trade_notional_cap
+            ):
                 return False, "NOTIONAL_CAP"
 
             return True, None

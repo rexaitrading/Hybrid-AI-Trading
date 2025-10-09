@@ -12,6 +12,7 @@ Covers all branches in iceberg.py:
 """
 
 import pytest
+
 from hybrid_ai_trading.algos.iceberg import IcebergExecutor
 
 

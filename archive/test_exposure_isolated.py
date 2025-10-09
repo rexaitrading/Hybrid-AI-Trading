@@ -1,7 +1,8 @@
-import sys
 import importlib
-import hybrid_ai_trading.execution.portfolio_tracker as pt_module
 import inspect
+import sys
+
+import hybrid_ai_trading.execution.portfolio_tracker as pt_module
 
 print(">>> PortfolioTracker code:\n", inspect.getsource(pt_module.PortfolioTracker))
 

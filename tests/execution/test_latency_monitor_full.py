@@ -11,9 +11,9 @@ Covers ALL branches in latency_monitor.py:
 - get_stats() snapshot output
 """
 
-import time
 import logging
-import pytest
+import time
+
 from hybrid_ai_trading.execution.latency_monitor import LatencyMonitor
 
 

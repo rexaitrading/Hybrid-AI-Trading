@@ -7,8 +7,9 @@ Alpaca Connection Test (Hybrid AI Quant Pro v7.4 – Hedge-Fund Grade, Safe & Co
 """
 
 import os
-from dotenv import load_dotenv
+
 import alpaca_trade_api as tradeapi
+from dotenv import load_dotenv
 
 # ----------------------------------------------------------------------
 # Load environment

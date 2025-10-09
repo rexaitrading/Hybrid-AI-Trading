@@ -1,4 +1,4 @@
-﻿"""collect_cryptocompare.py
+"""collect_cryptocompare.py
 Continuous collector for CryptoCompare API with per-day quota enforcement.
 """
 
@@ -8,8 +8,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from debug_cryptocompare import (daily_budget, fetch_prices,
-                                 suggested_interval_seconds)
+from debug_cryptocompare import daily_budget, fetch_prices, suggested_interval_seconds
 
 API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
 if not API_KEY:

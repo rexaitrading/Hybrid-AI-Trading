@@ -12,8 +12,13 @@ import os
 
 from sqlalchemy import func
 
-from hybrid_ai_trading.data.store.database import (Base, News, Price,
-                                                   SessionLocal, engine)
+from hybrid_ai_trading.data.store.database import (
+    Base,
+    News,
+    Price,
+    SessionLocal,
+    engine,
+)
 
 
 def query_news_with_prices(limit=None, symbol="AAPL", export_csv=True, export_db=True):
@@ -102,8 +107,7 @@ def query_news_with_prices(limit=None, symbol="AAPL", export_csv=True, export_db
     # Export to SQLite table
     # -------------------------
     if export_db and results:
-        from sqlalchemy import (Column, DateTime, Float, Integer, MetaData,
-                                String, Table)
+        from sqlalchemy import Column, DateTime, Float, Integer, String, Table
 
         metadata = Base.metadata
         event_table = Table(

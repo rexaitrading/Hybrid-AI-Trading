@@ -1,4 +1,5 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
+
 
 def utc_now() -> datetime:
     """Timezone-aware UTC now."""

@@ -1,6 +1,7 @@
-﻿from ib_insync import IB
 import os
+
 from dotenv import load_dotenv
+from ib_insync import IB
 
 load_dotenv(override=True)
 

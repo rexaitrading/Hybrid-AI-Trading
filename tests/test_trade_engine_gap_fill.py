@@ -12,6 +12,7 @@ Covers the last uncovered branches in trade_engine.py:
 """
 
 import pytest
+
 from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
 from hybrid_ai_trading.trade_engine import TradeEngine
 
@@ -48,8 +49,9 @@ def engine(base_config, monkeypatch):
 # Normalization paths
 # ----------------------------------------------------------------------
 def test_normalization_reason_ok(engine, monkeypatch):
-    monkeypatch.setattr(engine.router, "route_order",
-                        lambda *_: {"status": "ok", "reason": "ok"})
+    monkeypatch.setattr(
+        engine.router, "route_order", lambda *_: {"status": "ok", "reason": "ok"}
+    )
     res = engine.process_signal("AAPL", "BUY", 1, 100)
     assert res["status"] == "filled"
     assert res["reason"] == "normalized_ok"
@@ -84,15 +86,21 @@ def test_performance_exceptions(engine, monkeypatch):
     monkeypatch.setattr(engine.router, "route_order", lambda *_: {"status": "ok"})
 
     # Sharpe raises
-    monkeypatch.setattr(engine.performance_tracker, "sharpe_ratio",
-                        lambda *_: (_ for _ in ()).throw(Exception("boom")))
+    monkeypatch.setattr(
+        engine.performance_tracker,
+        "sharpe_ratio",
+        lambda *_: (_ for _ in ()).throw(Exception("boom")),
+    )
     res1 = engine.process_signal("AAPL", "BUY", 1, 100)
     assert "status" in res1
 
     # Sortino raises
     monkeypatch.setattr(engine.performance_tracker, "sharpe_ratio", lambda: 2)
-    monkeypatch.setattr(engine.performance_tracker, "sortino_ratio",
-                        lambda *_: (_ for _ in ()).throw(Exception("fail")))
+    monkeypatch.setattr(
+        engine.performance_tracker,
+        "sortino_ratio",
+        lambda *_: (_ for _ in ()).throw(Exception("fail")),
+    )
     res2 = engine.process_signal("AAPL", "BUY", 1, 100)
     assert "status" in res2
 
@@ -112,10 +120,14 @@ def test_sector_exposure_non_breach(engine):
 # ----------------------------------------------------------------------
 def test_record_trade_outcome_exception(engine, monkeypatch, caplog):
     caplog.set_level("ERROR")
-    monkeypatch.setattr(engine.performance_tracker, "record_trade",
-                        lambda *_: (_ for _ in ()).throw(Exception("fail")))
+    monkeypatch.setattr(
+        engine.performance_tracker,
+        "record_trade",
+        lambda *_: (_ for _ in ()).throw(Exception("fail")),
+    )
     engine.record_trade_outcome(-100)
     assert "Failed to record trade outcome" in caplog.text
+
 
 # ----------------------------------------------------------------------
 # KellySizer fallback branches
@@ -129,8 +141,9 @@ def test_kelly_sizer_negative_and_exception(engine, monkeypatch):
 
     # Exception in KellySizer → fallback size = 1
     monkeypatch.setattr(
-        engine.kelly_sizer, "size_position",
-        lambda *_: (_ for _ in ()).throw(Exception("kelly fail"))
+        engine.kelly_sizer,
+        "size_position",
+        lambda *_: (_ for _ in ()).throw(Exception("kelly fail")),
     )
     res2 = engine.process_signal("AAPL", "BUY", None, 100)
     assert res2["status"] in {"blocked", "filled", "rejected"}

@@ -1,11 +1,15 @@
-import os, pytest
-from hybrid_ai_trading.risk.risk_manager import RiskManager, RiskConfig
+import os
+
+from hybrid_ai_trading.risk.risk_manager import RiskConfig, RiskManager
+
 
 def test_save_state_exception_branch(monkeypatch, tmp_path):
-    calls = {"mk":0}
+    calls = {"mk": 0}
+
     def bad_makedirs(*a, **k):
         calls["mk"] += 1
         raise PermissionError("nope")
+
     monkeypatch.setattr(os, "makedirs", bad_makedirs)
 
     # __init__ may call _save_state() already—should be swallowed

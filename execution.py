@@ -11,14 +11,15 @@ and order execution for portfolio trades.
 - Stress testing scenarios
 """
 
-import os
 import json
-import ccxt
-import yaml
-import pandas as pd
 import logging
+import os
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+import ccxt
+import pandas as pd
+import yaml
 
 # ----------------------------------------------------------------------
 # Logging setup
@@ -44,8 +45,11 @@ STRESS_SCENARIOS = cfg.get("stress_scenarios", [])
 
 logger.info(
     "Execution config loaded | Brokers=%s, DryRun=%s, OrderType=%s",
-    BROKERS, DRY_RUN, ORDER_TYPE,
+    BROKERS,
+    DRY_RUN,
+    ORDER_TYPE,
 )
+
 
 # ----------------------------------------------------------------------
 # Broker Abstraction
@@ -82,8 +86,15 @@ if not os.path.exists(LOG_FILE):
     ).to_csv(LOG_FILE, index=False)
 
 
-def log_trade(broker: str, symbol: str, side: str, qty: float, price: float,
-              slippage: float, pnl: float = 0.0) -> None:
+def log_trade(
+    broker: str,
+    symbol: str,
+    side: str,
+    qty: float,
+    price: float,
+    slippage: float,
+    pnl: float = 0.0,
+) -> None:
     """Append executed trade details to log file."""
     entry = {
         "datetime": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
@@ -98,6 +109,7 @@ def log_trade(broker: str, symbol: str, side: str, qty: float, price: float,
     df = pd.DataFrame([entry])
     df.to_csv(LOG_FILE, mode="a", header=False, index=False)
     logger.info("Trade logged: %s", entry)
+
 
 # ----------------------------------------------------------------------
 # Risk Management
@@ -119,6 +131,7 @@ def check_risk(current_dd: float, shift_fraction: float) -> None:
             f"{MAX_DAILY_SHIFT:.2%}."
         )
 
+
 # ----------------------------------------------------------------------
 # Stress Testing
 # ----------------------------------------------------------------------
@@ -138,11 +151,13 @@ def run_stress_test(weights: Dict[str, float]) -> pd.DataFrame:
         impacts.append({"Scenario": name, "Impact": impact})
     return pd.DataFrame(impacts)
 
+
 # ----------------------------------------------------------------------
 # Order Execution
 # ----------------------------------------------------------------------
-def execute_order(broker_name: str, symbol: str, side: str,
-                  qty: float, price: Optional[float] = None) -> Optional[Dict[str, Any]]:
+def execute_order(
+    broker_name: str, symbol: str, side: str, qty: float, price: Optional[float] = None
+) -> Optional[Dict[str, Any]]:
     """
     Execute or simulate an order.
     Args:
@@ -158,7 +173,9 @@ def execute_order(broker_name: str, symbol: str, side: str,
     simulated_price = price * (1 + SLIPPAGE) if price else None
 
     if DRY_RUN:
-        logger.info("[DRY-RUN] %s %s %s @ %.4f", side, qty, symbol, simulated_price or 0.0)
+        logger.info(
+            "[DRY-RUN] %s %s %s @ %.4f", side, qty, symbol, simulated_price or 0.0
+        )
         log_trade(broker_name, symbol, side, qty, simulated_price or 0.0, SLIPPAGE)
         return {"status": "simulated", "price": simulated_price or 0.0}
 
@@ -179,6 +196,7 @@ def execute_order(broker_name: str, symbol: str, side: str,
             errfile.write(f"{datetime.utcnow()} | {symbol} | {str(exc)}\n")
         logger.error("⚠️ Execution error for %s: %s", symbol, exc)
         return None
+
 
 # ----------------------------------------------------------------------
 # CLI Entrypoint

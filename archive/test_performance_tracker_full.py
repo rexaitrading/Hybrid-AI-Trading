@@ -13,7 +13,7 @@ Covers ALL branches and uncovered lines in performance_tracker.py:
 """
 
 import json
-import pytest
+
 from hybrid_ai_trading.performance_tracker import PerformanceTracker
 
 
@@ -114,7 +114,7 @@ def test_sharpe_ratio_variants(monkeypatch, caplog):
     pt3.record_trade(20)
     monkeypatch.setattr(
         "hybrid_ai_trading.performance_tracker.mean",
-        lambda *_: (_ for _ in ()).throw(Exception("boom"))
+        lambda *_: (_ for _ in ()).throw(Exception("boom")),
     )
     caplog.set_level("ERROR")
     assert pt3.sharpe_ratio() == 0.0
@@ -154,7 +154,7 @@ def test_sortino_ratio_variants(monkeypatch, caplog):
     pt5.record_trade(-10)
     monkeypatch.setattr(
         "hybrid_ai_trading.performance_tracker.pstdev",
-        lambda *_: (_ for _ in ()).throw(Exception("bad pstdev"))
+        lambda *_: (_ for _ in ()).throw(Exception("bad pstdev")),
     )
     caplog.set_level("ERROR")
     assert pt5.sortino_ratio() == 0.0
@@ -181,7 +181,7 @@ def test_alpha_beta_variants(monkeypatch, caplog):
     pt2.benchmark = [1, 2, 3]
     monkeypatch.setattr(
         "hybrid_ai_trading.performance_tracker.mean",
-        lambda *_: (_ for _ in ()).throw(Exception("fail"))
+        lambda *_: (_ for _ in ()).throw(Exception("fail")),
     )
     caplog.set_level("ERROR")
     assert pt2.alpha_beta() == {"alpha": 0.0, "beta": 0.0}
@@ -233,6 +233,8 @@ def test_snapshot_and_export_json(tmp_path):
 def test_export_json_failure(monkeypatch, tmp_path, caplog):
     pt = PerformanceTracker()
     caplog.set_level("ERROR")
-    monkeypatch.setattr("builtins.open", lambda *_a, **_k: (_ for _ in ()).throw(Exception("disk full")))
+    monkeypatch.setattr(
+        "builtins.open", lambda *_a, **_k: (_ for _ in ()).throw(Exception("disk full"))
+    )
     pt.export_json(str(tmp_path / "fail.json"))
     assert "Failed to export" in caplog.text

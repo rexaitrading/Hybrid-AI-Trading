@@ -11,10 +11,11 @@ Covers every uncovered branch in trade_engine.py:
 - record_trade_outcome: exception branch
 """
 
+import builtins
 import os
 import smtplib
+
 import pytest
-import builtins
 
 from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
 
@@ -76,24 +77,45 @@ def test_alert_success_and_fail_and_noenv(engine, monkeypatch, caplog):
     os.environ["EMAIL_ENV"] = "me@example.com"
 
     # Success path
-    monkeypatch.setattr("requests.post", lambda *a, **k: type("R", (), {"status_code": 200})())
-    monkeypatch.setattr("requests.get", lambda *a, **k: type("R", (), {"status_code": 200})())
     monkeypatch.setattr(
-        smtplib, "SMTP",
-        lambda *_: type("S", (), {"send_message": lambda *_: None,
-                                  "__enter__": lambda s: s,
-                                  "__exit__": lambda *a: None})()
+        "requests.post", lambda *a, **k: type("R", (), {"status_code": 200})()
+    )
+    monkeypatch.setattr(
+        "requests.get", lambda *a, **k: type("R", (), {"status_code": 200})()
+    )
+    monkeypatch.setattr(
+        smtplib,
+        "SMTP",
+        lambda *_: type(
+            "S",
+            (),
+            {
+                "send_message": lambda *_: None,
+                "__enter__": lambda s: s,
+                "__exit__": lambda *a: None,
+            },
+        )(),
     )
     res1 = engine.alert("ok")
     assert res1["slack"] == 200 and res1["telegram"] == 200 and res1["email"] == "sent"
 
     # All fail
     caplog.set_level("ERROR")
-    monkeypatch.setattr("requests.post", lambda *a, **k: (_ for _ in ()).throw(Exception("slack fail")))
-    monkeypatch.setattr("requests.get", lambda *a, **k: (_ for _ in ()).throw(Exception("tg fail")))
-    monkeypatch.setattr(smtplib, "SMTP", lambda *a, **k: (_ for _ in ()).throw(Exception("email fail")))
+    monkeypatch.setattr(
+        "requests.post", lambda *a, **k: (_ for _ in ()).throw(Exception("slack fail"))
+    )
+    monkeypatch.setattr(
+        "requests.get", lambda *a, **k: (_ for _ in ()).throw(Exception("tg fail"))
+    )
+    monkeypatch.setattr(
+        smtplib, "SMTP", lambda *a, **k: (_ for _ in ()).throw(Exception("email fail"))
+    )
     res2 = engine.alert("fail")
-    assert res2["slack"] == "error" and res2["telegram"] == "error" and res2["email"] == "error"
+    assert (
+        res2["slack"] == "error"
+        and res2["telegram"] == "error"
+        and res2["email"] == "error"
+    )
     assert "slack" in caplog.text.lower()
     assert "telegram" in caplog.text.lower()
     assert "email" in caplog.text.lower()
@@ -121,7 +143,11 @@ def test_kelly_sizer_variants(engine, monkeypatch):
     monkeypatch.setattr(engine.kelly_sizer, "size_position", lambda *_: -5)
     assert "status" in engine.process_signal("AAPL", "BUY", 100)
 
-    monkeypatch.setattr(engine.kelly_sizer, "size_position", lambda *_: (_ for _ in ()).throw(Exception("boom")))
+    monkeypatch.setattr(
+        engine.kelly_sizer,
+        "size_position",
+        lambda *_: (_ for _ in ()).throw(Exception("boom")),
+    )
     assert "status" in engine.process_signal("AAPL", "BUY", 100)
 
 
@@ -150,14 +176,22 @@ def test_sentiment_and_gatescore_veto_and_exceptions(engine, monkeypatch):
     monkeypatch.setattr(engine.sentiment_filter, "allow_trade", lambda *_: False)
     assert "sentiment" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
-    monkeypatch.setattr(engine.sentiment_filter, "allow_trade", lambda *_: (_ for _ in ()).throw(Exception("bad sentiment")))
+    monkeypatch.setattr(
+        engine.sentiment_filter,
+        "allow_trade",
+        lambda *_: (_ for _ in ()).throw(Exception("bad sentiment")),
+    )
     assert "sentiment" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
     monkeypatch.setattr(engine.sentiment_filter, "allow_trade", lambda *_: True)
     monkeypatch.setattr(engine.gatescore, "allow_trade", lambda *_: False)
     assert "gatescore" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
-    monkeypatch.setattr(engine.gatescore, "allow_trade", lambda *_: (_ for _ in ()).throw(Exception("bad gs")))
+    monkeypatch.setattr(
+        engine.gatescore,
+        "allow_trade",
+        lambda *_: (_ for _ in ()).throw(Exception("bad gs")),
+    )
     assert "gatescore" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
 
@@ -182,12 +216,18 @@ def test_audit_and_record_outcome_failures(engine, tmp_path, monkeypatch, caplog
     engine.backup_log = str(tmp_path / "backup.csv")
 
     caplog.set_level("ERROR")
-    monkeypatch.setattr(builtins, "open", lambda *a, **k: (_ for _ in ()).throw(Exception("disk full")))
+    monkeypatch.setattr(
+        builtins, "open", lambda *a, **k: (_ for _ in ()).throw(Exception("disk full"))
+    )
     res1 = engine.process_signal("AAPL", "BUY", 100)
     assert "status" in res1
     assert "audit" in caplog.text.lower()
 
     # record_trade_outcome failure
-    monkeypatch.setattr(engine.performance_tracker, "record_trade", lambda *_: (_ for _ in ()).throw(Exception("rec fail")))
+    monkeypatch.setattr(
+        engine.performance_tracker,
+        "record_trade",
+        lambda *_: (_ for _ in ()).throw(Exception("rec fail")),
+    )
     engine.record_trade_outcome(-100)
     assert "record" in caplog.text.lower()

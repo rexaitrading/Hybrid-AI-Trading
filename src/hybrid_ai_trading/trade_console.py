@@ -1,4 +1,5 @@
-﻿from __future__ import annotations
+from __future__ import annotations
+
 """
 Trade Console (Hybrid AI Quant Pro v1.4 - Discipline-First, ATR Stops, LiveGuard, Kraken SELLs)
 -----------------------------------------------------------------------------------------------
@@ -16,7 +17,7 @@ Env examples:
   TC_WATCH_IPO_CSV="data/ipo_watchlist.csv"
 """
 
-import json, os
+import os
 from typing import Any, Dict, List, Optional
 
 # public kraken data (closes/ohlcv)
@@ -27,8 +28,8 @@ except Exception:
 
 # IBKR positions (optional)
 try:
-    from hybrid_ai_trading.data.clients.ibkr_ops import positions as ibkr_positions
     from hybrid_ai_trading.data.clients.ibkr_client import connect_ib
+    from hybrid_ai_trading.data.clients.ibkr_ops import positions as ibkr_positions
 except Exception:
     ibkr_positions = None
     connect_ib = None
@@ -51,8 +52,10 @@ def env_list(name: str, default: str) -> List[str]:
     v = os.getenv(name, default)
     return [s.strip() for s in v.split(",") if s.strip()]
 
+
 def pct(a: float, b: float) -> float:
     return 0.0 if b == 0 else 100.0 * (a - b) / b
+
 
 def safe_float(x: Any, d: float = 0.0) -> float:
     try:
@@ -60,16 +63,20 @@ def safe_float(x: Any, d: float = 0.0) -> float:
     except Exception:
         return d
 
+
 def print_section(name: str) -> None:
     bar = "-" * len(name)
     print(f"\n{name}\n{bar}")
+
 
 def print_line(line: str) -> None:
     print(line)
 
 
 # ---------------- crypto data & signals ----------------
-def fetch_ohlcv_kraken(symbol: str, timeframe: str = "1h", limit: int = 200) -> List[List[float]]:
+def fetch_ohlcv_kraken(
+    symbol: str, timeframe: str = "1h", limit: int = 200
+) -> List[List[float]]:
     if ccxt is None:
         return []
     ex = ccxt.kraken()
@@ -77,6 +84,7 @@ def fetch_ohlcv_kraken(symbol: str, timeframe: str = "1h", limit: int = 200) -> 
         return ex.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
     except Exception:
         return []
+
 
 def fetch_last_kraken(symbol: str) -> Optional[float]:
     if ccxt is None:
@@ -88,8 +96,10 @@ def fetch_last_kraken(symbol: str) -> Optional[float]:
     except Exception:
         return None
 
+
 def sma(vals: List[float], n: int) -> float:
     return 0.0 if len(vals) < n or n <= 0 else sum(vals[-n:]) / n
+
 
 def atr_from_ohlcv(ohlcv: List[List[float]], period: int = 14) -> float:
     n = len(ohlcv)
@@ -98,11 +108,14 @@ def atr_from_ohlcv(ohlcv: List[List[float]], period: int = 14) -> float:
     trs: List[float] = []
     prev_close = safe_float(ohlcv[-(period + 1)][4])
     for row in ohlcv[-period:]:
-        high = safe_float(row[2]); low = safe_float(row[3]); close = safe_float(row[4])
+        high = safe_float(row[2])
+        low = safe_float(row[3])
+        close = safe_float(row[4])
         tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
         trs.append(tr)
         prev_close = close
     return sum(trs) / float(period)
+
 
 def crypto_signal(symbol: str) -> Optional[Dict[str, Any]]:
     """
@@ -139,12 +152,22 @@ def crypto_signal(symbol: str) -> Optional[Dict[str, Any]]:
     sell_trig = (last < sma50_v) or (stop is not None and last < stop)
 
     return {
-        "symbol": symbol, "tf": tf,
-        "last": last, "sma20": sma20_v, "sma50": sma50_v,
-        "atr": atr, "stop": stop, "size_quote": size_q,
+        "symbol": symbol,
+        "tf": tf,
+        "last": last,
+        "sma20": sma20_v,
+        "sma50": sma50_v,
+        "atr": atr,
+        "stop": stop,
+        "size_quote": size_q,
         "near_breakout": abs(dist) <= 1.0,
-        "buy": buy, "sell": sell_trig,
-        "reason": "SMA20>SMA50 & near high" if buy else ("Below SMA50/ATR stop" if sell_trig else "Neutral"),
+        "buy": buy,
+        "sell": sell_trig,
+        "reason": (
+            "SMA20>SMA50 & near high"
+            if buy
+            else ("Below SMA50/ATR stop" if sell_trig else "Neutral")
+        ),
     }
 
 
@@ -157,7 +180,8 @@ def black_swan_crypto(pairs: List[str]) -> Dict[str, Any]:
     ohlcv = fetch_ohlcv_kraken(sym, timeframe="1h", limit=26)
     if len(ohlcv) < 26:
         return {"risk_off": False, "metric": None, "threshold": thr}
-    last = safe_float(ohlcv[-1][4]); prev24 = safe_float(ohlcv[-25][4])
+    last = safe_float(ohlcv[-1][4])
+    prev24 = safe_float(ohlcv[-25][4])
     drop = -pct(last, prev24)
     return {"risk_off": drop >= thr, "metric": drop, "threshold": thr}
 
@@ -184,6 +208,7 @@ def load_kraken_holdings(pairs: List[str]) -> Dict[str, float]:
     except Exception:
         return {}
 
+
 def load_ibkr_positions_list() -> List[Dict[str, Any]]:
     if connect_ib is None or ibkr_positions is None:
         return []
@@ -208,7 +233,9 @@ def main() -> None:
     risk = black_swan_crypto(crypto_pairs)
     print_section("RISK")
     if risk["risk_off"]:
-        print_line(f"BLACK SWAN: BTC 24h drop â‰ˆ {risk['metric']:.1f}% â‰¥ {risk['threshold']:.1f}% -> NO NEW BUYS")
+        print_line(
+            f"BLACK SWAN: BTC 24h drop â‰ˆ {risk['metric']:.1f}% â‰¥ {risk['threshold']:.1f}% -> NO NEW BUYS"
+        )
         lev = 0.0
     else:
         print_line("Regime: NORMAL")
@@ -238,8 +265,15 @@ def main() -> None:
             if cap > 0 and eff_size > cap:
                 eff_size = cap
             if live_guard_check:
-                guard = live_guard_check({"broker": "kraken", "symbol": pair, "side": "BUY",
-                                          "notional_quote": eff_size, "shares": None})
+                guard = live_guard_check(
+                    {
+                        "broker": "kraken",
+                        "symbol": pair,
+                        "side": "BUY",
+                        "notional_quote": eff_size,
+                        "shares": None,
+                    }
+                )
                 if not guard.get("ok", True):
                     suppressed.append({"pair": pair, "reason": guard})
                     continue
@@ -255,7 +289,9 @@ def main() -> None:
         if near:
             print_line("NEAR:")
             for it in near[:5]:
-                print_line(f"  {it['pair']}: lastâ‰ˆ{it['last']:.2f} stopâ‰ˆSMA50 {it['sma50']:.2f}")
+                print_line(
+                    f"  {it['pair']}: lastâ‰ˆ{it['last']:.2f} stopâ‰ˆSMA50 {it['sma50']:.2f}"
+                )
     if suppressed:
         print_line("SUPPRESSED (caps):")
         for it in suppressed[:5]:
@@ -278,7 +314,9 @@ def main() -> None:
             if sig["sell"]:
                 sells_printed = True
                 stop_txt = f"{sig['stop']:.2f}" if sig["stop"] is not None else "n/a"
-                print_line(f"{pair}: SELL  qtyâ‰ˆ{amt:.8f}  lastâ‰ˆ{sig['last']:.2f}  stopâ‰ˆ{stop_txt}  ({sig['reason']})")
+                print_line(
+                    f"{pair}: SELL  qtyâ‰ˆ{amt:.8f}  lastâ‰ˆ{sig['last']:.2f}  stopâ‰ˆ{stop_txt}  ({sig['reason']})"
+                )
     else:
         print_line("(no Kraken holdings or KRAKEN_KEYFILE not set)")
 
@@ -301,7 +339,11 @@ def main() -> None:
     print_section("WATCH")
     if ipo_csv and os.path.exists(ipo_csv):
         try:
-            rows = [r.strip() for r in open(ipo_csv, "r", encoding="utf-8").read().splitlines() if r.strip()]
+            rows = [
+                r.strip()
+                for r in open(ipo_csv, "r", encoding="utf-8").read().splitlines()
+                if r.strip()
+            ]
             for r in rows[:10]:
                 print_line(f"IPO: {r}")
             if len(rows) == 0:
@@ -317,42 +359,60 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 # --------------- optional loop (print only changes) ---------------
-import time, json
+import time
 from datetime import datetime
 
-def _active_window()->bool:
-    h=int(datetime.now().strftime("%H")); m=int(datetime.now().strftime("%M"))
-    return (h>6 or (h==6 and m>=0)) and (h<21 or (h==21 and m==0))
 
-def _snapshot()->Dict[str,Any]:
-    out={"buys":[], "sells":[]}
-    pairs = env_list("TC_CRYPTO","BTC/USDC,ETH/USDC")
+def _active_window() -> bool:
+    h = int(datetime.now().strftime("%H"))
+    m = int(datetime.now().strftime("%M"))
+    return (h > 6 or (h == 6 and m >= 0)) and (h < 21 or (h == 21 and m == 0))
+
+
+def _snapshot() -> Dict[str, Any]:
+    out = {"buys": [], "sells": []}
+    pairs = env_list("TC_CRYPTO", "BTC/USDC,ETH/USDC")
     risk = black_swan_crypto(pairs)
-    if risk.get("risk_off"): return out
-    cap = safe_float(os.getenv("HG_MAX_TRADE_QUOTE","0"))
+    if risk.get("risk_off"):
+        return out
+    cap = safe_float(os.getenv("HG_MAX_TRADE_QUOTE", "0"))
     for p in pairs:
-        sig=crypto_signal(p)
-        if not sig: continue
+        sig = crypto_signal(p)
+        if not sig:
+            continue
         if sig.get("buy"):
-            eff=min(float(sig["size_quote"]), cap) if cap>0 else float(sig["size_quote"])
-            out["buys"].append({"p":p,"size":round(eff,2),"stop": round(sig["stop"],2) if sig["stop"] else None})
+            eff = (
+                min(float(sig["size_quote"]), cap)
+                if cap > 0
+                else float(sig["size_quote"])
+            )
+            out["buys"].append(
+                {
+                    "p": p,
+                    "size": round(eff, 2),
+                    "stop": round(sig["stop"], 2) if sig["stop"] else None,
+                }
+            )
         if sig.get("sell"):
-            out["sells"].append({"p":p})
+            out["sells"].append({"p": p})
     return out
 
+
 def run_loop():
-    poll=int(os.getenv("TC_POLL_SECS","60"))
-    last=None
+    poll = int(os.getenv("TC_POLL_SECS", "60"))
+    last = None
     print(f"(looping every {poll}s; prints only changes)")
     while True:
         try:
             if _active_window():
-                cur=_snapshot()
-                if cur!=last:
+                cur = _snapshot()
+                if cur != last:
                     print_section("ALERTS")
                     if cur["buys"]:
                         for b in cur["buys"]:
-                            print_line(f"BUY {b['p']} sizeâ‰ˆ{b['size']} stopâ‰ˆ{b['stop']}")
+                            print_line(
+                                f"BUY {b['p']} sizeâ‰ˆ{b['size']} stopâ‰ˆ{b['stop']}"
+                            )
                     else:
                         print_line("(no buys)")
                     if cur["sells"]:
@@ -360,13 +420,15 @@ def run_loop():
                             print_line(f"SELL {s['p']}")
                     else:
                         print_line("(no sells)")
-                    last=cur
+                    last = cur
             else:
                 # print once per hour at most when idle
                 pass
             time.sleep(poll)
         except KeyboardInterrupt:
-            print_line("loop stopped"); break
+            print_line("loop stopped")
+            break
 
-if __name__=="__main__" and "--loop" in os.sys.argv:
+
+if __name__ == "__main__" and "--loop" in os.sys.argv:
     run_loop()

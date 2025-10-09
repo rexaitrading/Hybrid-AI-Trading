@@ -18,7 +18,7 @@ Covers ALL branches of breakout_intraday:
 """
 
 import math
-import pytest
+
 from hybrid_ai_trading.signals.breakout_intraday import (
     BreakoutIntradaySignal,
     breakout_intraday,
@@ -60,7 +60,9 @@ def test_insufficient_bars():
 
 
 def test_parse_error(monkeypatch):
-    def bad_float(_): raise ValueError("bad")
+    def bad_float(_):
+        raise ValueError("bad")
+
     monkeypatch.setattr("builtins.float", bad_float)
     sig = BreakoutIntradaySignal(lookback=5)
     result = sig.generate("AAPL", make_bars([1, 2, 3, 4, 5, 6]))

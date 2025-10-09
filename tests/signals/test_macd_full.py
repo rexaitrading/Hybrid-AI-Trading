@@ -9,9 +9,10 @@ Covers every branch of macd.py:
 - Wrapper consistency
 """
 
-import pytest
 import pandas as pd
-from hybrid_ai_trading.signals.macd import macd_signal, MACDSignal
+import pytest
+
+from hybrid_ai_trading.signals.macd import MACDSignal, macd_signal
 
 
 # ----------------------------------------------------------------------
@@ -31,6 +32,7 @@ def fake_ewm_factory(sequences):
             def mean(_self):
                 call_count["n"] += 1
                 return sequences[call_count["n"] - 1]
+
         return Dummy()
 
     return fake_ewm
@@ -77,9 +79,9 @@ def test_nan_in_closes():
 # Crossovers
 # ----------------------------------------------------------------------
 def test_buy_crossover(monkeypatch):
-    ema_fast = pd.Series([1.0, 4.0])      # macd = [-1, 3]
+    ema_fast = pd.Series([1.0, 4.0])  # macd = [-1, 3]
     ema_slow = pd.Series([2.0, 1.0])
-    signal_line = pd.Series([2.0, 1.0])   # -1<2 and 3>1 → BUY
+    signal_line = pd.Series([2.0, 1.0])  # -1<2 and 3>1 → BUY
     monkeypatch.setattr(
         pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line])
     )
@@ -88,9 +90,9 @@ def test_buy_crossover(monkeypatch):
 
 
 def test_sell_crossover(monkeypatch):
-    ema_fast = pd.Series([5.0, 1.0])      # macd = [3, -1]
+    ema_fast = pd.Series([5.0, 1.0])  # macd = [3, -1]
     ema_slow = pd.Series([2.0, 2.0])
-    signal_line = pd.Series([1.0, 2.0])   # 3>1 and -1<2 → SELL
+    signal_line = pd.Series([1.0, 2.0])  # 3>1 and -1<2 → SELL
     monkeypatch.setattr(
         pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line])
     )
@@ -104,8 +106,8 @@ def test_sell_crossover(monkeypatch):
 @pytest.mark.parametrize(
     "prices,expected",
     [
-        (list(range(1, 100)), "BUY"),      # uptrend
-        (list(range(100, 0, -1)), "SELL"), # downtrend
+        (list(range(1, 100)), "BUY"),  # uptrend
+        (list(range(100, 0, -1)), "SELL"),  # downtrend
     ],
 )
 def test_macd_trend_confirmations(prices, expected):

@@ -14,8 +14,9 @@ Covers ALL explicit branches of benzinga_client.py:
   * Response.json raises AttributeError
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from hybrid_ai_trading.data.clients.benzinga_client import (
     BenzingaAPIError,
@@ -68,7 +69,9 @@ def test_get_news_success_no_dates_and_with_dates(mock_get):
     assert "news" in out
 
     # With dates
-    out2 = client.get_news("AAPL", limit=5, date_from="2020-01-01", date_to="2020-01-02")
+    out2 = client.get_news(
+        "AAPL", limit=5, date_from="2020-01-01", date_to="2020-01-02"
+    )
     assert "news" in out2
 
     _, kwargs = mock_get.call_args
@@ -125,7 +128,8 @@ def test_get_news_missing_json_attr(mock_get):
     client = BenzingaClient(api_key="FAKE")
 
     class NoJson:
-        def raise_for_status(self): return None
+        def raise_for_status(self):
+            return None
 
     mock_get.return_value = NoJson()
     with pytest.raises(BenzingaAPIError):

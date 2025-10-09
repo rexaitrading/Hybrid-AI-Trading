@@ -13,8 +13,9 @@ Covers:
 - "unknown" status normalization (broker omits status)
 """
 
-import pytest
 import time
+
+import pytest
 
 import hybrid_ai_trading.algos.twap as a_twap
 from hybrid_ai_trading.algos.orchestrator import get_algo_executor
@@ -55,10 +56,16 @@ def test_multi_slice_divisible(monkeypatch, mgr):
 def test_multi_slice_with_remainder(monkeypatch, mgr):
     # Size 10 with 3 slices -> ensures the last slice still executes
     tw = TWAPCls(mgr, slices=3, delay=0.0)  # delay==0 path
-    monkeypatch.setattr(time, "sleep", lambda *_: (_ for _ in ()).throw(AssertionError("should not sleep")))
+    monkeypatch.setattr(
+        time,
+        "sleep",
+        lambda *_: (_ for _ in ()).throw(AssertionError("should not sleep")),
+    )
     out = tw.execute("TSLA", "SELL", 10, 200.0)
     assert out["status"] in ("filled", "error")
-    assert len(out.get("details", [])) == 3  # implementation slices equally by floor division
+    assert (
+        len(out.get("details", [])) == 3
+    )  # implementation slices equally by floor division
 
 
 def test_single_slice_normalization(mgr):
@@ -102,4 +109,6 @@ def test_unknown_status_normalization():
     assert out["status"] in ("filled", "error")
     det = out.get("details", [])
     assert len(det) == 2
-    assert all(d.get("status") in ("unknown", "filled", "ok") for d in det)  # tolerant across variants
+    assert all(
+        d.get("status") in ("unknown", "filled", "ok") for d in det
+    )  # tolerant across variants

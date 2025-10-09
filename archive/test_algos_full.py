@@ -12,17 +12,18 @@ Covers:
 """
 
 import logging
-import pytest
+
 import numpy as np
+import pytest
 
 from hybrid_ai_trading.execution.algos import (
-    get_algo_executor,
     ALGO_REGISTRY,
-    VWAPExecutor,
-    vwap_signal,
-    VWAPSignal,
-    TWAPExecutor,
     IcebergExecutor,
+    TWAPExecutor,
+    VWAPExecutor,
+    VWAPSignal,
+    get_algo_executor,
+    vwap_signal,
 )
 
 
@@ -176,7 +177,8 @@ def test_vwap_executor_exception(monkeypatch, dummy_order_manager):
 # ----------------------------------------------------------------------
 def test_twap_executor_integration():
     class DummyRisk:
-        def check_trade(self, *_a, **_k): return True
+        def check_trade(self, *_a, **_k):
+            return True
 
     from hybrid_ai_trading.execution.order_manager import OrderManager
     from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
@@ -192,7 +194,8 @@ def test_twap_executor_integration():
 
 def test_twap_executor_small_size():
     class DummyRisk:
-        def check_trade(self, *_a, **_k): return True
+        def check_trade(self, *_a, **_k):
+            return True
 
     from hybrid_ai_trading.execution.order_manager import OrderManager
     from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
@@ -210,7 +213,8 @@ def test_twap_executor_small_size():
 # ----------------------------------------------------------------------
 def test_iceberg_executor_integration():
     class DummyRisk:
-        def check_trade(self, *_a, **_k): return True
+        def check_trade(self, *_a, **_k):
+            return True
 
     from hybrid_ai_trading.execution.order_manager import OrderManager
     from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
@@ -226,7 +230,8 @@ def test_iceberg_executor_integration():
 
 def test_iceberg_executor_display_gt_size():
     class DummyRisk:
-        def check_trade(self, *_a, **_k): return True
+        def check_trade(self, *_a, **_k):
+            return True
 
     from hybrid_ai_trading.execution.order_manager import OrderManager
     from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
@@ -243,14 +248,18 @@ def test_iceberg_executor_display_gt_size():
 # ----------------------------------------------------------------------
 # Schema Consistency Across Executors
 # ----------------------------------------------------------------------
-@pytest.mark.parametrize("algo_class,args", [
-    (VWAPExecutor, {"slices": 3}),
-    (TWAPExecutor, {"slices": 3}),
-    (IcebergExecutor, {"display_size": 5}),
-])
+@pytest.mark.parametrize(
+    "algo_class,args",
+    [
+        (VWAPExecutor, {"slices": 3}),
+        (TWAPExecutor, {"slices": 3}),
+        (IcebergExecutor, {"display_size": 5}),
+    ],
+)
 def test_executor_schema_consistency(algo_class, args):
     class DummyRisk:
-        def check_trade(self, *_a, **_k): return True
+        def check_trade(self, *_a, **_k):
+            return True
 
     from hybrid_ai_trading.execution.order_manager import OrderManager
     from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker

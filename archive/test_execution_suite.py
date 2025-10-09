@@ -10,28 +10,22 @@ Covers:
 - LatencyMonitor (reset, ok, warning, halt)
 """
 
-import pytest
 import random
-import uuid
 import time
-import logging
+import uuid
 
-from hybrid_ai_trading.execution import (
-    PortfolioTracker,
-    OrderManager,
-    PaperSimulator,
-    SmartOrderRouter,
-    LatencyMonitor,
-)
-from hybrid_ai_trading.signals.vwap import vwap_signal
+import pytest
 
+from hybrid_ai_trading.execution import OrderManager, PaperSimulator, PortfolioTracker
 
 # ============================================================
 # Utilities
 # ============================================================
 
+
 class DummyRiskManager:
     """Supports both .check_trade and .approve_trade APIs for test stability."""
+
     def __init__(self, allow=True):
         self.allow = allow
         self.last_notional = None
@@ -67,6 +61,7 @@ def risk_manager_block():
 # ============================================================
 # PortfolioTracker Tests
 # ============================================================
+
 
 def test_buy_sell_and_commission(tracker):
     tracker.update_position("AAPL", "BUY", 1, 100, commission=1)
@@ -119,6 +114,7 @@ def test_invalid_inputs_raise(tracker):
 # PaperSimulator Tests
 # ============================================================
 
+
 def test_paper_simulator_invalid_side():
     sim = PaperSimulator(seed=42)
     result = sim.simulate_fill("AAPL", "HOLD", 5, 100)
@@ -166,13 +162,23 @@ def test_paper_simulator_zero_commission_keys():
     sim = PaperSimulator(slippage=0.0, commission=0.0)
     result = sim.simulate_fill("AAPL", "BUY", 1, 100)
     assert result["commission"] == 0.0
-    for key in ["status", "symbol", "side", "size", "fill_price", "notional", "commission", "mode"]:
+    for key in [
+        "status",
+        "symbol",
+        "side",
+        "size",
+        "fill_price",
+        "notional",
+        "commission",
+        "mode",
+    ]:
         assert key in result
 
 
 # ============================================================
 # OrderManager Tests
 # ============================================================
+
 
 def test_order_manager_invalid_inputs(tracker, risk_manager_allow):
     om = OrderManager(risk_manager_allow, tracker, dry_run=True)
@@ -217,8 +223,12 @@ def test_order_manager_live_mode(tracker, risk_manager_allow):
     assert "details" in result
 
 
-def test_order_manager_paper_simulator_success(monkeypatch, tracker, risk_manager_allow):
-    om = OrderManager(risk_manager_allow, tracker, dry_run=True, use_paper_simulator=True)
+def test_order_manager_paper_simulator_success(
+    monkeypatch, tracker, risk_manager_allow
+):
+    om = OrderManager(
+        risk_manager_allow, tracker, dry_run=True, use_paper_simulator=True
+    )
     monkeypatch.setattr(
         om.simulator,
         "simulate_fill",
@@ -235,9 +245,13 @@ def test_order_manager_paper_simulator_success(monkeypatch, tracker, risk_manage
 
 
 def test_order_manager_paper_simulator_error(monkeypatch, tracker, risk_manager_allow):
-    om = OrderManager(risk_manager_allow, tracker, dry_run=True, use_paper_simulator=True)
+    om = OrderManager(
+        risk_manager_allow, tracker, dry_run=True, use_paper_simulator=True
+    )
     monkeypatch.setattr(
-        om.simulator, "simulate_fill", lambda *a, **k: {"status": "error", "reason": "forced_fail"}
+        om.simulator,
+        "simulate_fill",
+        lambda *a, **k: {"status": "error", "reason": "forced_fail"},
     )
     result = om.place_order("AAPL", "BUY", 10, 100)
     assert result["status"] == "error"

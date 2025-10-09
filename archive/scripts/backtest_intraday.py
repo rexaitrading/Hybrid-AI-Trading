@@ -33,6 +33,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("IntradayBacktester")
 
+
 # ------------------------------------------------------
 # Config & Environment
 # ------------------------------------------------------
@@ -56,10 +57,13 @@ SLIPPAGE_PER_SHARE = cfg["costs"].get("slippage_per_share", 0.0)
 
 US_HOLIDAYS = {"2025-01-01", "2025-07-04", "2025-11-27", "2025-12-25"}
 
+
 # ------------------------------------------------------
 # Data Fetchers
 # ------------------------------------------------------
-def get_intraday_bars(ticker: str, start: str, end: str, interval="1", timespan="minute"):
+def get_intraday_bars(
+    ticker: str, start: str, end: str, interval="1", timespan="minute"
+):
     """Fetch intraday bars from Polygon.io."""
     url = (
         f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/"
@@ -74,6 +78,7 @@ def get_intraday_bars(ticker: str, start: str, end: str, interval="1", timespan=
     except Exception as e:
         logger.error(f"❌ Request failed for {ticker}: {e}")
         return []
+
 
 # ------------------------------------------------------
 # Strategy
@@ -107,6 +112,7 @@ def breakout_strategy(bars) -> str:
     if recent_close == prev_high or recent_close == prev_low:
         return "SELL"
     return "HOLD"
+
 
 # ------------------------------------------------------
 # Backtester
@@ -199,15 +205,19 @@ class IntradayBacktester:
 
                     try:
                         pd.DataFrame(
-                            [[
-                                symbol,
-                                day,
-                                datetime.fromtimestamp(entry_bar["t"] / 1000).strftime("%H:%M"),
-                                signal,
-                                trade_pnl,
-                                daily_pnl,
-                                equity,
-                            ]],
+                            [
+                                [
+                                    symbol,
+                                    day,
+                                    datetime.fromtimestamp(
+                                        entry_bar["t"] / 1000
+                                    ).strftime("%H:%M"),
+                                    signal,
+                                    trade_pnl,
+                                    daily_pnl,
+                                    equity,
+                                ]
+                            ],
                             columns=[
                                 "symbol",
                                 "date",

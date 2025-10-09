@@ -7,10 +7,14 @@ Quant Test Harness for Hybrid AI Trading System (Report Generator v4.0)
 - Writes a text summary of performance into reports/
 """
 
-import os, sys, yaml, random
+import os
+import random
+import sys
+from datetime import datetime
+
 import matplotlib.pyplot as plt
 import numpy as np
-from datetime import datetime
+import yaml
 
 # 🔑 Ensure src/ is on Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -44,7 +48,9 @@ def simulate_trades(engine, n_trades=50, seed=42):
         equity = engine.get_equity()
         equity_history.append(equity)
         pnl_history.append(pnl)
-        kelly_frac_history.append(engine.kelly_sizer.fraction if engine.kelly_sizer else 0)
+        kelly_frac_history.append(
+            engine.kelly_sizer.fraction if engine.kelly_sizer else 0
+        )
 
         # Print console log
         print(
@@ -69,7 +75,11 @@ def performance_summary(engine, equity_history, pnl_history, kelly_frac_history)
 
     start_eq, end_eq = equity_history[0], equity_history[-1]
     total_return = (end_eq - start_eq) / start_eq
-    cagr = (1 + total_return) ** (252 / len(equity_history)) - 1 if len(equity_history) > 0 else 0
+    cagr = (
+        (1 + total_return) ** (252 / len(equity_history)) - 1
+        if len(equity_history) > 0
+        else 0
+    )
 
     return {
         "Start Equity": start_eq,
@@ -158,10 +168,14 @@ def main():
     engine = TradeEngine(cfg)
 
     # Simulate trades
-    equity_history, pnl_history, kelly_frac_history = simulate_trades(engine, n_trades=50)
+    equity_history, pnl_history, kelly_frac_history = simulate_trades(
+        engine, n_trades=50
+    )
 
     # Report metrics
-    summary = performance_summary(engine, equity_history, pnl_history, kelly_frac_history)
+    summary = performance_summary(
+        engine, equity_history, pnl_history, kelly_frac_history
+    )
 
     # Save report
     save_report(equity_history, pnl_history, kelly_frac_history, summary)

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Universe Definitions (Hybrid AI Quant Pro – Hedge-Fund Grade)
 -------------------------------------------------------------
 Defines the static trading universe across asset categories:
@@ -13,23 +13,47 @@ from typing import Dict, List
 
 # --- Core Stocks (large-cap & diversified) ---
 Core_Stocks: List[str] = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META",
-    "JNJ", "PG", "KO", "JPM", "GS",
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "TSLA",
+    "NVDA",
+    "META",
+    "JNJ",
+    "PG",
+    "KO",
+    "JPM",
+    "GS",
 ]
 
 # --- Core Crypto Majors ---
 Core_Crypto: List[str] = [
-    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT",
+    "BTC/USDT",
+    "ETH/USDT",
+    "SOL/USDT",
+    "BNB/USDT",
+    "XRP/USDT",
 ]
 
 # --- Macro Risk Indicators (hedge ETFs & benchmarks) ---
 Macro_Risk: List[str] = [
-    "SPY", "QQQ", "DIA", "GLD", "TLT", "USO", "UUP", "VIXY",
+    "SPY",
+    "QQQ",
+    "DIA",
+    "GLD",
+    "TLT",
+    "USO",
+    "UUP",
+    "VIXY",
 ]
 
 # --- Leveraged ETFs (for tactical tools) ---
 Leverage_Tools: List[str] = [
-    "TQQQ", "SQQQ", "UPRO", "SPXU",
+    "TQQQ",
+    "SQQQ",
+    "UPRO",
+    "SPXU",
 ]
 
 # --- IPO Watchlist ---

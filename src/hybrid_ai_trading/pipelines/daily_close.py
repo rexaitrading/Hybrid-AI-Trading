@@ -1,4 +1,4 @@
-﻿"""
+"""
 Daily Close Exporter (Hybrid AI Quant Pro v6.8 – OE Grade, Polished)
 ---------------------------------------------------------------------
 - Fetches daily prev close data for stocks (Polygon) and crypto (CoinAPI).
@@ -17,8 +17,8 @@ from typing import Any, Dict, List
 from hybrid_ai_trading.data.clients.coinapi_client import batch_prev_close
 from hybrid_ai_trading.data.clients.polygon_client import PolygonClient
 from hybrid_ai_trading.utils.universe import (
-    Core_Stocks,
     Core_Crypto,
+    Core_Stocks,
     IPO_Watch,
     Leverage_Tools,
     Macro_Risk,
@@ -173,5 +173,7 @@ def main() -> None:
 # Entrypoint
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+    )
     main()

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests – Crypto Demo via CoinAPIClient
 (Hybrid AI Quant Pro – Hedge-Fund Grade, 100% Coverage)
 -------------------------------------------------------
@@ -10,7 +10,7 @@ Covers:
 """
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from hybrid_ai_trading.data.clients import coinapi_client
 from hybrid_ai_trading.data.clients.coinapi_client import CoinAPIError

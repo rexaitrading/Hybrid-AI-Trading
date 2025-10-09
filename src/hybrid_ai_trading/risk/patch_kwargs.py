@@ -5,6 +5,7 @@ try:
 except Exception:
     _RM = None
 
+
 def _derive_starting_equity(extras):
     # prefer explicit kw
     if "starting_equity" in extras:
@@ -18,6 +19,7 @@ def _derive_starting_equity(extras):
         if isinstance(risk, dict) and "starting_equity" in risk:
             return risk.get("starting_equity")
     return None
+
 
 def _patch_init():
     if _RM is None:
@@ -33,7 +35,11 @@ def _patch_init():
         orig_kwargs = dict(kwargs)
         # pass only supported kwargs to original __init__
         try:
-            allowed = {k: v for k, v in kwargs.items() if k in inspect.signature(_orig).parameters}
+            allowed = {
+                k: v
+                for k, v in kwargs.items()
+                if k in inspect.signature(_orig).parameters
+            }
         except Exception:
             allowed = kwargs
         ret = _orig(self, *args, **allowed)
@@ -57,5 +63,6 @@ def _patch_init():
         return ret
 
     _RM.__init__ = _wrapped
+
 
 _patch_init()

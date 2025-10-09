@@ -5,21 +5,17 @@ Covers Alpaca, Polygon, Benzinga, and CoinAPI clients.
 """
 
 from unittest.mock import MagicMock, patch
+
 import pytest
 
-from hybrid_ai_trading.data.clients.alpaca_client import (
-    AlpacaClient,
-    AlpacaAPIError,
-)
-from hybrid_ai_trading.data.clients.polygon_client import (
-    PolygonClient,
-    PolygonAPIError,
-)
-from hybrid_ai_trading.data.clients.benzinga_client import (
-    BenzingaClient,
-    BenzingaAPIError,
-)
 import hybrid_ai_trading.data.clients.coinapi_client as coinapi
+from hybrid_ai_trading.data.clients.alpaca_client import AlpacaAPIError, AlpacaClient
+from hybrid_ai_trading.data.clients.benzinga_client import (
+    BenzingaAPIError,
+    BenzingaClient,
+)
+from hybrid_ai_trading.data.clients.polygon_client import PolygonAPIError, PolygonClient
+
 
 # ==========================================================
 # AlpacaClient
@@ -88,13 +84,12 @@ def test_alpaca_ping_all_paths(mock_acc, caplog):
 # ==========================================================
 # PolygonClient
 # ==========================================================
-from hybrid_ai_trading.data.clients.polygon_client import PolygonAPIError
+
 
 def test_polygon_missing_key(monkeypatch):
     monkeypatch.delenv("POLYGON_KEY", raising=False)
     with pytest.raises(PolygonAPIError, match="Polygon API key not provided"):
         PolygonClient(api_key=None)
-
 
 
 @patch("hybrid_ai_trading.data.clients.polygon_client.requests.get")
@@ -197,6 +192,7 @@ def test_coinapi_headers_exception(monkeypatch):
 
 def test_coinapi_iso():
     from datetime import datetime
+
     ts = datetime(2020, 1, 1)
     assert coinapi._iso(ts).endswith("Z")
 

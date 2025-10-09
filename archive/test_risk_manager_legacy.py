@@ -11,7 +11,9 @@ skipped automatically to avoid polluting CI results.
 import pytest
 
 # ✅ Skip the entire module
-pytest.skip("Legacy RiskManager tests skipped – outdated signature", allow_module_level=True)
+pytest.skip(
+    "Legacy RiskManager tests skipped – outdated signature", allow_module_level=True
+)
 
 
 # --- No tests below will run (kept only as reference) ---

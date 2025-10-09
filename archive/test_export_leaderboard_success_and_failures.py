@@ -7,8 +7,9 @@ Covers export_leaderboard behavior in all branches:
 - Exception handling (force failure with monkeypatch)
 """
 
-import pytest
 import pandas as pd
+import pytest
+
 from hybrid_ai_trading.execution.leaderboard import export_leaderboard
 
 

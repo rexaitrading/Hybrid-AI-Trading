@@ -1,12 +1,15 @@
-﻿import os, json, datetime as dt
-from dateutil.relativedelta import relativedelta
+import datetime as dt
+import os
+
 import requests
+from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
+
 from utils.io_state import (
-    versioned_json_path,
     atomic_write_json,
     load_checkpoint,
     save_checkpoint,
+    versioned_json_path,
 )
 
 load_dotenv()
@@ -29,7 +32,9 @@ def fetch_earnings(start: str, end: str):
 
 if __name__ == "__main__":
     # è®€å–ä¸Šæ¬¡æŠ“å–åˆ°ã€Œå“ªä¸€å¤©ã€
-    last_day = load_checkpoint("earnings_day_ckpt", dt.date.today().strftime("%Y-%m-%d"))
+    last_day = load_checkpoint(
+        "earnings_day_ckpt", dt.date.today().strftime("%Y-%m-%d")
+    )
     start = last_day
     end = (dt.date.fromisoformat(start) + relativedelta(days=7)).strftime("%Y-%m-%d")
 
@@ -42,4 +47,6 @@ if __name__ == "__main__":
     print("âœ… saved:", out_path, "items:", len(data.get("earnings", [])))
 
     # æŽ¨é€²æª¢æŸ¥é»žï¼ˆä¸‹æ¬¡å¾žæ›´å¾Œé¢é–‹å§‹ï¼‰
-    save_checkpoint("earnings_day_ckpt", (dt.date.fromisoformat(end)).strftime("%Y-%m-%d"))
+    save_checkpoint(
+        "earnings_day_ckpt", (dt.date.fromisoformat(end)).strftime("%Y-%m-%d")
+    )

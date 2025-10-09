@@ -20,19 +20,19 @@ Branches covered:
 - Exception safety
 """
 
+import importlib
 import logging
 import math
-import importlib
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
+from hybrid_ai_trading.algos.vwap import vwap_signal
 from hybrid_ai_trading.signals.bollinger_bands import bollinger_bands_signal
 from hybrid_ai_trading.signals.breakout_intraday import breakout_intraday
 from hybrid_ai_trading.signals.macd import macd_signal
 from hybrid_ai_trading.signals.moving_average import moving_average_signal
 from hybrid_ai_trading.signals.rsi_signal import rsi_signal
-from hybrid_ai_trading.algos.vwap import vwap_signal
 
 # -------------------------------------------------------------------
 # Dynamic imports (avoid circulars)

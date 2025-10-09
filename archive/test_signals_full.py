@@ -10,14 +10,17 @@ Covers ALL branches for:
 - vwap_signal
 """
 
-import pytest
-import math
-import pandas as pd
 import logging
+import math
+
+import pandas as pd
 
 # Import signals from their dedicated modules
 from hybrid_ai_trading.signals.bollinger_bands import bollinger_bands_signal
-from hybrid_ai_trading.signals.breakout_polygon import BreakoutPolygonSignal, breakout_signal_polygon
+from hybrid_ai_trading.signals.breakout_polygon import (
+    BreakoutPolygonSignal,
+    breakout_signal_polygon,
+)
 from hybrid_ai_trading.signals.macd import macd_signal
 from hybrid_ai_trading.signals.moving_average import moving_average_signal
 from hybrid_ai_trading.signals.rsi_signal import rsi_signal

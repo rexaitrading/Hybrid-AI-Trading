@@ -10,15 +10,17 @@ Backtest Strategies & Pipeline Suite (Hybrid AI Quant Pro v16.7 – Hedge-Fund O
 """
 
 import time
+
 import pandas as pd
 import pytest
+
 from hybrid_ai_trading.pipelines.backtest import IntradayBacktester
 from hybrid_ai_trading.signals import (
+    bollinger_bands_signal,
     breakout_intraday,
+    macd_signal,
     moving_average_signal,
     rsi_signal,
-    bollinger_bands_signal,
-    macd_signal,
     vwap_signal,
 )
 
@@ -40,7 +42,9 @@ def patch_polygon(monkeypatch, fake_bars):
     """Patch Polygon data fetcher with deterministic fake bars."""
     monkeypatch.setattr(
         "hybrid_ai_trading.pipelines.backtest.get_intraday_bars",
-        lambda ticker, start, end, api_key=None, interval="1", timespan="minute": list(fake_bars),
+        lambda ticker, start, end, api_key=None, interval="1", timespan="minute": list(
+            fake_bars
+        ),
     )
 
 

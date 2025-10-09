@@ -10,6 +10,7 @@ Covers:
 """
 
 import pytest
+
 from hybrid_ai_trading.trade_engine import TradeEngine
 
 

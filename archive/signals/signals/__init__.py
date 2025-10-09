@@ -1,4 +1,4 @@
-﻿"""
+"""
 Hybrid AI Quant Pro – Signal Strategies Package (Hedge-Fund Grade)
 ------------------------------------------------------------------
 Exports all supported trading strategies in one namespace:

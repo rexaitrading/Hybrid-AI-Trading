@@ -1,7 +1,5 @@
-﻿import json
+import json
 import logging
-
-import pytest
 
 from hybrid_ai_trading.risk.kelly_sizer import KellySizer, _safe_fmt
 

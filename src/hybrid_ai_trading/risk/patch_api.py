@@ -1,6 +1,6 @@
+import inspect
 import logging
 from typing import Any
-import inspect
 
 try:
     from .risk_manager import RiskManager as _RM
@@ -10,35 +10,45 @@ except Exception:
 _pkg_log = logging.getLogger("hybrid_ai_trading.risk.risk_manager")
 
 ALIASES = {
-    "max_daily_loss":        "daily_loss_limit",
-    "daily_loss_limit":      "daily_loss_limit",
-    "max_position_risk":     ["trade_loss_limit", "position_risk_limit"],
-    "position_risk_limit":   "position_risk_limit",
-    "max_drawdown":          "drawdown_limit",
-    "drawdown_limit":        "drawdown_limit",
-    "roi_min":               "roi_min",
-    "sharpe_min":            "sharpe_min",
-    "sortino_min":           "sortino_min",
-    "sector_limit":          "sector_exposure_limit",
+    "max_daily_loss": "daily_loss_limit",
+    "daily_loss_limit": "daily_loss_limit",
+    "max_position_risk": ["trade_loss_limit", "position_risk_limit"],
+    "position_risk_limit": "position_risk_limit",
+    "max_drawdown": "drawdown_limit",
+    "drawdown_limit": "drawdown_limit",
+    "roi_min": "roi_min",
+    "sharpe_min": "sharpe_min",
+    "sortino_min": "sortino_min",
+    "sector_limit": "sector_exposure_limit",
     "sector_exposure_limit": "sector_exposure_limit",
-    "hedge_limit":           "hedge_exposure_limit",
-    "hedge_exposure_limit":  "hedge_exposure_limit",
-    "starting_equity":       "starting_equity",
-    "max_leverage":          "max_leverage",
+    "hedge_limit": "hedge_exposure_limit",
+    "hedge_exposure_limit": "hedge_exposure_limit",
+    "starting_equity": "starting_equity",
+    "max_leverage": "max_leverage",
 }
 
 GUARD_KEYS = {
-    "max_daily_loss","daily_loss_limit",
-    "max_position_risk","position_risk_limit","trade_loss_limit",
-    "max_drawdown","drawdown_limit",
-    "roi_min","sharpe_min","sortino_min",
-    "sector_limit","sector_exposure_limit",
-    "hedge_limit","hedge_exposure_limit",
+    "max_daily_loss",
+    "daily_loss_limit",
+    "max_position_risk",
+    "position_risk_limit",
+    "trade_loss_limit",
+    "max_drawdown",
+    "drawdown_limit",
+    "roi_min",
+    "sharpe_min",
+    "sortino_min",
+    "sector_limit",
+    "sector_exposure_limit",
+    "hedge_limit",
+    "hedge_exposure_limit",
     "max_leverage",
 }
 
+
 def _has_method(obj, name: str) -> bool:
     return hasattr(obj, name) and callable(getattr(obj, name))
+
 
 def _maybe_call(obj, name: str, default: float, level_on_exc: int) -> float:
     try:
@@ -49,6 +59,7 @@ def _maybe_call(obj, name: str, default: float, level_on_exc: int) -> float:
         logging.log(level_on_exc, "%s() exception: %s", name, e)
         return default
     return default
+
 
 def _attach_aliases(instance: Any, provided: dict[str, Any]) -> None:
     # kwargs: ALWAYS apply
@@ -77,30 +88,47 @@ def _attach_aliases(instance: Any, provided: dict[str, Any]) -> None:
                         except Exception:
                             pass
 
+
 def _derive_starting_equity(instance: Any, provided: dict[str, Any]) -> float:
     if "starting_equity" in provided:
-        try: return float(provided["starting_equity"])
-        except Exception: return 100_000.0
+        try:
+            return float(provided["starting_equity"])
+        except Exception:
+            return 100_000.0
     cfg = provided.get("config") or provided.get("config_stub")
     if isinstance(cfg, dict):
         if "starting_equity" in cfg:
-            try: return float(cfg["starting_equity"])
-            except Exception: return 100_000.0
+            try:
+                return float(cfg["starting_equity"])
+            except Exception:
+                return 100_000.0
         risk = cfg.get("risk") or {}
         if isinstance(risk, dict) and "starting_equity" in risk:
-            try: return float(risk["starting_equity"])
-            except Exception: return 100_000.0
-    for path in ("equity","portfolio.equity","portfolio_tracker.equity","tracker.equity"):
-        cur = instance; val = None
+            try:
+                return float(risk["starting_equity"])
+            except Exception:
+                return 100_000.0
+    for path in (
+        "equity",
+        "portfolio.equity",
+        "portfolio_tracker.equity",
+        "tracker.equity",
+    ):
+        cur = instance
+        val = None
         try:
-            for part in path.split("."): cur = getattr(cur, part)
+            for part in path.split("."):
+                cur = getattr(cur, part)
             val = cur
         except Exception:
             val = None
         if val is not None:
-            try: return float(val)
-            except Exception: pass
+            try:
+                return float(val)
+            except Exception:
+                pass
     return 100_000.0
+
 
 def _has_explicit_guards(provided: dict[str, Any]) -> bool:
     for k in provided.keys():
@@ -115,13 +143,14 @@ def _has_explicit_guards(provided: dict[str, Any]) -> bool:
                     return True
     return False
 
+
 def _patch():
     if _RM is None:
         return
 
-    _orig_init   = _RM.__init__
+    _orig_init = _RM.__init__
     _orig_update = getattr(_RM, "update_equity", None)
-    _orig_check  = getattr(_RM, "check_trade", None)
+    _orig_check = getattr(_RM, "check_trade", None)
 
     def _wrapped_init(self, *args, **kwargs):
         orig_kwargs = dict(kwargs)
@@ -135,14 +164,18 @@ def _patch():
         # extras not in signature
         for k, v in orig_kwargs.items():
             if k not in allowed:
-                try: setattr(self, k, v)
-                except Exception: pass
+                try:
+                    setattr(self, k, v)
+                except Exception:
+                    pass
 
         _attach_aliases(self, orig_kwargs)
 
         if not hasattr(self, "starting_equity"):
-            try: self.starting_equity = float(_derive_starting_equity(self, orig_kwargs))
-            except Exception: self.starting_equity = _derive_starting_equity(self, orig_kwargs)
+            try:
+                self.starting_equity = float(_derive_starting_equity(self, orig_kwargs))
+            except Exception:
+                self.starting_equity = _derive_starting_equity(self, orig_kwargs)
 
         try:
             setattr(self, "_compat_has_guards", _has_explicit_guards(orig_kwargs))
@@ -154,7 +187,9 @@ def _patch():
     _RM.__init__ = _wrapped_init
 
     # Wrapped check_trade: loss limits + robust leverage + AND with original + db_logger emit
-    def __compat_check_trade(self, symbol: str, side: str, qty: float, price: float) -> bool:
+    def __compat_check_trade(
+        self, symbol: str, side: str, qty: float, price: float
+    ) -> bool:
         ok = True
 
         # per-trade & daily loss
@@ -167,7 +202,9 @@ def _patch():
 
         try:
             if trade_lim is not None and ret < float(trade_lim):
-                _pkg_log.warning("trade_loss breach: %.4f < %.4f", ret, float(trade_lim))
+                _pkg_log.warning(
+                    "trade_loss breach: %.4f < %.4f", ret, float(trade_lim)
+                )
                 logging.warning("trade_loss breach: %.4f < %.4f", ret, float(trade_lim))
                 ok = False
         except Exception:
@@ -177,8 +214,12 @@ def _patch():
             cum = getattr(self, "daily_pnl", getattr(self, "cum_loss", 0.0))
             cum = float(cum)
             if daily_lim is not None and (cum + ret) < float(daily_lim):
-                _pkg_log.warning("daily_loss breach: %.4f < %.4f", (cum + ret), float(daily_lim))
-                logging.warning("daily_loss breach: %.4f < %.4f", (cum + ret), float(daily_lim))
+                _pkg_log.warning(
+                    "daily_loss breach: %.4f < %.4f", (cum + ret), float(daily_lim)
+                )
+                logging.warning(
+                    "daily_loss breach: %.4f < %.4f", (cum + ret), float(daily_lim)
+                )
                 ok = False
         except Exception:
             pass
@@ -188,8 +229,12 @@ def _patch():
             roi_val = getattr(self, "roi", None)
             if roi_min is not None and roi_val is not None:
                 if float(roi_val) < float(roi_min):
-                    _pkg_log.warning("ROI breach: %.4f < %.4f", float(roi_val), float(roi_min))
-                    logging.warning("ROI breach: %.4f < %.4f", float(roi_val), float(roi_min))
+                    _pkg_log.warning(
+                        "ROI breach: %.4f < %.4f", float(roi_val), float(roi_min)
+                    )
+                    logging.warning(
+                        "ROI breach: %.4f < %.4f", float(roi_val), float(roi_min)
+                    )
                     ok = False
         except Exception:
             pass
@@ -209,7 +254,11 @@ def _patch():
 
         # explicit portfolio error flag -> ERROR and reject
         try:
-            if p is not None and hasattr(p, "fail_leverage") and bool(getattr(p, "fail_leverage")):
+            if (
+                p is not None
+                and hasattr(p, "fail_leverage")
+                and bool(getattr(p, "fail_leverage"))
+            ):
                 _pkg_log.error("portfolio leverage error: fail flag")
                 logging.error("portfolio leverage error: fail flag")
                 ok = False
@@ -225,7 +274,11 @@ def _patch():
             except Exception:
                 lev = None
             # 2) method leverage() -> ERROR on failure
-            if lev is None and hasattr(p, "leverage") and callable(getattr(p, "leverage")):
+            if (
+                lev is None
+                and hasattr(p, "leverage")
+                and callable(getattr(p, "leverage"))
+            ):
                 try:
                     val = getattr(p, "leverage")()
                     lev = float(val)
@@ -254,19 +307,34 @@ def _patch():
                 try:
                     exp = getattr(p, "exposure", getattr(p, "exp", None))
                     if exp is not None:
-                        eq = getattr(self, "equity", getattr(self, "starting_equity", 100_000.0))
+                        eq = getattr(
+                            self, "equity", getattr(self, "starting_equity", 100_000.0)
+                        )
                         lev = float(exp) / max(float(eq), 1e-9)
                 except Exception:
                     lev = None
 
             try:
                 if lev is not None and lev >= float(max_lev):
-                    _pkg_log.warning("leverage breach: %.4f >= %.4f", lev, float(max_lev))
-                    logging.warning("leverage breach: %.4f >= %.4f", lev, float(max_lev))
+                    _pkg_log.warning(
+                        "leverage breach: %.4f >= %.4f", lev, float(max_lev)
+                    )
+                    logging.warning(
+                        "leverage breach: %.4f >= %.4f", lev, float(max_lev)
+                    )
                     dblog = getattr(self, "db_logger", None)
                     if dblog and hasattr(dblog, "log"):
-                        try: dblog.log({"reason":"leverage_breach","lev":lev,"limit":float(max_lev),"symbol":symbol})
-                        except Exception: pass
+                        try:
+                            dblog.log(
+                                {
+                                    "reason": "leverage_breach",
+                                    "lev": lev,
+                                    "limit": float(max_lev),
+                                    "symbol": symbol,
+                                }
+                            )
+                        except Exception:
+                            pass
                     ok = False
             except Exception:
                 pass
@@ -280,25 +348,34 @@ def _patch():
                 orig_ok = True
         else:
             # fallback Sharpe/Sortino
-            smin  = getattr(self, "sharpe_min",  None)
+            smin = getattr(self, "sharpe_min", None)
             somin = getattr(self, "sortino_min", None)
-            s  = _maybe_call(self, "sharpe_ratio",  1.0, logging.ERROR)
+            s = _maybe_call(self, "sharpe_ratio", 1.0, logging.ERROR)
             so = _maybe_call(self, "sortino_ratio", 1.0, logging.ERROR)
             try:
                 if smin is not None and s < float(smin):
-                    _pkg_log.warning("Sharpe breach"); logging.warning("Sharpe breach"); ok = False
-            except Exception: pass
+                    _pkg_log.warning("Sharpe breach")
+                    logging.warning("Sharpe breach")
+                    ok = False
+            except Exception:
+                pass
             try:
                 if somin is not None and so < float(somin):
-                    _pkg_log.warning("sortino ratio breach"); logging.warning("sortino ratio breach"); ok = False
-            except Exception: pass
+                    _pkg_log.warning("sortino ratio breach")
+                    logging.warning("sortino ratio breach")
+                    ok = False
+            except Exception:
+                pass
 
         # db_logger emission (success & failure)
         decision = bool(ok and orig_ok)
         try:
             dblog = getattr(self, "db_logger", None)
             if dblog and hasattr(dblog, "log"):
-                rec = {"reason": ("blocked" if not decision else "ok"), "symbol": symbol}
+                rec = {
+                    "reason": ("blocked" if not decision else "ok"),
+                    "symbol": symbol,
+                }
                 try:
                     dblog.log(rec)
                 except Exception as e:
@@ -313,35 +390,51 @@ def _patch():
 
     # reset_day (if missing)
     if not _has_method(_RM, "reset_day"):
+
         def reset_day(self) -> bool:
             p = getattr(self, "portfolio", None)
             if p and _has_method(p, "reset_day"):
-                try: p.reset_day(); return True
-                except Exception as e: _pkg_log.error("portfolio.reset_day failed: %s", e); logging.error("portfolio.reset_day failed: %s", e); return False
+                try:
+                    p.reset_day()
+                    return True
+                except Exception as e:
+                    _pkg_log.error("portfolio.reset_day failed: %s", e)
+                    logging.error("portfolio.reset_day failed: %s", e)
+                    return False
             return True
+
         _RM.reset_day = reset_day  # type: ignore
 
     # approve_trade (warn non-positive; default-approve if no guards at ctor)
     if not _has_method(_RM, "approve_trade"):
+
         def approve_trade(self, *a, **k) -> bool:
             symbol = a[0] if len(a) >= 1 else k.get("symbol")
-            side   = a[1] if len(a) >= 2 else k.get("side")
-            qty    = a[2] if len(a) >= 3 else k.get("qty", k.get("quantity"))
-            price  = a[3] if len(a) >= 4 else k.get("price", None)
+            side = a[1] if len(a) >= 2 else k.get("side")
+            qty = a[2] if len(a) >= 3 else k.get("qty", k.get("quantity"))
+            price = a[3] if len(a) >= 4 else k.get("price", None)
             try:
                 if qty is not None and float(qty) <= 0:
-                    _pkg_log.warning("non-positive quantity: %s", qty); logging.warning("non-positive quantity: %s", qty); return False
+                    _pkg_log.warning("non-positive quantity: %s", qty)
+                    logging.warning("non-positive quantity: %s", qty)
+                    return False
                 if price is not None and float(price) <= 0:
-                    _pkg_log.warning("non-positive price: %s", price); logging.warning("non-positive price: %s", price); return False
+                    _pkg_log.warning("non-positive price: %s", price)
+                    logging.warning("non-positive price: %s", price)
+                    return False
             except Exception:
-                _pkg_log.warning("non-positive qty or price (parse error)"); logging.warning("non-positive qty or price (parse error)"); return False
-            if price is None: price = 1.0
+                _pkg_log.warning("non-positive qty or price (parse error)")
+                logging.warning("non-positive qty or price (parse error)")
+                return False
+            if price is None:
+                price = 1.0
             if not bool(getattr(self, "_compat_has_guards", False)):
                 return True
             try:
                 return bool(self.check_trade(symbol, side, qty, price))
             except Exception:
                 return True
+
         _RM.approve_trade = approve_trade  # type: ignore
 
     # update_equity: negative reject + success True
@@ -351,7 +444,8 @@ def _patch():
         except Exception:
             return False
         if val < 0.0:
-            _pkg_log.critical("drawdown breach: equity below zero: %s", equity); logging.critical("drawdown breach: equity below zero: %s", equity)
+            _pkg_log.critical("drawdown breach: equity below zero: %s", equity)
+            logging.critical("drawdown breach: equity below zero: %s", equity)
             return False
         try:
             if callable(_orig_update):
@@ -363,27 +457,34 @@ def _patch():
             return True
         except Exception:
             return False
+
     _RM.update_equity = update_equity  # type: ignore
 
     # control_signal (if missing)
     if not _has_method(_RM, "control_signal"):
+
         def control_signal(self, side: str, score: float) -> str:
             side = (side or "").upper()
-            if side not in ("BUY","SELL","HOLD"):
-                _pkg_log.warning("unknown side: %s", side); logging.warning("unknown side: %s", side)
+            if side not in ("BUY", "SELL", "HOLD"):
+                _pkg_log.warning("unknown side: %s", side)
+                logging.warning("unknown side: %s", side)
                 return "HOLD"
             return side
+
         _RM.control_signal = control_signal  # type: ignore
 
     # kelly_size (if missing)
     if not _has_method(_RM, "kelly_size"):
+
         def kelly_size(self, p_win: float, payoff: float) -> float:
             try:
-                f = float(p_win) - (1.0 - float(p_win))/max(float(payoff), 1e-9)
+                f = float(p_win) - (1.0 - float(p_win)) / max(float(payoff), 1e-9)
                 return max(0.0, min(1.0, f))
             except Exception:
                 return 0.0
+
         _RM.kelly_size = kelly_size  # type: ignore
+
 
 _patch()
 # --- compat: widen kelly_size to accept regime and clamp [0,1] ---
@@ -392,12 +493,13 @@ try:
 except Exception:
     _orig_kelly = None
 
+
 def __compat_kelly_size(self, p_win: float, payoff: float, *a, **k) -> float:
     # classic Kelly fraction f = p - (1-p)/b
     try:
         p = float(p_win)
         b = max(float(payoff), 1e-9)
-        f = p - (1.0 - p)/b
+        f = p - (1.0 - p) / b
     except Exception:
         # if original exists, try delegating; else 0.0
         if callable(_orig_kelly):
@@ -411,15 +513,20 @@ def __compat_kelly_size(self, p_win: float, payoff: float, *a, **k) -> float:
         r = k.get("regime", None)
         if r is not None:
             r = float(r)
-            if r < 0.0: r = 0.0
-            if r > 1.0: r = 1.0
+            if r < 0.0:
+                r = 0.0
+            if r > 1.0:
+                r = 1.0
             f *= r
     except Exception:
         pass
     # clamp to [0,1]
-    if f < 0.0: f = 0.0
-    if f > 1.0: f = 1.0
+    if f < 0.0:
+        f = 0.0
+    if f > 1.0:
+        f = 1.0
     return f
+
 
 _RM.kelly_size = __compat_kelly_size  # type: ignore
 
@@ -429,6 +536,7 @@ try:
 except Exception:
     __orig_kelly_latest = None
 
+
 def __compat_kelly_size_v2(self, p_win: float, payoff: float, *a, **k) -> float:
     try:
         p = float(p_win)
@@ -436,7 +544,7 @@ def __compat_kelly_size_v2(self, p_win: float, payoff: float, *a, **k) -> float:
         # invalid inputs -> 0.0 (as tests expect)
         if not (0.0 <= p <= 1.0) or b <= 0.0:
             return 0.0
-        f = p - (1.0 - p)/max(b, 1e-9)
+        f = p - (1.0 - p) / max(b, 1e-9)
     except Exception:
         # if a prior impl exists, try that, else 0.0
         if callable(__orig_kelly_latest):
@@ -450,15 +558,20 @@ def __compat_kelly_size_v2(self, p_win: float, payoff: float, *a, **k) -> float:
         r = k.get("regime", None)
         if r is not None:
             r = float(r)
-            if r < 0.0: r = 0.0
-            if r > 1.0: r = 1.0
+            if r < 0.0:
+                r = 0.0
+            if r > 1.0:
+                r = 1.0
             f *= r
     except Exception:
         pass
     # clamp
-    if f < 0.0: f = 0.0
-    if f > 1.0: f = 1.0
+    if f < 0.0:
+        f = 0.0
+    if f > 1.0:
+        f = 1.0
     return f
+
 
 _RM.kelly_size = __compat_kelly_size_v2  # type: ignore
 
@@ -468,6 +581,7 @@ try:
 except Exception:
     __kelly_base = None
 
+
 def __compat_kelly_size_v3(self, p_win: float, payoff: float, *a, **k) -> float:
     # compute directly so we can catch/LOG any error path the tests trigger
     try:
@@ -475,17 +589,21 @@ def __compat_kelly_size_v3(self, p_win: float, payoff: float, *a, **k) -> float:
         b = float(payoff)
         if not (0.0 <= p <= 1.0) or b <= 0.0:
             return 0.0
-        f = p - (1.0 - p)/max(b, 1e-9)
+        f = p - (1.0 - p) / max(b, 1e-9)
         # optional regime scaling
         r = k.get("regime", None)
         if r is not None:
             r = float(r)
-            if r < 0.0: r = 0.0
-            if r > 1.0: r = 1.0
+            if r < 0.0:
+                r = 0.0
+            if r > 1.0:
+                r = 1.0
             f *= r
         # clamp
-        if f < 0.0: f = 0.0
-        if f > 1.0: f = 1.0
+        if f < 0.0:
+            f = 0.0
+        if f > 1.0:
+            f = 1.0
         return f
     except Exception as e:
         # REQUIRED by tests: log at ERROR with this phrase
@@ -499,6 +617,7 @@ def __compat_kelly_size_v3(self, p_win: float, payoff: float, *a, **k) -> float:
             pass
         return 0.0
 
+
 _RM.kelly_size = __compat_kelly_size_v3  # type: ignore
 
 # --- compat: control_signal v2 (optional score) ---
@@ -506,6 +625,7 @@ try:
     __orig_ctrl = getattr(_RM, "control_signal", None)
 except Exception:
     __orig_ctrl = None
+
 
 def __compat_control_signal_v2(self, *a, **k) -> str:
     # Accept side as first positional or keyword
@@ -516,11 +636,12 @@ def __compat_control_signal_v2(self, *a, **k) -> str:
         side = k.get("side", k.get("signal", None))
     side_u = (str(side) if side is not None else "").upper()
 
-    if side_u not in ("BUY","SELL","HOLD"):
+    if side_u not in ("BUY", "SELL", "HOLD"):
         _pkg_log.warning("unknown side: %s", side)
         logging.warning("unknown side: %s", side)
         return "HOLD"
     return side_u
+
 
 _RM.control_signal = __compat_control_signal_v2  # type: ignore
 
@@ -529,6 +650,7 @@ try:
     __ctrl_base = getattr(_RM, "control_signal", None)
 except Exception:
     __ctrl_base = None
+
 
 def __compat_control_signal_v3(self, *a, **k) -> str:
     # Extract side
@@ -547,12 +669,13 @@ def __compat_control_signal_v3(self, *a, **k) -> str:
         pass
 
     # Unknown side -> warn & HOLD
-    if side_u not in ("BUY","SELL","HOLD"):
+    if side_u not in ("BUY", "SELL", "HOLD"):
         _pkg_log.warning("unknown side: %s", side)
         logging.warning("unknown side: %s", side)
         return "HOLD"
 
     return side_u
+
 
 _RM.control_signal = __compat_control_signal_v3  # type: ignore
 
@@ -562,19 +685,25 @@ try:
 except Exception:
     __orig_reset = None
 
+
 def __compat_reset_day_v2(self):
     p = getattr(self, "portfolio", None)
     # If portfolio has reset_day(), call it and return dict
     if p is not None and hasattr(p, "reset_day") and callable(getattr(p, "reset_day")):
         try:
             p.reset_day()
-            _pkg_log.info("Daily reset complete"); logging.info("Daily reset complete"); return {"status": "ok"}
+            _pkg_log.info("Daily reset complete")
+            logging.info("Daily reset complete")
+            return {"status": "ok"}
         except Exception as e:
             _pkg_log.error("portfolio.reset_day failed: %s", e)
             logging.error("portfolio.reset_day failed: %s", e)
             return {"status": "error", "reason": f"portfolio.reset_day failed: {e}"}
     # No portfolio -> still a successful no-op
-    _pkg_log.info("Daily reset complete"); logging.info("Daily reset complete"); return {"status": "ok"}
+    _pkg_log.info("Daily reset complete")
+    logging.info("Daily reset complete")
+    return {"status": "ok"}
+
 
 _RM.reset_day = __compat_reset_day_v2  # type: ignore
 
@@ -583,6 +712,7 @@ try:
     __orig_reset3 = getattr(_RM, "reset_day", None)
 except Exception:
     __orig_reset3 = None
+
 
 def __compat_reset_day_v3(self):
     p = getattr(self, "portfolio", None)
@@ -602,6 +732,7 @@ def __compat_reset_day_v3(self):
     logging.info("Daily reset complete")
     return {"status": "ok"}
 
+
 _RM.reset_day = __compat_reset_day_v3  # type: ignore
 
 # --- compat: strict Sharpe/Sortino wrapper (exceptions or below-min => breach) ---
@@ -609,6 +740,7 @@ try:
     __prev_check_trade = getattr(_RM, "check_trade", None)
 except Exception:
     __prev_check_trade = None
+
 
 def __compat_check_trade_v4(self, symbol, side, qty, price):
     # 1) base decision from whatever is currently installed
@@ -628,12 +760,15 @@ def __compat_check_trade_v4(self, symbol, side, qty, price):
         try:
             s = float(self.sharpe_ratio())
             if s < float(smin):
-                _pkg_log.warning("Sharpe breach"); logging.warning("Sharpe breach")
+                _pkg_log.warning("Sharpe breach")
+                logging.warning("Sharpe breach")
                 extra_ok = False
         except Exception:
             # test expects ERROR in exception path and the decision False
-            _pkg_log.error("Sharpe ratio check failed"); logging.error("Sharpe ratio check failed")
-            _pkg_log.warning("Sharpe breach"); logging.warning("Sharpe breach")
+            _pkg_log.error("Sharpe ratio check failed")
+            logging.error("Sharpe ratio check failed")
+            _pkg_log.warning("Sharpe breach")
+            logging.warning("Sharpe breach")
             extra_ok = False
 
     # Sortino
@@ -642,13 +777,17 @@ def __compat_check_trade_v4(self, symbol, side, qty, price):
         try:
             so = float(self.sortino_ratio())
             if so < float(somin):
-                _pkg_log.warning("Sortino breach"); logging.warning("Sortino breach")
+                _pkg_log.warning("Sortino breach")
+                logging.warning("Sortino breach")
                 extra_ok = False
         except Exception:
-            _pkg_log.error("Sortino ratio check failed"); logging.error("Sortino ratio check failed")
-            _pkg_log.warning("Sortino breach"); logging.warning("Sortino breach")
+            _pkg_log.error("Sortino ratio check failed")
+            logging.error("Sortino ratio check failed")
+            _pkg_log.warning("Sortino breach")
+            logging.warning("Sortino breach")
             extra_ok = False
 
     return bool(base_ok and extra_ok)
+
 
 _RM.check_trade = __compat_check_trade_v4  # type: ignore

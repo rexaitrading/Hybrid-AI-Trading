@@ -205,7 +205,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             now_local = now_in_tz(tz)
             if os.path.exists(pause_file):
                 LOGGER.warning("pause_switch_detected", extra={"file": pause_file})
-                time.sleep(min(60, poll_sec)); 
+                time.sleep(min(60, poll_sec));
                 if args.once: break
                 continue
 

@@ -7,11 +7,10 @@ from getpass import getpass
 from optparse import OptionParser
 
 from peewee import *
-from peewee import print_
 from peewee import __version__ as peewee_version
+from peewee import print_
 from playhouse.cockroachdb import CockroachDatabase
 from playhouse.reflection import *
-
 
 HEADER = """from peewee import *%s
 
@@ -36,12 +35,16 @@ DATABASE_ALIASES = {
     SqliteDatabase: ["sqlite", "sqlite3"],
 }
 
-DATABASE_MAP = dict((value, key) for key in DATABASE_ALIASES for value in DATABASE_ALIASES[key])
+DATABASE_MAP = dict(
+    (value, key) for key in DATABASE_ALIASES for value in DATABASE_ALIASES[key]
+)
 
 
 def make_introspector(database_type, database_name, **kwargs):
     if database_type not in DATABASE_MAP:
-        err("Unrecognized database, must be one of: %s" % ", ".join(DATABASE_MAP.keys()))
+        err(
+            "Unrecognized database, must be one of: %s" % ", ".join(DATABASE_MAP.keys())
+        )
         sys.exit(1)
 
     schema = kwargs.pop("schema", None)
@@ -58,7 +61,9 @@ def print_models(
     ignore_unknown=False,
     snake_case=True,
 ):
-    database = introspector.introspect(table_names=tables, include_views=include_views, snake_case=snake_case)
+    database = introspector.introspect(
+        table_names=tables, include_views=include_views, snake_case=snake_case
+    )
 
     db_kwargs = introspector.get_database_kwargs()
     header = HEADER % (
@@ -139,7 +144,9 @@ def print_models(
         if introspector.schema:
             print_("        schema = '%s'" % introspector.schema)
         if len(primary_keys) > 1:
-            pk_field_names = sorted([field.name for col, field in columns if col in primary_keys])
+            pk_field_names = sorted(
+                [field.name for col, field in columns if col in primary_keys]
+            )
             pk_list = ", ".join("'%s'" % pk for pk in pk_field_names)
             print_("        primary_key = CompositeKey(%s)" % pk_list)
         elif not primary_keys:
@@ -183,14 +190,20 @@ def get_option_parser():
         "--engine",
         dest="engine",
         choices=engines,
-        help=("Database type, e.g. sqlite, mysql, postgresql or cockroachdb. " 'Default is "postgresql".'),
+        help=(
+            "Database type, e.g. sqlite, mysql, postgresql or cockroachdb. "
+            'Default is "postgresql".'
+        ),
     )
     ao("-s", "--schema", dest="schema")
     ao(
         "-t",
         "--tables",
         dest="tables",
-        help=("Only generate the specified tables. Multiple table names should " "be separated by commas."),
+        help=(
+            "Only generate the specified tables. Multiple table names should "
+            "be separated by commas."
+        ),
     )
     ao(
         "-v",
@@ -204,7 +217,10 @@ def get_option_parser():
         "--info",
         dest="info",
         action="store_true",
-        help=("Add database information and other metadata to top of the " "generated file."),
+        help=(
+            "Add database information and other metadata to top of the "
+            "generated file."
+        ),
     )
     ao(
         "-o",

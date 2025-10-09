@@ -14,11 +14,12 @@ Covers ALL branches in trade_engine.py:
 - Accessors: get_equity, get_positions, get_history
 """
 
+import builtins
 import os
 import smtplib
-import pytest
-import builtins
 import sys
+
+import pytest
 
 from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
 
@@ -110,7 +111,11 @@ def test_kelly_sizer_dict_int_and_exception(engine, monkeypatch):
     monkeypatch.setattr(engine.kelly_sizer, "size_position", lambda *_: 2)
     assert engine.process_signal("AAPL", "BUY", 100)["status"]
 
-    monkeypatch.setattr(engine.kelly_sizer, "size_position", lambda *_: (_ for _ in ()).throw(Exception("boom")))
+    monkeypatch.setattr(
+        engine.kelly_sizer,
+        "size_position",
+        lambda *_: (_ for _ in ()).throw(Exception("boom")),
+    )
     assert engine.process_signal("AAPL", "BUY", 100)["status"]
 
 
@@ -118,20 +123,39 @@ def test_kelly_sizer_dict_int_and_exception(engine, monkeypatch):
 # Algo routing
 # ----------------------------------------------------------------------
 def test_algo_routing_success_and_fail(engine, monkeypatch):
-    sys.modules["hybrid_ai_trading.algos.twap"] = type("M", (), {
-        "TWAPExecutor": lambda *_: type("X", (), {"execute": lambda *_: {"status": "ok"}})()
-    })
-    assert engine.process_signal("AAPL", "BUY", 1, 100, algo="twap")["status"] == "filled"
+    sys.modules["hybrid_ai_trading.algos.twap"] = type(
+        "M",
+        (),
+        {
+            "TWAPExecutor": lambda *_: type(
+                "X", (), {"execute": lambda *_: {"status": "ok"}}
+            )()
+        },
+    )
+    assert (
+        engine.process_signal("AAPL", "BUY", 1, 100, algo="twap")["status"] == "filled"
+    )
 
-    sys.modules["hybrid_ai_trading.algos.vwap"] = type("M", (), {
-        "VWAPExecutor": lambda *_: (_ for _ in ()).throw(Exception("bad"))
-    })
-    assert engine.process_signal("AAPL", "BUY", 1, 100, algo="vwap")["status"] == "error"
+    sys.modules["hybrid_ai_trading.algos.vwap"] = type(
+        "M", (), {"VWAPExecutor": lambda *_: (_ for _ in ()).throw(Exception("bad"))}
+    )
+    assert (
+        engine.process_signal("AAPL", "BUY", 1, 100, algo="vwap")["status"] == "error"
+    )
 
-    sys.modules["hybrid_ai_trading.algos.iceberg"] = type("M", (), {
-        "IcebergExecutor": lambda *_: type("X", (), {"execute": lambda *_: {"status": "ok"}})()
-    })
-    assert engine.process_signal("AAPL", "BUY", 1, 100, algo="iceberg")["status"] == "filled"
+    sys.modules["hybrid_ai_trading.algos.iceberg"] = type(
+        "M",
+        (),
+        {
+            "IcebergExecutor": lambda *_: type(
+                "X", (), {"execute": lambda *_: {"status": "ok"}}
+            )()
+        },
+    )
+    assert (
+        engine.process_signal("AAPL", "BUY", 1, 100, algo="iceberg")["status"]
+        == "filled"
+    )
 
     res = engine.process_signal("AAPL", "BUY", 1, 100, algo="unknown")
     assert res["status"] == "rejected"
@@ -141,13 +165,19 @@ def test_algo_routing_success_and_fail(engine, monkeypatch):
 # Router paths
 # ----------------------------------------------------------------------
 def test_router_exception_none_error_invalid(engine, monkeypatch):
-    monkeypatch.setattr(engine.router, "route_order", lambda *_: (_ for _ in ()).throw(Exception("fail")))
+    monkeypatch.setattr(
+        engine.router,
+        "route_order",
+        lambda *_: (_ for _ in ()).throw(Exception("fail")),
+    )
     assert "router_error" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
     monkeypatch.setattr(engine.router, "route_order", lambda *_: None)
     assert "router_failed" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
-    monkeypatch.setattr(engine.router, "route_order", lambda *_: {"status": "error", "reason": "oops"})
+    monkeypatch.setattr(
+        engine.router, "route_order", lambda *_: {"status": "error", "reason": "oops"}
+    )
     assert "router_error" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
     monkeypatch.setattr(engine.router, "route_order", lambda *_: "nonsense")
@@ -174,14 +204,22 @@ def test_perf_regime_sentiment_gatescore(engine, monkeypatch):
     monkeypatch.setattr(engine.sentiment_filter, "allow_trade", lambda *_: False)
     assert "sentiment" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
-    monkeypatch.setattr(engine.sentiment_filter, "allow_trade", lambda *_: (_ for _ in ()).throw(Exception("bad")))
+    monkeypatch.setattr(
+        engine.sentiment_filter,
+        "allow_trade",
+        lambda *_: (_ for _ in ()).throw(Exception("bad")),
+    )
     assert "sentiment" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
     monkeypatch.setattr(engine.sentiment_filter, "allow_trade", lambda *_: True)
     monkeypatch.setattr(engine.gatescore, "allow_trade", lambda *_: False)
     assert "gatescore" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
-    monkeypatch.setattr(engine.gatescore, "allow_trade", lambda *_: (_ for _ in ()).throw(Exception("fail")))
+    monkeypatch.setattr(
+        engine.gatescore,
+        "allow_trade",
+        lambda *_: (_ for _ in ()).throw(Exception("fail")),
+    )
     assert "gatescore" in engine.process_signal("AAPL", "BUY", 100)["reason"]
 
 
@@ -196,7 +234,9 @@ def test_audit_normal_and_fail(engine, tmp_path, monkeypatch):
     res = engine.process_signal("AAPL", "BUY", 100)
     assert "status" in res
 
-    def bad_open(*a, **k): raise OSError("disk full")
+    def bad_open(*a, **k):
+        raise OSError("disk full")
+
     monkeypatch.setattr(builtins, "open", bad_open)
     engine._write_audit(["row"])
 
@@ -205,24 +245,44 @@ def test_audit_normal_and_fail(engine, tmp_path, monkeypatch):
 # Alerts
 # ----------------------------------------------------------------------
 def test_alert_success_and_fail_and_noenv(engine, monkeypatch):
-    os.environ["SLACK_ENV"], os.environ["TG_BOT"], os.environ["TG_CHAT"], os.environ["EMAIL_ENV"] = (
-        "http://fake", "bot", "chat", "me@example.com"
-    )
+    (
+        os.environ["SLACK_ENV"],
+        os.environ["TG_BOT"],
+        os.environ["TG_CHAT"],
+        os.environ["EMAIL_ENV"],
+    ) = ("http://fake", "bot", "chat", "me@example.com")
 
-    monkeypatch.setattr("requests.post", lambda *_: type("R", (), {"status_code": 200})())
-    monkeypatch.setattr("requests.get", lambda *_: type("R", (), {"status_code": 200})())
     monkeypatch.setattr(
-        smtplib, "SMTP",
-        lambda *_: type("S", (), {"send_message": lambda *_: None,
-                                  "__enter__": lambda s: s,
-                                  "__exit__": lambda *a: None})()
+        "requests.post", lambda *_: type("R", (), {"status_code": 200})()
+    )
+    monkeypatch.setattr(
+        "requests.get", lambda *_: type("R", (), {"status_code": 200})()
+    )
+    monkeypatch.setattr(
+        smtplib,
+        "SMTP",
+        lambda *_: type(
+            "S",
+            (),
+            {
+                "send_message": lambda *_: None,
+                "__enter__": lambda s: s,
+                "__exit__": lambda *a: None,
+            },
+        )(),
     )
     r1 = engine.alert("msg")
     assert "slack" in r1 and "telegram" in r1 and "email" in r1
 
-    monkeypatch.setattr("requests.post", lambda *_: (_ for _ in ()).throw(Exception("fail")))
-    monkeypatch.setattr("requests.get", lambda *_: (_ for _ in ()).throw(Exception("fail")))
-    monkeypatch.setattr("smtplib.SMTP", lambda *_: (_ for _ in ()).throw(Exception("fail")))
+    monkeypatch.setattr(
+        "requests.post", lambda *_: (_ for _ in ()).throw(Exception("fail"))
+    )
+    monkeypatch.setattr(
+        "requests.get", lambda *_: (_ for _ in ()).throw(Exception("fail"))
+    )
+    monkeypatch.setattr(
+        "smtplib.SMTP", lambda *_: (_ for _ in ()).throw(Exception("fail"))
+    )
     r2 = engine.alert("msg")
     assert any(v == "error" for v in r2.values())
 
@@ -235,7 +295,11 @@ def test_alert_success_and_fail_and_noenv(engine, monkeypatch):
 # Fire alert
 # ----------------------------------------------------------------------
 def test_fire_alert_failure(engine, monkeypatch, caplog):
-    monkeypatch.setattr(engine.router, "_send_alert", lambda *_: (_ for _ in ()).throw(Exception("boom")))
+    monkeypatch.setattr(
+        engine.router,
+        "_send_alert",
+        lambda *_: (_ for _ in ()).throw(Exception("boom")),
+    )
     caplog.set_level("ERROR")
     engine._fire_alert("msg")
     assert "dispatch failed" in caplog.text.lower()
@@ -247,13 +311,20 @@ def test_fire_alert_failure(engine, monkeypatch, caplog):
 def test_reset_day_ok_and_errors(engine, monkeypatch):
     assert engine.reset_day()["status"] == "ok"
 
-    monkeypatch.setattr(engine.portfolio, "reset_day", lambda: {"status": "error"}, raising=False)
+    monkeypatch.setattr(
+        engine.portfolio, "reset_day", lambda: {"status": "error"}, raising=False
+    )
     assert engine.reset_day()["status"] == "error"
 
     monkeypatch.setattr(engine.risk_manager, "reset_day", lambda: {"status": "error"})
     assert engine.reset_day()["status"] == "error"
 
-    monkeypatch.setattr(engine.portfolio, "reset_day", lambda: (_ for _ in ()).throw(Exception("fail")), raising=False)
+    monkeypatch.setattr(
+        engine.portfolio,
+        "reset_day",
+        lambda: (_ for _ in ()).throw(Exception("fail")),
+        raising=False,
+    )
     assert engine.reset_day()["status"] == "error"
 
 

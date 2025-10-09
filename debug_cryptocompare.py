@@ -3,9 +3,10 @@ debug_cryptocompare.py
 Quick one-shot fetch from CryptoCompare for debugging / sanity checks.
 """
 
+import json
 import os
 import sys
-import json
+
 import requests
 
 # === API Key Handling =====================================================

@@ -10,14 +10,15 @@ Covers:
 - __main__ entrypoint execution (via subprocess)
 """
 
-import os
+import builtins
 import csv
 import json
-import sys
+import os
 import subprocess
-import builtins
+import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 import hybrid_ai_trading.pipelines.daily_close as daily_close
 

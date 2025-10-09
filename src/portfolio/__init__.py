@@ -1,4 +1,4 @@
-﻿"""
+"""
 Hybrid AI Trading – Portfolio Package (Hedge Fund Grade v2.0)
 -------------------------------------------------------------
 Responsibilities:

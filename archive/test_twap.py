@@ -10,6 +10,7 @@ Covers ALL branches in twap_executor.py:
 """
 
 import pytest
+
 from hybrid_ai_trading.algos.twap_executor import TWAPExecutor
 
 
@@ -27,7 +28,7 @@ class DummyOrderManager:
         if self.fail_at and len(self.calls) == self.fail_at:
             raise Exception("forced fail")
         return {
-            "status": "ok",          # normalized to "filled"
+            "status": "ok",  # normalized to "filled"
             "fill_price": price - 0.25,
             "broker": self.broker,
         }

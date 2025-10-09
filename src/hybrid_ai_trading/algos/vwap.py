@@ -14,8 +14,8 @@ Guards (return HOLD):
 - Total volume <= 0
 """
 
-from typing import List, Dict, Union
 import math
+from typing import Dict, List, Union
 
 Number = Union[int, float]
 
@@ -78,6 +78,7 @@ def vwap_algo(bars: List[Dict[str, Union[Number, str]]]) -> str:
 
 class VWAPAlgo:
     """OO wrapper; matches orchestrator-style usage."""
+
     def generate(self, symbol: str, bars: List[Dict[str, Union[Number, str]]]) -> str:
         _ = symbol  # symbol unused in pure price-based decision
         return vwap_algo(bars)

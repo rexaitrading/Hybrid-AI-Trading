@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests – PolygonClient Environment Handling
 (Hybrid AI Quant Pro – Hedge-Fund Grade, 100% Coverage)
 ------------------------------------------------------
@@ -11,12 +11,8 @@ Covers:
 
 import unittest
 from unittest.mock import patch
-import pytest
 
-from hybrid_ai_trading.data.clients.polygon_client import (
-    PolygonClient,
-    PolygonAPIError,
-)
+from hybrid_ai_trading.data.clients.polygon_client import PolygonAPIError, PolygonClient
 
 
 class TestPolygonEnv(unittest.TestCase):
@@ -39,6 +35,7 @@ class TestPolygonEnv(unittest.TestCase):
         mock_load.return_value = {"providers": {"polygon": {"api_key_env": None}}}
         # Ensure env variable is not leaking into test
         import os
+
         os.environ.pop("POLYGON_KEY", None)
 
         with self.assertRaises(PolygonAPIError) as ctx:
@@ -51,6 +48,7 @@ class TestPolygonEnv(unittest.TestCase):
         mock_load.return_value = {}
         # Ensure env variable is not leaking into test
         import os
+
         os.environ.pop("POLYGON_KEY", None)
 
         with self.assertRaises(PolygonAPIError) as ctx:

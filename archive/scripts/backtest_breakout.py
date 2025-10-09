@@ -10,22 +10,29 @@ Backtest Breakout Strategy (Hybrid AI Quant Pro v16.2 – Hedge-Fund OE Grade)
 
 import logging
 from pathlib import Path
+
 import pandas as pd
 
 from hybrid_ai_trading.pipelines.backtest import IntradayBacktester
-from hybrid_ai_trading.signals.breakout_polygon import breakout_intraday as breakout_signal
+from hybrid_ai_trading.signals.breakout_polygon import (
+    breakout_intraday as breakout_signal,
+)
 
 # ------------------------------------------------------
 # Logging
 # ------------------------------------------------------
-logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
+)
 logger = logging.getLogger("BacktestBreakout")
 
 
 # ------------------------------------------------------
 # Backtest Runner
 # ------------------------------------------------------
-def run_backtest(ticker: str, data_path: str = "data", lookback: int = 20, export_csv: bool = False) -> None:
+def run_backtest(
+    ticker: str, data_path: str = "data", lookback: int = 20, export_csv: bool = False
+) -> None:
     """
     Run breakout backtest for one ticker.
 
@@ -58,7 +65,11 @@ def run_backtest(ticker: str, data_path: str = "data", lookback: int = 20, expor
         logger.info("ℹ️ No trades for %s", ticker)
         return
 
-    logger.info("✅ Completed breakout backtest for %s | Strategies=%s", ticker, list(bt.results_summary.keys()))
+    logger.info(
+        "✅ Completed breakout backtest for %s | Strategies=%s",
+        ticker,
+        list(bt.results_summary.keys()),
+    )
     if export_csv:
         out_path = Path("results") / f"backtest_breakout_{ticker}.csv"
         out_path.parent.mkdir(exist_ok=True)

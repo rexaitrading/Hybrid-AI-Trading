@@ -10,17 +10,18 @@ Covers ALL clients under data/clients/:
 - Errors: all custom exception classes
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from hybrid_ai_trading.data.clients import (
-    coinapi_client,
     alpaca_client,
     benzinga_client,
-    polygon_client,
-    news_client,
+    coinapi_client,
     errors,
+    news_client,
+    polygon_client,
 )
 from hybrid_ai_trading.data.clients.coinapi_client import CoinAPIError
 
@@ -34,37 +35,55 @@ class TestCoinAPIClient:
         assert coinapi_client._get_headers() == {}
         monkeypatch.delenv("COINAPI_STUB", raising=False)
 
-        with patch("hybrid_ai_trading.data.clients.coinapi_client.load_config", side_effect=Exception("boom")):
+        with patch(
+            "hybrid_ai_trading.data.clients.coinapi_client.load_config",
+            side_effect=Exception("boom"),
+        ):
             with pytest.raises(CoinAPIError):
                 coinapi_client._get_headers()
 
-        with patch("hybrid_ai_trading.data.clients.coinapi_client.load_config", return_value="bad"):
+        with patch(
+            "hybrid_ai_trading.data.clients.coinapi_client.load_config",
+            return_value="bad",
+        ):
             with pytest.raises(CoinAPIError):
                 coinapi_client._get_headers()
 
-        with patch("hybrid_ai_trading.data.clients.coinapi_client.load_config", return_value=None):
+        with patch(
+            "hybrid_ai_trading.data.clients.coinapi_client.load_config",
+            return_value=None,
+        ):
             with pytest.raises(CoinAPIError):
                 coinapi_client._get_headers()
 
-        with patch("hybrid_ai_trading.data.clients.coinapi_client.load_config",
-                   return_value={"providers": {"coinapi": {"api_key_env": None}}}):
+        with patch(
+            "hybrid_ai_trading.data.clients.coinapi_client.load_config",
+            return_value={"providers": {"coinapi": {"api_key_env": None}}},
+        ):
             with pytest.raises(CoinAPIError):
                 coinapi_client._get_headers()
 
-        with patch("hybrid_ai_trading.data.clients.coinapi_client.load_config",
-                   return_value={"providers": {"coinapi": {"api_key_env": "MISSING"}}}):
+        with patch(
+            "hybrid_ai_trading.data.clients.coinapi_client.load_config",
+            return_value={"providers": {"coinapi": {"api_key_env": "MISSING"}}},
+        ):
             monkeypatch.delenv("MISSING", raising=False)
             assert coinapi_client._get_headers() == {}
 
         monkeypatch.setenv("COINAPI_ALLOW_STUB", "0")
-        with patch("hybrid_ai_trading.data.clients.coinapi_client.load_config",
-                   return_value={"providers": {"coinapi": {"api_key_env": "MISSING"}}}):
+        with patch(
+            "hybrid_ai_trading.data.clients.coinapi_client.load_config",
+            return_value={"providers": {"coinapi": {"api_key_env": "MISSING"}}},
+        ):
             with pytest.raises(CoinAPIError):
                 coinapi_client._get_headers()
         monkeypatch.delenv("COINAPI_ALLOW_STUB", raising=False)
 
     @patch("hybrid_ai_trading.data.clients.coinapi_client.requests.get")
-    @patch("hybrid_ai_trading.data.clients.coinapi_client._get_headers", return_value={"X": "FAKE"})
+    @patch(
+        "hybrid_ai_trading.data.clients.coinapi_client._get_headers",
+        return_value={"X": "FAKE"},
+    )
     def test_retry_get_paths(self, _, mock_get):
         good = MagicMock(status_code=200)
         good.json.return_value = {"ok": 1}
@@ -73,7 +92,10 @@ class TestCoinAPIClient:
 
         bad = MagicMock(status_code=503, text="retry")
         mock_get.return_value = bad
-        with patch("hybrid_ai_trading.data.clients.coinapi_client.time.sleep", return_value=None):
+        with patch(
+            "hybrid_ai_trading.data.clients.coinapi_client.time.sleep",
+            return_value=None,
+        ):
             with pytest.raises(CoinAPIError):
                 coinapi_client._retry_get("http://fake", max_retry=1)
 
@@ -124,12 +146,15 @@ class TestCoinAPIClient:
         assert c.ping() is False
         assert coinapi_client.ping() in (True, False)
 
-    @patch("hybrid_ai_trading.data.clients.coinapi_client.CoinAPIClient.get_ohlcv_latest")
+    @patch(
+        "hybrid_ai_trading.data.clients.coinapi_client.CoinAPIClient.get_ohlcv_latest"
+    )
     def test_batch_prev_close_paths(self, mock_ohlcv):
         now = datetime.now(timezone.utc).isoformat()
         mock_ohlcv.side_effect = [
             [{"time_period_start": now, "price_open": 1}],
-            [], Exception("fail")
+            [],
+            Exception("fail"),
         ]
         out = coinapi_client.batch_prev_close(["BTC", "ETH", "XRP"])
         assert out["BTC"]["status"] == "OK"
@@ -248,18 +273,30 @@ class TestPolygonClient:
     def test_init_and_request_failures(self, monkeypatch):
         monkeypatch.delenv("POLYGON_KEY", raising=False)
 
-        with patch("hybrid_ai_trading.data.clients.polygon_client.load_config",
-                   side_effect=Exception("bad")):
-            with pytest.raises(polygon_client.PolygonAPIError, match="Failed to load Polygon config"):
+        with patch(
+            "hybrid_ai_trading.data.clients.polygon_client.load_config",
+            side_effect=Exception("bad"),
+        ):
+            with pytest.raises(
+                polygon_client.PolygonAPIError, match="Failed to load Polygon config"
+            ):
                 polygon_client.PolygonClient(api_key=None, allow_missing=False)
 
-        with patch("hybrid_ai_trading.data.clients.polygon_client.load_config", return_value={}):
-            with pytest.raises(polygon_client.PolygonAPIError, match="Polygon API key not provided"):
+        with patch(
+            "hybrid_ai_trading.data.clients.polygon_client.load_config", return_value={}
+        ):
+            with pytest.raises(
+                polygon_client.PolygonAPIError, match="Polygon API key not provided"
+            ):
                 polygon_client.PolygonClient(api_key=None, allow_missing=False)
 
-        with patch("hybrid_ai_trading.data.clients.polygon_client.load_config",
-                   return_value={"providers": {"polygon": {"api_key_env": ""}}}):
-            with pytest.raises(polygon_client.PolygonAPIError, match="Polygon API key not provided"):
+        with patch(
+            "hybrid_ai_trading.data.clients.polygon_client.load_config",
+            return_value={"providers": {"polygon": {"api_key_env": ""}}},
+        ):
+            with pytest.raises(
+                polygon_client.PolygonAPIError, match="Polygon API key not provided"
+            ):
                 polygon_client.PolygonClient(api_key=None, allow_missing=False)
 
     @patch("hybrid_ai_trading.data.clients.polygon_client.requests.get")
@@ -284,8 +321,13 @@ class TestPolygonClient:
 # ======================================================================
 class TestNewsClient:
     def test_normalize_and_fail(self):
-        good = {"id": "1", "published_utc": "2025-01-01T00:00:00Z",
-                "title": "x", "url": "u", "tickers": ["AAPL"]}
+        good = {
+            "id": "1",
+            "published_utc": "2025-01-01T00:00:00Z",
+            "title": "x",
+            "url": "u",
+            "tickers": ["AAPL"],
+        }
         out = news_client._normalize_article(good)
         assert out["symbols"] == "AAPL"
         bad = {"id": "1", "published_utc": "bad-date"}
@@ -341,17 +383,24 @@ class TestNewsClient:
         fake = MagicMock()
         mock_sess.return_value = fake
         from sqlalchemy.exc import IntegrityError
+
         fake.add.side_effect = None
         fake.commit.side_effect = [IntegrityError("dup", "params", "orig")]
-        assert news_client.save_articles(
-            [{"id": "1", "published_utc": "2025-01-01T00:00:00Z"}]) >= 0
+        assert (
+            news_client.save_articles(
+                [{"id": "1", "published_utc": "2025-01-01T00:00:00Z"}]
+            )
+            >= 0
+        )
 
     @patch("hybrid_ai_trading.data.clients.news_client.SessionLocal")
     def test_get_latest_headlines_with_symbol(self, mock_sess):
         fake = MagicMock()
         mock_sess.return_value = fake
         row = MagicMock(title="t", symbols="AAPL", url="u", created=datetime.now())
-        fake.query.return_value.order_by.return_value.filter.return_value.limit.return_value.all.return_value = [row]
+        fake.query.return_value.order_by.return_value.filter.return_value.limit.return_value.all.return_value = [
+            row
+        ]
         out = news_client.get_latest_headlines(symbol="AAPL")
         assert out[0]["symbols"] == "AAPL"
 

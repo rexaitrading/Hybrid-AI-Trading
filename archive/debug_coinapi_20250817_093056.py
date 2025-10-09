@@ -1,6 +1,9 @@
-﻿import os, sys, json, traceback
-from dotenv import load_dotenv
+import json
+import os
+import traceback
+
 import requests
+from dotenv import load_dotenv
 
 print("=== start ===")
 load_dotenv()

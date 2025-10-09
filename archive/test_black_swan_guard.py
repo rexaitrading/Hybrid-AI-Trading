@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: BlackSwanGuard (Hybrid AI Quant Pro v12.7 – Hedge-Fund Grade, 100% Coverage)
 ----------------------------------------------------------------------------------------
 Covers:
@@ -15,6 +15,7 @@ Covers:
 """
 
 import pytest
+
 from hybrid_ai_trading.risk.black_swan_guard import BlackSwanGuard
 
 

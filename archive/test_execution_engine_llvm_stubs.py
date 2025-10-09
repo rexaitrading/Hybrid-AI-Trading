@@ -10,6 +10,7 @@ Ensures hedge-fund safety: JIT stubs never execute silently and always fail fast
 """
 
 import pytest
+
 from hybrid_ai_trading.execution import execution_engine
 
 

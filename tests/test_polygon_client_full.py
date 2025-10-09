@@ -10,9 +10,11 @@ Covers:
 - Final enforcement branch (env var exists but unset)
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from hybrid_ai_trading.data.clients.polygon_client import PolygonClient, PolygonAPIError
+
+from hybrid_ai_trading.data.clients.polygon_client import PolygonAPIError, PolygonClient
 
 
 # ==========================================================
@@ -33,7 +35,9 @@ def test_init_without_key_allow_missing(monkeypatch):
 
 def test_init_without_key_disallow(monkeypatch):
     monkeypatch.delenv("POLYGON_KEY", raising=False)
-    with patch("hybrid_ai_trading.data.clients.polygon_client.load_config", return_value={}):
+    with patch(
+        "hybrid_ai_trading.data.clients.polygon_client.load_config", return_value={}
+    ):
         with pytest.raises(PolygonAPIError, match="Polygon API key not provided"):
             PolygonClient(api_key=None, allow_missing=False)
 

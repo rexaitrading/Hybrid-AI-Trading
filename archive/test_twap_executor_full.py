@@ -12,6 +12,7 @@ Covers ALL branches in twap.py:
 """
 
 import pytest
+
 import hybrid_ai_trading.algos.twap as twap
 
 
@@ -98,6 +99,7 @@ def test_exception_branch(monkeypatch):
     assert "TWAP execution failure" in res["reason"]
     assert len(res["details"]) == 1  # only first slice succeeded
 
+
 def test_exception_first_slice(monkeypatch):
     """Covers branch where first slice fails immediately."""
     mgr = DummyOrderManager(fail_at=1)
@@ -107,6 +109,7 @@ def test_exception_first_slice(monkeypatch):
     assert res["status"] == "error"
     assert "slice 1" in res["reason"]
     assert res["details"] == []  # no successful slices
+
 
 def test_twap_executor_first_slice_exception(monkeypatch):
     """Covers branch: failure on the first slice triggers error return."""
@@ -119,6 +122,9 @@ def test_twap_executor_first_slice_exception(monkeypatch):
     twap = TWAPExecutor(FailingManager(), slices=3, delay=0)
     res = twap.execute("AAPL", "BUY", 9, 100.0)
     assert res["status"] == "error"
-    assert "first slice" in res["reason"].lower() or "TWAP execution failure" in res["reason"]
+    assert (
+        "first slice" in res["reason"].lower()
+        or "TWAP execution failure" in res["reason"]
+    )
     assert res["algo"] == "TWAP"
     assert res["details"] == []  # nothing filled before failure

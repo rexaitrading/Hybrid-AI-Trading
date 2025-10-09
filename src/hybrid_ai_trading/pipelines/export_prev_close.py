@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict
 
 from hybrid_ai_trading.data.clients.coinapi_client import batch_prev_close
-from hybrid_ai_trading.data.clients.polygon_client import PolygonClient, PolygonAPIError
+from hybrid_ai_trading.data.clients.polygon_client import PolygonAPIError, PolygonClient
 
 logger = logging.getLogger("hybrid_ai_trading.pipelines.export_prev_close")
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")

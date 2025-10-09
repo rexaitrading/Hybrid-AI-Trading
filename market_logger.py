@@ -1,5 +1,6 @@
 import csv
 from datetime import datetime
+
 from ib_insync import *
 
 ib = IB()
@@ -28,5 +29,7 @@ with open("market_data.csv", "a", newline="") as f:
     while True:
         ib.sleep(1)
         for t in tickers:
-            writer.writerow([datetime.now(), t.contract.symbol, t.last, t.marketPrice()])
+            writer.writerow(
+                [datetime.now(), t.contract.symbol, t.last, t.marketPrice()]
+            )
             print("Saved:", datetime.now(), t.contract.symbol, t.last, t.marketPrice())

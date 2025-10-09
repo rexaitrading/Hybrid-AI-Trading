@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: main.py
 (Hybrid AI Quant Pro – Hedge Fund Grade v1.4, 100% Coverage)
 ============================================================
@@ -11,9 +11,10 @@ Covers:
 - __main__ entrypoint execution (via runpy)
 """
 
+import runpy
 import sys
 import types
-import runpy
+
 import pytest
 
 import hybrid_ai_trading.main as main

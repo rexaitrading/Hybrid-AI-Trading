@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: SmartOrderRouter (Hybrid AI Quant Pro v5.1 – Hedge-Fund OE Grade, 100% Coverage)
 --------------------------------------------------------------------------------------------
 Covers all branches in smart_router.py:
@@ -12,7 +12,9 @@ Covers all branches in smart_router.py:
 """
 
 import os
+
 import pytest
+
 from hybrid_ai_trading.execution.smart_router import SmartOrderRouter
 
 
@@ -59,7 +61,12 @@ def test_score_and_choose_routes():
 def test_timeout_wrapper_success_and_exception(monkeypatch):
     r = make_router("ok")
     assert r._timeout_wrapper(lambda: {"status": "ok"}, timeout=0.01)
-    assert r._timeout_wrapper(lambda: (_ for _ in ()).throw(Exception("fail")), timeout=0.01)["status"] == "error"
+    assert (
+        r._timeout_wrapper(
+            lambda: (_ for _ in ()).throw(Exception("fail")), timeout=0.01
+        )["status"]
+        == "error"
+    )
 
 
 def test_send_alert_logs(caplog):
@@ -69,7 +76,9 @@ def test_send_alert_logs(caplog):
     assert "error" in caplog.text.lower()
 
 
-@pytest.mark.parametrize("behavior", ["ok", "pending", "error", "nondict", "warning", "blocked", "unknown"])
+@pytest.mark.parametrize(
+    "behavior", ["ok", "pending", "error", "nondict", "warning", "blocked", "unknown"]
+)
 def test_route_order_paths(behavior):
     r = make_router(behavior)
     res = r.route_order("AAPL", "BUY", 1, 100)

@@ -1,8 +1,5 @@
-﻿import os
 import time
-import csv
-import calendar
-from datetime import datetime
+
 from debug_cryptocompare import fetch_prices, print_and_save
 
 

@@ -8,8 +8,9 @@ Covers:
 """
 
 import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 import requests
 from dotenv import load_dotenv
 

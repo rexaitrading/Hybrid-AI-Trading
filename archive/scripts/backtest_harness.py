@@ -26,7 +26,9 @@ from hybrid_ai_trading.trade_engine import TradeEngine  # noqa
 
 SECTOR_MAP = {"BTC/USDT": "Crypto", "ETH/USDT": "Crypto", "SPY": "Equities"}
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
+)
 logger = logging.getLogger("BacktestHarness")
 
 
@@ -63,7 +65,9 @@ def run_backtest(engine: TradeEngine, data: pd.DataFrame, symbol: str) -> pd.Dat
         elif row["close"] < row["MA20"]:
             signal = "SELL"
 
-        result = engine.process_signal(symbol, signal, size=1, price=float(row["close"]))
+        result = engine.process_signal(
+            symbol, signal, size=1, price=float(row["close"])
+        )
         engine.portfolio.update_equity({symbol: float(row["close"])})
 
         trades.append(
@@ -82,7 +86,9 @@ def run_backtest(engine: TradeEngine, data: pd.DataFrame, symbol: str) -> pd.Dat
 # ==========================================================
 # Results Export
 # ==========================================================
-def save_results(all_trades: pd.DataFrame, summary: dict, attribution: dict, tag="multi") -> None:
+def save_results(
+    all_trades: pd.DataFrame, summary: dict, attribution: dict, tag="multi"
+) -> None:
     """Save results to Excel, PNG, TXT."""
     reports_dir = ROOT / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -92,16 +98,35 @@ def save_results(all_trades: pd.DataFrame, summary: dict, attribution: dict, tag
     excel_path = reports_dir / f"backtest_{tag}_{timestamp}.xlsx"
     with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
         all_trades.to_excel(writer, sheet_name="Trades", index=False)
-        all_trades[["date", "equity"]].to_excel(writer, sheet_name="EquityCurve", index=False)
-        pd.DataFrame.from_dict(summary, orient="index", columns=["Value"]).to_excel(writer, sheet_name="Summary")
-        pd.DataFrame.from_dict(attribution, orient="index", columns=["PnL"]).to_excel(writer, sheet_name="Attribution")
+        all_trades[["date", "equity"]].to_excel(
+            writer, sheet_name="EquityCurve", index=False
+        )
+        pd.DataFrame.from_dict(summary, orient="index", columns=["Value"]).to_excel(
+            writer, sheet_name="Summary"
+        )
+        pd.DataFrame.from_dict(attribution, orient="index", columns=["PnL"]).to_excel(
+            writer, sheet_name="Attribution"
+        )
 
     # PNG equity curve
     chart_path = reports_dir / f"backtest_{tag}_{timestamp}.png"
     plt.figure(figsize=(12, 6))
-    plt.plot(all_trades["date"], all_trades["equity"], label="Equity", linewidth=2, color="blue")
+    plt.plot(
+        all_trades["date"],
+        all_trades["equity"],
+        label="Equity",
+        linewidth=2,
+        color="blue",
+    )
     peak = np.maximum.accumulate(all_trades["equity"])
-    plt.fill_between(all_trades["date"], all_trades["equity"], peak, where=all_trades["equity"] < peak, color="red", alpha=0.3)
+    plt.fill_between(
+        all_trades["date"],
+        all_trades["equity"],
+        peak,
+        where=all_trades["equity"] < peak,
+        color="red",
+        alpha=0.3,
+    )
     plt.title(f"Equity Curve with Drawdowns ({tag})")
     plt.xlabel("Date")
     plt.ylabel("Equity")
@@ -158,8 +183,11 @@ def main() -> None:
         "End Equity": end_eq,
         "Return %": (end_eq - start_eq) / start_eq * 100,
         "Num Trades": len(all_trades),
-        "Max Drawdown %": ((np.maximum.accumulate(all_trades["equity"]) - all_trades["equity"])
-                           / np.maximum.accumulate(all_trades["equity"])).max() * 100,
+        "Max Drawdown %": (
+            (np.maximum.accumulate(all_trades["equity"]) - all_trades["equity"])
+            / np.maximum.accumulate(all_trades["equity"])
+        ).max()
+        * 100,
     }
 
     save_results(all_trades, summary, attribution, tag="multi_symbol")

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: RiskManager with Signals
 (Hybrid AI Quant Pro v7.9 – Hedge-Fund Grade, 100% Coverage)
 ================================================================
@@ -16,7 +16,9 @@ Covers:
 """
 
 import logging
+
 import pytest
+
 from hybrid_ai_trading.risk.risk_manager import RiskManager
 
 logger = logging.getLogger("test_risk_manager_with_signals")

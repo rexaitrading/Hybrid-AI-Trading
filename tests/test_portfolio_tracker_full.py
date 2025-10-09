@@ -15,9 +15,11 @@ Covers all branches in portfolio_tracker.py:
 - reset_day: success + exception branch + intraday_trades=None
 """
 
-import pytest
 import builtins
 from datetime import datetime
+
+import pytest
+
 from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
 
 
@@ -118,29 +120,34 @@ def test_close_long_exact_cleanup(tracker):
     tracker.update_position("LONGZERO", "SELL", 5, 110)  # exactly flat
     assert "LONGZERO" not in tracker.get_positions()
 
+
 def test_cover_and_open_long_same_call(tracker):
     tracker.update_position("SYM", "SELL", 5, 100)  # short
-    tracker.update_position("SYM", "BUY", 10, 90)   # cover 5 + open 5 long
+    tracker.update_position("SYM", "BUY", 10, 90)  # cover 5 + open 5 long
     pos = tracker.get_positions()["SYM"]
     assert pos["size"] > 0
 
+
 def test_close_and_open_short_same_call(tracker):
-    tracker.update_position("SYM2", "BUY", 5, 100)   # long
-    tracker.update_position("SYM2", "SELL", 10, 110) # close 5 + new 5 short
+    tracker.update_position("SYM2", "BUY", 5, 100)  # long
+    tracker.update_position("SYM2", "SELL", 10, 110)  # close 5 + new 5 short
     pos = tracker.get_positions()["SYM2"]
     assert pos["size"] < 0
 
+
 def test_buy_covers_and_opens_long(tracker):
-    tracker.update_position("MIX", "SELL", 5, 100)   # short
-    tracker.update_position("MIX", "BUY", 10, 90)    # cover 5 + open 5 long
+    tracker.update_position("MIX", "SELL", 5, 100)  # short
+    tracker.update_position("MIX", "BUY", 10, 90)  # cover 5 + open 5 long
     pos = tracker.get_positions()["MIX"]
     assert pos["size"] == 5
 
+
 def test_sell_closes_and_opens_short(tracker):
-    tracker.update_position("MIX2", "BUY", 5, 100)   # long
-    tracker.update_position("MIX2", "SELL", 10, 110) # close 5 + open 5 short
+    tracker.update_position("MIX2", "BUY", 5, 100)  # long
+    tracker.update_position("MIX2", "SELL", 10, 110)  # close 5 + open 5 short
     pos = tracker.get_positions()["MIX2"]
     assert pos["size"] == -5
+
 
 # ----------------------------------------------------------------------
 # update_equity
@@ -183,7 +190,11 @@ def test_var_and_cvar_paths(tracker, caplog):
 
 
 def test_cvar_no_losses_after_cutoff(tracker, caplog):
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 110), (datetime.utcnow(), 120)]
+    tracker.history = [
+        (datetime.utcnow(), 100),
+        (datetime.utcnow(), 110),
+        (datetime.utcnow(), 120),
+    ]
     with caplog.at_level("DEBUG"):
         val = tracker.get_cvar()
         assert val == 0.0
@@ -191,8 +202,14 @@ def test_cvar_no_losses_after_cutoff(tracker, caplog):
 
 
 def test_var_exception_branch(tracker, monkeypatch, caplog):
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 90), (datetime.utcnow(), 80)]
-    monkeypatch.setattr("numpy.percentile", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("fail")))
+    tracker.history = [
+        (datetime.utcnow(), 100),
+        (datetime.utcnow(), 90),
+        (datetime.utcnow(), 80),
+    ]
+    monkeypatch.setattr(
+        "numpy.percentile", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     with caplog.at_level("WARNING"):
         v = tracker.get_var()
         assert v >= 0
@@ -200,8 +217,14 @@ def test_var_exception_branch(tracker, monkeypatch, caplog):
 
 
 def test_cvar_exception_branch(tracker, monkeypatch, caplog):
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 90), (datetime.utcnow(), 80)]
-    monkeypatch.setattr("numpy.percentile", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("fail")))
+    tracker.history = [
+        (datetime.utcnow(), 100),
+        (datetime.utcnow(), 90),
+        (datetime.utcnow(), 80),
+    ]
+    monkeypatch.setattr(
+        "numpy.percentile", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     with caplog.at_level("WARNING"):
         c = tracker.get_cvar()
         assert c >= 0
@@ -231,6 +254,7 @@ def test_cvar_single_negative_loss_branch(caplog):
         assert val > 0
         assert "single loss branch" in caplog.text
 
+
 def test_var_logs_insufficient_data(tracker, caplog):
     tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 101)]
     with caplog.at_level("DEBUG"):
@@ -238,19 +262,30 @@ def test_var_logs_insufficient_data(tracker, caplog):
     assert v == 0.0
     assert "insufficient data for VaR" in caplog.text
 
+
 def test_cvar_all_returns_positive(tracker, caplog):
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 110), (datetime.utcnow(), 120)]
+    tracker.history = [
+        (datetime.utcnow(), 100),
+        (datetime.utcnow(), 110),
+        (datetime.utcnow(), 120),
+    ]
     with caplog.at_level("DEBUG"):
         v = tracker.get_cvar()
     assert v == 0.0
     assert "no losses" in caplog.text
 
+
 def test_var_with_empty_history(tracker):
     tracker.history = []
     assert tracker.get_var() == 0.0
 
+
 def test_cvar_losses_but_none_below_cutoff(tracker, monkeypatch, caplog):
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 101), (datetime.utcnow(), 102)]
+    tracker.history = [
+        (datetime.utcnow(), 100),
+        (datetime.utcnow(), 101),
+        (datetime.utcnow(), 102),
+    ]
     # Force cutoff high so no losses qualify
     monkeypatch.setattr("numpy.percentile", lambda *a, **k: -9999)
     with caplog.at_level("DEBUG"):
@@ -277,7 +312,11 @@ def test_sharpe_and_sortino(tracker):
 
 
 def test_sortino_downside_zero_std(tracker):
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 99), (datetime.utcnow(), 99)]
+    tracker.history = [
+        (datetime.utcnow(), 100),
+        (datetime.utcnow(), 99),
+        (datetime.utcnow(), 99),
+    ]
     assert tracker.get_sortino() == 0.0
 
 
@@ -322,7 +361,9 @@ def test_reset_day_success_and_exception():
     assert res["status"] == "ok"
 
     class BadTrades:
-        def clear(self): raise Exception("boom")
+        def clear(self):
+            raise Exception("boom")
+
     t.intraday_trades = BadTrades()
     res2 = t.reset_day()
     assert res2["status"] == "error"
@@ -335,36 +376,51 @@ def test_reset_day_intraday_trades_none():
     res = t.reset_day()
     assert res["status"] == "error"
 
+
 def test_reset_day_runtime_error():
     t = PortfolioTracker()
+
     class BadTrades:
-        def clear(self): raise RuntimeError("bad clear")
+        def clear(self):
+            raise RuntimeError("bad clear")
+
     t.intraday_trades = BadTrades()
     res = t.reset_day()
     assert res["status"] == "error"
     assert "bad clear" in res["reason"]
+
 
 def test_var_returns_empty_history(tracker):
     tracker.history = []
     assert tracker.get_var() == 0.0
 
+
 def test_cvar_mixed_returns(tracker):
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 90), (datetime.utcnow(), 110)]
+    tracker.history = [
+        (datetime.utcnow(), 100),
+        (datetime.utcnow(), 90),
+        (datetime.utcnow(), 110),
+    ]
     val = tracker.get_cvar()
     assert isinstance(val, float)
     assert val >= 0
 
+
 def test_reset_day_runtime_error_subclass():
     t = PortfolioTracker()
+
     class BadTrades:
-        def clear(self): raise RuntimeError("bad clear")
+        def clear(self):
+            raise RuntimeError("bad clear")
+
     t.intraday_trades = BadTrades()
     res = t.reset_day()
     assert res["status"] == "error"
     assert "bad clear" in res["reason"]
 
+
 def test_buy_cover_and_new_long_forces_both_paths(tracker, caplog):
-    tracker.update_position("BRANCH1", "SELL", 5, 100)   # short
+    tracker.update_position("BRANCH1", "SELL", 5, 100)  # short
     with caplog.at_level("DEBUG"):
         tracker.update_position("BRANCH1", "BUY", 10, 90)  # cover 5 + open 5 long
     pos = tracker.get_positions()["BRANCH1"]
@@ -373,7 +429,7 @@ def test_buy_cover_and_new_long_forces_both_paths(tracker, caplog):
 
 
 def test_sell_close_and_new_short_forces_both_paths(tracker, caplog):
-    tracker.update_position("BRANCH2", "BUY", 5, 100)    # long
+    tracker.update_position("BRANCH2", "BUY", 5, 100)  # long
     with caplog.at_level("DEBUG"):
         tracker.update_position("BRANCH2", "SELL", 10, 110)  # close 5 + open 5 short
     pos = tracker.get_positions()["BRANCH2"]
@@ -385,9 +441,9 @@ def test_cvar_losses_exist_but_none_below_cutoff(tracker, monkeypatch, caplog):
     # Two negative returns but force cutoff too low so losses list is empty
     tracker.history = [
         (datetime.utcnow(), 100),
-        (datetime.utcnow(), 90),   # -10%
-        (datetime.utcnow(), 80),   # -11%
-        (datetime.utcnow(), 82)    # +2.5%
+        (datetime.utcnow(), 90),  # -10%
+        (datetime.utcnow(), 80),  # -11%
+        (datetime.utcnow(), 82),  # +2.5%
     ]
     monkeypatch.setattr("numpy.percentile", lambda *a, **k: -999)  # cutoff excludes all
     with caplog.at_level("DEBUG"):

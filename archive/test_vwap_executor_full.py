@@ -11,6 +11,7 @@ Covers ALL branches in vwap_executor.py:
 """
 
 import pytest
+
 from hybrid_ai_trading.algos import get_algo_executor
 
 # Load VWAPExecutor class via orchestrator (avoids circular import issues)
@@ -22,6 +23,7 @@ VWAPExecutor = get_algo_executor("VWAP")
 # ----------------------------------------------------------------------
 class DummyOrderManager:
     """Minimal stub to satisfy VWAPExecutor constructor."""
+
     def place_order(self, *args, **kwargs):
         return {"status": "filled"}
 
@@ -76,7 +78,9 @@ def test_exception_branch(monkeypatch, executor):
     """If vwap_signal raises, executor returns error."""
     import hybrid_ai_trading.algos.vwap_executor as vwap_executor
 
-    def boom(*_): raise Exception("forced fail")
+    def boom(*_):
+        raise Exception("forced fail")
+
     monkeypatch.setattr(vwap_executor, "vwap_signal", boom)
     res = executor.execute("META", "BUY", 2, 75.0)
     assert res["status"] == "error"

@@ -22,10 +22,10 @@ Fixes:
 import logging
 import time
 import uuid
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
-from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
 from hybrid_ai_trading.execution.paper_simulator import PaperSimulator
+from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
 
 logger = logging.getLogger("hybrid_ai_trading.execution.order_manager")
 
@@ -76,7 +76,9 @@ class OrderManager:
                     return self.risk_manager.check_trade(symbol, side, size, notional)
                 except TypeError:
                     # Legacy fallback: many legacy stubs accept (pnl_or_notional, trade_notional=None)
-                    return self.risk_manager.check_trade(notional, trade_notional=notional)
+                    return self.risk_manager.check_trade(
+                        notional, trade_notional=notional
+                    )
 
             if hasattr(self.risk_manager, "approve_trade"):
                 return self.risk_manager.approve_trade(symbol, side, size, price)

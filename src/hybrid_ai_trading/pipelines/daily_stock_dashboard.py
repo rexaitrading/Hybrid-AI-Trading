@@ -1,4 +1,4 @@
-﻿"""
+"""
 Daily Stock Dashboard (ASCII-safe)
 ----------------------------------
 Fetch Polygon bars, grade breakouts, export CSV+JSON, optionally place IBKR bracket orders.
@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 # Optional IBKR import (safe for tests)
 try:
-    from ib_insync import IB, Stock, MarketOrder, LimitOrder, StopOrder
+    from ib_insync import IB, LimitOrder, MarketOrder, Stock, StopOrder
 except ImportError:
     IB = None
     Stock = None
@@ -26,7 +26,9 @@ except ImportError:
     StopOrder = None
 
 logger = logging.getLogger("DailyDashboard")
-logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
+)
 
 load_dotenv()
 POLYGON_KEY = os.getenv("POLYGON_KEY", "")
@@ -190,5 +192,8 @@ def daily_dashboard_with_ibkr() -> None:
         for e in executed:
             logger.info(
                 "%s: %d shares, Stop=%.2f, Target=%.2f",
-                e["symbol"], e["qty"], e["stop"], e["target"]
+                e["symbol"],
+                e["qty"],
+                e["stop"],
+                e["target"],
             )

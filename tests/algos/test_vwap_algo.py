@@ -1,5 +1,5 @@
-import pytest
 import math
+
 import hybrid_ai_trading.algos.vwap as mod
 
 
@@ -11,28 +11,30 @@ def make_bars(prices, vols=None):
 
 # -------------------- Guard paths --------------------
 def test_guard_empty_list():
-    assert mod.vwap_signal([]) == "HOLD"            # Guard 1
+    assert mod.vwap_signal([]) == "HOLD"  # Guard 1
 
 
 def test_guard_missing_c_or_v():
-    assert mod.vwap_signal([{"v": 1}]) == "HOLD"    # Guard 2 (missing c)
-    assert mod.vwap_signal([{"c": 1}]) == "HOLD"    # Guard 2 (missing v)
+    assert mod.vwap_signal([{"v": 1}]) == "HOLD"  # Guard 2 (missing c)
+    assert mod.vwap_signal([{"c": 1}]) == "HOLD"  # Guard 2 (missing v)
 
 
 def test_guard_non_numeric_values():
     # bad str
-    assert mod.vwap_signal([{"c": "oops", "v": 1}]) == "HOLD"   # Guard 3
+    assert mod.vwap_signal([{"c": "oops", "v": 1}]) == "HOLD"  # Guard 3
     # bad type
-    assert mod.vwap_signal([{"c": {"x":1}, "v": 1}]) == "HOLD"  # Guard 3
+    assert mod.vwap_signal([{"c": {"x": 1}, "v": 1}]) == "HOLD"  # Guard 3
 
 
 def test_guard_nan_values():
-    assert mod.vwap_signal([{"c": math.nan, "v": 1}]) == "HOLD" # Guard 4 (NaN close)
-    assert mod.vwap_signal([{"c": 1, "v": math.nan}]) == "HOLD" # Guard 4 (NaN vol)
+    assert mod.vwap_signal([{"c": math.nan, "v": 1}]) == "HOLD"  # Guard 4 (NaN close)
+    assert mod.vwap_signal([{"c": 1, "v": math.nan}]) == "HOLD"  # Guard 4 (NaN vol)
 
 
 def test_guard_total_volume_non_positive():
-    assert mod.vwap_signal([{"c": 100, "v": 0}, {"c": 101, "v": 0}]) == "HOLD"  # Guard 5
+    assert (
+        mod.vwap_signal([{"c": 100, "v": 0}, {"c": 101, "v": 0}]) == "HOLD"
+    )  # Guard 5
 
 
 # -------------------- Decision paths --------------------

@@ -12,10 +12,9 @@ Covers:
 """
 
 import logging
-import pytest
 from unittest.mock import patch
 
-from hybrid_ai_trading.signals.breakout_v1 import breakout_v1, breakout_signal
+from hybrid_ai_trading.signals.breakout_v1 import breakout_signal, breakout_v1
 
 
 # ======================================================================

@@ -20,6 +20,7 @@ import sys
 from typing import Any, Dict, List
 
 from dotenv import load_dotenv
+
 from src.config.settings import load_config
 
 # ----------------------------------------------------------------------
@@ -68,6 +69,7 @@ REQUIRED_STRUCTURE: Dict[str, Any] = {
         "enable_portfolio_guard",
     ],
 }
+
 
 # ----------------------------------------------------------------------
 # Validation helpers

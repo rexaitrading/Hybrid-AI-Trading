@@ -15,11 +15,12 @@ Covers ALL branches in llvm_adapter.py (10–75):
 - Logging paths for success/failure
 """
 
-import sys
-import os
 import ctypes
+import os
+import sys
+
 import pytest
-from llvmlite import ir, binding
+from llvmlite import binding, ir
 
 # Ensure src/ is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))

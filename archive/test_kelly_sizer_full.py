@@ -11,16 +11,16 @@ Covers:
 - _safe_fmt success and failure branches
 """
 
+import json
 import logging
 import os
-import json
-import pytest
-from hybrid_ai_trading.risk.kelly_sizer import KellySizer, _safe_fmt
 
+from hybrid_ai_trading.risk.kelly_sizer import KellySizer, _safe_fmt
 
 # ----------------------------------------------------------------------
 # Init
 # ----------------------------------------------------------------------
+
 
 def test_init_defaults_and_custom(caplog):
     caplog.set_level(logging.INFO)
@@ -34,6 +34,7 @@ def test_init_defaults_and_custom(caplog):
 # ----------------------------------------------------------------------
 # Kelly fraction
 # ----------------------------------------------------------------------
+
 
 def test_kelly_fraction_scaled_and_clamped(caplog):
     caplog.set_level(logging.DEBUG)
@@ -71,6 +72,7 @@ def test_kelly_fraction_exception(monkeypatch, caplog):
 # ----------------------------------------------------------------------
 # size_position
 # ----------------------------------------------------------------------
+
 
 def test_size_position_valid_and_invalid(caplog):
     caplog.set_level(logging.INFO)
@@ -116,6 +118,7 @@ def test_size_position_exception(monkeypatch, caplog):
 # batch_size
 # ----------------------------------------------------------------------
 
+
 def test_batch_size_multiple_symbols():
     ks = KellySizer(0.6, 2.0, 0.5)
     prices = {"AAPL": 100, "TSLA": 200}
@@ -127,6 +130,7 @@ def test_batch_size_multiple_symbols():
 # ----------------------------------------------------------------------
 # update_params, __repr__, save_params
 # ----------------------------------------------------------------------
+
 
 def test_update_and_repr_and_save(tmp_path, caplog):
     caplog.set_level(logging.INFO)
@@ -156,9 +160,12 @@ def test_save_params_failure(tmp_path, caplog):
 # _safe_fmt
 # ----------------------------------------------------------------------
 
+
 def test_safe_fmt_success_and_failure():
     assert _safe_fmt(1.234) == "1.23"
+
     # Pass an object that cannot be cast to float
     class Bad:
         pass
+
     assert "Bad" in _safe_fmt(Bad())

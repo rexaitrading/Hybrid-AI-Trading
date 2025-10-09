@@ -4,11 +4,10 @@ Unit Tests: Signal Demo (Hybrid AI Quant Pro v100 – Polished)
 Small demo tests for breakout_v1 and breakout_signal.
 """
 
-import pytest
 import logging
 from unittest.mock import patch
 
-from hybrid_ai_trading.signals.breakout_v1 import breakout_v1, breakout_signal
+from hybrid_ai_trading.signals.breakout_v1 import breakout_signal, breakout_v1
 
 
 def make_bars(prices):

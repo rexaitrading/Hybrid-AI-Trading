@@ -15,8 +15,8 @@ Forces 100% coverage of risk_manager.py:
 - Reset day (success + error branch)
 """
 
-import pytest
 import logging
+
 from hybrid_ai_trading.risk.risk_manager import RiskManager
 
 
@@ -72,12 +72,20 @@ def test_trade_and_daily_loss_guards(caplog):
 # Exposure & leverage guards
 # ----------------------------------------------------------------------
 class HighRiskPortfolio:
-    def get_leverage(self): return 10
-    def get_total_exposure(self): return 9999
+    def get_leverage(self):
+        return 10
+
+    def get_total_exposure(self):
+        return 9999
+
 
 def test_exposure_and_leverage_guards(caplog):
-    rm = RiskManager(max_leverage=2, max_portfolio_exposure=0.1,
-                     portfolio=HighRiskPortfolio(), equity=1000)
+    rm = RiskManager(
+        max_leverage=2,
+        max_portfolio_exposure=0.1,
+        portfolio=HighRiskPortfolio(),
+        equity=1000,
+    )
     caplog.set_level(logging.WARNING)
     assert rm.check_trade("AAPL", "BUY", 1, 1) is False
     assert "leverage" in caplog.text.lower() or "exposure" in caplog.text.lower()
@@ -87,8 +95,12 @@ def test_exposure_and_leverage_guards(caplog):
 # Portfolio error branch
 # ----------------------------------------------------------------------
 class BadPortfolio:
-    def get_leverage(self): raise Exception("lev fail")
-    def get_total_exposure(self): return 1000
+    def get_leverage(self):
+        raise Exception("lev fail")
+
+    def get_total_exposure(self):
+        return 1000
+
 
 def test_portfolio_error_branch(caplog):
     rm = RiskManager(portfolio=BadPortfolio())
@@ -101,11 +113,17 @@ def test_portfolio_error_branch(caplog):
 # DB logger branches
 # ----------------------------------------------------------------------
 class GoodLogger:
-    def __init__(self): self.logged = []
-    def log(self, data): self.logged.append(data)
+    def __init__(self):
+        self.logged = []
+
+    def log(self, data):
+        self.logged.append(data)
+
 
 class BadLogger:
-    def log(self, data): raise Exception("db fail")
+    def log(self, data):
+        raise Exception("db fail")
+
 
 def test_db_logger_success_and_error(caplog):
     good = GoodLogger()
@@ -141,7 +159,9 @@ def test_kelly_size_normal_invalid_and_exception(caplog):
 
     # Exception path
     class Exploder:
-        def __rtruediv__(self, other): raise Exception("boom")
+        def __rtruediv__(self, other):
+            raise Exception("boom")
+
     caplog.set_level(logging.ERROR)
     assert rm.kelly_size(0.6, Exploder()) == 0.0
     assert "kelly sizing failed" in caplog.text.lower()
@@ -168,7 +188,9 @@ def test_reset_day_success_and_error(caplog):
     assert out["status"] == "ok"
 
     class BadPortfolio:
-        def reset_day(self): raise Exception("boom")
+        def reset_day(self):
+            raise Exception("boom")
+
     rm.portfolio = BadPortfolio()
     caplog.set_level(logging.ERROR)
     out = rm.reset_day()

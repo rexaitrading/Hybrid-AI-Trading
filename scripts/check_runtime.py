@@ -1,4 +1,4 @@
-mods = ["torch","transformers","vaderSentiment","ccxt","ib_insync"]
+mods = ["torch", "transformers", "vaderSentiment", "ccxt", "ib_insync"]
 ok, bad = [], []
 for m in mods:
     try:

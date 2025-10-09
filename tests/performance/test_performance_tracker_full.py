@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: PerformanceTracker (Hybrid AI Quant Pro v7.5 – AAA+ Coverage)
 -----------------------------------------------------------------------
 Covers ALL branches in performance_tracker.py:
@@ -13,7 +13,9 @@ Covers ALL branches in performance_tracker.py:
 """
 
 import json
+
 import pytest
+
 from hybrid_ai_trading.performance_tracker import PerformanceTracker
 
 
@@ -114,7 +116,7 @@ def test_sharpe_ratio_variants(monkeypatch, caplog):
     pt3.record_trade(20)
     monkeypatch.setattr(
         "hybrid_ai_trading.performance_tracker.mean",
-        lambda *_: (_ for _ in ()).throw(Exception("boom"))
+        lambda *_: (_ for _ in ()).throw(Exception("boom")),
     )
     caplog.set_level("ERROR")
     assert pt3.sharpe_ratio() == 0.0
@@ -154,7 +156,7 @@ def test_sortino_ratio_variants(monkeypatch, caplog):
     pt5.record_trade(-10)
     monkeypatch.setattr(
         "hybrid_ai_trading.performance_tracker.pstdev",
-        lambda *_: (_ for _ in ()).throw(Exception("bad pstdev"))
+        lambda *_: (_ for _ in ()).throw(Exception("bad pstdev")),
     )
     caplog.set_level("ERROR")
     assert pt5.sortino_ratio() == 0.0
@@ -181,11 +183,12 @@ def test_alpha_beta_variants(monkeypatch, caplog):
     pt2.benchmark = [1, 2, 3]
     monkeypatch.setattr(
         "hybrid_ai_trading.performance_tracker.mean",
-        lambda *_: (_ for _ in ()).throw(Exception("fail"))
+        lambda *_: (_ for _ in ()).throw(Exception("fail")),
     )
     caplog.set_level("ERROR")
     assert pt2.alpha_beta() == {"alpha": 0.0, "beta": 0.0}
     assert "Alpha/Beta calc error" in caplog.text
+
 
 def test_alpha_beta_zero_variance_benchmark():
     """Benchmark with zero variance -> beta=0.0 path."""
@@ -193,7 +196,14 @@ def test_alpha_beta_zero_variance_benchmark():
     pt.trades = [1.0, 2.0, 3.0]
     pt.benchmark = [1.0, 1.0, 1.0]  # var_b = 0
     res = pt.alpha_beta()
-    assert res == {"alpha": pt.trades and pytest.approx( (sum(pt.trades)/len(pt.trades)) - (0.0 + 0.0 * 1.0), rel=1e-6 ) or 0.0, "beta": 0.0}
+    assert res == {
+        "alpha": pt.trades
+        and pytest.approx(
+            (sum(pt.trades) / len(pt.trades)) - (0.0 + 0.0 * 1.0), rel=1e-6
+        )
+        or 0.0,
+        "beta": 0.0,
+    }
 
 
 # ----------------------------------------------------------------------
@@ -241,13 +251,19 @@ def test_snapshot_and_export_json(tmp_path):
 def test_export_json_failure(monkeypatch, tmp_path, caplog):
     pt = PerformanceTracker()
     caplog.set_level("ERROR")
-    monkeypatch.setattr("builtins.open", lambda *_a, **_k: (_ for _ in ()).throw(Exception("disk full")))
+    monkeypatch.setattr(
+        "builtins.open", lambda *_a, **_k: (_ for _ in ()).throw(Exception("disk full"))
+    )
     pt.export_json(str(tmp_path / "fail.json"))
     assert "Failed to export" in caplog.text
+
+
 def test_alpha_beta_zero_variance_benchmark():
     """Benchmark with zero variance -> beta=0.0 and alpha ~= mean(trades)."""
-    import pytest
     from statistics import mean
+
+    import pytest
+
     pt = PerformanceTracker()
     pt.trades = [1.0, 2.0, 3.0]
     pt.benchmark = [1.0, 1.0, 1.0]  # var_b == 0 => beta == 0.0 path

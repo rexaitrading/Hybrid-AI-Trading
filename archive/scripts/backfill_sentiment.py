@@ -43,6 +43,7 @@ THRESHOLD: float = float(sent_cfg.get("threshold", 0.8))
 sent_filter = SentimentFilter(enabled=True, model=MODEL, threshold=THRESHOLD)
 session = SessionLocal()
 
+
 # ==========================================================
 # Helpers
 # ==========================================================
@@ -62,10 +63,7 @@ def add_sentiment_column() -> None:
 def backfill_sentiment(limit: int = 5000) -> None:
     """Process headlines and populate sentiment scores."""
     headlines = (
-        session.query(News)
-        .filter(News.sentiment_score.is_(None))
-        .limit(limit)
-        .all()
+        session.query(News).filter(News.sentiment_score.is_(None)).limit(limit).all()
     )
 
     if not headlines:
@@ -91,6 +89,7 @@ def backfill_sentiment(limit: int = 5000) -> None:
 
     session.commit()
     logger.info("✅ Backfilled %d headlines with sentiment scores", updated)
+
 
 # ==========================================================
 # Entrypoint

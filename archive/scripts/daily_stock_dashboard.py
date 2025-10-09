@@ -19,7 +19,7 @@ import requests
 from dotenv import load_dotenv
 
 try:
-    from ib_insync import IB, Stock, MarketOrder, LimitOrder, StopOrder
+    from ib_insync import IB, LimitOrder, MarketOrder, Stock, StopOrder
 except ImportError:
     IB = None
     Stock = None

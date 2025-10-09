@@ -1,18 +1,22 @@
+import os
+import threading
+import time
+
 from ibapi.client import EClient
-from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract
 from ibapi.order import Order
-import os, threading, time
+from ibapi.wrapper import EWrapper
+
 
 class App(EWrapper, EClient):
     def __init__(self):
         EClient.__init__(self, self)
         self.done = False
         self.placed = False
-        self.acknowledged = False   # we got openOrder/orderStatus for this order
+        self.acknowledged = False  # we got openOrder/orderStatus for this order
         self.canceled = False
         self.order_id = None
-        self.account = os.getenv("IB_ACCOUNT","")
+        self.account = os.getenv("IB_ACCOUNT", "")
 
     # --- lifecycle ---
     def nextValidId(self, orderId):
@@ -36,11 +40,26 @@ class App(EWrapper, EClient):
             self.acknowledged = True
         print(f"📄 openOrder id={orderId} status={orderState.status}", flush=True)
 
-    def orderStatus(self, orderId, status, filled, remaining, avgFillPrice, permId,
-                    parentId, lastFillPrice, clientId, whyHeld, mktCapPrice):
+    def orderStatus(
+        self,
+        orderId,
+        status,
+        filled,
+        remaining,
+        avgFillPrice,
+        permId,
+        parentId,
+        lastFillPrice,
+        clientId,
+        whyHeld,
+        mktCapPrice,
+    ):
         if self.order_id is not None and orderId == self.order_id:
             self.acknowledged = True
-        print(f"📈 orderStatus id={orderId} status={status} filled={filled} remaining={remaining}", flush=True)
+        print(
+            f"📈 orderStatus id={orderId} status={status} filled={filled} remaining={remaining}",
+            flush=True,
+        )
         if status.lower() in ("cancelled", "inactive"):
             self.canceled = True
             self._disconnect_later(0.8)
@@ -54,6 +73,7 @@ class App(EWrapper, EClient):
             time.sleep(delay)
             if not self.done:
                 self.disconnect()
+
         threading.Thread(target=_d, daemon=True).start()
 
     def place_test_order(self):
@@ -67,10 +87,10 @@ class App(EWrapper, EClient):
 
         # Order: far-away limit so it won't fill
         o = Order()
-        o.action = os.getenv("IB_TEST_SIDE","BUY").upper()
-        o.totalQuantity = int(os.getenv("IB_TEST_QTY","1"))
+        o.action = os.getenv("IB_TEST_SIDE", "BUY").upper()
+        o.totalQuantity = int(os.getenv("IB_TEST_QTY", "1"))
         o.orderType = "LMT"
-        o.lmtPrice = float(os.getenv("IB_TEST_LIMIT","10"))
+        o.lmtPrice = float(os.getenv("IB_TEST_LIMIT", "10"))
         o.tif = "DAY"
         o.outsideRth = False
         o.transmit = True
@@ -80,7 +100,10 @@ class App(EWrapper, EClient):
         if self.account:
             o.account = self.account
 
-        print(f"🚀 placing {o.action} {o.totalQuantity} AAPL LMT {o.lmtPrice} (orderId={self.order_id})", flush=True)
+        print(
+            f"🚀 placing {o.action} {o.totalQuantity} AAPL LMT {o.lmtPrice} (orderId={self.order_id})",
+            flush=True,
+        )
         self.placeOrder(self.order_id, c, o)
         self.placed = True
 
@@ -101,18 +124,22 @@ class App(EWrapper, EClient):
             print(f"🛑 cancelling orderId={self.order_id}", flush=True)
             self.cancelOrder(self.order_id)
         else:
-            print("ℹ️ No acknowledged open order to cancel; exiting cleanly.", flush=True)
+            print(
+                "ℹ️ No acknowledged open order to cancel; exiting cleanly.", flush=True
+            )
             self._disconnect_later(0.5)
 
+
 def main():
-    host = os.getenv("IB_HOST","127.0.0.1")
-    port = int(os.getenv("IB_PORT","4002"))  # Gateway Paper
-    cid  = int(os.getenv("IB_CLIENT_ID","101"))
+    host = os.getenv("IB_HOST", "127.0.0.1")
+    port = int(os.getenv("IB_PORT", "4002"))  # Gateway Paper
+    cid = int(os.getenv("IB_CLIENT_ID", "101"))
     app = App()
     print(f"Connecting to {host}:{port} clientId={cid} ...", flush=True)
     app.connect(host, port, cid)
 
-    t = threading.Thread(target=app.run, daemon=True); t.start()
+    t = threading.Thread(target=app.run, daemon=True)
+    t.start()
 
     # watchdog so we never hang
     deadline = time.time() + 30
@@ -124,6 +151,7 @@ def main():
         time.sleep(0.3)
 
     print("Done.", flush=True)
+
 
 if __name__ == "__main__":
     main()

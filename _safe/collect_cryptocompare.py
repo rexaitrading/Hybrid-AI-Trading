@@ -1,27 +1,26 @@
-﻿"""
+"""
 collect_cryptocompare.py
 Continuous collector for CryptoCompare API with per-day quota enforcement.
 """
 
+import csv
 import os
 import time
-import csv
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from debug_cryptocompare import (
     fetch_prices,  # must return dict like {"BTC": {"USD": 12345.67}}
-    daily_budget,
-    suggested_interval_seconds,
 )
+from debug_cryptocompare import daily_budget, suggested_interval_seconds
 
 # === API Key Handling =====================================================
 API_KEY: Optional[str] = os.getenv("CRYPTOCOMPARE_API_KEY")
 if not API_KEY:
     raise EnvironmentError(
         "❌ CRYPTOCOMPARE_API_KEY is not set.\n"
-        "Run: setx CRYPTOCOMPARE_API_KEY \"your_key_here\" "
+        'Run: setx CRYPTOCOMPARE_API_KEY "your_key_here" '
         "and restart your terminal."
     )
 
@@ -114,7 +113,9 @@ def loop_fetch(monthly_calls: Optional[int] = None) -> None:
     per_day = daily_budget(year, month, monthly)
     interval = suggested_interval_seconds(year, month, monthly)
 
-    print(f"[collector] {year}-{month:02d} → target/day ≈ {per_day}, interval ≈ {interval}s")
+    print(
+        f"[collector] {year}-{month:02d} → target/day ≈ {per_day}, interval ≈ {interval}s"
+    )
 
     while True:
         now = datetime.now(timezone.utc)
@@ -122,12 +123,16 @@ def loop_fetch(monthly_calls: Optional[int] = None) -> None:
             year, month = now.year, now.month
             per_day = daily_budget(year, month, monthly)
             interval = suggested_interval_seconds(year, month, monthly)
-            print(f"[rollover] Entered {year}-{month:02d}; new quota/day ≈ {per_day}, interval ≈ {interval}s")
+            print(
+                f"[rollover] Entered {year}-{month:02d}; new quota/day ≈ {per_day}, interval ≈ {interval}s"
+            )
 
         used_today = count_today_calls()
         if used_today >= per_day:
             sleep_s = seconds_until_tomorrow_utc()
-            print(f"[quota] Reached {used_today}/{per_day}, sleeping {sleep_s}s until UTC midnight…")
+            print(
+                f"[quota] Reached {used_today}/{per_day}, sleeping {sleep_s}s until UTC midnight…"
+            )
             time.sleep(sleep_s)
             continue
 

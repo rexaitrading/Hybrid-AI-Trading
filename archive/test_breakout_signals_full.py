@@ -18,12 +18,14 @@ Audit=True → returns tuple (decision, price, rh, rl)
 
 import logging
 import math
-from typing import List, Dict, Union
+from typing import Dict, List, Union
+
 
 # --- Helpers -----------------------------------------------------------
 def make_bars(prices):
     """Utility to wrap list of closes into bar dicts with 'c' key."""
     return [{"c": p} for p in prices]
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -86,6 +88,7 @@ def breakout_intraday(
         logger.debug("Inside range → HOLD: price=%.2f", price)
 
     return (decision, price, rolling_high, rolling_low) if audit else decision
+
 
 def test_audit_tie_sell_priority():
     """Audit mode: price == high == low → SELL priority."""

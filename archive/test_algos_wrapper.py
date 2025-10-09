@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: Deprecated Execution Algo Wrapper
 (Hybrid AI Quant Pro v3.2 - Hedge-Fund OE Grade, AAA Coverage)
 ----------------------------------------------------------------
@@ -11,13 +11,14 @@ Covers src/hybrid_ai_trading/execution/algos.py wrapper:
 - Unknown executor raises KeyError
 """
 
-import warnings
-import logging
 import importlib
+import logging
+import warnings
+
 import pytest
 
-import hybrid_ai_trading.execution.algos as exec_algos
 import hybrid_ai_trading.algos as algos
+import hybrid_ai_trading.execution.algos as exec_algos
 
 
 def test_deprecation_warning_on_import():
@@ -57,4 +58,3 @@ def test_get_algo_executor_failure(caplog):
     with pytest.raises(KeyError):
         exec_algos.get_algo_executor("unknown123")
     assert "not found" in caplog.text.lower()
-

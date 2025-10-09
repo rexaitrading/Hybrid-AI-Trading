@@ -22,6 +22,7 @@ Covers ALL branches:
 """
 
 import logging
+
 import pytest
 
 from hybrid_ai_trading.risk.gatescore import GateScore
@@ -62,7 +63,9 @@ def test_threshold_adjustments_and_exceptions(monkeypatch) -> None:
     g2 = GateScore(enabled=True, adaptive=False, threshold=0.9)
     assert g2.adjusted_threshold("bull") == 0.9
 
-    monkeypatch.setattr(g, "_detect_regime", lambda *_: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        g, "_detect_regime", lambda *_: (_ for _ in ()).throw(RuntimeError("boom"))
+    )
     assert g._adaptive_threshold("AAPL") == g.base_threshold
 
 
@@ -132,7 +135,9 @@ def test_audit_mode_tuple_return(monkeypatch) -> None:
 
 def test_regime_detector_failure(monkeypatch, caplog) -> None:
     g = GateScore(enabled=True, models=["regime"], audit_mode=True)
-    monkeypatch.setattr(g, "_detect_regime", lambda *_: (_ for _ in ()).throw(RuntimeError("fail")))
+    monkeypatch.setattr(
+        g, "_detect_regime", lambda *_: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     caplog.set_level(logging.ERROR)
     decision, score, thr, regime = g.allow_trade({}, "AAPL")
     assert regime == "neutral"
@@ -171,15 +176,18 @@ def test_safe_score_happy_and_error(caplog) -> None:
     assert g._safe_score("x", object()) == 0.0
     assert "failed" in caplog.text
 
+
 def test_empty_models_enabled_branch():
     g = GateScore(enabled=True, models=[], weights={}, audit_mode=False)
     result = g.allow_trade({}, "SYM")
     assert result in (True, False)
 
+
 def test_non_audit_return_path():
     g = GateScore(enabled=True, models=["m"], weights={"m": 1.0}, audit_mode=False)
     out = g.allow_trade({"m": 0.7}, "AAPL")
     assert isinstance(out, bool)
+
 
 def test_repr_str_logging(monkeypatch):
     g = GateScore(models=["m"], weights={"m": 1.0})
@@ -188,15 +196,18 @@ def test_repr_str_logging(monkeypatch):
     assert "repr" in repr(g)
     assert "str" in str(g)
 
+
 def test_allow_trade_empty_models_enabled():
     g = GateScore(enabled=True, models=[], weights={}, audit_mode=False)
     out = g.allow_trade({}, "XYZ")
     assert out in (True, False)
 
+
 def test_allow_trade_non_audit_path():
     g = GateScore(enabled=True, models=["m"], weights={"m": 1.0}, audit_mode=False)
     result = g.allow_trade({"m": 0.7}, "AAPL")
     assert isinstance(result, bool)
+
 
 def test_repr_str_monkeypatched(monkeypatch):
     g = GateScore(models=["x"], weights={"x": 1.0})
@@ -205,13 +216,16 @@ def test_repr_str_monkeypatched(monkeypatch):
     assert repr(g) == "GateScore<repr>"
     assert str(g) == "GateScore<str>"
 
+
 def test_init_with_no_models_hits_branch():
     g = GateScore(enabled=True, models=None, weights=None)
     assert isinstance(g, GateScore)
 
+
 # ==========================================================
 # Extra tests to close remaining uncovered lines in GateScore
 # ==========================================================
+
 
 def test_init_with_none_models_and_weights() -> None:
     """Covers __init__ branch when models/weights are None (line ~31)."""
@@ -231,7 +245,9 @@ def test_allow_trade_non_audit_fallback() -> None:
 
 def test_allow_trade_bottom_fallback() -> None:
     """Forces execution to bottom else-return (lines ~153-154)."""
-    g = GateScore(enabled=True, models=["m"], weights={}, strict_missing=False, audit_mode=False)
+    g = GateScore(
+        enabled=True, models=["m"], weights={}, strict_missing=False, audit_mode=False
+    )
     # No valid weights, non-audit mode → falls through to final return False
     result = g.allow_trade({}, "XYZ")
     assert result is False
@@ -244,6 +260,7 @@ def test_real_repr_and_str() -> None:
     r = repr(g)
     # Should include class name and key attributes
     assert "GateScore" in s or "GateScore" in r
+
 
 def test_init_with_none_models_and_weights() -> None:
     """Covers __init__ branch when models/weights are None (line ~31)."""
@@ -262,7 +279,9 @@ def test_allow_trade_non_audit_fallback() -> None:
 
 def test_allow_trade_bottom_fallback() -> None:
     """Forces the very last else-return (lines ~153–154)."""
-    g = GateScore(enabled=True, models=["m"], weights={}, strict_missing=False, audit_mode=False)
+    g = GateScore(
+        enabled=True, models=["m"], weights={}, strict_missing=False, audit_mode=False
+    )
     result = g.allow_trade({}, "SPY")
     assert result is False
 
@@ -275,11 +294,13 @@ def test_real_repr_and_str() -> None:
     r = repr(g)
     assert "GateScore" in s or "GateScore" in r
 
+
 def test_init_with_models_none_and_weights_none():
     # hits line 31
     g = GateScore(enabled=True, models=None, weights=None)
     assert g.models == []
     assert g.weights == {}
+
 
 def test_allow_trade_non_audit_empty_scores():
     # hits non-audit return at 109/123/130
@@ -287,11 +308,15 @@ def test_allow_trade_non_audit_empty_scores():
     result = g.allow_trade({}, "SPY")  # no score provided
     assert result is False
 
+
 def test_allow_trade_bottom_fallback():
     # forces the very last return at 153–154
-    g = GateScore(enabled=True, models=["m"], weights={}, strict_missing=False, audit_mode=False)
+    g = GateScore(
+        enabled=True, models=["m"], weights={}, strict_missing=False, audit_mode=False
+    )
     result = g.allow_trade({}, "XYZ")
     assert result is False
+
 
 def test_real_repr_and_str_methods():
     # executes lines 176 and 183

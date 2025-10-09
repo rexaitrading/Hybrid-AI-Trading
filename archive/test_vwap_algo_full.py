@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: VWAP Algo (Hybrid AI Quant Pro v35.2 – 100% Coverage, Hedge-Fund Grade)
 ----------------------------------------------------------------------------------
 Covers ALL branches of algos/vwap.py:
@@ -13,11 +13,10 @@ Covers ALL branches of algos/vwap.py:
 - Wrapper consistency
 """
 
-import pytest
 import numpy as np
 import pandas as pd
 
-from hybrid_ai_trading.algos.vwap import vwap_algo, VWAPAlgo, vwap_signal
+from hybrid_ai_trading.algos.vwap import VWAPAlgo, vwap_algo, vwap_signal
 
 
 def make_bars(closes, vols=None):
@@ -72,7 +71,7 @@ def test_tolerance_hold():
 
 # --- Core BUY / SELL ---
 def test_buy_and_sell_branches():
-    bars_buy = make_bars([10, 20], vols=[5, 5])   # last > vwap
+    bars_buy = make_bars([10, 20], vols=[5, 5])  # last > vwap
     bars_sell = make_bars([20, 10], vols=[5, 5])  # last < vwap
     assert vwap_algo(bars_buy) == "BUY"
     assert vwap_algo(bars_sell) == "SELL"
@@ -80,7 +79,9 @@ def test_buy_and_sell_branches():
 
 # --- Exception ---
 def test_exception_branch(monkeypatch):
-    monkeypatch.setattr(pd, "DataFrame", lambda *_: (_ for _ in ()).throw(Exception("boom")))
+    monkeypatch.setattr(
+        pd, "DataFrame", lambda *_: (_ for _ in ()).throw(Exception("boom"))
+    )
     bars = make_bars([10, 20], vols=[5, 5])
     assert vwap_algo(bars) == "HOLD"
 

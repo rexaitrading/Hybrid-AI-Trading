@@ -102,9 +102,7 @@ class GateScore:
 
             if m not in inputs:
                 if self.strict_missing:
-                    logger.warning(
-                        "[GateScore] ❌ Missing model %s → veto trade", m
-                    )
+                    logger.warning("[GateScore] ❌ Missing model %s → veto trade", m)
                     if self.audit_mode:
                         return False, 0.0, self.base_threshold, regime
                     return False

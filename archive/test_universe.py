@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: Universe Definitions (Hybrid AI Quant Pro – Hedge-Fund Grade)
 =========================================================================
 Covers:
@@ -7,13 +7,18 @@ Covers:
 - __all__ contains the correct exports
 """
 
-import pytest
 import hybrid_ai_trading.utils.universe as universe
 
 
 def test_groups_contains_all_keys_and_types():
     g = universe.groups()
-    expected_keys = ["Core_Stocks", "Core_Crypto", "Macro_Risk", "Leverage_Tools", "IPO_Watch"]
+    expected_keys = [
+        "Core_Stocks",
+        "Core_Crypto",
+        "Macro_Risk",
+        "Leverage_Tools",
+        "IPO_Watch",
+    ]
 
     # Check all expected keys exist
     for key in expected_keys:
@@ -38,5 +43,12 @@ def test_groups_dict_structure_and_equality():
 
 def test_all_exports_are_correct():
     """__all__ must include all five groups and the groups() function."""
-    expected = {"Core_Stocks", "Core_Crypto", "Macro_Risk", "Leverage_Tools", "IPO_Watch", "groups"}
+    expected = {
+        "Core_Stocks",
+        "Core_Crypto",
+        "Macro_Risk",
+        "Leverage_Tools",
+        "IPO_Watch",
+        "groups",
+    }
     assert set(universe.__all__) == expected

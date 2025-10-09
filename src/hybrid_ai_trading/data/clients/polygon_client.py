@@ -1,4 +1,5 @@
-﻿from __future__ import annotations
+from __future__ import annotations
+
 """
 Polygon Client (Hybrid AI Quant Pro v1.5 - Safe & Test-Friendly)
 ----------------------------------------------------------------
@@ -14,9 +15,9 @@ Polygon Client (Hybrid AI Quant Pro v1.5 - Safe & Test-Friendly)
 - ping(): True on success; warns and False on PolygonAPIError; False on generic Exception
 """
 
-from typing import Any, Dict, Optional
-import os
 import logging
+import os
+from typing import Any, Dict, Optional
 
 try:
     import requests  # type: ignore
@@ -110,7 +111,9 @@ class PolygonClient:
             raise PolygonAPIError("Polygon API key not set")
         return {"apiKey": self.api_key}
 
-    def _request(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _request(
+        self, path: str, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         GET wrapper that:
         - attaches ?apiKey=... (query param auth)
