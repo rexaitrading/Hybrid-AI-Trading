@@ -617,3 +617,48 @@ def test_unknown_side_precise(caplog):
     caplog.set_level("DEBUG")
     assert sf.allow_trade("h", "XYZ") is True
     assert "unknown side" in caplog.text.lower()
+# ---- neutral zone gate tests ----
+def test_neutral_zone_gate_vader(monkeypatch):
+    import hybrid_ai_trading.risk.sentiment_filter as sf_mod
+
+    class FakeVader:
+        def __init__(self, values):
+            self.values = values
+        def polarity_scores(self, text):
+            return {"compound": self.values[0]}
+
+    # small positive below gate -> 0.0
+    sf = sf_mod.SentimentFilter(enabled=True, model="vader", neutral_zone=0.05)
+    sf.analyzer = FakeVader([0.04])
+    assert sf.score("x") == 0.0
+
+    # small negative below gate -> 0.0
+    sf.analyzer = FakeVader([-0.03])
+    assert sf.score("x") == 0.0
+
+    # above gate -> raw score preserved
+    sf.analyzer = FakeVader([0.12])
+    assert sf.score("x") == 0.12
+
+def test_neutral_zone_gate_hf(monkeypatch):
+    import hybrid_ai_trading.risk.sentiment_filter as sf_mod
+
+    class FakeHF:
+        def __init__(self, label, score):
+            self._label = label
+            self._score = score
+        def __call__(self, text):
+            return [{"label": self._label, "score": self._score}]
+
+    sf = sf_mod.SentimentFilter(enabled=True, model="hf", neutral_zone=0.10)
+    sf.analyzer = FakeHF("POSITIVE", 0.08)
+    assert sf.score("x") == 0.0  # below gate
+
+    sf.analyzer = FakeHF("NEGATIVE", 0.09)
+    assert sf.score("x") == 0.0  # below gate (magnitude)
+
+    sf.analyzer = FakeHF("POSITIVE", 0.25)
+    assert sf.score("x") == 0.25  # above gate
+
+    sf.analyzer = FakeHF("NEGATIVE", 0.30)
+    assert sf.score("x") == -0.30  # above gate, negative preserved
