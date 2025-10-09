@@ -1,5 +1,6 @@
+from hybrid_ai_trading.risk.sentiment_filter import SentimentFilter
 """
-Execution Engine (Hybrid AI Quant Pro v21.8 – Hedge Fund Grade, Flake8-Clean)
+Execution Engine (Hybrid AI Quant Pro v21.8 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Hedge Fund Grade, Flake8-Clean)
 -----------------------------------------------------------------------------
 Responsibilities:
 - Central router for order placement (paper simulator vs. live broker)
@@ -33,13 +34,30 @@ class ExecutionEngine:
         self.dry_run = dry_run
         self.config = config or {}
 
-        # === Portfolio Tracker ===
-        self.portfolio_tracker = PortfolioTracker()
+        
+        
+        # ---- config-level guard: validate sentiment.model early
+        _sent_cfg = {}
+        try:
+            if isinstance(self.config, dict):
+                _sent_cfg = dict(self.config.get("sentiment", {}))
+        except Exception:
+            _sent_cfg = {}
+        _model = str(_sent_cfg.get("model", "vader")).lower()
+        if _model not in getattr(SentimentFilter, "_ALLOWED_MODELS", {"vader", "hf", "transformers", "bert", "distilbert"}):
+            raise ValueError(f"Invalid config: sentiment.model='{_model}'. Allowed: {sorted(list(getattr(SentimentFilter, '_ALLOWED_MODELS', [])))}")# compute starting equity: config override > dry_run default (50k) > live default (100k)
+        try:
+            _cfg_start_eq = float(config.get('starting_equity')) if isinstance(config, dict) and 'starting_equity' in config else None
+        except Exception:
+            _cfg_start_eq = None
+        starting_equity_source = _cfg_start_eq if _cfg_start_eq is not None else (50000.0 if dry_run else 100000.0)
+# === Portfolio Tracker ===
+        self.portfolio_tracker = PortfolioTracker(starting_equity=starting_equity_source)
 
         # === Risk Manager (avoid duplicate equity kwarg) ===
         risk_cfg = dict(self.config.get("risk", {}))  # shallow copy
         equity = risk_cfg.pop("equity", 100_000.0)
-        self.risk_manager = RiskManager(equity=equity, **risk_cfg)
+        self.risk_manager = RiskManager(starting_equity=starting_equity_source, equity=equity, **risk_cfg)
 
         # === Mode selection ===
         if self.dry_run or self.config.get("use_paper_simulator", False):
@@ -48,7 +66,7 @@ class ExecutionEngine:
                 commission=self.config.get("costs", {}).get("commission_pct", 0.0),
             )
             self.order_manager = None
-            logger.info("[ExecutionEngine] ✅ Initialized in DRY RUN mode.")
+            logger.info("[ExecutionEngine] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Initialized in DRY RUN mode.")
         else:
             self.order_manager = OrderManager(
                 risk_manager=self.risk_manager,
@@ -57,7 +75,7 @@ class ExecutionEngine:
                 costs=self.config.get("costs", {}),
             )
             self.paper_simulator = None
-            logger.info("[ExecutionEngine] ✅ Initialized in LIVE mode.")
+            logger.info("[ExecutionEngine] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Initialized in LIVE mode.")
 
     # ------------------------------------------------------------------
     def place_order(
@@ -118,7 +136,7 @@ class ExecutionEngine:
     # ------------------------------------------------------------------
     def emergency_flatten(self) -> Dict[str, Any]:
         """Flatten all positions immediately (risk circuit breaker)."""
-        logger.critical("⚠️ EMERGENCY FLATTEN TRIGGERED ⚠️")
+        logger.critical("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â EMERGENCY FLATTEN TRIGGERED ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â")
         if not self.dry_run and self.order_manager:
             return self.order_manager.flatten_all()
         return {"status": "flattened", "mode": "dry_run"}
