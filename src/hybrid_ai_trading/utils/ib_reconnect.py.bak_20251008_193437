@@ -45,7 +45,7 @@ def with_ib_reconnect(
             if ib is None and args:
                 # if used as method, args[0] might be self; try next positional
                 for a in args:
-                    if hasattr(a, "isConnected") and hasattr(a, "client"): 
+                    if hasattr(a, "isConnected") and hasattr(a, "client"):
                         ib = a
                         break
             # connection hints (optional) for reconnect()

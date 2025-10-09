@@ -18,9 +18,9 @@ Covers ALL branches of rsi_signal:
 
 import os
 import sys
-import pandas as pd
-import pytest
+
 import numpy as np
+import pandas as pd
 
 from hybrid_ai_trading.signals.rsi_signal import RSISignal, rsi_signal
 
@@ -74,8 +74,28 @@ def test_sell_branch():
 
 
 def test_hold_branch():
-    prices = [50, 52, 48, 51, 49, 50, 51, 49, 50, 52,
-              48, 51, 49, 50, 51, 49, 50, 52, 48, 51]
+    prices = [
+        50,
+        52,
+        48,
+        51,
+        49,
+        50,
+        51,
+        49,
+        50,
+        52,
+        48,
+        51,
+        49,
+        50,
+        51,
+        49,
+        50,
+        52,
+        48,
+        51,
+    ]
     assert rsi_signal(make_bars(prices), period=14) == "HOLD"
 
 
@@ -124,6 +144,7 @@ def test_exception_branch_parse(monkeypatch):
 
 def test_exception_branch_calc(monkeypatch):
     """Patch rolling to throw → triggers 'calc failed' branch."""
+
     def boom_rolling(self, *_a, **_k):
         raise Exception("boom")
 

@@ -11,12 +11,7 @@ Exports:
 - get_algo_executor, ALGO_REGISTRY
 """
 
-from .orchestrator import (
-    get_algo_executor,
-    ALGO_REGISTRY,
-    vwap_signal,
-    VWAPSignal,
-)
+from .orchestrator import ALGO_REGISTRY, VWAPSignal, get_algo_executor, vwap_signal
 
 # ----------------------------------------------------------------------
 # Re-export executor classes for direct imports

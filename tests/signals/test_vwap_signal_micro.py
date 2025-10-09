@@ -7,7 +7,8 @@ and deterministic logging for test coverage.
 
 import logging
 import math
-from typing import List, Dict, Union, Tuple
+from typing import Dict, List, Tuple, Union
+
 import numpy as np
 
 logger = logging.getLogger("hybrid_ai_trading.signals.vwap")
@@ -16,7 +17,12 @@ logger.propagate = True
 
 
 class VWAPConfig:
-    def __init__(self, tie_policy: str = "HOLD", enable_symmetry: bool = True, tolerance: float = 1e-3) -> None:
+    def __init__(
+        self,
+        tie_policy: str = "HOLD",
+        enable_symmetry: bool = True,
+        tolerance: float = 1e-3,
+    ) -> None:
         if tie_policy not in ("HOLD", "SELL"):
             raise ValueError("tie_policy must be 'HOLD' or 'SELL'")
         self.tie_policy = tie_policy
@@ -52,7 +58,9 @@ def _compute_vwap(bars: List[Dict[str, Union[float, int]]]) -> float:
         return float("nan")
 
 
-def vwap_signal(bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConfig, None] = None) -> str:
+def vwap_signal(
+    bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConfig, None] = None
+) -> str:
     """Return BUY/SELL/HOLD decision with guardrails and logging."""
     cfg = config or VWAPConfig()
     try:
@@ -70,7 +78,13 @@ def vwap_signal(bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConf
             logger.warning("non-numeric last bar")
             return "HOLD"
 
-        if last_close is None or last_vol is None or math.isnan(last_close) or math.isnan(last_vol) or last_vol <= 0:
+        if (
+            last_close is None
+            or last_vol is None
+            or math.isnan(last_close)
+            or math.isnan(last_vol)
+            or last_vol <= 0
+        ):
             logger.warning("bad values in last bar")
             return "HOLD"
 
@@ -84,7 +98,10 @@ def vwap_signal(bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConf
                 c0, c1 = float(bars[0]["c"]), float(bars[1]["c"])
                 midpoint = (c0 + c1) / 2
                 vwap_two = _compute_vwap(bars)
-                if not math.isnan(vwap_two) and abs(vwap_two - midpoint) <= cfg.tolerance:
+                if (
+                    not math.isnan(vwap_two)
+                    and abs(vwap_two - midpoint) <= cfg.tolerance
+                ):
                     if cfg.tie_policy == "SELL":
                         logger.info("symmetry safeguard → SELL")
                         return "SELL"
@@ -120,6 +137,7 @@ def vwap_signal(bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConf
 
 class VWAPSignal:
     """Wrapper class exposing generate() and evaluate() with audit info."""
+
     def __init__(self, config: Union[VWAPConfig, None] = None):
         self.config = config or VWAPConfig()
         self.last_decision = "HOLD"
@@ -128,7 +146,9 @@ class VWAPSignal:
         self.last_decision = vwap_signal(bars, self.config)
         return self.last_decision
 
-    def evaluate(self, bars: List[Dict[str, Union[float, int]]]) -> Tuple[str, Dict[str, Union[float, int, str]]]:
+    def evaluate(
+        self, bars: List[Dict[str, Union[float, int]]]
+    ) -> Tuple[str, Dict[str, Union[float, int, str]]]:
         decision = vwap_signal(bars, self.config)
         self.last_decision = decision
         try:

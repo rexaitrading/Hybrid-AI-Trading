@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: Algo Orchestrator
 (Hybrid AI Quant Pro v3.1 – Hedge-Fund OE Grade, AAA Coverage)
 ----------------------------------------------------------------
@@ -11,9 +11,11 @@ Covers all branches in algos/orchestrator.py and __init__.py:
 - __all__: exported symbols are importable
 """
 
-import pytest
-import logging
 import importlib
+import logging
+
+import pytest
+
 import hybrid_ai_trading.algos as algos
 
 

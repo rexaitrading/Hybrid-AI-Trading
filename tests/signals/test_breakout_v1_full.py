@@ -10,8 +10,9 @@ Covers:
 - Direct log_decision coverage
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from hybrid_ai_trading.signals.breakout_v1 import BreakoutV1Signal, breakout_signal
 
@@ -117,6 +118,7 @@ def test_breakout_signal_exception(mock_get):
 @patch("hybrid_ai_trading.signals.breakout_v1.get_ohlcv_latest")
 def test_generate_wrapper_exception(monkeypatch):
     """Force get_ohlcv_latest to raise → wrapper_exception path."""
+
     def boom(*_a, **_k):
         raise RuntimeError("boom")
 
@@ -146,7 +148,10 @@ def test_log_decision_direct(signal, caplog):
     caplog.set_level("INFO")
     signal._log_decision("AAPL", "BUY", "unit_test")
     assert "unit_test" in caplog.text
+
+
 def test_breakout_v1_window_edge():
     from hybrid_ai_trading.signals.breakout_v1 import breakout_v1
+
     bars = [{"c": 1, "h": 1, "l": 1} for _ in range(3)]
-    assert breakout_v1(bars, window=3) in {"BUY","SELL","HOLD"}
+    assert breakout_v1(bars, window=3) in {"BUY", "SELL", "HOLD"}

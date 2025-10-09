@@ -1,12 +1,24 @@
-﻿from ib_insync import IB, Stock, LimitOrder
-import os, time
-from decimal import Decimal, ROUND_HALF_UP
+import os
+from decimal import ROUND_HALF_UP, Decimal
+
+from ib_insync import IB, LimitOrder, Stock
+
 
 def dround(x, places=2):
     return float(Decimal(x).quantize(Decimal(10) ** -places, rounding=ROUND_HALF_UP))
 
-def quote_market(ib, side, qty, symbol="AAPL", exchange="SMART", currency="USD",
-                 slippage_bps=5, max_notional=100000.0, outside_rth=True):
+
+def quote_market(
+    ib,
+    side,
+    qty,
+    symbol="AAPL",
+    exchange="SMART",
+    currency="USD",
+    slippage_bps=5,
+    max_notional=100000.0,
+    outside_rth=True,
+):
     side = side.upper()
     contract = Stock(symbol, exchange, currency)
     ib.qualifyContracts(contract)
@@ -21,17 +33,21 @@ def quote_market(ib, side, qty, symbol="AAPL", exchange="SMART", currency="USD",
 
     if side == "BUY":
         base = ask or last
-        if base is None: raise RuntimeError("No ask/last available for BUY")
-        limit = dround(base * (1 + slippage_bps/10_000), 2)
+        if base is None:
+            raise RuntimeError("No ask/last available for BUY")
+        limit = dround(base * (1 + slippage_bps / 10_000), 2)
     else:
         base = bid or last
-        if base is None: raise RuntimeError("No bid/last available for SELL")
-        limit = dround(base * (1 - slippage_bps/10_000), 2)
+        if base is None:
+            raise RuntimeError("No bid/last available for SELL")
+        limit = dround(base * (1 - slippage_bps / 10_000), 2)
 
     notional = limit * qty
     print(f"[PLAN] {side} {qty} {symbol} @ ~{limit} (IOC), notional≈${notional:,.2f}")
     if notional > max_notional:
-        raise RuntimeError(f"Notional ${notional:,.2f} exceeds cap ${max_notional:,.2f}")
+        raise RuntimeError(
+            f"Notional ${notional:,.2f} exceeds cap ${max_notional:,.2f}"
+        )
 
     order = LimitOrder(side, qty, limit, tif="IOC", outsideRth=outside_rth)
     trade = ib.placeOrder(contract, order)
@@ -43,9 +59,12 @@ def quote_market(ib, side, qty, symbol="AAPL", exchange="SMART", currency="USD",
         if st in ("Filled", "Cancelled", "Inactive"):
             break
 
-    print(f"[RESULT] status={trade.orderStatus.status} "
-          f"filled={trade.orderStatus.filled} avgFill={trade.orderStatus.avgFillPrice}")
+    print(
+        f"[RESULT] status={trade.orderStatus.status} "
+        f"filled={trade.orderStatus.filled} avgFill={trade.orderStatus.avgFillPrice}"
+    )
     return trade
+
 
 def main():
     host = os.getenv("IB_HOST", "127.0.0.1")
@@ -62,8 +81,10 @@ def main():
 
     try:
         if dry:
-            c = Stock("AAPL","SMART","USD"); ib.qualifyContracts(c)
-            t = ib.reqMktData(c, "", False, False); ib.sleep(1.2)
+            c = Stock("AAPL", "SMART", "USD")
+            ib.qualifyContracts(c)
+            t = ib.reqMktData(c, "", False, False)
+            ib.sleep(1.2)
             print(f"[DRY-RUN QUOTE] bid={t.bid} ask={t.ask} last={t.last}")
             print("[DRY-RUN] No order sent.")
         else:
@@ -71,6 +92,7 @@ def main():
     finally:
         ib.disconnect()
         print("[DONE] disconnected.")
+
 
 if __name__ == "__main__":
     main()

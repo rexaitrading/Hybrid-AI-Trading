@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, Any, Dict
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,8 @@ class SentimentFilter:
 
         # Unknown model → neutral fallback with explicit wording
         logger.warning(
-            "Unknown sentiment model=%s; fallback to neutral scoring (analyzer=None).", m
+            "Unknown sentiment model=%s; fallback to neutral scoring (analyzer=None).",
+            m,
         )
         self.analyzer = None
 

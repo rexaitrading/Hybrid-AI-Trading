@@ -1,16 +1,16 @@
-﻿"""
+"""
 debyg_cryptocompare.py
 ------------------------------------------------------------
 One-shot fetch from CryptoCompare for debugging / sanity checks.
 Polished Hedge-Fund Grade: Safe API key handling, logging, and output.
 """
 
+import json
 import os
 import sys
-import json
-import requests
 from typing import Any
 
+import requests
 
 # === API Key Handling =====================================================
 API_KEY: str | None = os.getenv("CRYPTOCOMPARE_API_KEY")

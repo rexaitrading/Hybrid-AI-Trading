@@ -14,7 +14,7 @@ Smart Order Router (Hybrid AI Quant Pro v5.2 - Hedge-Fund OE Grade, Test-Friendl
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
 from hybrid_ai_trading.execution.latency_monitor import LatencyMonitor
 
@@ -192,7 +192,10 @@ class SmartOrderRouter:
                 elif broker_result is not None:
                     # unknown non-dict result branch
                     self._send_alert("Unknown broker result error")
-                    last_error = {"status": "blocked", "reason": "unknown_broker_result"}
+                    last_error = {
+                        "status": "blocked",
+                        "reason": "unknown_broker_result",
+                    }
 
         # --- All brokers failed
         self._send_alert("All brokers failed error")

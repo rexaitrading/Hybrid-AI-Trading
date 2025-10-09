@@ -19,8 +19,8 @@ Logic:
 import logging
 from typing import Dict, List, Union
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 logger = logging.getLogger("hybrid_ai_trading.signals.rsi_signal")
 

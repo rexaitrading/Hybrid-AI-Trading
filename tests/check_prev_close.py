@@ -1,8 +1,10 @@
-﻿# tests/check_prev_close.py
+# tests/check_prev_close.py
 from __future__ import annotations
-import json
+
 import glob
+import json
 import os
+
 import pandas as pd
 
 DATA_DIR = "data"

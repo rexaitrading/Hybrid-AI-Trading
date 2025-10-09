@@ -23,7 +23,9 @@ from .vwap import vwap_signal
 STRATEGIES = {
     "bollinger": lambda symbol, bars=None: bollinger_bands_signal(bars or []),
     "breakout_intraday": lambda symbol, bars=None: breakout_intraday(bars or []),
-    "breakout_polygon": lambda symbol, bars=None: BreakoutPolygonSignal().generate(symbol, bars=bars or []),
+    "breakout_polygon": lambda symbol, bars=None: BreakoutPolygonSignal().generate(
+        symbol, bars=bars or []
+    ),
     "breakout_v1": lambda symbol, bars=None: breakout_v1(bars or []),
     "macd": lambda symbol, bars=None: macd_signal(bars or []),
     "ma": lambda symbol, bars=None: moving_average_signal(bars or []),

@@ -10,9 +10,11 @@ Covers all branches of export_leaderboard:
 - Error path where no file exists (skip unlink)
 """
 
-import pytest
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+import pytest
+
 from hybrid_ai_trading.execution.leaderboard import export_leaderboard
 
 

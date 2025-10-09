@@ -14,8 +14,10 @@ Covers:
 - Outermost exception
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
+
 from hybrid_ai_trading.signals.breakout_polygon import BreakoutPolygonSignal
 
 
@@ -88,9 +90,9 @@ def test_not_enough_bars(signal):
 def test_incomplete_data(signal):
     """Guard: some bars missing fields → HOLD, reason incomplete_data."""
     bars = [
-        {"c": 100, "h": 105},              # missing low
-        {"c": 102, "h": 106, "l": 98},     # valid
-        {"c": 104},                        # missing high/low
+        {"c": 100, "h": 105},  # missing low
+        {"c": 102, "h": 106, "l": 98},  # valid
+        {"c": 104},  # missing high/low
     ]
     result = signal.generate("AAPL", bars=bars)
     assert result["signal"] == "HOLD"
@@ -146,30 +148,43 @@ def test_parse_error(signal):
 def test_outermost_exception(monkeypatch, signal):
     """Guard: _get_polygon_bars raises → HOLD, reason exception."""
     monkeypatch.setattr(
-        signal, "_get_polygon_bars", lambda *_: (_ for _ in ()).throw(RuntimeError("boom"))
+        signal,
+        "_get_polygon_bars",
+        lambda *_: (_ for _ in ()).throw(RuntimeError("boom")),
     )
     result = signal.generate("AAPL")
     assert result["signal"] == "HOLD"
     assert result["reason"] == "exception"
 
+
 @patch("hybrid_ai_trading.signals.breakout_polygon.requests.get")
 def test_api_status_code_error(mock_get, signal):
     """Guard: API returns non-200 → triggers PolygonAPIError branch."""
+
     class DummyResp:
         status_code = 500
         text = "server error"
-        def json(self): return {}
+
+        def json(self):
+            return {}
+
     mock_get.return_value = DummyResp()
     result = signal._get_polygon_bars("AAPL")
     assert result == []  # exception caught → []
 
+
 def test_generate_outermost_exception(signal, monkeypatch):
     """Guard: outermost exception handler in generate()."""
-    monkeypatch.setattr(signal, "_get_polygon_bars", lambda *_: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        signal,
+        "_get_polygon_bars",
+        lambda *_: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
     result = signal.generate("AAPL")
     assert result["signal"] == "HOLD"
     assert result["reason"] == "exception"
+
+
 def test_breakout_polygon_guard_empty(monkeypatch):
-    import hybrid_ai_trading.signals.breakout_polygon as mod
     # Force client to return empty/guardable path if needed
     assert True  # placeholder if already covered

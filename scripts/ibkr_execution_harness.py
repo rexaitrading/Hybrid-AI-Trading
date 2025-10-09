@@ -12,10 +12,9 @@ Responsibilities:
 import logging
 import sqlite3
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
-from ib_insync import IB, Stock, MarketOrder, LimitOrder, Trade
+from ib_insync import IB, LimitOrder, MarketOrder, Stock, Trade
 
 # ---------------------------------------------------------------------
 # Logging setup
@@ -158,7 +157,9 @@ def main(
             )
             for o in bracket:
                 ib.placeOrder(contract, o)
-            logger.info("📊 Bracket placed: stop=%.2f target=%.2f", stop_price, target_price)
+            logger.info(
+                "📊 Bracket placed: stop=%.2f target=%.2f", stop_price, target_price
+            )
 
         # Wait for updates
         ib.sleep(5)

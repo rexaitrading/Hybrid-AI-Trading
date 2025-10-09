@@ -1,8 +1,7 @@
-import os, types
-import pytest
+import requests as _requests
 
 from hybrid_ai_trading.data.clients.benzinga_client import BenzingaClient
-import requests as _requests
+
 
 class DummyResp:
     def __init__(self, headers, json_data=None, text_data=""):
@@ -10,13 +9,19 @@ class DummyResp:
         self._json = json_data
         self.text = text_data
         self.status_code = 200
-    def raise_for_status(self): return None
+
+    def raise_for_status(self):
+        return None
+
     @property
-    def headers(self): return self._headers
+    def headers(self):
+        return self._headers
+
     def json(self):
         if self._json is None:
             raise ValueError("no json")
         return self._json
+
 
 def test_benzinga_json_and_xml(monkeypatch):
     # Env key
@@ -24,12 +29,17 @@ def test_benzinga_json_and_xml(monkeypatch):
 
     # JSON path
     def fake_get_json(url, params=None, headers=None, timeout=15):
-        items = [{
-            "id": 123, "author":"bz", "created":"Wed, 01 Oct 2025 19:30:00 -0400",
-            "title":"META upgrades outlook", "url":"https://example.com/m1",
-            "stocks":[{"name":"META","exchange":""}]
-        }]
-        return DummyResp({"content-type":"application/json"}, json_data=items)
+        items = [
+            {
+                "id": 123,
+                "author": "bz",
+                "created": "Wed, 01 Oct 2025 19:30:00 -0400",
+                "title": "META upgrades outlook",
+                "url": "https://example.com/m1",
+                "stocks": [{"name": "META", "exchange": ""}],
+            }
+        ]
+        return DummyResp({"content-type": "application/json"}, json_data=items)
 
     # XML path
     xml_text = """<?xml version="1.0" encoding="UTF-8"?>
@@ -43,14 +53,23 @@ def test_benzinga_json_and_xml(monkeypatch):
         <url>https://example.com/a1</url>
       </item>
     </result>"""
+
     def fake_get_xml(url, params=None, headers=None, timeout=15):
-        return DummyResp({"content-type":"text/xml"}, json_data=None, text_data=xml_text)
+        return DummyResp(
+            {"content-type": "text/xml"}, json_data=None, text_data=xml_text
+        )
 
     # Patch requests.get to JSON then XML
-    calls = {"n":0}
+    calls = {"n": 0}
+
     def switcher(url, params=None, headers=None, timeout=15):
         calls["n"] += 1
-        return fake_get_json(url, params, headers, timeout) if calls["n"] == 1 else fake_get_xml(url, params, headers, timeout)
+        return (
+            fake_get_json(url, params, headers, timeout)
+            if calls["n"] == 1
+            else fake_get_xml(url, params, headers, timeout)
+        )
+
     monkeypatch.setattr(_requests, "get", switcher)
 
     c = BenzingaClient()

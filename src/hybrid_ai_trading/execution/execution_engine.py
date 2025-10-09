@@ -12,7 +12,7 @@ Responsibilities:
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from hybrid_ai_trading.execution.order_manager import OrderManager
 from hybrid_ai_trading.execution.paper_simulator import PaperSimulator

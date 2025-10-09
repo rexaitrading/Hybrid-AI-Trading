@@ -6,7 +6,8 @@ Strict truth table for trading signals with full logging for test coverage.
 
 import logging
 import math
-from typing import List, Dict, Union, Tuple
+from typing import Dict, List, Tuple, Union
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,12 @@ logger.setLevel(logging.DEBUG)
 
 
 class VWAPConfig:
-    def __init__(self, tie_policy: str = "HOLD", enable_symmetry: bool = True, tolerance: float = 1e-3) -> None:
+    def __init__(
+        self,
+        tie_policy: str = "HOLD",
+        enable_symmetry: bool = True,
+        tolerance: float = 1e-3,
+    ) -> None:
         if tie_policy not in ("HOLD", "SELL"):
             raise ValueError("tie_policy must be 'HOLD' or 'SELL'")
         self.tie_policy = tie_policy
@@ -49,7 +55,9 @@ def _compute_vwap(bars: List[Dict[str, Union[float, int]]]) -> float:
         return float("nan")
 
 
-def vwap_signal(bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConfig, None] = None) -> str:
+def vwap_signal(
+    bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConfig, None] = None
+) -> str:
     cfg = config or VWAPConfig()
     try:
         if not bars:
@@ -62,7 +70,12 @@ def vwap_signal(bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConf
 
         try:
             last_close, last_vol = float(bars[-1]["c"]), float(bars[-1]["v"])
-            if last_close <= 0 or last_vol <= 0 or math.isnan(last_close) or math.isnan(last_vol):
+            if (
+                last_close <= 0
+                or last_vol <= 0
+                or math.isnan(last_close)
+                or math.isnan(last_vol)
+            ):
                 logger.warning("❌ VWAP invalid: last bar contains NaN or bad values")
                 return "HOLD"
         except Exception:
@@ -74,12 +87,19 @@ def vwap_signal(bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConf
             return "HOLD"
 
         # --- Symmetry safeguard ---
-        if cfg.enable_symmetry and len(bars) == 2 and bars[0].get("v") == bars[1].get("v"):
+        if (
+            cfg.enable_symmetry
+            and len(bars) == 2
+            and bars[0].get("v") == bars[1].get("v")
+        ):
             try:
                 c0, c1 = float(bars[0]["c"]), float(bars[1]["c"])
                 midpoint = (c0 + c1) / 2
                 vwap_two = _compute_vwap(bars)
-                if not math.isnan(vwap_two) and abs(vwap_two - midpoint) <= cfg.tolerance:
+                if (
+                    not math.isnan(vwap_two)
+                    and abs(vwap_two - midpoint) <= cfg.tolerance
+                ):
                     if cfg.tie_policy == "SELL":
                         logger.info("✅ VWAP symmetric safeguard → SELL (policy=SELL)")
                         return "SELL"
@@ -102,10 +122,14 @@ def vwap_signal(bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConf
             return "HOLD"
 
         if last_close > vwap_val:
-            logger.info("VWAP decision → BUY (last=%.2f, vwap=%.2f)", last_close, vwap_val)
+            logger.info(
+                "VWAP decision → BUY (last=%.2f, vwap=%.2f)", last_close, vwap_val
+            )
             return "BUY"
         if last_close < vwap_val:
-            logger.info("VWAP decision → SELL (last=%.2f, vwap=%.2f)", last_close, vwap_val)
+            logger.info(
+                "VWAP decision → SELL (last=%.2f, vwap=%.2f)", last_close, vwap_val
+            )
             return "SELL"
 
         logger.info("VWAP tie fallback → %s", cfg.tie_policy)
@@ -124,7 +148,9 @@ class VWAPSignal:
         self.last_decision = vwap_signal(bars, self.config)
         return self.last_decision
 
-    def evaluate(self, bars: List[Dict[str, Union[float, int]]]) -> Tuple[str, Dict[str, Union[float, int, str]]]:
+    def evaluate(
+        self, bars: List[Dict[str, Union[float, int]]]
+    ) -> Tuple[str, Dict[str, Union[float, int, str]]]:
         decision = vwap_signal(bars, self.config)
         self.last_decision = decision
 
@@ -134,7 +160,10 @@ class VWAPSignal:
                 c0, c1 = float(bars[0]["c"]), float(bars[1]["c"])
                 midpoint = (c0 + c1) / 2
                 vwap_two = _compute_vwap(bars)
-                if not math.isnan(vwap_two) and abs(vwap_two - midpoint) <= self.config.tolerance:
+                if (
+                    not math.isnan(vwap_two)
+                    and abs(vwap_two - midpoint) <= self.config.tolerance
+                ):
                     symmetry_triggered = True
             except Exception:
                 symmetry_triggered = False

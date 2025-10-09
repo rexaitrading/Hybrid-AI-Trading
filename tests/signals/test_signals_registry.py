@@ -9,6 +9,7 @@ Validates that the STRATEGIES registry in signals/__init__.py:
 """
 
 import pytest
+
 from hybrid_ai_trading.signals import STRATEGIES
 
 
@@ -23,9 +24,9 @@ def test_registry_keys_and_callables():
         "macd",
         "vwap",
     }
-    assert set(STRATEGIES.keys()) == expected_keys, (
-        f"STRATEGIES keys mismatch → expected {expected_keys}, got {set(STRATEGIES.keys())}"
-    )
+    assert (
+        set(STRATEGIES.keys()) == expected_keys
+    ), f"STRATEGIES keys mismatch → expected {expected_keys}, got {set(STRATEGIES.keys())}"
     for name, func in STRATEGIES.items():
         assert callable(func), f"Strategy {name} is not callable"
 

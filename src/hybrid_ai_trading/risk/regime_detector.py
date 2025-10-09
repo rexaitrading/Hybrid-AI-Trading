@@ -1,4 +1,5 @@
 from hybrid_ai_trading.utils.time_utils import utc_now
+
 """
 Regime Detector (Hybrid AI Quant Pro v16.13 â€“ Suite-Aligned, Fully Covered)
 ----------------------------------------------------------------------------
@@ -11,7 +12,7 @@ Regime Detector (Hybrid AI Quant Pro v16.13 â€“ Suite-Aligned, Fully Covere
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
@@ -93,7 +94,9 @@ class RegimeDetector:
             avg_return = float(rets.mean())
             vol = float(rets.std())
         except Exception as e:
-            logger.error("Return stats failed for %s: %s â†’ returning neutral", symbol, e)
+            logger.error(
+                "Return stats failed for %s: %s â†’ returning neutral", symbol, e
+            )
             return "neutral"
 
         # --- Classification ---
@@ -154,7 +157,13 @@ class RegimeDetector:
         if not self.enabled:
             return 0.0
         regime = self.detect(symbol, prices)
-        mapping = {"bull": 0.9, "bear": 0.1, "crisis": 0.3, "transition": 0.5, "sideways": 0.5}
+        mapping = {
+            "bull": 0.9,
+            "bear": 0.1,
+            "crisis": 0.3,
+            "transition": 0.5,
+            "sideways": 0.5,
+        }
         return mapping.get(regime, 0.5)
 
     # ------------------------------------------------------------------
@@ -164,7 +173,9 @@ class RegimeDetector:
         self.history.clear()
 
     # ------------------------------------------------------------------
-    def _get_prices(self, symbol: str, prices: Optional[List[float]] = None) -> pd.Series:
+    def _get_prices(
+        self, symbol: str, prices: Optional[List[float]] = None
+    ) -> pd.Series:
         """Return price series from list or DB, coerced to floats with guards."""
         if prices is not None:
             try:

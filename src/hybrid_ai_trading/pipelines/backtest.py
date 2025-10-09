@@ -9,16 +9,16 @@ Backtest Pipeline (Hybrid AI Quant Pro v16.6 – Hedge Fund OE Grade, Loop-Free)
 - export_leaderboard for audit-grade reporting
 """
 
-import logging
-import os
 import csv
 import datetime
-from typing import Dict, List, Optional, Callable, Any
+import logging
+import os
+from typing import Any, Callable, Dict, List, Optional
 
 import matplotlib
 import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
+import pandas as pd
 import requests
 import yaml
 
@@ -119,7 +119,12 @@ def _safe_empty_dataframe(columns: Optional[List[str]] = None) -> pd.DataFrame:
 class IntradayBacktester:
     HOLIDAYS = {(12, 24), (12, 25), (1, 1)}
 
-    def __init__(self, symbols: List[str], days: int = 5, strategies: Optional[Dict[str, Callable]] = None) -> None:
+    def __init__(
+        self,
+        symbols: List[str],
+        days: int = 5,
+        strategies: Optional[Dict[str, Callable]] = None,
+    ) -> None:
         self.cfg = load_config()
         providers = self.cfg.get("providers", {})
         polygon_cfg = providers.get("polygon", {})
@@ -141,8 +146,12 @@ class IntradayBacktester:
         os.makedirs(self.reports_dir, exist_ok=True)
 
         self.strategies = strategies or {}
-        self.risk_manager = RiskManager(daily_loss_limit=self.daily_stop, trade_loss_limit=-0.01)
-        self.paper = PaperSimulator(slippage=self.slippage_per_share, commission=self.commission_per_share)
+        self.risk_manager = RiskManager(
+            daily_loss_limit=self.daily_stop, trade_loss_limit=-0.01
+        )
+        self.paper = PaperSimulator(
+            slippage=self.slippage_per_share, commission=self.commission_per_share
+        )
         self.portfolio = PortfolioTracker()
         self.engine = TradeEngine(self.cfg)
 
@@ -156,7 +165,9 @@ class IntradayBacktester:
         except TypeError:
             return fn({"symbol": symbol, "bars": bars})
         except Exception as e:
-            logger.error("strategy %s failed: %s", getattr(fn, "__name__", "unknown"), e)
+            logger.error(
+                "strategy %s failed: %s", getattr(fn, "__name__", "unknown"), e
+            )
             return "HOLD"
 
     def run(self) -> pd.DataFrame:
@@ -182,7 +193,9 @@ class IntradayBacktester:
             self._write_dummy_csv("NONE_HOLIDAY")
             self._plot_equity("HOLIDAY", [self.start_capital])
             self._plot_drawdown("HOLIDAY", [self.start_capital])
-            return pd.DataFrame([{"Strategy": "NONE", "Symbol": "HOLIDAY", "Sharpe": 0.0}])
+            return pd.DataFrame(
+                [{"Strategy": "NONE", "Symbol": "HOLIDAY", "Sharpe": 0.0}]
+            )
 
         # --- No strategies
         if not self.strategies:
@@ -213,12 +226,19 @@ class IntradayBacktester:
             with open(logfile, "w", newline="", encoding="utf-8") as f:
                 try:
                     csv.writer(f).writerow(
-                        ["symbol", "date", "time", "signal", "trade_pnl", "daily_pnl", "cum_equity"]
+                        [
+                            "symbol",
+                            "date",
+                            "time",
+                            "signal",
+                            "trade_pnl",
+                            "daily_pnl",
+                            "cum_equity",
+                        ]
                     )
                 except Exception as e:
                     logger.error("[backtest] unexpected error: %s", e)
                     continue
-
 
             for symbol in self.symbols:
                 returns, trades, wins, blocked = [], 0, 0, 0
@@ -258,10 +278,14 @@ class IntradayBacktester:
                     "Blocked %": blocked_pct,
                     "FinalEquity": final_eq,
                 }
-                rows.append({"Strategy": name.upper(), "Symbol": symbol, "Sharpe": sharpe})
+                rows.append(
+                    {"Strategy": name.upper(), "Symbol": symbol, "Sharpe": sharpe}
+                )
 
                 with open(logfile, "a", newline="", encoding="utf-8") as f:
-                    csv.writer(f).writerow([symbol, today.isoformat(), "09:30", signal, 0.0, 0.0, final_eq])
+                    csv.writer(f).writerow(
+                        [symbol, today.isoformat(), "09:30", signal, 0.0, 0.0, final_eq]
+                    )
 
                 self._plot_equity(symbol, [final_eq])
                 self._plot_drawdown(symbol, [final_eq])
@@ -287,7 +311,17 @@ class IntradayBacktester:
     def _write_dummy_csv(self, tag: str) -> None:
         path = os.path.join(self.reports_dir, f"backtest_{tag}.csv")
         with open(path, "w", newline="", encoding="utf-8") as f:
-            csv.writer(f).writerow(["symbol", "date", "time", "signal", "trade_pnl", "daily_pnl", "cum_equity"])
+            csv.writer(f).writerow(
+                [
+                    "symbol",
+                    "date",
+                    "time",
+                    "signal",
+                    "trade_pnl",
+                    "daily_pnl",
+                    "cum_equity",
+                ]
+            )
 
     def _plot_equity(self, symbol: str, equity_curve: List[float]) -> None:
         try:
@@ -326,4 +360,3 @@ class IntradayBacktester:
             df.style.to_html(html_file)
         except Exception as e:
             logger.error("❌ failed to export leaderboard: %s", e)
-

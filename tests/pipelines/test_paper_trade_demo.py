@@ -1,9 +1,8 @@
-﻿import runpy
 import logging
+import runpy
 from datetime import datetime
 from unittest.mock import patch
 
-import pytest
 import hybrid_ai_trading.pipelines.paper_trade_demo as demo
 
 
@@ -44,8 +43,12 @@ def test_demo_as_script_success(capsys):
     Run the module as a script via runpy.
     We patch the source function BEFORE import so paper_trade_demo binds to our patched version.
     """
-    with patch("hybrid_ai_trading.signals.breakout_v1.breakout_signal", return_value="SELL"):
-        runpy.run_module("hybrid_ai_trading.pipelines.paper_trade_demo", run_name="__main__")
+    with patch(
+        "hybrid_ai_trading.signals.breakout_v1.breakout_signal", return_value="SELL"
+    ):
+        runpy.run_module(
+            "hybrid_ai_trading.pipelines.paper_trade_demo", run_name="__main__"
+        )
 
     out = capsys.readouterr().out
     assert "Breakout signal: SELL" in out
@@ -53,8 +56,13 @@ def test_demo_as_script_success(capsys):
 
 def test_demo_as_script_exception(capsys):
     """Script path when breakout_signal raises."""
-    with patch("hybrid_ai_trading.signals.breakout_v1.breakout_signal", side_effect=Exception("boom")):
-        runpy.run_module("hybrid_ai_trading.pipelines.paper_trade_demo", run_name="__main__")
+    with patch(
+        "hybrid_ai_trading.signals.breakout_v1.breakout_signal",
+        side_effect=Exception("boom"),
+    ):
+        runpy.run_module(
+            "hybrid_ai_trading.pipelines.paper_trade_demo", run_name="__main__"
+        )
 
     out = capsys.readouterr().out
     assert "Breakout signal failed: boom" in out

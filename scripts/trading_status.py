@@ -1,10 +1,13 @@
-﻿from ib_insync import *
-import os, pathlib
+import os
+import pathlib
+
+from ib_insync import *
+
 
 def main():
-    host = os.getenv("IB_HOST","127.0.0.1")
-    port = int(os.getenv("IB_PORT","7497") or 7497)
-    cid  = int(os.getenv("IB_CLIENT_ID","201") or 201)
+    host = os.getenv("IB_HOST", "127.0.0.1")
+    port = int(os.getenv("IB_PORT", "7497") or 7497)
+    cid = int(os.getenv("IB_CLIENT_ID", "201") or 201)
 
     ib = IB()
     ib.connect(host, port, clientId=cid)
@@ -16,7 +19,9 @@ def main():
     opens = []
     for t in ib.reqOpenOrders():
         c, o, s = t.contract, t.order, t.orderStatus
-        opens.append((getattr(c,"symbol","?"), o.action, int(o.totalQuantity), s.status))
+        opens.append(
+            (getattr(c, "symbol", "?"), o.action, int(o.totalQuantity), s.status)
+        )
 
     ib.disconnect()
 
@@ -32,6 +37,7 @@ def main():
             print(line)
     else:
         print("[STATUS] No logs/orders.csv yet.")
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Quant Report Generator (Hybrid AI Quant Pro v1.0 – Research Tool)
 -----------------------------------------------------------------
 - Simulates trades with random PnL outcomes
@@ -6,10 +6,14 @@ Quant Report Generator (Hybrid AI Quant Pro v1.0 – Research Tool)
 - Saves chart + text summary into reports/
 """
 
-import os, sys, yaml, random
+import os
+import random
+import sys
+from datetime import datetime
+
 import matplotlib.pyplot as plt
 import numpy as np
-from datetime import datetime
+import yaml
 
 # Ensure src/ is on Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -25,7 +29,11 @@ def simulate_trades(engine, n_trades=50, seed=42):
 
     for i in range(n_trades):
         # Random PnL outcome
-        pnl = random.uniform(100, 600) if random.random() < 0.55 else -random.uniform(50, 300)
+        pnl = (
+            random.uniform(100, 600)
+            if random.random() < 0.55
+            else -random.uniform(50, 300)
+        )
 
         # Execute trade
         result = engine.process_signal("BTC/USDT", "BUY", size=1, price=60000)
@@ -36,10 +44,14 @@ def simulate_trades(engine, n_trades=50, seed=42):
 
         equity_history.append(engine.get_equity())
         pnl_history.append(pnl)
-        kelly_frac_history.append(engine.kelly_sizer.fraction if engine.kelly_sizer else 0)
+        kelly_frac_history.append(
+            engine.kelly_sizer.fraction if engine.kelly_sizer else 0
+        )
 
-        print(f"Trade {i+1:02d}: PnL={pnl:+.2f} | Equity={equity_history[-1]:.2f} | "
-              f"Kelly fraction={kelly_frac_history[-1]:.2f}")
+        print(
+            f"Trade {i+1:02d}: PnL={pnl:+.2f} | Equity={equity_history[-1]:.2f} | "
+            f"Kelly fraction={kelly_frac_history[-1]:.2f}"
+        )
         print("   Result:", result)
 
     return equity_history, pnl_history, kelly_frac_history
@@ -49,7 +61,9 @@ def performance_summary(engine, equity_history, pnl_history, kelly_frac_history)
     pt = engine.performance_tracker
     start_eq, end_eq = equity_history[0], equity_history[-1]
     total_return = (end_eq - start_eq) / start_eq
-    cagr = (1 + total_return) ** (252 / len(equity_history)) - 1 if equity_history else 0
+    cagr = (
+        (1 + total_return) ** (252 / len(equity_history)) - 1 if equity_history else 0
+    )
 
     return {
         "Start Equity": start_eq,
@@ -76,20 +90,32 @@ def save_report(equity_history, pnl_history, kelly_frac_history, summary):
     peak = np.maximum.accumulate(equity_history)
     plt.plot(trades, equity_history, label="Equity Curve", color="blue")
     dd = (peak - np.array(equity_history)) / peak
-    plt.fill_between(trades, equity_history, peak, where=equity_history < peak,
-                     color="red", alpha=0.3, label="Drawdowns")
+    plt.fill_between(
+        trades,
+        equity_history,
+        peak,
+        where=equity_history < peak,
+        color="red",
+        alpha=0.3,
+        label="Drawdowns",
+    )
     plt.title("Equity Curve with Drawdowns")
-    plt.xlabel("Trades"); plt.ylabel("Equity"); plt.legend()
+    plt.xlabel("Trades")
+    plt.ylabel("Equity")
+    plt.legend()
     plt.grid(True, linestyle="--", alpha=0.7)
     chart_path = os.path.join(reports_dir, f"quant_report_{timestamp}.png")
-    plt.savefig(chart_path); plt.close()
+    plt.savefig(chart_path)
+    plt.close()
 
     # Text summary
     text_path = os.path.join(reports_dir, f"quant_report_{timestamp}.txt")
     with open(text_path, "w") as f:
         f.write("=== Quant Performance Report ===\n")
         for k, v in summary.items():
-            f.write(f"{k:<18}: {v:.2f}\n" if isinstance(v, float) else f"{k:<18}: {v}\n")
+            f.write(
+                f"{k:<18}: {v:.2f}\n" if isinstance(v, float) else f"{k:<18}: {v}\n"
+            )
         f.write("===============================\n")
 
     print(f"\n✅ Quant report saved to:\n  {chart_path}\n  {text_path}")
@@ -100,8 +126,12 @@ def main():
         cfg = yaml.safe_load(f)
 
     engine = TradeEngine(cfg)
-    equity_history, pnl_history, kelly_frac_history = simulate_trades(engine, n_trades=50)
-    summary = performance_summary(engine, equity_history, pnl_history, kelly_frac_history)
+    equity_history, pnl_history, kelly_frac_history = simulate_trades(
+        engine, n_trades=50
+    )
+    summary = performance_summary(
+        engine, equity_history, pnl_history, kelly_frac_history
+    )
     save_report(equity_history, pnl_history, kelly_frac_history, summary)
 
 

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: Universe Definitions (Hybrid AI Quant Pro – Hedge-Fund Grade)
 Covers:
 - groups() returns all expected keys
@@ -12,7 +12,13 @@ import hybrid_ai_trading.utils.universe as universe
 
 def test_groups_contains_all_keys_and_types():
     g = universe.groups()
-    expected_keys = ["Core_Stocks", "Core_Crypto", "Macro_Risk", "Leverage_Tools", "IPO_Watch"]
+    expected_keys = [
+        "Core_Stocks",
+        "Core_Crypto",
+        "Macro_Risk",
+        "Leverage_Tools",
+        "IPO_Watch",
+    ]
     # Every key present
     for key in expected_keys:
         assert key in g, f"{key} missing from groups()"
@@ -33,7 +39,14 @@ def test_groups_dict_structure_and_equality():
 
 
 def test_all_exports_are_correct_and_accessible():
-    expected = {"Core_Stocks", "Core_Crypto", "Macro_Risk", "Leverage_Tools", "IPO_Watch", "groups"}
+    expected = {
+        "Core_Stocks",
+        "Core_Crypto",
+        "Macro_Risk",
+        "Leverage_Tools",
+        "IPO_Watch",
+        "groups",
+    }
     assert set(universe.__all__) == expected
     # Touch every exported symbol to ensure the assignments are counted by coverage
     for name in universe.__all__:

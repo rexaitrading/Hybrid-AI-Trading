@@ -8,9 +8,10 @@ from typing import List, Optional
 
 # --- Tunables (safe defaults) ---
 BREAKOUT_N = 24
-ATR_MIN = 0.003   # 0.3%
-ATR_MAX = 0.03    # 3.0%
-K_ATR   = 0.5     # thrust buffer vs EMA200
+ATR_MIN = 0.003  # 0.3%
+ATR_MAX = 0.03  # 3.0%
+K_ATR = 0.5  # thrust buffer vs EMA200
+
 
 def _ema_last(values: List[float], period: int) -> Optional[float]:
     n = len(values)
@@ -22,31 +23,37 @@ def _ema_last(values: List[float], period: int) -> Optional[float]:
         ema = v * k + ema * (1.0 - k)
     return ema
 
-def _atr_last(highs: List[float], lows: List[float], closes: List[float], period: int = 14) -> Optional[float]:
+
+def _atr_last(
+    highs: List[float], lows: List[float], closes: List[float], period: int = 14
+) -> Optional[float]:
     n = len(closes)
     if n < period + 1:
         return None
     trs = []
     for i in range(n - period, n):
         prev_close = closes[i - 1]
-        tr = max(highs[i] - lows[i], abs(highs[i] - prev_close), abs(lows[i] - prev_close))
+        tr = max(
+            highs[i] - lows[i], abs(highs[i] - prev_close), abs(lows[i] - prev_close)
+        )
         trs.append(tr)
     return sum(trs) / float(period)
+
 
 def eth1h_signal(bars: List[List[float]]) -> Optional[str]:
     if not bars or len(bars) < 210:
         return None
 
-    highs  = [b[2] for b in bars if b[2] is not None]
-    lows   = [b[3] for b in bars if b[3] is not None]
+    highs = [b[2] for b in bars if b[2] is not None]
+    lows = [b[3] for b in bars if b[3] is not None]
     closes = [b[4] for b in bars if b[4] is not None]
     if min(len(highs), len(lows), len(closes)) < 210:
         return None
 
-    ema50  = _ema_last(closes, 50)
+    ema50 = _ema_last(closes, 50)
     ema200 = _ema_last(closes, 200)
-    atr14  = _atr_last(highs, lows, closes, 14)
-    last   = closes[-1] if closes else None
+    atr14 = _atr_last(highs, lows, closes, 14)
+    last = closes[-1] if closes else None
 
     if ema50 is None or ema200 is None or atr14 is None or last is None or last <= 0:
         return None
@@ -58,16 +65,16 @@ def eth1h_signal(bars: List[List[float]]) -> Optional[str]:
     # Prior window (exclude the current bar)
     if len(highs) <= BREAKOUT_N:
         return None
-    prev_high = max(highs[-(BREAKOUT_N+1):-1])
-    prev_low  = min(lows [-(BREAKOUT_N+1):-1])
+    prev_high = max(highs[-(BREAKOUT_N + 1) : -1])
+    prev_low = min(lows[-(BREAKOUT_N + 1) : -1])
 
-    long_trend  = ema50 > ema200
+    long_trend = ema50 > ema200
     short_trend = ema50 < ema200
 
-    breakout_up   = last > prev_high
-    breakdown_dn  = last < prev_low
-    thrust_up     = last > (ema200 + K_ATR * atr14)
-    thrust_down   = last < (ema200 - K_ATR * atr14)
+    breakout_up = last > prev_high
+    breakdown_dn = last < prev_low
+    thrust_up = last > (ema200 + K_ATR * atr14)
+    thrust_down = last < (ema200 - K_ATR * atr14)
 
     # Longs: uptrend + (breakout OR thrust above EMA200 by K*ATR)
     if long_trend and (breakout_up or thrust_up):

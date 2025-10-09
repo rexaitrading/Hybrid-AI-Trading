@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests: settings.py (Hybrid AI Quant Pro – 100% Coverage)
 -------------------------------------------------------------
 Covers:

@@ -1,4 +1,5 @@
-﻿from __future__ import annotations
+from __future__ import annotations
+
 """
 IBKR Ops (Hybrid AI Quant Pro v1.0 - Practical Ops Tools)
 - --account
@@ -12,9 +13,16 @@ Notes:
 
 import argparse
 import json
-import os
+
 from ib_insync import IB
-from hybrid_ai_trading.data.clients.ibkr_client import connect_ib, account_summary, positions, open_orders, cancel_all
+
+from hybrid_ai_trading.data.clients.ibkr_client import (
+    account_summary,
+    cancel_all,
+    connect_ib,
+    open_orders,
+    positions,
+)
 
 
 def _print(obj):
@@ -34,13 +42,17 @@ def main() -> None:
 
     try:
         if args.account:
-            _print(account_summary(ib)); return
+            _print(account_summary(ib))
+            return
         if args.positions:
-            _print(positions(ib)); return
+            _print(positions(ib))
+            return
         if args.open_orders:
-            _print(open_orders(ib)); return
+            _print(open_orders(ib))
+            return
         if args.cancel_all:
-            _print(cancel_all(ib, args.symbol)); return
+            _print(cancel_all(ib, args.symbol))
+            return
         # default
         _print(account_summary(ib))
     finally:

@@ -1,5 +1,7 @@
-from ib_insync import IB, util
 import sys
+
+from ib_insync import IB
+
 ib = IB()
 print("Connecting to 127.0.0.1:7497 clientId=1001 ...")
 ok = ib.connect("127.0.0.1", 7497, clientId=1001, timeout=60)

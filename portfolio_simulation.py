@@ -1,16 +1,17 @@
+import base64
 import os
-import ccxt
-import yaml
 import smtplib
+from datetime import datetime
+from email.message import EmailMessage
+from io import BytesIO
+
+import ccxt
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import yaml
 from polygon import RESTClient
 from scipy.optimize import minimize
-from email.message import EmailMessage
-import base64
-from io import BytesIO
-from datetime import datetime
 
 # --- Load Config ---
 with open("portfolio_config.yaml", "r") as f:
@@ -40,7 +41,9 @@ print(
 # --- Global Clients ---
 polygon_key = os.getenv("POLYGON_KEY") or cfg.get("polygon_key")
 if not polygon_key:
-    raise RuntimeError("❌ Missing Polygon API key. Set POLYGON_KEY in env or in portfolio_config.yaml")
+    raise RuntimeError(
+        "❌ Missing Polygon API key. Set POLYGON_KEY in env or in portfolio_config.yaml"
+    )
 
 _binance = ccxt.binance()
 _polygon_client = RESTClient(polygon_key)
@@ -91,8 +94,12 @@ def send_email(subject, body, attachments=None):
 def fetch_crypto(symbol: str, start_date: str) -> pd.DataFrame:
     try:
         print(f"🔗 Fetching crypto {symbol} from Binance...")
-        ohlcv = _binance.fetch_ohlcv(symbol, timeframe="1d", since=_binance.parse8601(start_date + "T00:00:00Z"))
-        df = pd.DataFrame(ohlcv, columns=["ts", "open", "high", "low", "close", "volume"])
+        ohlcv = _binance.fetch_ohlcv(
+            symbol, timeframe="1d", since=_binance.parse8601(start_date + "T00:00:00Z")
+        )
+        df = pd.DataFrame(
+            ohlcv, columns=["ts", "open", "high", "low", "close", "volume"]
+        )
         df["date"] = pd.to_datetime(df["ts"], unit="ms")
         df.set_index("date", inplace=True)
         df["returns"] = np.log(df["close"] / df["close"].shift(1))
@@ -106,7 +113,9 @@ def fetch_polygon(symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
     """Fetch daily OHLCV from Polygon (works for stocks, ETFs, IPOs, and forex)."""
     try:
         print(f"🔗 Fetching {symbol} from Polygon...")
-        bars = _polygon_client.get_aggs(ticker=symbol, multiplier=1, timespan="day", from_=start_date, to=end_date)
+        bars = _polygon_client.get_aggs(
+            ticker=symbol, multiplier=1, timespan="day", from_=start_date, to=end_date
+        )
 
         if not bars or not getattr(bars, "results", None):
             print(f"⚠️ No data returned for {symbol}")
@@ -140,16 +149,24 @@ def simulate_portfolio(weights, returns_df, rebalance="daily"):
     daily_returns = (returns_df * weights).sum(axis=1).dropna()
 
     if rebalance == "weekly":
-        daily_returns = daily_returns.resample("W-MON").mean().reindex(returns_df.index).ffill()
+        daily_returns = (
+            daily_returns.resample("W-MON").mean().reindex(returns_df.index).ffill()
+        )
     elif rebalance == "monthly":
-        daily_returns = daily_returns.resample("M").mean().reindex(returns_df.index).ffill()
+        daily_returns = (
+            daily_returns.resample("M").mean().reindex(returns_df.index).ffill()
+        )
 
     port_cum = (1 + daily_returns).cumprod()
     ann_return = daily_returns.mean() * 252
     ann_vol = daily_returns.std() * np.sqrt(252)
     sharpe = (ann_return - RISK_FREE) / ann_vol if ann_vol > 0 else 0
     downside = daily_returns[daily_returns < 0]
-    sortino = (ann_return - RISK_FREE) / (downside.std() * np.sqrt(252)) if not downside.empty else None
+    sortino = (
+        (ann_return - RISK_FREE) / (downside.std() * np.sqrt(252))
+        if not downside.empty
+        else None
+    )
     max_dd = (port_cum / port_cum.cummax() - 1).min()
     calmar = ann_return / abs(max_dd) if max_dd != 0 else None
     var95 = daily_returns.quantile(0.05)
@@ -191,13 +208,19 @@ def optimize_portfolio(returns_df, max_alloc=0.5, min_alloc=0.05):
 # --- Report Generator ---
 def generate_report_html(opt_metrics, opt_w, tickers, html_file):
     html = "<h1>Portfolio Report</h1>"
-    html += pd.DataFrame([opt_metrics]).drop(columns=["Cumulative", "DailyReturns"]).to_html()
+    html += (
+        pd.DataFrame([opt_metrics])
+        .drop(columns=["Cumulative", "DailyReturns"])
+        .to_html()
+    )
 
     # Equity curve
     fig, ax = plt.subplots(figsize=(8, 4))
     opt_metrics["Cumulative"].plot(ax=ax, title="Equity Curve")
     ax.set_ylabel("Portfolio Value")
-    html += f"<h2>Equity Curve</h2><img src='data:image/png;base64,{plot_to_base64(fig)}'>"
+    html += (
+        f"<h2>Equity Curve</h2><img src='data:image/png;base64,{plot_to_base64(fig)}'>"
+    )
     plt.close(fig)
 
     # Drawdown
@@ -247,7 +270,11 @@ if __name__ == "__main__":
     )
     print(
         "📊 Optimal Metrics:",
-        {k: round(v, 4) for k, v in opt_metrics.items() if isinstance(v, (int, float, np.floating))},
+        {
+            k: round(v, 4)
+            for k, v in opt_metrics.items()
+            if isinstance(v, (int, float, np.floating))
+        },
     )
 
     # --- Save reports safely ---
@@ -260,7 +287,9 @@ if __name__ == "__main__":
 
     with pd.ExcelWriter(xlsx_file) as writer:
         combined.to_excel(writer, sheet_name="Returns")
-        pd.DataFrame([opt_metrics]).drop(columns=["Cumulative", "DailyReturns"]).to_excel(writer, sheet_name="Metrics")
+        pd.DataFrame([opt_metrics]).drop(
+            columns=["Cumulative", "DailyReturns"]
+        ).to_excel(writer, sheet_name="Metrics")
 
     generate_report_html(opt_metrics, opt_w, combined.columns, html_file)
 

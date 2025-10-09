@@ -1,22 +1,28 @@
-import os, time
 import datetime as dt
+import os
+import time
+
 import pytest
 
 pytestmark = pytest.mark.usefixtures()  # keep it simple
 
+
 def _should_run():
     return os.environ.get("IB_INT") == "1"
+
 
 def _get_env():
     host = os.environ.get("IB_HOST", "127.0.0.1")
     port = int(os.environ.get("IB_PORT", "4002"))
-    cid  = int(os.environ.get("IB_CLIENT_ID", "9021"))
+    cid = int(os.environ.get("IB_CLIENT_ID", "9021"))
     return host, port, cid
+
 
 def _bounded_wait(ib, trade, seconds=10):
     deadline = time.time() + seconds
     while time.time() < deadline and getattr(trade, "isActive", lambda: False)():
         ib.waitOnUpdate(timeout=1.0)
+
 
 def test_ib_paper_connect_and_time():
     if not _should_run():
@@ -34,11 +40,12 @@ def test_ib_paper_connect_and_time():
     assert isinstance(now, dt.datetime)
     ib.disconnect()
 
+
 def test_ib_paper_whatif_limit():
     if not _should_run():
         pytest.skip("IB integration disabled (set IB_INT=1)")
     try:
-        from ib_insync import IB, Stock, LimitOrder
+        from ib_insync import IB, LimitOrder, Stock
     except Exception:
         pytest.skip("ib_insync not available")
 

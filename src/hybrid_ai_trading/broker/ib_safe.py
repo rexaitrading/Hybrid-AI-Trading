@@ -8,18 +8,22 @@ IB utils (Phase-2, Step-1): hardened & version-proof
 - human error mapping (best-effort)
 - marketable_limit helper
 """
+
 import random
 import time
 from typing import Any, Callable, List, Optional, Tuple
 
 try:
-    from ib_insync import IB, Stock, LimitOrder  # type: ignore
+    from ib_insync import IB, LimitOrder, Stock  # type: ignore
 except Exception:
     IB = object  # type: ignore
-    class Stock:                       # stubs allow import in test envs
+
+    class Stock:  # stubs allow import in test envs
         def __init__(self, *a, **k): ...
+
     class LimitOrder:
         def __init__(self, *a, **k): ...
+
 
 # ----------------------------- Retry / Backoff ----------------------------- #
 def retry(
@@ -30,6 +34,7 @@ def retry(
     jitter: float = 0.25,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Exponential backoff with jitter for transient failures."""
+
     def deco(fn: Callable[..., Any]) -> Callable[..., Any]:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             last: Optional[Exception] = None
@@ -40,12 +45,17 @@ def retry(
                     last = e
                     if i == attempts - 1:
                         raise
-                    sleep_s = min(max_backoff, backoff * (2 ** i)) + (random.random() * jitter)
+                    sleep_s = min(max_backoff, backoff * (2**i)) + (
+                        random.random() * jitter
+                    )
                     if sleep_s > 0:
                         time.sleep(sleep_s)
             raise last  # not reached
+
         return wrapper
+
     return deco
+
 
 # ----------------------------- Error mapping ------------------------------- #
 def map_ib_error(exc: BaseException) -> str:
@@ -68,6 +78,7 @@ def map_ib_error(exc: BaseException) -> str:
         return "HOST_UNREACHABLE"
     return "UNKNOWN"
 
+
 # ------------------------------- Connect ----------------------------------- #
 def connect_ib(
     host: str = "127.0.0.1",
@@ -76,7 +87,7 @@ def connect_ib(
     timeout: int = 30,
     attempts: int = 3,
     backoff: float = 0.5,
-    ib_factory: Callable[[], IB] = IB,   # allows stubbing in unit tests
+    ib_factory: Callable[[], IB] = IB,  # allows stubbing in unit tests
 ) -> IB:
     """Robust connect that works across ib_insync versions."""
     ib = ib_factory()
@@ -90,8 +101,11 @@ def connect_ib(
     _do_connect()
     return ib
 
+
 # ----------------------------- Account snapshot ---------------------------- #
-def account_snapshot(ib: IB, acct: Optional[str] = None, wait_sec: float = 3.0) -> List[Tuple[str, str, str]]:
+def account_snapshot(
+    ib: IB, acct: Optional[str] = None, wait_sec: float = 3.0
+) -> List[Tuple[str, str, str]]:
     """Version-proof snapshot via low-level subscribe → accountValues."""
     if acct is None:
         ma = getattr(ib, "managedAccounts", lambda: [])() or []
@@ -103,7 +117,10 @@ def account_snapshot(ib: IB, acct: Optional[str] = None, wait_sec: float = 3.0) 
     vals = getattr(ib, "accountValues", lambda: [])() or []
     ib.client.reqAccountUpdates(False, acct)  # type: ignore[attr-defined]
     wanted = {"NetLiquidation", "TotalCashValue", "BuyingPower", "AvailableFunds"}
-    return [(v.tag, v.value, v.currency) for v in vals if getattr(v, "tag", "") in wanted]
+    return [
+        (v.tag, v.value, v.currency) for v in vals if getattr(v, "tag", "") in wanted
+    ]
+
 
 # ----------------------------- Cancel / Positions -------------------------- #
 def cancel_all_open(ib: IB, settle_sec: int = 8) -> None:
@@ -114,6 +131,7 @@ def cancel_all_open(ib: IB, settle_sec: int = 8) -> None:
             ib.cancelOrder(tr.order)
     for _ in range(max(0, settle_sec)):
         ib.waitOnUpdate(timeout=1.0)
+
 
 def force_refresh_positions(ib: IB, settle_sec: int = 3):
     """Request positions to refresh ib.positions() cache across versions."""
@@ -129,6 +147,7 @@ def force_refresh_positions(ib: IB, settle_sec: int = 3):
         pass
     return getattr(ib, "positions", lambda: [])() or []
 
+
 # ----------------------------- Marketable limit ---------------------------- #
 def marketable_limit(side: str, ref: float, afterhours: bool) -> float:
     """Compute a marketable limit around a reference price."""
@@ -138,8 +157,9 @@ def marketable_limit(side: str, ref: float, afterhours: bool) -> float:
     if ref <= 0:
         raise ValueError("ref must be > 0")
     bump = 1.01 if afterhours else 1.001
-    cut  = 0.99 if afterhours else 0.999
+    cut = 0.99 if afterhours else 0.999
     return round(ref * (bump if s == "BUY" else cut), 2)
+
 
 # ----------------------------- High-level flatten -------------------------- #
 def flatten_symbol_limit(
@@ -159,7 +179,11 @@ def flatten_symbol_limit(
     ib.sleep(1.0)
 
     s = str(side).upper()
-    ref = (getattr(t, "ask", None) if s == "BUY" else getattr(t, "bid", None)) or getattr(t, "close", None) or 200.0
+    ref = (
+        (getattr(t, "ask", None) if s == "BUY" else getattr(t, "bid", None))
+        or getattr(t, "close", None)
+        or 200.0
+    )
     lmt = marketable_limit(s, ref, afterhours)
 
     o = LimitOrder(s, qty, lmt)  # type: ignore[name-defined]
@@ -172,8 +196,13 @@ def flatten_symbol_limit(
         ib.waitOnUpdate(timeout=1.0)
 
     if tr.isActive():
-        new_ref = (getattr(t, "ask", None) if s == "BUY" else getattr(t, "bid", None)) or ref
-        o.lmtPrice = round(new_ref * (1 + reprice_pct) if s == "BUY" else new_ref * (1 - reprice_pct), 2)
+        new_ref = (
+            getattr(t, "ask", None) if s == "BUY" else getattr(t, "bid", None)
+        ) or ref
+        o.lmtPrice = round(
+            new_ref * (1 + reprice_pct) if s == "BUY" else new_ref * (1 - reprice_pct),
+            2,
+        )
         ib.placeOrder(c, o)
         for _ in range(8):
             ib.waitOnUpdate(timeout=1.0)

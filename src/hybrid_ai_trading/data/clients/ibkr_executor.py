@@ -1,4 +1,5 @@
-﻿from __future__ import annotations
+from __future__ import annotations
+
 """
 IBKR Executor (Hybrid AI Quant Pro v1.0 - DRY-RUN Safe)
 - Dry-run by default; --live requires env IBKR_LIVE=1
@@ -10,8 +11,15 @@ import argparse
 import json
 import os
 import sys
+
 from ib_insync import IB
-from hybrid_ai_trading.data.clients.ibkr_client import connect_ib, place_market_stock, place_limit_stock, cancel_all
+
+from hybrid_ai_trading.data.clients.ibkr_client import (
+    cancel_all,
+    connect_ib,
+    place_limit_stock,
+    place_market_stock,
+)
 
 
 def _require_live(args: argparse.Namespace) -> bool:
@@ -52,43 +60,92 @@ def main() -> None:
         # Market BUY
         if args.market_buy_shares is not None:
             if _require_live(args):
-                _print(place_market_stock(ib, args.symbol, args.market_buy_shares, "BUY"))
+                _print(
+                    place_market_stock(ib, args.symbol, args.market_buy_shares, "BUY")
+                )
             else:
-                _print({"dry_run": True, "op": "market_buy", "symbol": args.symbol, "shares": args.market_buy_shares})
+                _print(
+                    {
+                        "dry_run": True,
+                        "op": "market_buy",
+                        "symbol": args.symbol,
+                        "shares": args.market_buy_shares,
+                    }
+                )
             return
 
         # Market SELL
         if args.market_sell_shares is not None:
             if _require_live(args):
-                _print(place_market_stock(ib, args.symbol, args.market_sell_shares, "SELL"))
+                _print(
+                    place_market_stock(ib, args.symbol, args.market_sell_shares, "SELL")
+                )
             else:
-                _print({"dry_run": True, "op": "market_sell", "symbol": args.symbol, "shares": args.market_sell_shares})
+                _print(
+                    {
+                        "dry_run": True,
+                        "op": "market_sell",
+                        "symbol": args.symbol,
+                        "shares": args.market_sell_shares,
+                    }
+                )
             return
 
         # Limit BUY
         if args.limit_buy_shares is not None:
             price = float(args.limit_price) if args.limit_price is not None else None
             if price is None:
-                _print({"error": "limit_price required for limit-buy"}); return
+                _print({"error": "limit_price required for limit-buy"})
+                return
             if _require_live(args):
-                _print(place_limit_stock(ib, args.symbol, args.limit_buy_shares, price, "BUY"))
+                _print(
+                    place_limit_stock(
+                        ib, args.symbol, args.limit_buy_shares, price, "BUY"
+                    )
+                )
             else:
-                _print({"dry_run": True, "op": "limit_buy", "symbol": args.symbol, "shares": args.limit_buy_shares, "limit_price": price})
+                _print(
+                    {
+                        "dry_run": True,
+                        "op": "limit_buy",
+                        "symbol": args.symbol,
+                        "shares": args.limit_buy_shares,
+                        "limit_price": price,
+                    }
+                )
             return
 
         # Limit SELL
         if args.limit_sell_shares is not None:
             price = float(args.limit_price) if args.limit_price is not None else None
             if price is None:
-                _print({"error": "limit_price required for limit-sell"}); return
+                _print({"error": "limit_price required for limit-sell"})
+                return
             if _require_live(args):
-                _print(place_limit_stock(ib, args.symbol, args.limit_sell_shares, price, "SELL"))
+                _print(
+                    place_limit_stock(
+                        ib, args.symbol, args.limit_sell_shares, price, "SELL"
+                    )
+                )
             else:
-                _print({"dry_run": True, "op": "limit_sell", "symbol": args.symbol, "shares": args.limit_sell_shares, "limit_price": price})
+                _print(
+                    {
+                        "dry_run": True,
+                        "op": "limit_sell",
+                        "symbol": args.symbol,
+                        "shares": args.limit_sell_shares,
+                        "limit_price": price,
+                    }
+                )
             return
 
         # default: dry-run hint
-        _print({"hint": "use --market-buy-shares / --market-sell-shares / --limit-* options", "symbol": args.symbol})
+        _print(
+            {
+                "hint": "use --market-buy-shares / --market-sell-shares / --limit-* options",
+                "symbol": args.symbol,
+            }
+        )
 
     finally:
         ib.disconnect()

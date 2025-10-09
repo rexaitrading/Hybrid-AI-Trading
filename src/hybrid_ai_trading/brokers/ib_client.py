@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 IBClient (Hybrid AI Quant Pro – minimal, safe wrapper)
 - Env-driven connect (defaults to TWS paper: localhost:7497)
@@ -11,9 +12,10 @@ IBClient (Hybrid AI Quant Pro – minimal, safe wrapper)
 import os
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Dict, Tuple, Optional, List
+from typing import Dict, List, Optional, Tuple
 
-from ib_insync import IB, Stock, MarketOrder
+from ib_insync import IB, MarketOrder, Stock
+
 
 # ---------------------------
 # Config
@@ -73,7 +75,9 @@ class IBClient:
                 out[e.tag] = (e.value, e.currency)
         return out
 
-    def ensure_realtime_equity_entitlement(self, symbol: str = "AAPL") -> Tuple[bool, List[Tuple[int, str]]]:
+    def ensure_realtime_equity_entitlement(
+        self, symbol: str = "AAPL"
+    ) -> Tuple[bool, List[Tuple[int, str]]]:
         """
         Try a real-time snapshot; capture 10089 (missing subscription) if it fires.
         Returns (ok, errors), where ok=True means snapshot looked good.
@@ -89,7 +93,9 @@ class IBClient:
             self.ib.reqMarketDataType(1)  # 1 = real-time
             t = self.ib.reqMktData(Stock(symbol, "SMART", "USD"), "", snapshot=True)
             self.ib.sleep(2.0)  # allow a moment for the snapshot
-            ok = (t is not None) and (t.bid is not None or t.last is not None or t.ask is not None)
+            ok = (t is not None) and (
+                t.bid is not None or t.last is not None or t.ask is not None
+            )
             return ok, errors
         finally:
             # Unsubscribe hook

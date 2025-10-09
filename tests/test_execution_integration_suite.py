@@ -12,13 +12,17 @@ Covers:
 + Extra micro-tests to force 100% coverage of trade_engine.py
 """
 
-import pytest, random, csv, math, os, sys
-from datetime import datetime
 import builtins
+import csv
+import math
+import random
+import sys
+from datetime import datetime
 
-from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
+import pytest
+
 from hybrid_ai_trading.execution.order_manager import OrderManager
-from hybrid_ai_trading.performance_tracker import PerformanceTracker
+from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
 from hybrid_ai_trading.trade_engine import TradeEngine
 
 
@@ -94,7 +98,11 @@ def test_order_manager_multi_broker_mock(portfolio):
     om.live_client = type(
         "BinanceClient",
         (),
-        {"submit_order": lambda *a, **k: (_ for _ in ()).throw(Exception("binance error"))},
+        {
+            "submit_order": lambda *a, **k: (_ for _ in ()).throw(
+                Exception("binance error")
+            )
+        },
     )()
     err = om.place_order("BTCUSD", "BUY", 1, 25000)
     assert err["status"] == "error"
@@ -213,12 +221,26 @@ def test_profitability_guardrails(trade_engine):
 # ----------------------------------------------------------------------
 def test_trade_engine_stress_with_audit(tmp_path, trade_engine):
     symbols = ["AAPL", "TSLA", "MSFT", "AMZN", "META", "BTCUSD", "ETHUSD", "SPY", "GLD"]
-    blotter_file = tmp_path / f"trade_blotter_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    blotter_file = (
+        tmp_path / f"trade_blotter_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    )
 
     with open(blotter_file, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["step", "symbol", "side", "size", "price", "status",
-                         "equity", "realized_pnl", "unrealized_pnl", "cash"])
+        writer.writerow(
+            [
+                "step",
+                "symbol",
+                "side",
+                "size",
+                "price",
+                "status",
+                "equity",
+                "realized_pnl",
+                "unrealized_pnl",
+                "cash",
+            ]
+        )
 
     for i in range(200):
         sym = random.choice(symbols)
@@ -229,11 +251,20 @@ def test_trade_engine_stress_with_audit(tmp_path, trade_engine):
 
         with open(blotter_file, "a", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow([i + 1, sym, side,
-                             snap["positions"].get(sym, {}).get("size", 0),
-                             round(price, 2), res["status"],
-                             snap["equity"], snap["realized_pnl"],
-                             snap["unrealized_pnl"], snap["cash"]])
+            writer.writerow(
+                [
+                    i + 1,
+                    sym,
+                    side,
+                    snap["positions"].get(sym, {}).get("size", 0),
+                    round(price, 2),
+                    res["status"],
+                    snap["equity"],
+                    snap["realized_pnl"],
+                    snap["unrealized_pnl"],
+                    snap["cash"],
+                ]
+            )
         assert res["status"] in {"filled", "blocked", "ignored", "rejected"}
 
     rep = trade_engine.portfolio.report()
@@ -244,6 +275,7 @@ def test_trade_engine_stress_with_audit(tmp_path, trade_engine):
 # ----------------------------------------------------------------------
 # EXTRA MICRO-TESTS TO CLOSE COVERAGE GAPS
 # ----------------------------------------------------------------------
+
 
 def test_audit_file_creation_and_failure(tmp_path, base_config, portfolio, monkeypatch):
     te = TradeEngine(base_config, portfolio=portfolio)
@@ -256,7 +288,9 @@ def test_audit_file_creation_and_failure(tmp_path, base_config, portfolio, monke
     assert "status" in res
 
     # Force audit failure
-    monkeypatch.setattr(builtins, "open", lambda *a, **k: (_ for _ in ()).throw(Exception("disk full")))
+    monkeypatch.setattr(
+        builtins, "open", lambda *a, **k: (_ for _ in ()).throw(Exception("disk full"))
+    )
     res2 = te.process_signal("AAPL", "BUY", 100)
     assert "status" in res2
 
@@ -267,7 +301,11 @@ def test_kelly_sizer_invalid_and_exception(base_config, portfolio, monkeypatch):
     monkeypatch.setattr(te.kelly_sizer, "size_position", lambda *_: 5)
     assert "status" in te.process_signal("AAPL", "BUY", 100, None)
 
-    monkeypatch.setattr(te.kelly_sizer, "size_position", lambda *_: (_ for _ in ()).throw(Exception("boom")))
+    monkeypatch.setattr(
+        te.kelly_sizer,
+        "size_position",
+        lambda *_: (_ for _ in ()).throw(Exception("boom")),
+    )
     res = te.process_signal("AAPL", "BUY", 100, None)
     assert "status" in res
 
@@ -275,9 +313,11 @@ def test_kelly_sizer_invalid_and_exception(base_config, portfolio, monkeypatch):
 def test_algo_routing_exceptions(base_config, portfolio):
     te = TradeEngine(base_config, portfolio=portfolio)
 
-    sys.modules["hybrid_ai_trading.algos.iceberg"] = type("M", (), {
-        "IcebergExecutor": lambda *_: (_ for _ in ()).throw(Exception("fail"))
-    })
+    sys.modules["hybrid_ai_trading.algos.iceberg"] = type(
+        "M",
+        (),
+        {"IcebergExecutor": lambda *_: (_ for _ in ()).throw(Exception("fail"))},
+    )
     res = te.process_signal("AAPL", "BUY", 1, 100, algo="iceberg")
     assert res["status"] == "error"
 
@@ -299,8 +339,9 @@ def test_sentiment_and_gatescore_exceptions(base_config, portfolio, monkeypatch)
 
     # Force sentiment filter to raise exception
     monkeypatch.setattr(
-        te.sentiment_filter, "allow_trade",
-        lambda *_: (_ for _ in ()).throw(Exception("bad"))
+        te.sentiment_filter,
+        "allow_trade",
+        lambda *_: (_ for _ in ()).throw(Exception("bad")),
     )
     res1 = te.process_signal("AAPL", "BUY", 100)
     assert "sentiment" in res1["reason"]
@@ -308,8 +349,7 @@ def test_sentiment_and_gatescore_exceptions(base_config, portfolio, monkeypatch)
     # Force gatescore to raise exception
     monkeypatch.setattr(te.sentiment_filter, "allow_trade", lambda *_: True)
     monkeypatch.setattr(
-        te.gatescore, "allow_trade",
-        lambda *_: (_ for _ in ()).throw(Exception("fail"))
+        te.gatescore, "allow_trade", lambda *_: (_ for _ in ()).throw(Exception("fail"))
     )
     res2 = te.process_signal("AAPL", "BUY", 100)
     assert "gatescore" in res2["reason"]
