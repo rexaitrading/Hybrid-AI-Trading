@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Optional, Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ class SentimentFilter:
     - Accepts arbitrary kwargs from config (enabled, model, threshold, neutral_zone, etc.)
     - Ignores unknown keys safely so future config additions won't crash
     - Falls back to neutral scoring (0.0) when analyzer is unavailable
+    - Applies a neutral gate: if abs(score) < neutral_zone -> 0.0
     """
 
     def __init__(self, **cfg: Any) -> None:
@@ -30,10 +31,9 @@ class SentimentFilter:
         self.enabled: bool = bool(cfg.pop("enabled", True))
         self.model: str = str(cfg.pop("model", "vader"))
         self.threshold: float = float(cfg.pop("threshold", 0.0))
-        self.neutral_zone: float = float(cfg.pop("neutral_zone", 0.0))
+        self.neutral_zone: float = float(cfg.pop("neutral_zone", 0.0))  # NEW: enforced in score()
 
         # Anything else is accepted and ignored to maintain forward compatibility
-        # (kept for potential debugging/inspection)
         self._extra_cfg: Dict[str, Any] = dict(cfg)
 
         self.analyzer: Optional[Any] = None
@@ -75,8 +75,7 @@ class SentimentFilter:
 
         # Unknown model → neutral fallback with explicit wording
         logger.warning(
-            "Unknown sentiment model=%s; fallback to neutral scoring (analyzer=None).",
-            m,
+            "Unknown sentiment model=%s; fallback to neutral scoring (analyzer=None).", m
         )
         self.analyzer = None
 
@@ -86,34 +85,44 @@ class SentimentFilter:
         - Disabled or missing analyzer → 0.0 (neutral fallback)
         - VADER: compound score
         - HF pipeline: map POSITIVE to +score, NEGATIVE to -score (else 0)
-        NOTE: `threshold` / `neutral_zone` are accepted for config compatibility; this returns raw score.
+        - Neutral-zone gate: if abs(raw_score) < neutral_zone -> 0.0
+        NOTE: `threshold` is accepted for config compatibility; not enforced here.
         """
         if not self.enabled or not text:
             return 0.0
         if self.analyzer is None:
             return 0.0
 
+        raw: float = 0.0
+
         # VADER path
         if hasattr(self.analyzer, "polarity_scores"):
             try:
-                return float(self.analyzer.polarity_scores(text).get("compound", 0.0))
+                raw = float(self.analyzer.polarity_scores(text).get("compound", 0.0))
             except Exception:
                 logger.exception("VADER scoring failed; fallback to neutral (0.0).")
                 return 0.0
-
-        # HF pipeline path
-        try:
-            out = self.analyzer(text)
-            if not out:
+        else:
+            # HF pipeline path
+            try:
+                out = self.analyzer(text)
+                if not out:
+                    return 0.0
+                r0: Dict[str, Any] = out[0]
+                label = str(r0.get("label", "")).upper()
+                val = float(r0.get("score", 0.0))
+                if "POS" in label:
+                    raw = +val
+                elif "NEG" in label:
+                    raw = -val
+                else:
+                    raw = 0.0
+            except Exception:
+                logger.exception("HF scoring failed; fallback to neutral (0.0).")
                 return 0.0
-            r0: Dict[str, Any] = out[0]
-            label = str(r0.get("label", "")).upper()
-            val = float(r0.get("score", 0.0))
-            if "POS" in label:
-                return +val
-            if "NEG" in label:
-                return -val
+
+        # Neutral-zone gate
+        if self.neutral_zone > 0.0 and abs(raw) < self.neutral_zone:
             return 0.0
-        except Exception:
-            logger.exception("HF scoring failed; fallback to neutral (0.0).")
-            return 0.0
+
+        return raw
