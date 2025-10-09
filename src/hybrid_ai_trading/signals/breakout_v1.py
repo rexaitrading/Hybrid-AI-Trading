@@ -116,7 +116,9 @@ def breakout_v1(
     audit: bool = False,
 ) -> Union[str, Tuple[str, float, float, float]]:
     """Functional wrapper for injected bars (unit tests, backtests)."""
-    return BreakoutV1Signal(window=window).generate(symbol="TEST", bars=bars, audit=audit)
+    return BreakoutV1Signal(window=window).generate(
+        symbol="TEST", bars=bars, audit=audit
+    )
 
 
 def breakout_signal(symbol: str, window: int = 3) -> str:

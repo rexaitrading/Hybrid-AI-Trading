@@ -23,8 +23,10 @@ Covers ALL paths in risk_manager.py:
     • Failure path
 """
 
-import pytest
 import logging
+
+import pytest
+
 from hybrid_ai_trading.risk.risk_manager import RiskManager
 
 
@@ -32,7 +34,14 @@ from hybrid_ai_trading.risk.risk_manager import RiskManager
 # Dummy helpers
 # ----------------------------------------------------------------------
 class DummyPortfolio:
-    def __init__(self, lev=1.0, exp=1000, fail_leverage=False, fail_exposure=False, fail_reset=False):
+    def __init__(
+        self,
+        lev=1.0,
+        exp=1000,
+        fail_leverage=False,
+        fail_exposure=False,
+        fail_reset=False,
+    ):
         self._lev = lev
         self._exp = exp
         self.fail_leverage = fail_leverage
@@ -176,7 +185,9 @@ def test_kelly_size_variants_and_exceptions(caplog):
 
     # Exception path
     class Exploder:
-        def __rtruediv__(self, other): raise Exception("boom")
+        def __rtruediv__(self, other):
+            raise Exception("boom")
+
     caplog.set_level(logging.ERROR)
     assert rm.kelly_size(0.6, Exploder()) == 0.0
     assert "Kelly sizing failed" in caplog.text or "kelly" in caplog.text
@@ -185,10 +196,10 @@ def test_kelly_size_variants_and_exceptions(caplog):
 # ----------------------------------------------------------------------
 # control_signal
 # ----------------------------------------------------------------------
-@pytest.mark.parametrize("signal,pnl,expected",
-                         [("HOLD", 0.0, "HOLD"),
-                          ("BUY", -999, "HOLD"),
-                          ("sell", 0.0, "SELL")])
+@pytest.mark.parametrize(
+    "signal,pnl,expected",
+    [("HOLD", 0.0, "HOLD"), ("BUY", -999, "HOLD"), ("sell", 0.0, "SELL")],
+)
 def test_control_signal_variants(signal, pnl, expected, caplog):
     rm = RiskManager(daily_loss_limit=-0.01)
     rm.daily_pnl = pnl
@@ -223,14 +234,13 @@ def test_reset_day_with_and_without_portfolio(caplog):
     assert out3["status"] == "error"
     assert "Reset day failed" in caplog.text or "fail" in out3["reason"]
 
+
 """
 Extra Micro Tests: RiskManager guardrails & exception branches
 Ensures 100% coverage of risk_manager.py
 """
 
 import pytest
-import logging
-from hybrid_ai_trading.risk.risk_manager import RiskManager
 
 
 def test_daily_loss_guard_branch(caplog):
@@ -253,7 +263,9 @@ def test_roi_guard_branch(caplog):
 
 def test_sharpe_guard_breach(caplog):
     class BadSharpe(RiskManager):
-        def sharpe_ratio(self): return 0.2
+        def sharpe_ratio(self):
+            return 0.2
+
     rm = BadSharpe(sharpe_min=0.5)
     caplog.set_level(logging.WARNING)
     assert not rm.check_trade("AAPL", "BUY", 1, 1)
@@ -262,7 +274,9 @@ def test_sharpe_guard_breach(caplog):
 
 def test_sharpe_guard_exception(caplog):
     class Exploder(RiskManager):
-        def sharpe_ratio(self): raise Exception("bad sharpe")
+        def sharpe_ratio(self):
+            raise Exception("bad sharpe")
+
     rm = Exploder(sharpe_min=1.0)
     caplog.set_level(logging.ERROR)
     assert not rm.check_trade("AAPL", "BUY", 1, 1)
@@ -271,7 +285,9 @@ def test_sharpe_guard_exception(caplog):
 
 def test_sortino_guard_breach(caplog):
     class BadSortino(RiskManager):
-        def sortino_ratio(self): return 0.1
+        def sortino_ratio(self):
+            return 0.1
+
     rm = BadSortino(sortino_min=0.5)
     caplog.set_level(logging.WARNING)
     assert not rm.check_trade("AAPL", "BUY", 1, 1)
@@ -280,7 +296,9 @@ def test_sortino_guard_breach(caplog):
 
 def test_sortino_guard_exception(caplog):
     class Exploder(RiskManager):
-        def sortino_ratio(self): raise Exception("bad sortino")
+        def sortino_ratio(self):
+            raise Exception("bad sortino")
+
     rm = Exploder(sortino_min=1.0)
     caplog.set_level(logging.ERROR)
     assert not rm.check_trade("AAPL", "BUY", 1, 1)
@@ -289,74 +307,102 @@ def test_sortino_guard_exception(caplog):
 
 def test_reset_day_exception_branch(caplog):
     class BadPortfolio:
-        def reset_day(self): raise RuntimeError("boom")
+        def reset_day(self):
+            raise RuntimeError("boom")
+
     rm = RiskManager(portfolio=BadPortfolio())
     caplog.set_level(logging.ERROR)
     out = rm.reset_day()
     assert out["status"] == "error"
     assert "boom" in out["reason"]
 
+
 def test_sharpe_ratio_breach(caplog):
     class BadSharpe(RiskManager):
-        def sharpe_ratio(self): return 0.1
+        def sharpe_ratio(self):
+            return 0.1
+
     rm = BadSharpe(sharpe_min=1.0)
     caplog.set_level("WARNING")
     assert not rm.check_trade("AAPL", "BUY", 1, 10)
     assert "Sharpe breach" in caplog.text
 
+
 def test_sortino_ratio_breach(caplog):
     class BadSortino(RiskManager):
-        def sortino_ratio(self): return 0.1
+        def sortino_ratio(self):
+            return 0.1
+
     rm = BadSortino(sortino_min=1.0)
     caplog.set_level("WARNING")
     assert not rm.check_trade("AAPL", "BUY", 1, 10)
     assert "Sortino breach" in caplog.text
 
+
 def test_sharpe_and_sortino_exceptions(caplog):
     class BothFail(RiskManager):
-        def sharpe_ratio(self): raise Exception("boom sharpe")
-        def sortino_ratio(self): raise Exception("boom sortino")
+        def sharpe_ratio(self):
+            raise Exception("boom sharpe")
+
+        def sortino_ratio(self):
+            raise Exception("boom sortino")
+
     rm = BothFail(sharpe_min=1.0, sortino_min=1.0)
     caplog.set_level("ERROR")
     assert not rm.check_trade("AAPL", "BUY", 1, 10)
     assert "Sharpe ratio check failed" in caplog.text
     assert "Sortino ratio check failed" in caplog.text
 
+
 def test_db_logger_failure(caplog):
     class BadLogger:
-        def log(self, record): raise Exception("db fail")
+        def log(self, record):
+            raise Exception("db fail")
+
     rm = RiskManager(db_logger=BadLogger())
     caplog.set_level("ERROR")
     assert rm.check_trade("AAPL", "BUY", 1, 10) is True
     assert "DB log failed" in caplog.text
 
+
 def test_sharpe_ratio_breach_branch(caplog):
     class BadSharpe(RiskManager):
-        def sharpe_ratio(self): return 0.1
+        def sharpe_ratio(self):
+            return 0.1
+
     rm = BadSharpe(sharpe_min=1.0)
     caplog.set_level("WARNING")
     assert not rm.check_trade("AAPL", "BUY", 1, 10)
     assert "Sharpe breach" in caplog.text
 
+
 def test_sortino_ratio_breach_branch(caplog):
     class BadSortino(RiskManager):
-        def sortino_ratio(self): return 0.1
+        def sortino_ratio(self):
+            return 0.1
+
     rm = BadSortino(sortino_min=1.0)
     caplog.set_level("WARNING")
     assert not rm.check_trade("AAPL", "BUY", 1, 10)
     assert "Sortino breach" in caplog.text
 
+
 def test_sharpe_ratio_exception_branch(caplog):
     class Exploder(RiskManager):
-        def sharpe_ratio(self): raise Exception("boom sharpe")
+        def sharpe_ratio(self):
+            raise Exception("boom sharpe")
+
     rm = Exploder(sharpe_min=1.0)
     caplog.set_level("ERROR")
     assert not rm.check_trade("AAPL", "BUY", 1, 10)
     assert "Sharpe ratio check failed" in caplog.text
 
+
 def test_sortino_ratio_exception_branch(caplog):
     class Exploder(RiskManager):
-        def sortino_ratio(self): raise Exception("boom sortino")
+        def sortino_ratio(self):
+            raise Exception("boom sortino")
+
     rm = Exploder(sortino_min=1.0)
     caplog.set_level("ERROR")
     assert not rm.check_trade("AAPL", "BUY", 1, 10)

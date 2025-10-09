@@ -1,6 +1,8 @@
 from __future__ import annotations
-import os, time
-from typing import Dict, Any, Optional
+
+import os
+import time
+from typing import Any, Dict
 
 try:
     import requests  # type: ignore
@@ -49,7 +51,19 @@ class Alerts:
     def _format(kind: str, p: Dict[str, Any]) -> str:
         # compact ASCII one-liner for chats
         fields = []
-        order = ("strategy","exchange","broker","symbol","side","qty","px","status","reason","pnl","bar_ts")
+        order = (
+            "strategy",
+            "exchange",
+            "broker",
+            "symbol",
+            "side",
+            "qty",
+            "px",
+            "status",
+            "reason",
+            "pnl",
+            "bar_ts",
+        )
         for k in order:
             v = p.get(k, None)
             if v is not None:
@@ -69,7 +83,11 @@ class Alerts:
             return
         try:
             url = f"https://api.telegram.org/bot{self.tg_token}/sendMessage"
-            data = {"chat_id": self.tg_chat, "text": text, "disable_web_page_preview": True}
+            data = {
+                "chat_id": self.tg_chat,
+                "text": text,
+                "disable_web_page_preview": True,
+            }
             requests.post(url, data=data, timeout=5)
         except Exception:
             pass

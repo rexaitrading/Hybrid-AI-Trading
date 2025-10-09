@@ -1,4 +1,4 @@
-﻿# src/data/clients/polygon_client.py
+# src/data/clients/polygon_client.py
 import requests
 
 from src.config.settings import load_config

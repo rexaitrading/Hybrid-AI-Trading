@@ -12,14 +12,17 @@ Covers ALL branches of backtest.py:
 """
 
 import datetime
-import pandas as pd
-import yaml
-import requests
-import pytest
 
-from hybrid_ai_trading.pipelines import backtest
-from hybrid_ai_trading.pipelines.backtest import IntradayBacktester, _safe_empty_dataframe
+import pandas as pd
+import requests
+import yaml
+
 from hybrid_ai_trading.execution.paper_simulator import PaperSimulator
+from hybrid_ai_trading.pipelines import backtest
+from hybrid_ai_trading.pipelines.backtest import (
+    IntradayBacktester,
+    _safe_empty_dataframe,
+)
 
 
 # ------------------------------------------------------------------
@@ -28,9 +31,17 @@ from hybrid_ai_trading.execution.paper_simulator import PaperSimulator
 def fake_bars():
     return [{"t": 1, "c": 100}, {"t": 2, "c": 101}]
 
-def always_buy(_): return "BUY"
-def always_sell(_): return "SELL"
-def always_error(_): raise RuntimeError("bad strat")
+
+def always_buy(_):
+    return "BUY"
+
+
+def always_sell(_):
+    return "SELL"
+
+
+def always_error(_):
+    raise RuntimeError("bad strat")
 
 
 # ------------------------------------------------------------------
@@ -81,7 +92,9 @@ def test_get_intraday_bars_branches(monkeypatch, caplog):
     assert "api key missing" in caplog.text.lower()
 
     # Non-200
-    class FakeResp: status_code, text = 500, "oops"
+    class FakeResp:
+        status_code, text = 500, "oops"
+
     monkeypatch.setattr(requests, "get", lambda *a, **k: FakeResp())
     bars = backtest.get_intraday_bars("AAPL", "2020", "2020", "KEY")
     assert bars == []
@@ -90,14 +103,19 @@ def test_get_intraday_bars_branches(monkeypatch, caplog):
     # JSON error
     class FakeResp2:
         status_code = 200
-        def json(self): raise ValueError("bad json")
+
+        def json(self):
+            raise ValueError("bad json")
+
     monkeypatch.setattr(requests, "get", lambda *a, **k: FakeResp2())
     bars = backtest.get_intraday_bars("AAPL", "2020", "2020", "KEY")
     assert bars == []
     assert "json parse error" in caplog.text.lower()
 
     # Request exception
-    monkeypatch.setattr(requests, "get", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        requests, "get", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
+    )
     bars = backtest.get_intraday_bars("AAPL", "2020", "2020", "KEY")
     assert bars == []
     assert "request failed" in caplog.text.lower()
@@ -123,16 +141,20 @@ def test_run_no_strategies(tmp_path, caplog):
     assert isinstance(df, pd.DataFrame)
     assert "no strategies configured" in caplog.text.lower()
 
+
 def test_run_holiday(monkeypatch, tmp_path, caplog):
     class FakeDate(datetime.date):
         @classmethod
-        def today(cls): return datetime.date(2025, 12, 25)
+        def today(cls):
+            return datetime.date(2025, 12, 25)
+
     monkeypatch.setattr(backtest.datetime, "date", FakeDate)
     bt = IntradayBacktester(["AAPL"], days=1, strategies={"buy": always_buy})
     bt.reports_dir = tmp_path
     df = bt.run()
     assert "HOLIDAY" in df.iloc[0]["Symbol"]
     assert "skipping run" in caplog.text.lower()
+
 
 def test_strategy_exception(monkeypatch, tmp_path, caplog):
     bt = IntradayBacktester(["AAPL"], days=1, strategies={"bad": always_error})
@@ -142,8 +164,11 @@ def test_strategy_exception(monkeypatch, tmp_path, caplog):
     assert isinstance(df, pd.DataFrame)
     assert "strategy always_error failed" in caplog.text.lower()
 
+
 def test_fill_failure(monkeypatch, tmp_path, caplog):
-    def bad_fill(*_a, **_k): raise Exception("boom fill")
+    def bad_fill(*_a, **_k):
+        raise Exception("boom fill")
+
     bt = IntradayBacktester(["AAPL"], days=1, strategies={"buy": always_buy})
     bt.reports_dir = tmp_path
     monkeypatch.setattr(PaperSimulator, "simulate_fill", bad_fill)
@@ -181,7 +206,11 @@ def test_sharpe_positive_negative_zero(monkeypatch, tmp_path):
 def test_plot_equity_and_drawdown_exceptions(monkeypatch, tmp_path, caplog):
     bt = IntradayBacktester(["AAPL"], days=1, strategies={"buy": always_buy})
     bt.reports_dir = tmp_path
-    monkeypatch.setattr(backtest.plt, "savefig", lambda *a, **k: (_ for _ in ()).throw(Exception("fail")))
+    monkeypatch.setattr(
+        backtest.plt,
+        "savefig",
+        lambda *a, **k: (_ for _ in ()).throw(Exception("fail")),
+    )
     with caplog.at_level("ERROR"):
         bt._plot_equity("AAPL", [1, 2, 3])
         bt._plot_drawdown("AAPL", [1, 2, 3])
@@ -201,16 +230,22 @@ def test_export_leaderboard_empty_and_exception(tmp_path, caplog):
 
     class BadDF:
         empty = False
-        def to_excel(self, *a, **k): raise Exception("excel fail")
+
+        def to_excel(self, *a, **k):
+            raise Exception("excel fail")
+
         @property
         def style(self):
             class S:
-                def to_html(self, *a, **k): raise Exception("html fail")
+                def to_html(self, *a, **k):
+                    raise Exception("html fail")
+
             return S()
 
     with caplog.at_level("ERROR"):
         bt.export_leaderboard(BadDF())
     assert "failed to export leaderboard" in caplog.text.lower()
+
 
 def test_export_leaderboard_success(tmp_path):
     """Covers happy path for leaderboard export (Excel + HTML)."""
@@ -221,9 +256,12 @@ def test_export_leaderboard_success(tmp_path):
     assert (tmp_path / "strategy_leaderboard.xlsx").exists()
     assert (tmp_path / "strategy_leaderboard.html").exists()
 
+
 def test_strategy_runtime_error(monkeypatch, tmp_path, caplog):
     """Force a runtime error inside strategy → should log 'strategy ... failed'."""
-    def bad_strategy(_bars): return 1 / 0  # raises ZeroDivisionError
+
+    def bad_strategy(_bars):
+        return 1 / 0  # raises ZeroDivisionError
 
     bt = IntradayBacktester(["AAPL"], days=1, strategies={"bad": bad_strategy})
     bt.reports_dir = tmp_path
@@ -234,11 +272,15 @@ def test_strategy_runtime_error(monkeypatch, tmp_path, caplog):
     assert isinstance(df, pd.DataFrame)
     assert "strategy bad_strategy failed" in caplog.text.lower()
 
+
 def test_load_config_file_open_error(monkeypatch, tmp_path, caplog):
     """Simulate file open error to hit early load_config exception branch."""
     bad_file = tmp_path / "bad.yaml"
     bad_file.write_text("key: val")
-    monkeypatch.setattr("builtins.open", lambda *a, **k: (_ for _ in ()).throw(PermissionError("no access")))
+    monkeypatch.setattr(
+        "builtins.open",
+        lambda *a, **k: (_ for _ in ()).throw(PermissionError("no access")),
+    )
     cfg = backtest.load_config(str(bad_file))
     assert cfg == {}
     assert "failed to load" in caplog.text.lower()
@@ -246,13 +288,16 @@ def test_load_config_file_open_error(monkeypatch, tmp_path, caplog):
 
 def test_call_strategy_typeerror(monkeypatch, tmp_path, caplog):
     """Hit the except TypeError branch in _call_strategy (dict-only strategy)."""
+
     def dict_only_strategy(arg):
         # Fail if bars is not dict
         if not isinstance(arg, dict):
             raise TypeError("dict required")
         return "BUY"
 
-    bt = IntradayBacktester(["AAPL"], days=1, strategies={"dict_only": dict_only_strategy})
+    bt = IntradayBacktester(
+        ["AAPL"], days=1, strategies={"dict_only": dict_only_strategy}
+    )
     bt.reports_dir = tmp_path
     # Force bars to be list, so first call raises TypeError
     monkeypatch.setattr(backtest, "get_intraday_bars", lambda *a, **k: fake_bars())
@@ -265,7 +310,9 @@ def test_fill_failure_exception(monkeypatch, tmp_path, caplog):
     bt = IntradayBacktester(["AAPL"], days=1, strategies={"buy": always_buy})
     bt.reports_dir = tmp_path
 
-    def bad_fill(*_a, **_k): raise RuntimeError("sim fill exploded")
+    def bad_fill(*_a, **_k):
+        raise RuntimeError("sim fill exploded")
+
     monkeypatch.setattr(PaperSimulator, "simulate_fill", bad_fill)
     monkeypatch.setattr(backtest, "get_intraday_bars", lambda *a, **k: fake_bars())
 
@@ -298,25 +345,38 @@ def test_unexpected_error_outer(monkeypatch, tmp_path, caplog):
 def test_load_config_open_error(monkeypatch, tmp_path, caplog):
     bad_file = tmp_path / "bad.yaml"
     bad_file.write_text("foo: bar")
-    monkeypatch.setattr("builtins.open", lambda *a, **k: (_ for _ in ()).throw(PermissionError("denied")))
+    monkeypatch.setattr(
+        "builtins.open",
+        lambda *a, **k: (_ for _ in ()).throw(PermissionError("denied")),
+    )
     cfg = backtest.load_config(str(bad_file))
     assert cfg == {}
     assert "failed to load" in caplog.text.lower()
 
+
 def test_plot_equity_failure(monkeypatch, tmp_path, caplog):
     bt = IntradayBacktester(["AAPL"], days=1, strategies={})
     bt.reports_dir = tmp_path
-    monkeypatch.setattr(backtest.plt, "savefig", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("fail save")))
+    monkeypatch.setattr(
+        backtest.plt,
+        "savefig",
+        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("fail save")),
+    )
     with caplog.at_level("ERROR"):
         bt._plot_equity("AAPL", [100, 200])
     assert "plot equity failed" in caplog.text.lower()
+
 
 def test_export_leaderboard_failure(monkeypatch, tmp_path, caplog):
     bt = IntradayBacktester(["AAPL"], days=1, strategies={"buy": lambda _: "BUY"})
     bt.reports_dir = tmp_path
     df = pd.DataFrame([{"Strategy": "BUY", "Symbol": "AAPL", "Sharpe": 1.0}])
     # Patch ExcelWriter to raise
-    monkeypatch.setattr(backtest.pd, "ExcelWriter", lambda *a, **k: (_ for _ in ()).throw(Exception("excel fail")))
+    monkeypatch.setattr(
+        backtest.pd,
+        "ExcelWriter",
+        lambda *a, **k: (_ for _ in ()).throw(Exception("excel fail")),
+    )
     with caplog.at_level("ERROR"):
         bt.export_leaderboard(df)
     assert "failed to export leaderboard" in caplog.text.lower()

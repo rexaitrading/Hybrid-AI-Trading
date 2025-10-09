@@ -1,4 +1,4 @@
-﻿"""
+"""
 Coverage Diff Helper
 ====================
 Run this after pytest to see exactly which lines/branches are still uncovered.
@@ -11,6 +11,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+
 
 def run_coverage_json():
     """Generate fresh coverage JSON file via pytest-cov if needed."""
@@ -26,12 +27,14 @@ def run_coverage_json():
         check=True,
     )
 
+
 def load_coverage():
     path = Path("coverage.json")
     if not path.exists():
         run_coverage_json()
     with path.open() as f:
         return json.load(f)
+
 
 def show_diff(target_file: str):
     data = load_coverage()
@@ -41,7 +44,9 @@ def show_diff(target_file: str):
     # find matching file
     match = None
     for fname, meta in files.items():
-        if fname.endswith(target_file) or str(fname).endswith(target_file.replace("\\", "/")):
+        if fname.endswith(target_file) or str(fname).endswith(
+            target_file.replace("\\", "/")
+        ):
             match = (fname, meta)
             break
 
@@ -55,8 +60,10 @@ def show_diff(target_file: str):
     branches = meta.get("missing_branches", [])
 
     print(f"\n=== Coverage Report for {fname} ===")
-    print(f"Lines: {summary['covered_lines']}/{summary['num_statements']} "
-          f"({summary['percent_covered']}%)")
+    print(
+        f"Lines: {summary['covered_lines']}/{summary['num_statements']} "
+        f"({summary['percent_covered']}%)"
+    )
     print(f"Branches: {summary['covered_branches']}/{summary['num_branches']}")
 
     if missing:
@@ -69,6 +76,7 @@ def show_diff(target_file: str):
 
     if not missing and not branches:
         print("\n✅ 100% Coverage!")
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

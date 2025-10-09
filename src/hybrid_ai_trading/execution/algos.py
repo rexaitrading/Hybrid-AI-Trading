@@ -16,10 +16,10 @@ import warnings
 
 # Re-export everything from the canonical orchestrator
 from hybrid_ai_trading.algos.orchestrator import (
-    get_algo_executor,
     ALGO_REGISTRY,
-    vwap_signal,
     VWAPSignal,
+    get_algo_executor,
+    vwap_signal,
 )
 
 # Lazily resolve executors (ensures loop-proof imports)
@@ -48,4 +48,6 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2,
 )
-logger.warning("⚠️ DEPRECATED: import from execution.algos; use algos.orchestrator instead.")
+logger.warning(
+    "⚠️ DEPRECATED: import from execution.algos; use algos.orchestrator instead."
+)

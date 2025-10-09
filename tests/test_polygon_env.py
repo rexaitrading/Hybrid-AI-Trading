@@ -6,9 +6,11 @@ Covers:
 - ping(): success + failure
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from hybrid_ai_trading.data.clients.polygon_client import PolygonClient, PolygonAPIError
+
+from hybrid_ai_trading.data.clients.polygon_client import PolygonAPIError, PolygonClient
 
 
 @patch("hybrid_ai_trading.data.clients.polygon_client.requests.get")

@@ -1,5 +1,5 @@
-import os
 from ib_insync import IB
+
 ports = [7496, 4001, 7497, 4002]
 ok = []
 for p in ports:
@@ -10,4 +10,4 @@ for p in ports:
         ib.disconnect()
     except Exception:
         pass
-print("IB_CONNECT_OK:"+",".join(str(x) for x in ok) if ok else "IB_CONNECT_FAIL")
+print("IB_CONNECT_OK:" + ",".join(str(x) for x in ok) if ok else "IB_CONNECT_FAIL")

@@ -131,7 +131,8 @@ def get_ohlcv_latest(
             continue
 
     raise CoinAPIError(
-        f"OHLCV not found for {base}/{quote}. " f"Tried: {', '.join(candidates)}; last error: {last_err}"
+        f"OHLCV not found for {base}/{quote}. "
+        f"Tried: {', '.join(candidates)}; last error: {last_err}"
     )
 
 

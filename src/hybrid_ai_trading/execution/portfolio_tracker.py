@@ -10,7 +10,8 @@ Portfolio Tracker (Hybrid AI Quant Pro v91.4 Ã¢â‚¬â€œ Hedge-Fund OE Gr
 import logging
 import math
 from datetime import datetime, timezone
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -27,19 +28,29 @@ class PortfolioTracker:
         self.cash = float(starting_equity)
         self.equity = float(starting_equity)
         self.positions: Dict[str, Dict[str, float | str]] = {}
-        self.history: List[Tuple[datetime, float]] = [(datetime.now(timezone.utc), self.equity)]
+        self.history: List[Tuple[datetime, float]] = [
+            (datetime.now(timezone.utc), self.equity)
+        ]
         self.realized_pnl = 0.0
         self.unrealized_pnl = 0.0
         self.daily_pnl = 0.0
         self.intraday_trades: List[Tuple[str, float, float]] = []
 
-        logger.debug("Ã¢Å“â€¦ PortfolioTracker initialized | Equity=%.2f %s",
-                     self.equity, self.base_currency)
+        logger.debug(
+            "Ã¢Å“â€¦ PortfolioTracker initialized | Equity=%.2f %s",
+            self.equity,
+            self.base_currency,
+        )
 
     # ------------------------------------------------------------------
     def update_position(
-        self, symbol: str, side: str, size: float, price: float,
-        commission: float = 0.0, currency: Optional[str] = None,
+        self,
+        symbol: str,
+        side: str,
+        size: float,
+        price: float,
+        commission: float = 0.0,
+        currency: Optional[str] = None,
     ) -> None:
         if size <= 0 or price <= 0:
             raise ValueError("Invalid size or price for trade update")
@@ -50,7 +61,11 @@ class PortfolioTracker:
         currency = currency or self.base_currency
 
         if symbol not in self.positions:
-            self.positions[symbol] = {"size": 0.0, "avg_price": price, "currency": currency}
+            self.positions[symbol] = {
+                "size": 0.0,
+                "avg_price": price,
+                "currency": currency,
+            }
 
         pos = self.positions[symbol]
         old_size, old_avg = pos["size"], pos["avg_price"]
@@ -66,7 +81,9 @@ class PortfolioTracker:
                 logger.debug("BRANCH-85 COVER HIT | cover=%s, leftover=%s", cover, size)
             if size > 0:  # open/add long
                 new_total = max(pos["size"], 0) + size
-                pos["avg_price"] = (old_avg * max(pos["size"], 0) + price * size) / new_total
+                pos["avg_price"] = (
+                    old_avg * max(pos["size"], 0) + price * size
+                ) / new_total
                 pos["size"] = max(pos["size"], 0) + size
                 self.cash -= price * size + commission
                 logger.debug("BRANCH-100 OPEN LONG HIT | size=%s", size)
@@ -79,10 +96,14 @@ class PortfolioTracker:
                 self.cash += price * close - commission
                 pos["size"] -= close
                 size -= close
-                logger.debug("BRANCH-122 CLOSE LONG HIT | close=%s, leftover=%s", close, size)
+                logger.debug(
+                    "BRANCH-122 CLOSE LONG HIT | close=%s, leftover=%s", close, size
+                )
             if size > 0:  # open/add short
                 new_total = abs(min(pos["size"], 0)) + size
-                pos["avg_price"] = (old_avg * abs(min(pos["size"], 0)) + price * size) / new_total
+                pos["avg_price"] = (
+                    old_avg * abs(min(pos["size"], 0)) + price * size
+                ) / new_total
                 pos["size"] = min(pos["size"], 0) - size
                 self.cash += price * size - commission
                 logger.debug("BRANCH-114 OPEN SHORT HIT | size=%s", size)
@@ -113,8 +134,11 @@ class PortfolioTracker:
                     unrealized += (price - pos["avg_price"]) * pos["size"]
                 elif pos["size"] < 0:
                     unrealized += (pos["avg_price"] - price) * abs(pos["size"])
-        to_delete = [s for s, p in self.positions.items()
-                     if math.isclose(p["size"], 0.0, abs_tol=1e-8)]
+        to_delete = [
+            s
+            for s, p in self.positions.items()
+            if math.isclose(p["size"], 0.0, abs_tol=1e-8)
+        ]
         for sym in to_delete:
             del self.positions[sym]
             logger.debug("BRANCH-237 CLEANUP HIT | deleted=%s", sym)
@@ -127,7 +151,8 @@ class PortfolioTracker:
         if len(self.history) < 2:
             return []
         return [
-            (self.history[i][1] - self.history[i - 1][1]) / max(self.history[i - 1][1], 1e-9)
+            (self.history[i][1] - self.history[i - 1][1])
+            / max(self.history[i - 1][1], 1e-9)
             for i in range(1, len(self.history))
         ]
 

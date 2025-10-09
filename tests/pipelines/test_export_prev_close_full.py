@@ -10,14 +10,15 @@ Covers:
 - __main__ entrypoint execution (with stub + Polygon missing → warning)
 """
 
-import os
+import builtins
 import csv
 import json
-import builtins
-import pytest
-from unittest.mock import patch, MagicMock
-import sys
+import os
 import subprocess
+import sys
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 import hybrid_ai_trading.pipelines.export_prev_close as export_prev_close
 
@@ -83,7 +84,9 @@ def test_core_crypto_success_and_error(mock_exit, mock_batch, tmp_path, monkeypa
     export_prev_close.main()  # Should log error, not crash
 
 
-@patch("hybrid_ai_trading.pipelines.export_prev_close.batch_prev_close", return_value={})
+@patch(
+    "hybrid_ai_trading.pipelines.export_prev_close.batch_prev_close", return_value={}
+)
 @patch("sys.exit")
 def test_polygon_branch_success_no_data_and_error(mock_exit, _, tmp_path, monkeypatch):
     mock_exit.side_effect = lambda code=0: None  # no-op

@@ -14,12 +14,13 @@ Trade Engine (Hybrid AI Quant Pro v17.5 – Hedge Fund Grade, Loop-Proof Normali
 - 🔒 FIX: unknown algo now returns early as rejected (no normalization overwrite)
 """
 
-import logging
+import csv
 import importlib
+import logging
 import os
 import smtplib
-import csv
 from typing import Any, Dict, List, Optional
+
 import requests
 
 from hybrid_ai_trading.execution.order_manager import OrderManager
@@ -131,9 +132,7 @@ class TradeEngine:
             logger.error("Telegram alert failed: %s", e)
 
         try:
-            email_to = os.getenv(
-                self.config.get("alerts", {}).get("email_env", ""), ""
-            )
+            email_to = os.getenv(self.config.get("alerts", {}).get("email_env", ""), "")
             if email_to:
                 with smtplib.SMTP("localhost") as smtp:
                     smtp.send_message(f"Subject: Alert\n\n{message}")
@@ -316,15 +315,13 @@ class TradeEngine:
 
         # --- Performance AFTER filters
         try:
-            if (
-                self.performance_tracker.sharpe_ratio()
-                < self.config.get("risk", {}).get("sharpe_min", -1.0)
-            ):
+            if self.performance_tracker.sharpe_ratio() < self.config.get(
+                "risk", {}
+            ).get("sharpe_min", -1.0):
                 return {"status": "blocked", "reason": "sharpe_breach"}
-            if (
-                self.performance_tracker.sortino_ratio()
-                < self.config.get("risk", {}).get("sortino_min", -1.0)
-            ):
+            if self.performance_tracker.sortino_ratio() < self.config.get(
+                "risk", {}
+            ).get("sortino_min", -1.0):
                 return {"status": "blocked", "reason": "sortino_breach"}
         except Exception:
             pass
@@ -368,11 +365,8 @@ class TradeEngine:
         return symbol in tech and exposure / max(self.portfolio.equity, 1) >= cap
 
     def _hedge_trigger(self, symbol: str) -> bool:
-        return (
-            symbol
-            in self.config.get("risk", {})
-            .get("hedge_rules", {})
-            .get("equities_vol_spike", [])
+        return symbol in self.config.get("risk", {}).get("hedge_rules", {}).get(
+            "equities_vol_spike", []
         )
 
     def get_equity(self) -> float:
@@ -391,4 +385,3 @@ class TradeEngine:
             self.performance_tracker.record_trade(pnl)
         except Exception as e:
             logger.error("Failed to record trade outcome: %s", e)
-

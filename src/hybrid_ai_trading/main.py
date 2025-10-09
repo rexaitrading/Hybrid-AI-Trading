@@ -1,4 +1,4 @@
-﻿"""
+"""
 Hybrid AI Trading - Main Entrypoint (Hedge Fund Grade)
 ------------------------------------------------------
 Responsibilities:
@@ -45,12 +45,15 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.pipeline == "backtest":
             from hybrid_ai_trading.pipelines.backtest import run_backtest
+
             run_backtest(engine)
         elif args.pipeline == "daily_close":
             from hybrid_ai_trading.pipelines.daily_close import run_daily_close
+
             run_daily_close(engine)
         elif args.pipeline == "paper_trade":
             from hybrid_ai_trading.pipelines.paper_trade_demo import run_paper_trade
+
             run_paper_trade(engine)
 
         return 0

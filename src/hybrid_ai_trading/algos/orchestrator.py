@@ -13,29 +13,34 @@ Responsibilities
 """
 
 import logging
-from typing import Dict, Type, Any
+from typing import Any, Dict, Type
 
-from hybrid_ai_trading.signals.vwap import vwap_signal, VWAPSignal
+from hybrid_ai_trading.signals.vwap import VWAPSignal, vwap_signal
+
 # ⚠️ NOTE: Do not import VWAPExecutor/TWAPExecutor/IcebergExecutor at top level to avoid circular imports.
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 # ----------------------------------------------------------------------
 # Lazy import helpers (defer heavy imports until needed)
 # ----------------------------------------------------------------------
 def _load_vwap_executor() -> Any:
     from hybrid_ai_trading.algos.vwap_executor import VWAPExecutor
+
     return VWAPExecutor
 
 
 def _load_twap_executor() -> Any:
     from hybrid_ai_trading.algos.twap import TWAPExecutor
+
     return TWAPExecutor
 
 
 def _load_iceberg_executor() -> Any:
     from hybrid_ai_trading.algos.iceberg import IcebergExecutor
+
     return IcebergExecutor
 
 

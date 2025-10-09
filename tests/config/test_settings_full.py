@@ -14,7 +14,6 @@ Covers:
 import builtins
 from pathlib import Path
 
-
 import hybrid_ai_trading.config.settings as settings
 
 

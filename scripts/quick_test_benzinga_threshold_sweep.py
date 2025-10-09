@@ -6,20 +6,21 @@ Quick Threshold Sweep (per-symbol fetch, YAML-driven)
 - Uses precomputed_score to avoid double-smoothing drift
 - Prints per-symbol stats
 """
-import yaml
+
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-from hybrid_ai_trading.data.news_aggregator import aggregate_news
+import yaml
+
 from hybrid_ai_trading.risk.sentiment_filter import SentimentFilter
 
 # Load config
 with open("config/config.yaml", "r", encoding="utf-8") as f:
     cfg = yaml.safe_load(f) or {}
 
-sweep_cfg   = cfg.get("sentiment_filter_sweep", [])
+sweep_cfg = cfg.get("sentiment_filter_sweep", [])
 symbols_str = cfg.get("sweep_symbols", "")
-hours_back  = int(cfg.get("sweep_hours_back", 48))
+hours_back = int(cfg.get("sweep_hours_back", 48))
 limit_total = int(cfg.get("sweep_limit", 200))
 
 watch = [s.strip().upper() for s in symbols_str.split(",") if s.strip()]
@@ -31,11 +32,13 @@ if not sweep_cfg:
         {"threshold": 0.70, "neutral_zone": 0.20, "smoothing": 3},
     ]
 
-date_from = (datetime.now(timezone.utc) - timedelta(hours=hours_back)).strftime("%Y-%m-%d")
+date_from = (datetime.now(timezone.utc) - timedelta(hours=hours_back)).strftime(
+    "%Y-%m-%d"
+)
 
 # Per-symbol fetch & dedupe
 c = BenzingaClient()
-per_sym_limit = max(3, int(round(limit_total / max(1,len(watch)))))
+per_sym_limit = max(3, int(round(limit_total / max(1, len(watch)))))
 stories = []
 seen = set()
 for sym in watch:
@@ -50,7 +53,9 @@ for sym in watch:
 
 print("\n=== Sentiment Filter Parameter Sweep (YAML-driven, per-symbol fetch) ===\n")
 print(f"Watch set ({len(watch_set)}): {', '.join(watch)}")
-print(f"Lookback: {hours_back}h | TotalLimit: {limit_total} | PerSymbolLimit: {per_sym_limit} | date_from={date_from}\n")
+print(
+    f"Lookback: {hours_back}h | TotalLimit: {limit_total} | PerSymbolLimit: {per_sym_limit} | date_from={date_from}\n"
+)
 print(f"Fetched unique stories: {len(stories)}\n")
 
 for params in sweep_cfg:
@@ -66,18 +71,24 @@ for params in sweep_cfg:
     sym_score_sum = defaultdict(float)
     sym_score_cnt = defaultdict(int)
 
-    print(f"\n--- Config: threshold={params['threshold']} | neutral_zone={params['neutral_zone']} | smoothing={params.get('smoothing',3)} ---")
+    print(
+        f"\n--- Config: threshold={params['threshold']} | neutral_zone={params['neutral_zone']} | smoothing={params.get('smoothing',3)} ---"
+    )
 
     for s in stories:
-        tagged = [ (x.get("name") or "").upper() for x in s.get("stocks", []) if (x.get("name") or "").strip() ]
+        tagged = [
+            (x.get("name") or "").upper()
+            for x in s.get("stocks", [])
+            if (x.get("name") or "").strip()
+        ]
         if not tagged:
-            tagged = [s.get("_source_symbol","").upper()]
+            tagged = [s.get("_source_symbol", "").upper()]
         in_watch = [sym for sym in tagged if sym in watch_set]
         if not in_watch:
             skipped += 1
             continue
 
-        title = s.get("title","")
+        title = s.get("title", "")
         sc = f.score(title)
         allowed = f.allow_trade(title, side="BUY", precomputed_score=sc)
 
@@ -96,11 +107,15 @@ for params in sweep_cfg:
             blocked_count += 1
             status = "BLOCK "
 
-        print(f"[{s.get('created')}] {title} ({','.join(in_watch)}) | Score={sc:.2f} | {status}")
+        print(
+            f"[{s.get('created')}] {title} ({','.join(in_watch)}) | Score={sc:.2f} | {status}"
+        )
 
     total = allowed_count + blocked_count
     pct_allowed = (allowed_count / total * 100) if total > 0 else 0
-    print(f"\nSummary: Allowed={allowed_count}, Blocked={blocked_count}, Skipped(non-watch)={skipped}, Allowed%={pct_allowed:.1f}%")
+    print(
+        f"\nSummary: Allowed={allowed_count}, Blocked={blocked_count}, Skipped(non-watch)={skipped}, Allowed%={pct_allowed:.1f}%"
+    )
 
     if sym_score_cnt:
         print("\nPer-symbol summary:")

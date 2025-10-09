@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+
 """
 Unit Tests: ExecutionEngine (Hybrid AI Quant Pro v15.7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge Fund Grade, 100% Coverage)
 -----------------------------------------------------------------------------------------
@@ -12,16 +13,15 @@ Covers ALL branches in execution_engine.py:
 """
 
 import logging
+
 import pytest
-from datetime import datetime
 
 from hybrid_ai_trading.execution.execution_engine import (
     ExecutionEngine,
     LLVMExecutionEngine,
-    create_mcjit_compiler,
     check_jit_execution,
+    create_mcjit_compiler,
 )
-
 
 
 # ----------------------------------------------------------------------
@@ -84,7 +84,9 @@ def test_place_order_live(monkeypatch, config_stub):
     config_stub["use_paper_simulator"] = False
     eng = ExecutionEngine(dry_run=False, config=config_stub)
     monkeypatch.setattr(eng.risk_manager, "approve_trade", lambda *a, **k: True)
-    monkeypatch.setattr(eng.order_manager, "place_order", lambda *a, **k: {"status": "filled"})
+    monkeypatch.setattr(
+        eng.order_manager, "place_order", lambda *a, **k: {"status": "filled"}
+    )
     res = eng.place_order("AAPL", "BUY", 1, 50)
     assert res["status"] == "filled"
 
@@ -92,8 +94,16 @@ def test_place_order_live(monkeypatch, config_stub):
 def test_place_order_portfolio_update_failure(monkeypatch, config_stub, caplog):
     eng = ExecutionEngine(dry_run=True, config=config_stub)
     monkeypatch.setattr(eng.risk_manager, "approve_trade", lambda *a, **k: True)
-    monkeypatch.setattr(eng.paper_simulator, "simulate_fill", lambda *a, **k: {"status": "filled", "fill_price": 10})
-    monkeypatch.setattr(eng.portfolio_tracker, "update_position", lambda *a, **k: (_ for _ in ()).throw(Exception("boom")))
+    monkeypatch.setattr(
+        eng.paper_simulator,
+        "simulate_fill",
+        lambda *a, **k: {"status": "filled", "fill_price": 10},
+    )
+    monkeypatch.setattr(
+        eng.portfolio_tracker,
+        "update_position",
+        lambda *a, **k: (_ for _ in ()).throw(Exception("boom")),
+    )
     caplog.set_level(logging.ERROR)
     res = eng.place_order("AAPL", "BUY", 1, 10)
     assert res["status"] == "rejected"
@@ -122,7 +132,11 @@ def test_cancel_order_dry_run(config_stub):
 def test_cancel_order_live(monkeypatch, config_stub):
     config_stub["use_paper_simulator"] = False
     eng = ExecutionEngine(dry_run=False, config=config_stub)
-    monkeypatch.setattr(eng.order_manager, "cancel_order", lambda oid: {"status": "cancelled", "order_id": oid})
+    monkeypatch.setattr(
+        eng.order_manager,
+        "cancel_order",
+        lambda oid: {"status": "cancelled", "order_id": oid},
+    )
     res = eng.cancel_order("999")
     assert res["status"] == "cancelled"
 
@@ -177,7 +191,9 @@ def test_emergency_flatten_dry_run(config_stub, caplog):
 def test_emergency_flatten_live(monkeypatch, config_stub, caplog):
     config_stub["use_paper_simulator"] = False
     eng = ExecutionEngine(dry_run=False, config=config_stub)
-    monkeypatch.setattr(eng.order_manager, "flatten_all", lambda: {"status": "flattened"})
+    monkeypatch.setattr(
+        eng.order_manager, "flatten_all", lambda: {"status": "flattened"}
+    )
     caplog.set_level(logging.CRITICAL)
     res = eng.emergency_flatten()
     assert res["status"] == "flattened"
@@ -189,6 +205,7 @@ def test_emergency_flatten_invalid_path(config_stub):
     res = eng.emergency_flatten()
     assert res["status"] in ("flattened", "rejected")
 
+
 def test_emergency_flatten_live_invalid_path(config_stub):
     """Live mode with no order_manager triggers fallback branch (lines 143, 151)."""
     config_stub["use_paper_simulator"] = False
@@ -197,6 +214,7 @@ def test_emergency_flatten_live_invalid_path(config_stub):
     res = eng.emergency_flatten()
     assert isinstance(res, dict)
     assert res["status"] in ("flattened", "rejected")
+
 
 def test_returns_empty_and_single_loss_branch(config_stub):
     eng = ExecutionEngine(dry_run=True, config=config_stub)
@@ -209,14 +227,19 @@ def test_returns_empty_and_single_loss_branch(config_stub):
     val = t.get_cvar(0.95)
     assert val > 0
 
+
 def test_reset_day_exception_path(config_stub):
     eng = ExecutionEngine(dry_run=True, config=config_stub)
     t = eng.portfolio_tracker
+
     class BadTrades:
-        def clear(self): raise RuntimeError("boom")
+        def clear(self):
+            raise RuntimeError("boom")
+
     t.intraday_trades = BadTrades()
     res = t.reset_day()
     assert res["status"] == "error"
+
 
 def test_emergency_flatten_live_missing_order_manager(config_stub):
     config_stub["use_paper_simulator"] = False
@@ -224,6 +247,7 @@ def test_emergency_flatten_live_missing_order_manager(config_stub):
     eng.order_manager = None
     res = eng.emergency_flatten()
     assert res["status"] in ("flattened", "rejected")
+
 
 # ----------------------------------------------------------------------
 # sync_portfolio branches
@@ -263,7 +287,9 @@ def test_emergency_flatten_dry_run(caplog):
 def test_emergency_flatten_live(monkeypatch):
     cfg = {"use_paper_simulator": False}
     eng = ExecutionEngine(dry_run=False, config=cfg)
-    monkeypatch.setattr(eng.order_manager, "flatten_all", lambda: {"status": "ok", "flattened": True})
+    monkeypatch.setattr(
+        eng.order_manager, "flatten_all", lambda: {"status": "ok", "flattened": True}
+    )
     out = eng.emergency_flatten()
     assert out == {"status": "ok", "flattened": True}
 

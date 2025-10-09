@@ -1,4 +1,5 @@
 from hybrid_ai_trading.utils.time_utils import utc_now
+
 # src/hybrid_ai_trading/performance_tracker.py
 """
 Performance Tracker (Hybrid AI Quant Pro v21.2 â€“ Hedge Fund OE Grade, AAA Coverage)
@@ -12,11 +13,11 @@ Performance Tracker (Hybrid AI Quant Pro v21.2 â€“ Hedge Fund OE Grade, AAA
 - Explicit logging for edge-case branches (to match tests)
 """
 
-import logging
 import json
-from statistics import mean, pstdev
-from typing import List, Optional, Dict, Any
+import logging
 from datetime import datetime
+from statistics import mean, pstdev
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("hybrid_ai_trading.performance_tracker")
 logger.setLevel(logging.DEBUG)
@@ -119,7 +120,7 @@ class PerformanceTracker:
         downside = [t for t in self.trades if t < 0]
         if not downside:
             logger.warning("No downside trades â†’ fallback")
-            return (avg - risk_free) / ((pstdev(self.trades) or 1.0))
+            return (avg - risk_free) / (pstdev(self.trades) or 1.0)
         try:
             dd_std = pstdev(downside)
             if dd_std == 0:

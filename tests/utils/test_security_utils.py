@@ -9,7 +9,6 @@ Covers all branches of mask_key():
 - Long key (>8 chars, star count)
 """
 
-import pytest
 from hybrid_ai_trading.utils.security import mask_key
 
 
@@ -49,7 +48,7 @@ def test_mask_key_minimal_long_case():
 
 def test_mask_key_boundary_cases():
     """Check edge boundaries explicitly."""
-    key7 = "1234567"   # 7 chars → unchanged
+    key7 = "1234567"  # 7 chars → unchanged
     assert mask_key(key7) == key7
 
     key8 = "12345678"  # 8 chars → formatted

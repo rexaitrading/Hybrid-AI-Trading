@@ -9,6 +9,7 @@ Covers:
 """
 
 import inspect
+
 import pytest
 
 import hybrid_ai_trading.data.clients as clients
@@ -36,12 +37,15 @@ def test_clients_are_classes():
         assert inspect.isclass(cls)
 
 
-@pytest.mark.parametrize("exc_cls", [
-    clients.AlpacaAPIError,
-    clients.BenzingaAPIError,
-    clients.CoinAPIError,
-    clients.PolygonAPIError,
-])
+@pytest.mark.parametrize(
+    "exc_cls",
+    [
+        clients.AlpacaAPIError,
+        clients.BenzingaAPIError,
+        clients.CoinAPIError,
+        clients.PolygonAPIError,
+    ],
+)
 def test_errors_inherit_from_base(exc_cls):
     err = exc_cls("oops")
     assert isinstance(err, clients.DataClientError)

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests – AlpacaClient (Hybrid AI Quant Pro v12.1 – Hedge-Fund OE Grade, AAA+ Coverage)
 ------------------------------------------------------------------------------------------
 Covers all branches of alpaca_client.py with stable micro-tests:
@@ -11,8 +11,9 @@ Covers all branches of alpaca_client.py with stable micro-tests:
 """
 
 import logging
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from hybrid_ai_trading.data.clients.alpaca_client import AlpacaAPIError, AlpacaClient
 

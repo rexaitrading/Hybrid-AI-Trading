@@ -9,10 +9,10 @@ Covers ALL branches of news_client.py:
 - get_latest_headlines: with symbol, without symbol, empty result, query exception
 """
 
-import os
-import pytest
-from unittest.mock import patch, MagicMock
 from datetime import datetime
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from hybrid_ai_trading.data.clients import news_client
 
@@ -127,6 +127,7 @@ def test_save_articles_happy_and_integrity(mock_sess):
 
     # IntegrityError triggers rollback
     from sqlalchemy.exc import IntegrityError
+
     fake.add.side_effect = IntegrityError("stmt", "params", "orig")
     fake.commit.side_effect = None
     count2 = news_client.save_articles([art])
@@ -161,7 +162,9 @@ def test_get_latest_headlines_with_and_without_symbol(mock_sess):
     row.title, row.symbols, row.url, row.created = "t", "AAPL", "u", datetime.utcnow()
 
     # Chain for no symbol
-    fake.query.return_value.order_by.return_value.limit.return_value.all.return_value = [row]
+    fake.query.return_value.order_by.return_value.limit.return_value.all.return_value = [
+        row
+    ]
 
     out = news_client.get_latest_headlines(limit=1)
     assert out[0]["title"] == "t"

@@ -8,6 +8,7 @@ Covers:
 """
 
 import pytest
+
 from hybrid_ai_trading.data.clients import errors
 
 
@@ -18,12 +19,15 @@ def test_base_error_is_runtimeerror():
         raise err
 
 
-@pytest.mark.parametrize("exc_cls", [
-    errors.CoinAPIError,
-    errors.PolygonAPIError,
-    errors.AlpacaAPIError,
-    errors.BenzingaAPIError,
-])
+@pytest.mark.parametrize(
+    "exc_cls",
+    [
+        errors.CoinAPIError,
+        errors.PolygonAPIError,
+        errors.AlpacaAPIError,
+        errors.BenzingaAPIError,
+    ],
+)
 def test_specific_errors_inherit_from_base(exc_cls):
     # Instantiate with a message
     err = exc_cls("oops")

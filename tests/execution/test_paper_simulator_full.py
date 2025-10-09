@@ -20,9 +20,11 @@ Covers ALL branches in simulate_fill:
 - Result contains all expected keys
 """
 
-import pytest
 import random
 from unittest.mock import patch
+
+import pytest
+
 from hybrid_ai_trading.execution.paper_simulator import PaperSimulator
 
 
@@ -166,6 +168,7 @@ def test_result_contains_expected_keys():
         assert key in result
     assert result["mode"] == "paper"
 
+
 def test_limit_and_stop_without_prices():
     sim = PaperSimulator(slippage=0.0)
     # Limit order with no limit_price should just fill
@@ -181,6 +184,7 @@ def test_carry_cost_zero_days():
     sim = PaperSimulator(slippage=0.0, commission=0.0)
     r = sim.simulate_fill("AAPL", "BUY", 1, 100, hold_days=0)
     assert r["carry_cost"] == 0.0
+
 
 def test_limit_order_without_limit_price():
     sim = PaperSimulator(slippage=0.0)

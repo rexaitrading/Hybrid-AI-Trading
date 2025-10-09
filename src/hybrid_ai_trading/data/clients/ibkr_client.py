@@ -1,4 +1,5 @@
-﻿from __future__ import annotations
+from __future__ import annotations
+
 """
 IBKR Client (Hybrid AI Quant Pro v1.0 - Safe & Test-Friendly)
 - Connects to TWS/Gateway (defaults to paper: 127.0.0.1:7497, clientId=1)
@@ -10,7 +11,7 @@ IBKR Client (Hybrid AI Quant Pro v1.0 - Safe & Test-Friendly)
 import os
 from typing import Any, Dict, List, Optional
 
-from ib_insync import IB, Stock, MarketOrder, LimitOrder
+from ib_insync import IB, LimitOrder, MarketOrder, Stock
 
 
 def connect_ib(
@@ -45,28 +46,32 @@ def account_summary(ib: IB) -> Dict[str, Any]:
 def positions(ib: IB) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     for pos in ib.positions():
-        out.append({
-            "account": pos.account,
-            "symbol": getattr(pos.contract, "symbol", None),
-            "currency": getattr(pos.contract, "currency", None),
-            "position": float(pos.position),
-            "avgCost": float(pos.avgCost or 0.0),
-        })
+        out.append(
+            {
+                "account": pos.account,
+                "symbol": getattr(pos.contract, "symbol", None),
+                "currency": getattr(pos.contract, "currency", None),
+                "position": float(pos.position),
+                "avgCost": float(pos.avgCost or 0.0),
+            }
+        )
     return out
 
 
 def open_orders(ib: IB) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     for o in ib.openOrders():
-        out.append({
-            "orderId": o.orderId,
-            "action": o.action,
-            "totalQuantity": float(o.totalQuantity or 0.0),
-            "lmtPrice": float(getattr(o, "lmtPrice", 0.0) or 0.0),
-            "orderType": o.orderType,
-            "tif": o.tif,
-            "transmit": o.transmit,
-        })
+        out.append(
+            {
+                "orderId": o.orderId,
+                "action": o.action,
+                "totalQuantity": float(o.totalQuantity or 0.0),
+                "lmtPrice": float(getattr(o, "lmtPrice", 0.0) or 0.0),
+                "orderType": o.orderType,
+                "tif": o.tif,
+                "transmit": o.transmit,
+            }
+        )
     return out
 
 
@@ -80,11 +85,15 @@ def cancel_all(ib: IB, symbol: Optional[str] = None) -> Dict[str, Any]:
         if symbol is not None and getattr(cont, "symbol", None) != symbol:
             continue
         ib.cancelOrder(trade.order)
-        canceled.append({"orderId": trade.order.orderId, "symbol": getattr(cont, "symbol", None)})
+        canceled.append(
+            {"orderId": trade.order.orderId, "symbol": getattr(cont, "symbol", None)}
+        )
     return {"canceled": canceled}
 
 
-def place_market_stock(ib: IB, symbol: str, shares: float, action: str = "BUY") -> Dict[str, Any]:
+def place_market_stock(
+    ib: IB, symbol: str, shares: float, action: str = "BUY"
+) -> Dict[str, Any]:
     contract = Stock(symbol, "SMART", "USD")
     order = MarketOrder(action.upper(), abs(shares))
     trade = ib.placeOrder(contract, order)
@@ -92,7 +101,9 @@ def place_market_stock(ib: IB, symbol: str, shares: float, action: str = "BUY") 
     return {"orderId": trade.order.orderId, "status": trade.orderStatus.status}
 
 
-def place_limit_stock(ib: IB, symbol: str, shares: float, limit_price: float, action: str = "BUY") -> Dict[str, Any]:
+def place_limit_stock(
+    ib: IB, symbol: str, shares: float, limit_price: float, action: str = "BUY"
+) -> Dict[str, Any]:
     contract = Stock(symbol, "SMART", "USD")
     order = LimitOrder(action.upper(), abs(shares), float(limit_price))
     trade = ib.placeOrder(contract, order)

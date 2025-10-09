@@ -1,8 +1,6 @@
-﻿import os
-import json
-import csv
-import pytest
 from pathlib import Path
+
+import pytest
 
 import hybrid_ai_trading.pipelines.export_prev_close as mod
 from hybrid_ai_trading.data.clients.polygon_client import PolygonAPIError
@@ -24,11 +22,16 @@ def test_safe_export_header_only_hits_line_50(tmp_path, caplog):
     assert "Exported" in caplog.text
 
 
-@pytest.mark.parametrize("crypto_ret, stocks, expect_files", [
-    # Polygon constructor fails (PolygonAPIError) -> warn branch hits, no rows -> no files
-    ({}, [], False),
-])
-def test_polygon_constructor_unavailable_warn_and_all_rows_false(monkeypatch, tmp_path, caplog, crypto_ret, stocks, expect_files):
+@pytest.mark.parametrize(
+    "crypto_ret, stocks, expect_files",
+    [
+        # Polygon constructor fails (PolygonAPIError) -> warn branch hits, no rows -> no files
+        ({}, [], False),
+    ],
+)
+def test_polygon_constructor_unavailable_warn_and_all_rows_false(
+    monkeypatch, tmp_path, caplog, crypto_ret, stocks, expect_files
+):
     """
     - Force PolygonClient() to raise PolygonAPIError -> except warning branch.
     - batch_prev_close returns {} so crypto contributes no rows.
@@ -43,7 +46,11 @@ def test_polygon_constructor_unavailable_warn_and_all_rows_false(monkeypatch, tm
     monkeypatch.setattr(mod, "batch_prev_close", lambda *_a, **_k: crypto_ret)
 
     # Ensure PolygonClient constructor raises PolygonAPIError
-    monkeypatch.setattr(mod, "PolygonClient", lambda *a, **k: (_ for _ in ()).throw(PolygonAPIError("no key")))
+    monkeypatch.setattr(
+        mod,
+        "PolygonClient",
+        lambda *a, **k: (_ for _ in ()).throw(PolygonAPIError("no key")),
+    )
 
     # Make Core_Stocks empty so we definitely have all_rows == []
     monkeypatch.setattr(mod, "Core_Stocks", [])

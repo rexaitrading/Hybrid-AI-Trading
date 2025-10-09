@@ -1,57 +1,58 @@
 from __future__ import annotations
-import os, sys, json, time, argparse, math, datetime as dt
-from typing import List, Dict, Any, Optional, Tuple
-from hybrid_ai_trading.utils.time_utils import utc_now
+
+import argparse
+import datetime as dt
+import json
+import math
+import os
+import time
+from typing import Any, Dict, List, Optional, Tuple
+
 try:
     from zoneinfo import ZoneInfo
 except Exception:
     ZoneInfo = None
 
-from ib_insync import IB, Stock, LimitOrder
-from hybrid_ai_trading.utils.structured_log import setup_logging, get_logger
+from ib_insync import IB, LimitOrder, Stock
+
 from hybrid_ai_trading.utils.ib_conn import ib_session
 from hybrid_ai_trading.utils.ib_reconnect import with_ib_reconnect
+from hybrid_ai_trading.utils.structured_log import get_logger, setup_logging
 
 LOGGER = get_logger("hybrid_ai_trading.runner.paper")
 
 DEFAULT_CFG: Dict[str, Any] = {
     "timezone": "America/Vancouver",
     "equities": {
-        "trading_window_pt": ["05:00-11:00"],   # PT hours
+        "trading_window_pt": ["05:00-11:00"],  # PT hours
         "symbols": ["AAPL", "MSFT", "NVDA"],
         "lot_size": 1,
         "max_risk_usd": 100.0,
         "gatescore_min": 0.85,
-        "whatif": True
+        "whatif": True,
     },
-    "loop": {
-        "poll_sec": 30,
-        "max_runtime_min": 240
-    },
-    "risk": {
-        "daily_loss_cap_pct": 1.0,
-        "kelly_fraction": 0.5
-    },
-    "control": {
-        "pause_file": "control/PAUSE"
-    },
-    "logging": {
-        "audit_jsonl": "logs/paper_trades.jsonl"
-    }
+    "loop": {"poll_sec": 30, "max_runtime_min": 240},
+    "risk": {"daily_loss_cap_pct": 1.0, "kelly_fraction": 0.5},
+    "control": {"pause_file": "control/PAUSE"},
+    "logging": {"audit_jsonl": "logs/paper_trades.jsonl"},
 }
+
 
 def load_yaml(path: str) -> Dict[str, Any]:
     if not os.path.exists(path):
         return DEFAULT_CFG
     try:
         import yaml  # type: ignore
+
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         # shallow-merge defaults
         cfg = DEFAULT_CFG.copy()
         for k, v in data.items():
             if isinstance(v, dict) and isinstance(cfg.get(k), dict):
-                x = cfg[k].copy(); x.update(v); cfg[k] = x
+                x = cfg[k].copy()
+                x.update(v)
+                cfg[k] = x
             else:
                 cfg[k] = v
         return cfg
@@ -59,8 +60,10 @@ def load_yaml(path: str) -> Dict[str, Any]:
         LOGGER.warning("cfg_yaml_failed", extra={"error": str(e)})
         return DEFAULT_CFG
 
+
 def now_in_tz(tzname: str) -> dt.datetime:
     return dt.datetime.now(ZoneInfo(tzname))
+
 
 def _parse_window(s: str) -> Tuple[dt.time, dt.time]:
     # "HH:MM-HH:MM"
@@ -68,6 +71,7 @@ def _parse_window(s: str) -> Tuple[dt.time, dt.time]:
     h1, m1 = [int(x) for x in a.split(":")]
     h2, m2 = [int(x) for x in b.split(":")]
     return dt.time(h1, m1), dt.time(h2, m2)
+
 
 def in_trading_window(now_local: dt.datetime, windows: List[str]) -> bool:
     if now_local.weekday() >= 5:  # weekend off for equities by default
@@ -81,6 +85,7 @@ def in_trading_window(now_local: dt.datetime, windows: List[str]) -> bool:
             continue
     return False
 
+
 @with_ib_reconnect(retries=2, backoff_sec=1.0)
 def fetch_quote(ib: IB, symbol: str) -> Dict[str, Any]:
     c = Stock(symbol, "SMART", "USD")
@@ -88,6 +93,7 @@ def fetch_quote(ib: IB, symbol: str) -> Dict[str, Any]:
     t = ib.reqMktData(c, "", False, False)
     ib.sleep(2.0)
     return {"bid": t.bid, "ask": t.ask, "last": t.last, "symbol": symbol}
+
 
 def simple_signal_from_quote(q: Dict[str, Any]) -> Tuple[str, float]:
     """
@@ -109,18 +115,30 @@ def simple_signal_from_quote(q: Dict[str, Any]) -> Tuple[str, float]:
         return "SELL", 0.90
     return "HOLD", 0.50
 
+
 def risk_position_size(price: float, lot_size: int, max_risk_usd: float) -> int:
     if price is None or price <= 0:
         return 0
     max_qty = int(max(0, math.floor(max_risk_usd / max(price, 1e-6))))
     return max(0, min(lot_size, max_qty)) if lot_size > 0 else max_qty
 
+
 def write_audit(jsonl_path: str, row: Dict[str, Any]) -> None:
     os.makedirs(os.path.dirname(jsonl_path), exist_ok=True)
     with open(jsonl_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-def evaluate_symbol(ib: IB, cfg: Dict[str, Any], symbol: str, audit_path: str, gatescore_min: float, whatif: bool, lot_size: int, max_risk: float) -> None:
+
+def evaluate_symbol(
+    ib: IB,
+    cfg: Dict[str, Any],
+    symbol: str,
+    audit_path: str,
+    gatescore_min: float,
+    whatif: bool,
+    lot_size: int,
+    max_risk: float,
+) -> None:
     try:
         q = fetch_quote(ib=ib, symbol=symbol)
         signal, score = simple_signal_from_quote(q)
@@ -142,7 +160,7 @@ def evaluate_symbol(ib: IB, cfg: Dict[str, Any], symbol: str, audit_path: str, g
                     "equityWithLoan": getattr(state, "equityWithLoanChange", None),
                 }
         row = {
-            "ts": dt.utc_now().isoformat(timespec="milliseconds")+"Z",
+            "ts": dt.utc_now().isoformat(timespec="milliseconds") + "Z",
             "symbol": symbol,
             "price": px,
             "bid": q.get("bid"),
@@ -153,27 +171,42 @@ def evaluate_symbol(ib: IB, cfg: Dict[str, Any], symbol: str, audit_path: str, g
             "decision": decision,
             "qty": qty,
             "whatif": whatif,
-            "order_info": order_info
+            "order_info": order_info,
         }
         write_audit(audit_path, row)
         LOGGER.info("audit_row", extra=row)
     except Exception as e:
         LOGGER.warning("eval_failed", extra={"symbol": symbol, "error": str(e)})
 
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser("Paper Runner MVP")
     ap.add_argument("--config", default="config/paper_runner.yaml")
     ap.add_argument("--once", action="store_true", help="Run one pass then exit")
     ap.add_argument("--universe", default="", help="Comma list to override symbols")
-    ap.add_argument("--mdt", type=int, default=3, help="1=live,2=frozen,3=delayed,4=delayed-frozen")
-    ap.add_argument("--client-id", type=int, default=int(os.getenv("IB_CLIENT_ID","3021")))
+    ap.add_argument(
+        "--mdt", type=int, default=3, help="1=live,2=frozen,3=delayed,4=delayed-frozen"
+    )
+    ap.add_argument(
+        "--client-id", type=int, default=int(os.getenv("IB_CLIENT_ID", "3021"))
+    )
     ap.add_argument("--log-file", default="logs/runner_paper.jsonl")
     ap.add_argument("--log-level", default="INFO")
-    ap.add_argument("--json", action="store_true", help="Emit structured JSON logs to stdout/logfile")
-    ap.add_argument("--transmit", action="store_true", help="(DANGEROUS) actually transmit orders")
+    ap.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit structured JSON logs to stdout/logfile",
+    )
+    ap.add_argument(
+        "--transmit", action="store_true", help="(DANGEROUS) actually transmit orders"
+    )
     args = ap.parse_args(argv)
 
-    setup_logging(level=args.log_level, logfile=args.log_file, json_output=True if args.json or args.log_file else False)
+    setup_logging(
+        level=args.log_level,
+        logfile=args.log_file,
+        json_output=True if args.json or args.log_file else False,
+    )
     cfg = load_yaml(args.config)
 
     tz = cfg.get("timezone", DEFAULT_CFG["timezone"])
@@ -194,29 +227,49 @@ def main(argv: Optional[List[str]] = None) -> int:
     poll_sec = int(cfg.get("loop", {}).get("poll_sec", 30))
     max_runtime_min = int(cfg.get("loop", {}).get("max_runtime_min", 240))
 
-    LOGGER.info("runner_start", extra={
-        "tz": tz, "windows": windows, "symbols": symbols, "poll_sec": poll_sec, "max_runtime_min": max_runtime_min,
-        "gatescore_min": gatescore_min, "whatif": whatif, "lot_size": lot_size, "max_risk": max_risk
-    })
+    LOGGER.info(
+        "runner_start",
+        extra={
+            "tz": tz,
+            "windows": windows,
+            "symbols": symbols,
+            "poll_sec": poll_sec,
+            "max_runtime_min": max_runtime_min,
+            "gatescore_min": gatescore_min,
+            "whatif": whatif,
+            "lot_size": lot_size,
+            "max_risk": max_risk,
+        },
+    )
 
     start = time.time()
-    with ib_session(client_id=args.client_id, market_data_type=args.mdt, timeout=int(os.getenv('IB_TIMEOUT','60'))) as ib:
+    with ib_session(
+        client_id=args.client_id,
+        market_data_type=args.mdt,
+        timeout=int(os.getenv("IB_TIMEOUT", "60")),
+    ) as ib:
         # main loop
         while True:
             now_local = now_in_tz(tz)
             if os.path.exists(pause_file):
                 LOGGER.warning("pause_switch_detected", extra={"file": pause_file})
-                time.sleep(min(60, poll_sec)); 
-                if args.once: break
+                time.sleep(min(60, poll_sec))
+                if args.once:
+                    break
                 continue
 
             if not in_trading_window(now_local, windows) and not args.once:
-                LOGGER.info("outside_trading_window", extra={"now": now_local.isoformat(), "windows": windows})
+                LOGGER.info(
+                    "outside_trading_window",
+                    extra={"now": now_local.isoformat(), "windows": windows},
+                )
                 time.sleep(30)
                 continue
 
             for sym in symbols:
-                evaluate_symbol(ib, cfg, sym, audit_path, gatescore_min, whatif, lot_size, max_risk)
+                evaluate_symbol(
+                    ib, cfg, sym, audit_path, gatescore_min, whatif, lot_size, max_risk
+                )
 
             if args.once:
                 break
@@ -229,6 +282,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     LOGGER.info("runner_exit")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

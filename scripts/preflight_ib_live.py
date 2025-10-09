@@ -4,7 +4,9 @@ Usage:
   $env:PYTHONPATH="src"
   python scripts/preflight_ib_live.py
 """
+
 from hybrid_ai_trading.brokers.ib_client import IBClient, IBConfig
+
 
 def main():
     cli = IBClient(IBConfig())
@@ -29,6 +31,7 @@ def main():
 
         wi = cli.what_if_market_buy("AAPL", 1)
         print("What-If:", wi)
+
 
 if __name__ == "__main__":
     main()

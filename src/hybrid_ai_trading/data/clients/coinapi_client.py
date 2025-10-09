@@ -1,4 +1,5 @@
-﻿from __future__ import annotations
+from __future__ import annotations
+
 """
 CoinAPI Client (Hybrid AI Quant Pro v1.4 â€“ Hedge-Fund OE Grade, Test-Friendly)
 -------------------------------------------------------------------------------
@@ -12,11 +13,9 @@ Exports:
 - CoinAPIError and subclasses
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
-from datetime import datetime, timezone
 import os
-import json
-import argparse
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 try:
     import requests  # type: ignore
@@ -112,7 +111,9 @@ def parse_symbol(symbol: str) -> Tuple[str, str]:
     return parts[0].upper(), parts[1].upper()
 
 
-def coinapi_symbol(exchange: Optional[str], base: str, quote: str, kind: str = "SPOT") -> str:
+def coinapi_symbol(
+    exchange: Optional[str], base: str, quote: str, kind: str = "SPOT"
+) -> str:
     """If exchange provided: 'EXCHANGE_SPOT_BASE_QUOTE', else 'BASE/QUOTE'."""
     if exchange:
         return f"{exchange.upper()}_{kind.upper()}_{base.upper()}_{quote.upper()}"
@@ -217,7 +218,9 @@ def _retry_get(
     last_exc: Optional[Exception] = None
     for attempt in range(max_retry + 1):
         try:
-            resp = requests.get(url, headers=headers, params=params or {}, timeout=_DEFAULT_TIMEOUT)
+            resp = requests.get(
+                url, headers=headers, params=params or {}, timeout=_DEFAULT_TIMEOUT
+            )
         except Exception as e:
             last_exc = e
             if attempt >= max_retry:
@@ -258,7 +261,9 @@ def http_get(
     try:
         resp = sess.get(
             url,
-            headers=_get_headers() or {"X-CoinAPI-Key": api_key} if api_key else _get_headers(),
+            headers=_get_headers() or {"X-CoinAPI-Key": api_key}
+            if api_key
+            else _get_headers(),
             params=params or {},
             timeout=timeout,
         )
@@ -369,7 +374,9 @@ class CoinAPIClient:
         candidates: List[str] = []
         if quote:
             base = base_or_symbol
-            candidates.append(f"{self.base_url.rstrip('/')}/ohlcv/{base}/{quote}/latest")
+            candidates.append(
+                f"{self.base_url.rstrip('/')}/ohlcv/{base}/{quote}/latest"
+            )
         else:
             sym = base_or_symbol
             if any(sep in sym for sep in ("/", "-", "_")):
@@ -462,7 +469,9 @@ def batch_prev_close(
             }
         return out
 
-    client = CoinAPIClient(api_key=api_key, base_url=base_url, session=session, timeout=timeout)
+    client = CoinAPIClient(
+        api_key=api_key, base_url=base_url, session=session, timeout=timeout
+    )
     out: Dict[str, Dict[str, Optional[float]]] = {}
 
     for s in symbols:

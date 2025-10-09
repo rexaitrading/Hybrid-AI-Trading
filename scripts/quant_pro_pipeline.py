@@ -28,9 +28,9 @@ if SRC_PATH not in sys.path:
 from hybrid_ai_trading.config.settings import CONFIG
 from hybrid_ai_trading.execution import ExecutionEngine
 from hybrid_ai_trading.performance_tracker import PerformanceTracker
-from hybrid_ai_trading.signals.breakout_polygon import breakout_signal_polygon
 from hybrid_ai_trading.risk.gatescore import GateScore
 from hybrid_ai_trading.risk.regime_detector import RegimeDetector
+from hybrid_ai_trading.signals.breakout_polygon import breakout_signal_polygon
 from hybrid_ai_trading.trade_engine import TradeEngine  # must exist at src root
 
 # ---------------------------------------------------------------------
@@ -41,6 +41,7 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
 )
 logger = logging.getLogger("QuantProPipeline")
+
 
 # ---------------------------------------------------------------------
 # Main Loop

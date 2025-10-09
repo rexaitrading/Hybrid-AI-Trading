@@ -16,11 +16,10 @@ Covers ALL branches of moving_average_signal:
 """
 
 import pandas as pd
-import pytest
 
 from hybrid_ai_trading.signals.moving_average import (
-    moving_average_signal,
     MovingAverageSignal,
+    moving_average_signal,
 )
 
 
@@ -73,11 +72,12 @@ def test_forced_buy_branch(monkeypatch):
     def fake_rolling(self, window, *args, **kwargs):
         class FakeRolling:
             def mean(_self, *_a, **_k):
-                if window == 3:   # short MA
+                if window == 3:  # short MA
                     return pd.Series([1.0, 2.0], index=self.index[-2:])
                 if window == 10:  # long MA
                     return pd.Series([2.0, 1.5], index=self.index[-2:])
                 return pd.Series([1.0] * len(self), index=self.index)
+
         return FakeRolling()
 
     monkeypatch.setattr(pd.Series, "rolling", fake_rolling)
@@ -91,11 +91,12 @@ def test_forced_sell_branch(monkeypatch):
     def fake_rolling(self, window, *args, **kwargs):
         class FakeRolling:
             def mean(_self, *_a, **_k):
-                if window == 3:   # short MA
+                if window == 3:  # short MA
                     return pd.Series([3.0, 1.0], index=self.index[-2:])
                 if window == 10:  # long MA
                     return pd.Series([2.0, 2.5], index=self.index[-2:])
                 return pd.Series([1.0] * len(self), index=self.index)
+
         return FakeRolling()
 
     monkeypatch.setattr(pd.Series, "rolling", fake_rolling)
@@ -110,6 +111,7 @@ def test_hold_equal_forced(monkeypatch):
         class FakeRolling:
             def mean(_self, *_a, **_k):
                 return pd.Series([2.0] * len(self), index=self.index)
+
         return FakeRolling()
 
     monkeypatch.setattr(pd.Series, "rolling", fake_rolling)
@@ -125,6 +127,7 @@ def test_nan_sma(monkeypatch):
             def mean(_self, *_a, **_k):
                 values = [1.0] * (len(self) - 1) + [float("nan")]
                 return pd.Series(values, index=self.index)
+
         return FakeRolling()
 
     monkeypatch.setattr(pd.Series, "rolling", fake_rolling)

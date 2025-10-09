@@ -1,10 +1,13 @@
-﻿import os, json, datetime as dt
-from dateutil.relativedelta import relativedelta
+import datetime as dt
+import os
+
 import requests
+from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
+
 from utils.io_state import (
-    json_path,
     atomic_write_json,
+    json_path,
     load_checkpoint,
     save_checkpoint,
 )
@@ -40,4 +43,6 @@ if __name__ == "__main__":
     print("âœ… Saved:", out_path, "items:", len(data.get("earnings", [])))
 
     # æ›´æ–° checkpoint
-    save_checkpoint("earnings_day_ckpt", dt.date.fromisoformat(end).strftime("%Y-%m-%d"))
+    save_checkpoint(
+        "earnings_day_ckpt", dt.date.fromisoformat(end).strftime("%Y-%m-%d")
+    )

@@ -1,9 +1,11 @@
+import os
+import sys
+
 from ib_insync import IB
-import os, sys, time
 
 host = os.getenv("IB_HOST", "127.0.0.1")
 port = int(os.getenv("IB_PORT", "4002"))
-cid  = int(os.getenv("IB_CLIENT_ID", "901"))
+cid = int(os.getenv("IB_CLIENT_ID", "901"))
 
 ib = IB()
 try:

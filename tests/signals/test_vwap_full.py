@@ -6,12 +6,14 @@ Unit Tests: VWAP Signal (Hybrid AI Quant Pro v50.9 – Final Coverage Fix)
 - Full guard, symmetry, tolerance, tie fallback, and evaluate logic covered.
 """
 
-import importlib
-import pytest
-import numpy as np
-import math
-from hybrid_ai_trading.signals import vwap
 import builtins
+import importlib
+import math
+
+import numpy as np
+import pytest
+
+from hybrid_ai_trading.signals import vwap
 
 
 def make_bars(prices, vols=None):
@@ -76,7 +78,9 @@ def test_compute_vwap_no_usable_volume(monkeypatch, caplog):
 
 
 def test_compute_vwap_exception(monkeypatch):
-    monkeypatch.setattr(vwap.np, "dot", lambda *_: (_ for _ in ()).throw(Exception("dot fail")))
+    monkeypatch.setattr(
+        vwap.np, "dot", lambda *_: (_ for _ in ()).throw(Exception("dot fail"))
+    )
     bars = [{"c": 10, "v": 5}, {"c": 20, "v": 5}]
     res = vwap._compute_vwap(bars)
     assert math.isnan(res)
@@ -111,14 +115,23 @@ def test_last_bar_bad_numeric_or_vol_in_vwap_signal():
 def test_symmetry_hold_and_sell_tie_policy():
     bars = [{"c": 10, "v": 5}, {"c": 20, "v": 5}]
     bars[-1]["c"] = 15
-    assert vwap.vwap_signal(bars, vwap.VWAPConfig(tie_policy="HOLD", enable_symmetry=True)) == "HOLD"
-    assert vwap.vwap_signal(bars, vwap.VWAPConfig(tie_policy="SELL", enable_symmetry=True)) == "SELL"
+    assert (
+        vwap.vwap_signal(bars, vwap.VWAPConfig(tie_policy="HOLD", enable_symmetry=True))
+        == "HOLD"
+    )
+    assert (
+        vwap.vwap_signal(bars, vwap.VWAPConfig(tie_policy="SELL", enable_symmetry=True))
+        == "SELL"
+    )
 
 
 def test_symmetry_not_triggered_conditions():
     # Different vols → symmetry not applied
     bars_diff_vol = [{"c": 10, "v": 4}, {"c": 20, "v": 8}]
-    assert vwap.vwap_signal(bars_diff_vol, vwap.VWAPConfig(enable_symmetry=True)) in {"BUY", "SELL"}
+    assert vwap.vwap_signal(bars_diff_vol, vwap.VWAPConfig(enable_symmetry=True)) in {
+        "BUY",
+        "SELL",
+    }
 
     # Equal vols but last far from midpoint → safeguard *may* still HOLD depending on implementation
     bars_not_mid = [{"c": 10, "v": 5}, {"c": 30, "v": 5}]  # midpoint=20, last=30
@@ -127,8 +140,10 @@ def test_symmetry_not_triggered_conditions():
 
 
 def test_symmetry_exception(monkeypatch):
-    monkeypatch.setattr("hybrid_ai_trading.signals.vwap._compute_vwap",
-                        lambda *_: (_ for _ in ()).throw(Exception("forced")))
+    monkeypatch.setattr(
+        "hybrid_ai_trading.signals.vwap._compute_vwap",
+        lambda *_: (_ for _ in ()).throw(Exception("forced")),
+    )
     bars = [{"c": 10, "v": 5}, {"c": 20, "v": 5}]
     assert vwap.vwap_signal(bars, vwap.VWAPConfig(enable_symmetry=True)) == "HOLD"
 
@@ -140,12 +155,22 @@ def test_core_buy_sell_tolerance_and_tie():
     assert vwap.vwap_signal(bars_sell) == "SELL"
 
     bars_tie = make_bars([10, 10.001], vols=[5, 5])
-    assert vwap.vwap_signal(bars_tie, vwap.VWAPConfig(tolerance=0.01, tie_policy="HOLD")) == "HOLD"
-    assert vwap.vwap_signal(bars_tie, vwap.VWAPConfig(tolerance=0.01, tie_policy="SELL")) == "SELL"
+    assert (
+        vwap.vwap_signal(bars_tie, vwap.VWAPConfig(tolerance=0.01, tie_policy="HOLD"))
+        == "HOLD"
+    )
+    assert (
+        vwap.vwap_signal(bars_tie, vwap.VWAPConfig(tolerance=0.01, tie_policy="SELL"))
+        == "SELL"
+    )
 
     bars_exact_tie = [{"c": 10, "v": 1}, {"c": 20, "v": 1}, {"c": 15, "v": 1}]
-    assert vwap.vwap_signal(bars_exact_tie, vwap.VWAPConfig(tie_policy="HOLD")) == "HOLD"
-    assert vwap.vwap_signal(bars_exact_tie, vwap.VWAPConfig(tie_policy="SELL")) == "SELL"
+    assert (
+        vwap.vwap_signal(bars_exact_tie, vwap.VWAPConfig(tie_policy="HOLD")) == "HOLD"
+    )
+    assert (
+        vwap.vwap_signal(bars_exact_tie, vwap.VWAPConfig(tie_policy="SELL")) == "SELL"
+    )
 
 
 def test_evaluate_true_false_and_exception(monkeypatch):
@@ -162,8 +187,10 @@ def test_evaluate_true_false_and_exception(monkeypatch):
     assert audit2["symmetry_triggered"] is False
     assert decision2 in {"BUY", "SELL", "HOLD"}
 
-    monkeypatch.setattr("hybrid_ai_trading.signals.vwap._compute_vwap",
-                        lambda *_: (_ for _ in ()).throw(Exception("boom")))
+    monkeypatch.setattr(
+        "hybrid_ai_trading.signals.vwap._compute_vwap",
+        lambda *_: (_ for _ in ()).throw(Exception("boom")),
+    )
     decision3, audit3 = v.evaluate(make_bars([10, 20, 30], vols=[1, 1, 1]))
     assert decision3 == "HOLD"
     assert audit3["vwap"] is None

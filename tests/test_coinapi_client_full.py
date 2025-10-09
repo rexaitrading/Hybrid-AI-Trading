@@ -14,9 +14,10 @@ Covers ALL branches in coinapi_client.py:
 - module-level wrappers: get_ohlcv_latest, get_fx_rate, ping
 """
 
-import pytest
 from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from hybrid_ai_trading.data.clients import coinapi_client
 from hybrid_ai_trading.data.clients.coinapi_client import (
@@ -24,8 +25,8 @@ from hybrid_ai_trading.data.clients.coinapi_client import (
     CoinAPIError,
     _iso,
     batch_prev_close,
-    get_ohlcv_latest,
     get_fx_rate,
+    get_ohlcv_latest,
     ping,
 )
 
@@ -42,6 +43,7 @@ def test_get_headers_stub(monkeypatch):
 
 def test_get_headers_load_config_exception(monkeypatch):
     """Covers branch where load_config() itself raises."""
+
     def bad_loader():
         raise RuntimeError("config fail")
 
@@ -107,14 +109,19 @@ def test_iso_formats_with_timezone():
 # ----------------------------------------------------------------------
 def test_retry_get_stub_when_headers_empty(monkeypatch):
     monkeypatch.setenv("COINAPI_ALLOW_STUB", "1")
-    with patch("hybrid_ai_trading.data.clients.coinapi_client._get_headers", return_value={}):
+    with patch(
+        "hybrid_ai_trading.data.clients.coinapi_client._get_headers", return_value={}
+    ):
         resp = coinapi_client._retry_get("http://fake")
         assert isinstance(resp.json(), dict)
     monkeypatch.delenv("COINAPI_ALLOW_STUB", raising=False)
 
 
 @patch("hybrid_ai_trading.data.clients.coinapi_client.requests.get")
-@patch("hybrid_ai_trading.data.clients.coinapi_client._get_headers", return_value={"X": "Y"})
+@patch(
+    "hybrid_ai_trading.data.clients.coinapi_client._get_headers",
+    return_value={"X": "Y"},
+)
 def test_retry_get_success(mock_headers, mock_get):
     good = MagicMock(status_code=200)
     good.json.return_value = {"ok": 1}
@@ -125,7 +132,10 @@ def test_retry_get_success(mock_headers, mock_get):
 
 @patch("hybrid_ai_trading.data.clients.coinapi_client.time.sleep", return_value=None)
 @patch("hybrid_ai_trading.data.clients.coinapi_client.requests.get")
-@patch("hybrid_ai_trading.data.clients.coinapi_client._get_headers", return_value={"X": "Y"})
+@patch(
+    "hybrid_ai_trading.data.clients.coinapi_client._get_headers",
+    return_value={"X": "Y"},
+)
 def test_retry_get_retryable_then_success(mock_headers, mock_get, _sleep):
     bad = MagicMock(status_code=503, text="retry")
     good = MagicMock(status_code=200)
@@ -137,7 +147,10 @@ def test_retry_get_retryable_then_success(mock_headers, mock_get, _sleep):
 
 @patch("hybrid_ai_trading.data.clients.coinapi_client.time.sleep", return_value=None)
 @patch("hybrid_ai_trading.data.clients.coinapi_client.requests.get")
-@patch("hybrid_ai_trading.data.clients.coinapi_client._get_headers", return_value={"X": "Y"})
+@patch(
+    "hybrid_ai_trading.data.clients.coinapi_client._get_headers",
+    return_value={"X": "Y"},
+)
 def test_retry_get_exhausts_and_nonretryable(mock_headers, mock_get, _sleep):
     bad_retry = MagicMock(status_code=503, text="retry")
     mock_get.return_value = bad_retry
@@ -150,8 +163,14 @@ def test_retry_get_exhausts_and_nonretryable(mock_headers, mock_get, _sleep):
         coinapi_client._retry_get("http://fake")
 
 
-@patch("hybrid_ai_trading.data.clients.coinapi_client.requests.get", side_effect=Exception("boom"))
-@patch("hybrid_ai_trading.data.clients.coinapi_client._get_headers", return_value={"X": "Y"})
+@patch(
+    "hybrid_ai_trading.data.clients.coinapi_client.requests.get",
+    side_effect=Exception("boom"),
+)
+@patch(
+    "hybrid_ai_trading.data.clients.coinapi_client._get_headers",
+    return_value={"X": "Y"},
+)
 def test_retry_get_exception_path(mock_headers, mock_get):
     with pytest.raises(CoinAPIError):
         coinapi_client._retry_get("http://fake", max_retry=1)
@@ -203,7 +222,10 @@ def test_ohlcv_latest_paths(mock_retry):
     assert client.get_ohlcv_latest("BTC", "USD") == []
 
 
-@patch("hybrid_ai_trading.data.clients.coinapi_client._retry_get", side_effect=Exception("fail"))
+@patch(
+    "hybrid_ai_trading.data.clients.coinapi_client._retry_get",
+    side_effect=Exception("fail"),
+)
 def test_ohlcv_exhaust_candidates(mock_retry):
     client = CoinAPIClient()
     with pytest.raises(CoinAPIError):
@@ -252,8 +274,17 @@ def test_batch_prev_close_stub(monkeypatch):
 def test_batch_prev_close_ok_no_data_error(mock_ohlcv):
     now = datetime.now(timezone.utc).isoformat()
     mock_ohlcv.side_effect = [
-        [{"time_period_start": now, "price_open": 1, "price_high": 2,
-          "price_low": 0.5, "price_close": 1.1, "volume_traded": 100, "price_vwap": 1.05}],
+        [
+            {
+                "time_period_start": now,
+                "price_open": 1,
+                "price_high": 2,
+                "price_low": 0.5,
+                "price_close": 1.1,
+                "volume_traded": 100,
+                "price_vwap": 1.05,
+            }
+        ],
         [],  # no data
         Exception("fail"),  # error
     ]

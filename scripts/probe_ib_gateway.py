@@ -11,9 +11,11 @@ Probe IB Connection (v3.0 – Env Override + Summary + Market Snapshot + What-If
 """
 
 import os
-from ib_insync import IB, Stock, MarketOrder
+
+from ib_insync import IB, MarketOrder, Stock
+
 try:
-    from dotenv import load_dotenv, find_dotenv
+    from dotenv import find_dotenv, load_dotenv
 except Exception:
     load_dotenv = None
     find_dotenv = None
@@ -56,15 +58,22 @@ def try_connect(host, port, cid, label="primary"):
             contract = Stock("AAPL", "SMART", "USD")
             ticker = ib.reqMktData(contract, "", snapshot=True)
             ib.sleep(2.0)  # wait for snapshot
-            print(f"AAPL snapshot -> last: {ticker.last} bid: {ticker.bid} ask: {ticker.ask}")
+            print(
+                f"AAPL snapshot -> last: {ticker.last} bid: {ticker.bid} ask: {ticker.ask}"
+            )
 
             # --- What-If order (no real trade) ---
             order = MarketOrder("BUY", 1)
             state = ib.whatIfOrder(contract, order)
             print("What-If order status:", state.status)
-            print("Init margin before:", state.initMarginBefore,
-                  "Change:", state.initMarginChange,
-                  "After:", state.initMarginAfter)
+            print(
+                "Init margin before:",
+                state.initMarginBefore,
+                "Change:",
+                state.initMarginChange,
+                "After:",
+                state.initMarginAfter,
+            )
             print("Commission estimate:", state.commission)
 
             return True

@@ -13,10 +13,12 @@ Covers:
 - Alerts with no env vars
 """
 
-import pytest
 import random
-from hybrid_ai_trading.trade_engine import TradeEngine
+
+import pytest
+
 from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
+from hybrid_ai_trading.trade_engine import TradeEngine
 
 
 # ----------------------------------------------------------------------
@@ -108,9 +110,13 @@ def test_alert_hooks(monkeypatch, base_config, portfolio, capsys):
     fired = {}
 
     # Capture fired alert
-    monkeypatch.setattr(te.router, "_send_alert", lambda msg: fired.update({"msg": msg}))
     monkeypatch.setattr(
-        te.router, "route_order", lambda *a, **k: {"status": "error", "reason": "forced"}
+        te.router, "_send_alert", lambda msg: fired.update({"msg": msg})
+    )
+    monkeypatch.setattr(
+        te.router,
+        "route_order",
+        lambda *a, **k: {"status": "error", "reason": "forced"},
     )
 
     te.process_signal("AAPL", "BUY", 150)
@@ -148,7 +154,9 @@ def test_router_normalization(base_config, portfolio, monkeypatch):
     monkeypatch.setattr(te.router, "route_order", lambda *_: None)
     assert te.process_signal("AAPL", "BUY", 100)["status"] in {"rejected", "blocked"}
 
-    monkeypatch.setattr(te.router, "route_order", lambda *_: {"status": "error", "reason": "fail"})
+    monkeypatch.setattr(
+        te.router, "route_order", lambda *_: {"status": "error", "reason": "fail"}
+    )
     assert "router_error" in te.process_signal("AAPL", "BUY", 100)["reason"]
 
 
@@ -179,11 +187,15 @@ def test_reset_day_paths(base_config, portfolio, monkeypatch):
     assert te.reset_day()["status"] == "ok"
 
     # ✅ Error path via portfolio.reset_day
-    monkeypatch.setattr(te.portfolio, "reset_day", lambda: {"status": "error", "reason": "fail"})
+    monkeypatch.setattr(
+        te.portfolio, "reset_day", lambda: {"status": "error", "reason": "fail"}
+    )
     assert te.reset_day()["status"] == "error"
 
     # ✅ Error path via risk_manager.reset_day
-    monkeypatch.setattr(te.risk_manager, "reset_day", lambda: {"status": "error", "reason": "fail"})
+    monkeypatch.setattr(
+        te.risk_manager, "reset_day", lambda: {"status": "error", "reason": "fail"}
+    )
     assert te.reset_day()["status"] == "error"
 
 

@@ -14,14 +14,12 @@ Covers:
 """
 
 import math
-import pytest
 import statistics
 
 from hybrid_ai_trading.signals.bollinger_bands import (
     BollingerBandsSignal,
     bollinger_bands_signal,
 )
-
 
 
 # ----------------------------------------------------------------------
@@ -121,7 +119,9 @@ def test_wrapper_non_audit_and_audit():
     assert out in {"BUY", "SELL", "HOLD"}
 
     # Audit mode
-    decision, close, upper, lower = bollinger_bands_signal(bars, period=20, std_dev=2.0, audit=True)
+    decision, close, upper, lower = bollinger_bands_signal(
+        bars, period=20, std_dev=2.0, audit=True
+    )
     assert decision in {"BUY", "SELL", "HOLD"}
     assert isinstance(close, float)
     assert isinstance(upper, float)

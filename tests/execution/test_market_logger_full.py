@@ -19,7 +19,6 @@ Covers:
 import csv
 import logging
 import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,6 +31,7 @@ import hybrid_ai_trading.execution.market_logger as ml
 # ----------------------------------------------------------------------
 class FakeEvent(list):
     """Fake event handler supporting += operator like ib_insync.Event."""
+
     def __iadd__(self, other):
         self.append(other)
         return self
@@ -128,7 +128,9 @@ def test_start_logging_logtick_error(tmp_path, monkeypatch, caplog):
     real_writer = csv.writer
 
     class FlakyWriter:
-        def __init__(self, f): self._w = real_writer(f)
+        def __init__(self, f):
+            self._w = real_writer(f)
+
         def writerow(self, row):
             if "AAPL" in row:  # fail only on tick rows, not header
                 raise Exception("tick fail")
@@ -233,7 +235,9 @@ def test_shutdown_with_exceptions(monkeypatch, caplog):
     mlogger.ib = fake_ib
     mlogger.subscriptions = {"AAPL": fake_ticker}
 
-    caplog.set_level(logging.WARNING, logger="hybrid_ai_trading.execution.market_logger")
+    caplog.set_level(
+        logging.WARNING, logger="hybrid_ai_trading.execution.market_logger"
+    )
     mlogger.shutdown()
 
     assert "unsubscribe" in caplog.text or "disconnect" in caplog.text

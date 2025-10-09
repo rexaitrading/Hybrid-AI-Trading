@@ -1,7 +1,11 @@
+import os
+import threading
+import time
+
 from ibapi.client import EClient
-from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract
-import os, threading, time
+from ibapi.wrapper import EWrapper
+
 
 class App(EWrapper, EClient):
     def __init__(self):
@@ -11,14 +15,20 @@ class App(EWrapper, EClient):
     def nextValidId(self, orderId):
         print(f"✅ Connected. nextValidId={orderId}", flush=True)
         c = Contract()
-        c.symbol = "AAPL"; c.secType = "STK"; c.currency = "USD"
-        c.exchange = "SMART"; c.primaryExchange = "NASDAQ"
+        c.symbol = "AAPL"
+        c.secType = "STK"
+        c.currency = "USD"
+        c.exchange = "SMART"
+        c.primaryExchange = "NASDAQ"
         self.reqContractDetails(7001, c)
 
     def contractDetails(self, reqId, details):
         con = details.contract
-        print(f"📄 {con.symbol} conId={con.conId} exch={con.exchange} prim={con.primaryExchange} "
-              f"currency={con.currency} local={con.localSymbol}", flush=True)
+        print(
+            f"📄 {con.symbol} conId={con.conId} exch={con.exchange} prim={con.primaryExchange} "
+            f"currency={con.currency} local={con.localSymbol}",
+            flush=True,
+        )
 
     def contractDetailsEnd(self, reqId):
         print("— contractDetailsEnd —", flush=True)
@@ -31,14 +41,16 @@ class App(EWrapper, EClient):
     def connectionClosed(self):
         print("🔌 connectionClosed", flush=True)
 
+
 def main():
-    host = os.getenv("IB_HOST","127.0.0.1")
-    port = int(os.getenv("IB_PORT","4002"))
-    cid  = int(os.getenv("IB_CLIENT_ID","101"))
+    host = os.getenv("IB_HOST", "127.0.0.1")
+    port = int(os.getenv("IB_PORT", "4002"))
+    cid = int(os.getenv("IB_CLIENT_ID", "101"))
     app = App()
     print(f"Connecting to {host}:{port} clientId={cid} ...", flush=True)
     app.connect(host, port, cid)
-    t = threading.Thread(target=app.run, daemon=True); t.start()
+    t = threading.Thread(target=app.run, daemon=True)
+    t.start()
 
     # watchdog (no hangs)
     deadline = time.time() + 15
@@ -50,6 +62,7 @@ def main():
         time.sleep(0.2)
 
     print("Done.", flush=True)
+
 
 if __name__ == "__main__":
     main()

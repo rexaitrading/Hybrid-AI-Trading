@@ -1,9 +1,13 @@
+import os
+import threading
+import time
+
 from ibapi.client import EClient
-from ibapi.wrapper import EWrapper
 from ibapi.common import *
-import os, threading, time
+from ibapi.wrapper import EWrapper
 
 TAGS = "AccountType,NetLiquidation,TotalCashValue,AvailableFunds,BuyingPower,EquityWithLoanValue"
+
 
 class App(EWrapper, EClient):
     def __init__(self):
@@ -35,6 +39,7 @@ class App(EWrapper, EClient):
         print("🔌 connectionClosed", flush=True)
         self.stop_evt.set()
 
+
 def connect_and_run(app, host, port, cid):
     try:
         app.connect(host, port, cid)
@@ -43,16 +48,19 @@ def connect_and_run(app, host, port, cid):
         if not app.stop_evt.is_set():
             print(f"❌ Connect/run exception: {e}", flush=True)
 
+
 def main():
-    host = os.getenv("IB_HOST","127.0.0.1")
-    port = int(os.getenv("IB_PORT","4002"))
-    cid  = int(os.getenv("IB_CLIENT_ID","101"))
+    host = os.getenv("IB_HOST", "127.0.0.1")
+    port = int(os.getenv("IB_PORT", "4002"))
+    cid = int(os.getenv("IB_CLIENT_ID", "101"))
 
     app = App()
     print(f"Connecting to {host}:{port} clientId={cid} ...", flush=True)
 
     # start IB loop on background thread (prevents blocking hangs)
-    t = threading.Thread(target=connect_and_run, args=(app,host,port,cid), daemon=True)
+    t = threading.Thread(
+        target=connect_and_run, args=(app, host, port, cid), daemon=True
+    )
     t.start()
 
     # hard deadline so we never hang
@@ -67,6 +75,7 @@ def main():
         time.sleep(0.3)
 
     print("Done.", flush=True)
+
 
 if __name__ == "__main__":
     main()

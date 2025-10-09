@@ -10,16 +10,16 @@ Responsibilities:
 - Save audit logs + performance snapshot (JSON)
 """
 
-import sys
-import os
 import logging
+import os
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict
 
+import ccxt
 import pandas as pd
 import requests
-import ccxt
 
 # ---------------------------------------------------------------------
 # Ensure src/ is importable
@@ -37,6 +37,7 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
 )
 logger = logging.getLogger("QuantProBacktest")
+
 
 # ---------------------------------------------------------------------
 # Data Loaders
@@ -65,10 +66,13 @@ def load_data_ccxt(
     ex = getattr(ccxt, exchange)()
     since = int(pd.Timestamp(start).timestamp() * 1000)
     ohlcv = ex.fetch_ohlcv(symbol, timeframe="1d", since=since, limit=500)
-    df = pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])
+    df = pd.DataFrame(
+        ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"]
+    )
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
     df = df[df["timestamp"] <= pd.Timestamp(end)]
     return df[["timestamp", "close"]]
+
 
 # ---------------------------------------------------------------------
 # Main Backtest
