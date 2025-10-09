@@ -1,0 +1,19 @@
+timezone: America/Vancouver
+equities:
+  trading_window_pt:
+    - "05:00-11:00"
+  symbols: ["AAPL","MSFT","NVDA"]
+  lot_size: 1
+  max_risk_usd: 100.0
+  gatescore_min: 0.85
+  whatif: true
+loop:
+  poll_sec: 30
+  max_runtime_min: 240
+risk:
+  daily_loss_cap_pct: 1.0
+  kelly_fraction: 0.5
+control:
+  pause_file: "control/PAUSE"
+logging:
+  audit_jsonl: "logs/paper_trades.jsonl"

@@ -1,4 +1,4 @@
-﻿import os
+import os
 import pytest
 from unittest.mock import patch, MagicMock
 import requests
@@ -18,9 +18,7 @@ def _make_mock_response(status_code=200, json_data=None, text_data=None):
 @patch("requests.get")
 def test_polygon_api(mock_get, monkeypatch):
     monkeypatch.setenv("POLYGON_KEY", "FAKE_KEY")
-    mock_get.return_value = _make_mock_response(
-        200, {"status": "OK"}
-    )
+    mock_get.return_value = _make_mock_response(200, {"status": "OK"})
 
     key = os.getenv("POLYGON_KEY")
     url = f"https://api.polygon.io/v2/aggs/ticker/AAPL/prev?apiKey={key}"
@@ -47,10 +45,13 @@ def test_alpaca_api(mock_get, monkeypatch):
     mock_get.return_value = _make_mock_response(200, {"id": "account-id"})
 
     url = "https://paper-api.alpaca.markets/v2/account"
-    r = requests.get(url, headers={
-        "APCA-API-KEY-ID": os.getenv("ALPACA_KEY"),
-        "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET"),
-    })
+    r = requests.get(
+        url,
+        headers={
+            "APCA-API-KEY-ID": os.getenv("ALPACA_KEY"),
+            "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET"),
+        },
+    )
     assert r.status_code == 200
     assert "id" in r.json()
 

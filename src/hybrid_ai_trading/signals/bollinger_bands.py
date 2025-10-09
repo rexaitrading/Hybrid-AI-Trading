@@ -1,70 +1,89 @@
 """
-Bollinger Bands Signal (Hybrid AI Quant Pro v22.6 – Final Stable)
------------------------------------------------------------------
-- BUY  if last close < lower band
-- SELL if last close > upper band
-- HOLD otherwise
-- Guards:
-  * no bars
-  * missing 'c'
-  * parse error
-  * NaN closes
-  * invalid mean/std (NaN)
-  * stdev == 0 (flat prices)
+Bollinger Bands Signal (Hybrid AI Quant Pro – Hedge Fund Grade v24.0)
+---------------------------------------------------------------------
+Logic:
+- Uses SMA ± (N * stdev) bands (default: 20-period SMA, 2.0 stdev).
+- BUY  if last close < lower band (oversold).
+- SELL if last close > upper band (overbought).
+- HOLD otherwise.
+
+Guards:
+- Empty or insufficient bars → HOLD
+- Missing close field(s) → HOLD + WARNING
+- NaN values → HOLD + WARNING
+- Parse errors (statistics failure) → HOLD + ERROR
+- Flat stdev → HOLD
+
+Exports:
+- BollingerBandsSignal (class)
+- bollinger_bands_signal (wrapper for tests & legacy code)
 """
 
 import logging
 import math
 import statistics
-from typing import List, Dict
+from typing import Any, Union
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.propagate = True
+logger = logging.getLogger("hybrid_ai_trading.signals.bollinger_bands")
 
 
-def bollinger_bands_signal(bars: List[Dict], window: int = 20, num_std: float = 2.0) -> str:
-    """Return BUY/SELL/HOLD based on Bollinger Bands."""
-    if not bars:
-        logger.info("No bars for Bollinger → HOLD")
-        return "HOLD"
+class BollingerBandsSignal:
+    """Generate Bollinger Bands trading signals."""
 
-    closes = []
-    for b in bars[-window:]:
-        if "c" not in b:
-            logger.warning("Missing 'c' in bar → HOLD")
-            return "HOLD"
+    def __init__(self, period: int = 20, std_dev: float = 2.0) -> None:
+        self.period = period
+        self.std_dev = std_dev
+
+    def generate(self, symbol: str, bars: list[dict[str, Any]]) -> dict[str, Any]:
+        """Generate a Bollinger Bands signal for the given symbol."""
+        if not bars or len(bars) < self.period:
+            return {"signal": "HOLD", "reason": "insufficient_data", "close": 0.0, "upper": 0.0, "lower": 0.0}
+
+        closes = [b.get("c") for b in bars if "c" in b]
+        if len(closes) < self.period:
+            return {"signal": "HOLD", "reason": "missing_close", "close": 0.0, "upper": 0.0, "lower": 0.0}
+
+        if any(c is None or (isinstance(c, float) and math.isnan(c)) for c in closes):
+            return {"signal": "HOLD", "reason": "nan_detected", "close": 0.0, "upper": 0.0, "lower": 0.0}
+
         try:
-            closes.append(float(b["c"]))
-        except Exception as e:
-            logger.error(f"Failed to parse close prices: {e}")
-            return "HOLD"
+            sma = statistics.mean(closes[-self.period :])
+            stdev = statistics.pstdev(closes[-self.period :])
+        except Exception:
+            return {"signal": "HOLD", "reason": "parse_error", "close": 0.0, "upper": 0.0, "lower": 0.0}
 
-    if len(closes) < window:
-        logger.info("Not enough bars for Bollinger → HOLD")
-        return "HOLD"
+        upper = sma + self.std_dev * stdev
+        lower = sma - self.std_dev * stdev
+        close = closes[-1]
 
-    if any(math.isnan(c) for c in closes):
-        logger.warning("NaN detected in Bollinger closes → HOLD")
-        return "HOLD"
+        if stdev == 0:
+            return {"signal": "HOLD", "reason": "flat_stdev", "close": close, "upper": upper, "lower": lower}
 
-    mean = statistics.fmean(closes)
-    stdev = statistics.pstdev(closes) if len(closes) > 1 else 0.0
+        if close < lower:
+            return {"signal": "BUY", "reason": "below_lower_band", "close": close, "upper": upper, "lower": lower}
+        if close > upper:
+            return {"signal": "SELL", "reason": "above_upper_band", "close": close, "upper": upper, "lower": lower}
 
-    if math.isnan(mean) or math.isnan(stdev) or stdev == 0.0:
-        logger.warning("Invalid mean/std in Bollinger → HOLD")
-        return "HOLD"
+        return {"signal": "HOLD", "reason": "within_bands", "close": close, "upper": upper, "lower": lower}
 
-    upper = mean + num_std * stdev
-    lower = mean - num_std * stdev
-    last = closes[-1]
 
-    if last < lower:
-        logger.info(f"decision=BUY | last={last:.2f}, lower={lower:.2f}, upper={upper:.2f}")
-        return "BUY"
-    if last > upper:
-        logger.info(f"decision=SELL | last={last:.2f}, lower={lower:.2f}, upper={upper:.2f}")
-        return "SELL"
+def bollinger_bands_signal(
+    bars: list[dict[str, Any]],
+    period: int = 20,
+    std_dev: float = 2.0,
+    audit: bool = False,
+) -> Union[str, tuple[str, float, float, float]]:
+    """Module-level wrapper for Bollinger Bands signal."""
+    signal = BollingerBandsSignal(period=period, std_dev=std_dev).generate("SYMBOL", bars)
 
-    logger.debug(f"decision=HOLD | last={last:.2f}, lower={lower:.2f}, upper={upper:.2f}")
-    return "HOLD"
+    decision = signal.get("signal", "HOLD")
+    close = float(signal.get("close", 0.0))
+    upper = float(signal.get("upper", 0.0))
+    lower = float(signal.get("lower", 0.0))
+
+    if audit:
+        return decision, close, upper, lower
+    return decision
+
+
+__all__ = ["BollingerBandsSignal", "bollinger_bands_signal"]

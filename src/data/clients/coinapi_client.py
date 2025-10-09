@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime
+from datetime import timezone as tz
 from typing import Optional
+
 import requests
-from datetime import datetime, timezone as tz
+
 from src.config.settings import load_config
 
 # Explicit exports (but private helpers are still available for tests)
@@ -22,6 +25,7 @@ BASE = "https://rest.coinapi.io/v1"
 # ---------- Errors ----------
 class CoinAPIError(RuntimeError):
     """Raised for any CoinAPI-related error"""
+
     pass
 
 
@@ -66,14 +70,14 @@ def _retry_get(
                 return resp
 
             if resp.status_code in (429, 500, 502, 503, 504):
-                time.sleep(backoff * (2 ** i))
+                time.sleep(backoff * (2**i))
                 continue
 
             raise CoinAPIError(f"CoinAPI HTTP {resp.status_code}: {resp.text[:200]}")
 
         except Exception as e:
             last_err = e
-            time.sleep(backoff * (2 ** i))
+            time.sleep(backoff * (2**i))
 
     raise CoinAPIError(f"CoinAPI request failed after retries: {last_err}")
 
@@ -127,8 +131,7 @@ def get_ohlcv_latest(
             continue
 
     raise CoinAPIError(
-        f"OHLCV not found for {base}/{quote}. "
-        f"Tried: {', '.join(candidates)}; last error: {last_err}"
+        f"OHLCV not found for {base}/{quote}. " f"Tried: {', '.join(candidates)}; last error: {last_err}"
     )
 
 
@@ -138,4 +141,3 @@ def ping() -> bool:
         return True
     except Exception:
         return False
-

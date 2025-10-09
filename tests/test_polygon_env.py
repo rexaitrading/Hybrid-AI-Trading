@@ -1,35 +1,50 @@
-﻿import unittest
+"""
+Unit Tests: PolygonClient API Calls (Hybrid AI Quant Pro – Hedge-Fund Grade)
+----------------------------------------------------------------------------
+Covers:
+- prev_close(): success + failure
+- ping(): success + failure
+"""
+
+import pytest
 from unittest.mock import patch, MagicMock
-from src.data.clients.polygon_client import PolygonClient, PolygonAPIError
+from hybrid_ai_trading.data.clients.polygon_client import PolygonClient, PolygonAPIError
 
-class TestPolygonClient(unittest.TestCase):
 
-    @patch("src.data.clients.polygon_client.requests.get")
-    def test_prev_close_success(self, mock_get):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {"ticker": "AAPL", "results": [{"c": 150.0}]}
-        mock_resp.raise_for_status.return_value = None
-        mock_get.return_value = mock_resp
+@patch("hybrid_ai_trading.data.clients.polygon_client.requests.get")
+def test_prev_close_success(mock_get):
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"results": [{"c": 150.0}]}
+    mock_resp.raise_for_status.return_value = None
+    mock_get.return_value = mock_resp
 
-        client = PolygonClient()
-        data = client.prev_close("AAPL")
-        self.assertIn("results", data)
-        self.assertEqual(data["results"][0]["c"], 150.0)
+    client = PolygonClient(api_key="FAKE", allow_missing=True)
+    data = client.prev_close("AAPL")
+    assert "results" in data
+    assert data["results"][0]["c"] == 150.0
 
-    @patch("src.data.clients.polygon_client.requests.get")
-    def test_prev_close_failure(self, mock_get):
-        mock_resp = MagicMock()
-        mock_resp.raise_for_status.side_effect = Exception("API error")
-        mock_get.return_value = mock_resp
 
-        client = PolygonClient()
-        with self.assertRaises(PolygonAPIError):
-            client.prev_close("AAPL")
+@patch("hybrid_ai_trading.data.clients.polygon_client.requests.get")
+def test_prev_close_failure(mock_get):
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status.side_effect = Exception("API error")
+    mock_get.return_value = mock_resp
 
-    @patch("src.data.clients.polygon_client.PolygonClient.prev_close")
-    def test_ping_success(self, mock_prev):
-        mock_prev.return_value = {"results": [{"c": 150.0}]}  # ✅ properly closed
-        client = PolygonClient()
-        self.assertTrue(client.ping())
+    client = PolygonClient(api_key="FAKE", allow_missing=True)
+    with pytest.raises(PolygonAPIError):
+        client.prev_close("AAPL")
 
+
+@patch("hybrid_ai_trading.data.clients.polygon_client.PolygonClient.prev_close")
+def test_ping_success(mock_prev):
+    mock_prev.return_value = {"results": [{"c": 150.0}]}
+    client = PolygonClient(api_key="FAKE", allow_missing=True)
+    assert client.ping() is True
+
+
+@patch("hybrid_ai_trading.data.clients.polygon_client.PolygonClient.prev_close")
+def test_ping_failure(mock_prev):
+    mock_prev.side_effect = PolygonAPIError("down")
+    client = PolygonClient(api_key="FAKE", allow_missing=True)
+    assert client.ping() is False

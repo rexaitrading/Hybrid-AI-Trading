@@ -1,142 +1,127 @@
 """
-Breakout v1 Signal (Hybrid AI Quant Pro – v22.4 AAA Polished & 100% Coverage)
-------------------------------------------------------------------------------
-Rules:
-- BUY  if last close > prior rolling high
-- SELL if last close < prior rolling low
-- SELL priority if price == high == low (flat window)
-- HOLD if last close == rolling high or == rolling low (false breakout / retest)
-- HOLD if strictly inside range
-
-Guards:
-- No bars
-- Invalid window
-- Not enough bars
-- NaN values
-- Parse errors (ValueError, TypeError, RuntimeError)
-
-Audit Mode:
-- Returns tuple (decision, price, rolling_high, rolling_low)
-
-Wrapper breakout_signal:
-- bars=None → fetches via get_ohlcv_latest
-- Invalid bar format handled safely
-- Exception during fetch logged & returns HOLD
+BreakoutV1Signal (Hybrid AI Quant Pro v24.0 – Hedge-Fund Grade, Wrapper-Aligned)
+-------------------------------------------------------------------------------
+Logic:
+- BUY if last close > max(highs of previous N bars)
+- SELL if last close < min(lows of previous N bars)
+- HOLD otherwise
+- Tie case: last_close == high == low → SELL (risk-off bias)
+- Guards: insufficient bars, NaN detection, parse errors
+- Full audit mode with decision tuple
+- breakout_v1: pure functional wrapper for tests
+- breakout_signal: legacy wrapper with CoinAPI fetch
 """
 
+import json
 import logging
 import math
-from typing import List, Dict, Union, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+from hybrid_ai_trading.data.clients.coinapi_client import get_ohlcv_latest
 
-__all__ = ["get_ohlcv_latest", "breakout_v1", "breakout_signal"]
+logger = logging.getLogger("hybrid_ai_trading.signals.breakout_v1")
 
-# --------------------------------------------------------------------
-# Stub fetcher (monkeypatched in tests)
-# --------------------------------------------------------------------
-def get_ohlcv_latest(symbol: str, limit: int = 50) -> List[Dict]:
-    """Stub for OHLCV fetch (monkeypatched in tests)."""
-    logger.warning("⚠️ get_ohlcv_latest is a placeholder, returning empty list")
-    return []
 
-# --------------------------------------------------------------------
-# Core breakout detection
-# --------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# Internal Safe Getter
+# ----------------------------------------------------------------------
+def _safe_get(bar: Dict[str, Any], keys: List[str]) -> float:
+    """
+    Safely extract numeric values from a bar dict.
+    Prevents treating 0 as falsy and raises if all keys are missing/None.
+    """
+    for k in keys:
+        if k in bar and bar[k] is not None:
+            return float(bar[k])
+    raise ValueError(f"Missing required field(s): {keys}")
+
+
+class BreakoutV1Signal:
+    """Breakout strategy using CoinAPI OHLCV data."""
+
+    def __init__(self, window: int = 3) -> None:
+        self.window = window
+
+    def generate(
+        self,
+        symbol: str,
+        bars: List[Dict[str, Any]] | None = None,
+        audit: bool = False,
+    ) -> Union[str, Tuple[str, float, float, float]]:
+        """
+        Generate breakout trading signal.
+        Returns str by default, or tuple in audit mode.
+        """
+        try:
+            if bars is None:
+                bars = get_ohlcv_latest(symbol, period_id="1MIN", limit=self.window)
+        except Exception as e:
+            logger.error("❌ Failed to fetch bars for %s: %s", symbol, e)
+            self._log_decision(symbol, "HOLD", "wrapper_exception")
+            return "HOLD" if not audit else ("HOLD", 0.0, 0.0, 0.0)
+
+        if not bars or len(bars) < self.window:
+            self._log_decision(symbol, "HOLD", "insufficient_data")
+            return "HOLD" if not audit else ("HOLD", 0.0, 0.0, 0.0)
+
+        try:
+            closes = [_safe_get(b, ["c", "price_close"]) for b in bars]
+            highs = [_safe_get(b, ["h", "price_high"]) for b in bars]
+            lows = [_safe_get(b, ["l", "price_low"]) for b in bars]
+        except Exception as e:
+            logger.error("❌ Failed to parse bars for %s: %s", symbol, e)
+            self._log_decision(symbol, "HOLD", "invalid_data")
+            return "HOLD" if not audit else ("HOLD", 0.0, 0.0, 0.0)
+
+        if any(math.isnan(x) for x in closes + highs + lows):
+            logger.error("❌ NaN detected in bars for %s", symbol)
+            self._log_decision(symbol, "HOLD", "nan_detected")
+            return (
+                "HOLD"
+                if not audit
+                else ("HOLD", closes[-1], max(highs[:-1]), min(lows[:-1]))
+            )
+
+        last_close = closes[-1]
+        prev_high = max(highs[:-1])
+        prev_low = min(lows[:-1])
+
+        if last_close > prev_high:
+            decision, reason = "BUY", "breakout_up"
+        elif last_close < prev_low:
+            decision, reason = "SELL", "breakout_down"
+        elif last_close == prev_high == prev_low:
+            decision, reason = "SELL", "tie_case"
+        else:
+            decision, reason = "HOLD", "inside_range"
+
+        self._log_decision(symbol, decision, reason)
+
+        if audit:
+            return decision, last_close, prev_high, prev_low
+        return decision
+
+    def _log_decision(self, symbol: str, decision: str, reason: str) -> None:
+        """Log structured JSON decisions for auditing."""
+        payload = {"symbol": symbol, "decision": decision, "reason": reason}
+        logger.info(json.dumps(payload))
+
+
+# ----------------------------------------------------------------------
+# Wrappers
+# ----------------------------------------------------------------------
 def breakout_v1(
-    bars: List[Dict],
+    bars: List[Dict[str, Any]],
     window: int = 3,
-    audit: bool = False
+    audit: bool = False,
 ) -> Union[str, Tuple[str, float, float, float]]:
-    """Core breakout/breakdown detection logic with audit mode."""
+    """Functional wrapper for injected bars (unit tests, backtests)."""
+    return BreakoutV1Signal(window=window).generate(symbol="TEST", bars=bars, audit=audit)
 
-    # --- Guard: no bars ---
-    if not bars:
-        logger.info("No bars → HOLD")
-        return ("HOLD", math.nan, math.nan, math.nan) if audit else "HOLD"
 
-    # --- Guard: invalid window ---
-    if window <= 0:
-        logger.info("Invalid window → HOLD")
-        return ("HOLD", math.nan, math.nan, math.nan) if audit else "HOLD"
+def breakout_signal(symbol: str, window: int = 3) -> str:
+    """Legacy wrapper for pipelines with live data fetch."""
+    return BreakoutV1Signal(window=window).generate(symbol)
 
-    # --- Guard: not enough bars ---
-    if len(bars) < window:
-        logger.info("Not enough bars → HOLD")
-        return ("HOLD", math.nan, math.nan, math.nan) if audit else "HOLD"
 
-    # --- Parse closes ---
-    try:
-        closes = [float(b.get("c", math.nan)) for b in bars]
-    except Exception as e:
-        logger.error(f"❌ Failed to parse close prices: {e}")
-        return ("HOLD", math.nan, math.nan, math.nan) if audit else "HOLD"
-
-    price = closes[-1]
-
-    # --- Edge case: window=1 ---
-    if window == 1:
-        logger.info("Window=1 edge case → HOLD")
-        return ("HOLD", price, math.nan, math.nan) if audit else "HOLD"
-
-    prior_closes = closes[-window:-1]  # exclude last bar
-    rolling_high = max(prior_closes)
-    rolling_low = min(prior_closes)
-
-    # --- NaN check ---
-    if any(math.isnan(v) for v in [price, rolling_high, rolling_low]):
-        logger.warning("⚠️ NaN detected in values → HOLD")
-        return ("HOLD", price, rolling_high, rolling_low) if audit else "HOLD"
-
-    # --- Decision rules ---
-    if price == rolling_high == rolling_low:
-        decision = "SELL"
-        logger.info(f"Tie case → SELL (price={price})")
-    elif price < rolling_low:
-        decision = "SELL"
-        logger.info(f"Breakdown SELL {price:.2f} < {rolling_low:.2f}")
-    elif price > rolling_high:
-        decision = "BUY"
-        logger.info(f"Breakout BUY {price:.2f} > {rolling_high:.2f}")
-    elif price == rolling_low or price == rolling_high:
-        decision = "HOLD"
-        logger.info(f"Retest HOLD @ {price:.2f}")
-    else:
-        decision = "HOLD"
-        logger.debug(
-            f"Inside range HOLD | Low={rolling_low:.2f}, Price={price:.2f}, High={rolling_high:.2f}"
-        )
-
-    return (decision, price, rolling_high, rolling_low) if audit else decision
-
-# --------------------------------------------------------------------
-# Wrapper
-# --------------------------------------------------------------------
-def breakout_signal(symbol: str, bars: List[Dict] = None) -> str:
-    """Production/demo wrapper for breakout_v1."""
-    if bars is None:
-        try:
-            bars = get_ohlcv_latest(symbol, limit=50)
-        except Exception as e:
-            logger.error(f"❌ Data fetch failed: {e}")
-            return "HOLD"
-
-    if not bars:
-        return "HOLD"
-
-    converted: List[Dict[str, float]] = []
-    for b in bars:
-        try:
-            if "c" in b:
-                converted.append({"c": float(b["c"])})
-            elif "price_close" in b:
-                converted.append({"c": float(b["price_close"])})
-            else:
-                logger.error("❌ Invalid bar format in breakout_signal")
-                return "HOLD"
-        except Exception as e:
-            logger.error(f"❌ Error parsing bar {b}: {e}")
-            return "HOLD"
-
-    return breakout_v1(converted, window=3, audit=False)
+__all__ = ["BreakoutV1Signal", "breakout_v1", "breakout_signal"]

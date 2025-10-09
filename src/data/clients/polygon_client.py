@@ -1,10 +1,14 @@
 ﻿# src/data/clients/polygon_client.py
 import requests
+
 from src.config.settings import load_config
+
 
 class PolygonAPIError(RuntimeError):
     """Raised when Polygon API call fails"""
+
     pass
+
 
 class PolygonClient:
     def __init__(self):

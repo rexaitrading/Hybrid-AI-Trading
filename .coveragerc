@@ -1,0 +1,24 @@
+[run]
+branch = True
+source =
+    src
+    src/hybrid_ai_trading
+omit =
+    */.venv/*
+    */venv/*
+    */tests/*
+    */scripts/*
+    */research-env/*
+    */site-packages/*
+    */__pycache__/*
+
+[report]
+show_missing = True
+skip_covered = False
+precision = 2
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+
+[html]
+directory = htmlcov

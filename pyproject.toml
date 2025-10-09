@@ -2,7 +2,7 @@
 # Build System
 # ===============================
 [build-system]
-requires = ["setuptools>=42"]
+requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 # ===============================
@@ -16,7 +16,6 @@ python_classes = "Test*"
 python_functions = "test_*"
 pythonpath = ["src"]
 
-# --- Global Options ---
 addopts = [
     "--maxfail=1",
     "--disable-warnings",
@@ -25,6 +24,7 @@ addopts = [
     "--cov-branch",
     "--cov-report=term-missing",
     "--cov-report=html",
+    "--cov-report=xml",
     "--cov-fail-under=95",
     "-ra",
     "-q",
@@ -49,19 +49,18 @@ skip_covered = false
 fail_under = 95
 precision = 2
 
-# --- Path Mapping (local vs venv) ---
 [tool.coverage.paths]
 source = [
     "src/hybrid_ai_trading",
     "*/site-packages/hybrid_ai_trading"
 ]
 
-# --- Per-Module Enforcement ---
+# Per-module enforcement
 [tool.coverage.fail_under]
-"hybrid_ai_trading.pipelines.backtest" = 100
 "hybrid_ai_trading.risk.*" = 100
 "hybrid_ai_trading.execution.*" = 100
 "hybrid_ai_trading.trade_engine" = 100
+"hybrid_ai_trading.pipelines.backtest" = 100
 
 # ===============================
 # Warnings Handling
@@ -82,7 +81,8 @@ markers = [
     "db: tests that require database/SQLAlchemy",
     "perf: performance/stress tests",
     "trading: strategy/trading logic tests",
-    "risk: risk management tests"
+    "risk: risk management tests",
+    "style: lint/style checks (flake8, black, isort)"
 ]
 
 # ===============================
@@ -97,3 +97,29 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+# ===============================
+# Flake8 (Strict Hedge-Fund Style)
+# ===============================
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [".git", "__pycache__", "build", "dist", ".venv"]
+max-complexity = 10
+select = ["E", "F", "W", "C90"]
+
+# ===============================
+# Black (Auto Formatter)
+# ===============================
+[tool.black]
+line-length = 88
+target-version = ['py310', 'py311', 'py312']
+skip-string-normalization = false
+
+# ===============================
+# isort (Import Sorting)
+# ===============================
+[tool.isort]
+profile = "black"
+line_length = 88
+src_paths = ["src", "tests"]

@@ -1,3 +1,4 @@
+﻿from __future__ import annotations
 """
 Kraken Client (Hybrid AI Quant Pro v1.3 - Explicit Key Resolution)
 ------------------------------------------------------------------
@@ -6,10 +7,11 @@ Kraken Client (Hybrid AI Quant Pro v1.3 - Explicit Key Resolution)
 - Exports _resolve_keyfile for tests
 """
 
-from __future__ import annotations
-import os, json, argparse
+import os
+import json
+import argparse
 import ccxt
-from typing import Optional, List
+from typing import Optional
 
 
 __all__ = ["_resolve_keyfile", "load_client"]
