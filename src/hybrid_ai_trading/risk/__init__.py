@@ -1,28 +1,32 @@
-"""
-Risk Package (Hybrid AI Quant Pro ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge Fund Grade, Polished)
----------------------------------------------------------------
-Centralized exports for risk governance modules.
-
-Responsibilities:
-- Provide unified imports for all risk management components.
-- Avoid circular imports by only exposing stable, finalized classes.
-- Ensure hedge-fund-grade quality across all risk layers.
+﻿"""
+hybrid_ai_trading.risk package
+- Lazy exports to avoid import-time cycles & side-effects
+- No eager imports (esp. patch_api)
 """
 
-from .black_swan_guard import BlackSwanGuard
-from .kelly_sizer import KellySizer
-from .regime_detector import RegimeDetector
-from .risk_manager import RiskManager
-from .sentiment_filter import SentimentFilter
+def get_RiskManager():
+    """
+    Lazy accessor to avoid import-time loops.
 
-__all__ = [
-    "RiskManager",
-    "KellySizer",
-    "BlackSwanGuard",
-    "SentimentFilter",
-    "RegimeDetector",
-]
+    Usage:
+        from hybrid_ai_trading.risk import get_RiskManager
+        RiskManager = get_RiskManager()
+    """
+    from .risk_manager import RiskManager as _RM
+    return _RM
 
-from . import patch_api  # compat: add missing RiskManager API
-from . import patch_exposure  # compat: portfolio exposure guard
-from . import patch_kwargs  # ensure RiskManager ctor accepts legacy kwargs
+def __getattr__(name):
+    # PEP 562: lazy attribute access for top-level symbols
+    if name == "RiskManager":
+        from .risk_manager import RiskManager
+        return RiskManager
+    # Optionally: fallback to submodules (GateScore, SentimentFilter, etc.)
+    # Only import on demand; keep this very lightweight.
+    try:
+        import importlib
+        mod = importlib.import_module(f"{__name__}.{name}")
+        return mod
+    except Exception as _e:
+        raise AttributeError(name)
+
+__all__ = ["get_RiskManager", "RiskManager"]

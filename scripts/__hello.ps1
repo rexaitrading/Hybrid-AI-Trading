@@ -1,1 +1,1 @@
-﻿Write-Host 'hello from __hello.ps1'
+﻿Write-Host "__hello.ps1 ran from: $((Get-Location).Path)" -ForegroundColor Cyan

@@ -1,4 +1,4 @@
-﻿name: Performance Tests
+name: Performance Tests
 
 on:
   workflow_dispatch:        # ✅ Manual trigger

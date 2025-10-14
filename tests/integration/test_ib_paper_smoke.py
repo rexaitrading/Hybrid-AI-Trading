@@ -1,4 +1,6 @@
 import datetime as dt
+import warnings
+warnings.filterwarnings('ignore', message='usefixtures\\(\\).*has no effect')
 import os
 import time
 
