@@ -7,6 +7,7 @@ Fetch Polygon bars, grade breakouts, export CSV+JSON, optionally place IBKR brac
 import csv
 import json
 import logging
+logger = logging.getLogger(__name__)
 import os
 from datetime import datetime, timedelta
 from pathlib import Path

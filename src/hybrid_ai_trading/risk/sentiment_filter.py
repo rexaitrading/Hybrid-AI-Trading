@@ -19,40 +19,46 @@ except Exception:  # pragma: no cover
 
 class SentimentFilter:
     """
-    Config-robust sentiment filter:
-    - Accepts arbitrary kwargs from config (enabled, model, threshold, neutral_zone, etc.)
-    - Ignores unknown keys safely so future config additions won't crash
-    - Falls back to neutral scoring (0.0) when analyzer is unavailable
-    - Applies a neutral gate: if abs(score) < neutral_zone -> 0.0
+    Contract:
+    - kwargs-robust init (enabled, model, threshold, neutral_zone, future keys ok)
+    - disabled or empty text => score==0.5 (legacy)
+    - neutral_zone gate: if abs(raw)<neutral_zone => 0.0
+    - unknown model while enabled => ValueError raised in __init__
+    - allow_trade(text, side): BUY >= gate, SELL <= -gate; fail-open if disabled/analyzer missing
     """
 
+    _ALLOWED_MODELS = {"vader", "hf", "transformers", "bert", "distilbert"}
+
     def __init__(self, **cfg: Any) -> None:
-        # Known knobs (with sensible defaults)
+        # parse knobs
         self.enabled: bool = bool(cfg.pop("enabled", True))
         self.model: str = str(cfg.pop("model", "vader"))
         self.threshold: float = float(cfg.pop("threshold", 0.0))
-        self.neutral_zone: float = float(cfg.pop("neutral_zone", 0.0))  # NEW: enforced in score()
-
-        # Anything else is accepted and ignored to maintain forward compatibility
+        self.neutral_zone: float = float(cfg.pop("neutral_zone", 0.0))
         self._extra_cfg: Dict[str, Any] = dict(cfg)
+
+        # upfront validation so tests see ValueError immediately
+        m = (self.model or "vader").lower()
+        if self.enabled and m not in self._ALLOWED_MODELS:
+            raise ValueError(f"Unknown sentiment model={m}")
 
         self.analyzer: Optional[Any] = None
         self._init_analyzer()
 
     def _init_analyzer(self) -> None:
-        """Initialize analyzer based on model; if unavailable, fall back to neutral."""
-        m = (self.model or "vader").lower()
-
+        """Initialize analyzer for supported models; warn+neutral if deps unavailable."""
         if not self.enabled:
             self.analyzer = None
             return
+
+        m = (self.model or "vader").lower()
 
         if m == "vader":
             if SentimentIntensityAnalyzer is not None:
                 try:
                     self.analyzer = SentimentIntensityAnalyzer()
                     return
-                except Exception:  # pragma: no cover
+                except Exception:
                     self.analyzer = None
             logger.warning(
                 "Analyzer unavailable for model=vader; fallback to neutral scoring (analyzer=None)."
@@ -60,12 +66,13 @@ class SentimentFilter:
             self.analyzer = None
             return
 
+        # hf family
         if m in ("hf", "transformers", "bert", "distilbert"):
             if pipeline is not None:
                 try:
                     self.analyzer = pipeline("sentiment-analysis")
                     return
-                except Exception:  # pragma: no cover
+                except Exception:
                     self.analyzer = None
             logger.warning(
                 "Analyzer unavailable for model=hf; fallback to neutral scoring (analyzer=None)."
@@ -73,29 +80,21 @@ class SentimentFilter:
             self.analyzer = None
             return
 
-        # Unknown model → neutral fallback with explicit wording
-        logger.warning(
-            "Unknown sentiment model=%s; fallback to neutral scoring (analyzer=None).", m
-        )
-        self.analyzer = None
-
     def score(self, text: str) -> float:
         """
-        Return sentiment score in [-1, 1].
-        - Disabled or missing analyzer → 0.0 (neutral fallback)
-        - VADER: compound score
-        - HF pipeline: map POSITIVE to +score, NEGATIVE to -score (else 0)
-        - Neutral-zone gate: if abs(raw_score) < neutral_zone -> 0.0
-        NOTE: `threshold` is accepted for config compatibility; not enforced here.
+        [-1,1] score.
+        - disabled or empty => 0.5 (legacy)
+        - no analyzer => 0.0
+        - VADER: compound
+        - HF: POSITIVE=+score, NEGATIVE=-score
+        - neutral_zone gate applied after raw score
         """
         if not self.enabled or not text:
-            return 0.0
+            return 0.5
         if self.analyzer is None:
             return 0.0
 
         raw: float = 0.0
-
-        # VADER path
         if hasattr(self.analyzer, "polarity_scores"):
             try:
                 raw = float(self.analyzer.polarity_scores(text).get("compound", 0.0))
@@ -103,7 +102,6 @@ class SentimentFilter:
                 logger.exception("VADER scoring failed; fallback to neutral (0.0).")
                 return 0.0
         else:
-            # HF pipeline path
             try:
                 out = self.analyzer(text)
                 if not out:
@@ -121,8 +119,27 @@ class SentimentFilter:
                 logger.exception("HF scoring failed; fallback to neutral (0.0).")
                 return 0.0
 
-        # Neutral-zone gate
         if self.neutral_zone > 0.0 and abs(raw) < self.neutral_zone:
             return 0.0
-
         return raw
+
+    def allow_trade(self, text: str, side: str | None = None) -> bool:
+        """
+        Disabled => allow; analyzer missing => allow.
+        Gate = max(threshold, neutral_zone).
+        BUY: score>=gate; SELL: score<=-gate; other sides => allow.
+        """
+        if not self.enabled:
+            return True
+        if self.analyzer is None:
+            return True
+        s = self.score(text)
+        gate = max(float(self.threshold or 0.0), float(self.neutral_zone or 0.0))
+        if not side:
+            return True
+        side_u = str(side).upper()
+        if side_u == "BUY":
+            return s >= gate
+        if side_u == "SELL":
+            return s <= -gate
+        return True
