@@ -35,9 +35,9 @@ class ExecutionEngine:
         self.dry_run = dry_run
         self.config = config or {}
 
-        
-        
-        
+
+
+
         # central validation (raises on bad config)
         self.config = validate_config(self.config)
 # ---- config-level guard: validate sentiment.model early

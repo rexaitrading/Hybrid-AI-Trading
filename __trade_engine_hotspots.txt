@@ -1,0 +1,64 @@
+ 230:             return {"status": "ignored", "reason": "hold_signal"}
+ 231:         if price is None or price <= 0:
+ 232:             return {"status": "rejected", "reason": "invalid_price"}
+ 233: 
+ 234:         # --- Guardrails
+ 235:         if self.portfolio.equity <= 0:
+ 236:             return {"status": "blocked", "reason": "equity_depleted"}
+ 237:         if signal in {"BUY", "SELL"} and self._sector_exposure_breach(symbol):
+ 238:             return {"status": "blocked", "reason": "sector_exposure"}
+ 239:         if signal in {"BUY", "SELL"} and self._hedge_trigger(symbol):
+ 240:             return {"status": "blocked", "reason": "hedge_rule"}
+ 241:         if self.portfolio and getattr(self.portfolio, "history", []):
+ 242:             try:
+ 243:                 start_equity = self.portfolio.history[0][1]
+ 244:                 drawdown = 1 - (self.portfolio.equity / max(start_equity, 1))
+ 245:                 if drawdown > self.config.get("risk", {}).get("max_drawdown", 0.5):
+ 246:                     return {"status": "blocked", "reason": "drawdown_breach"}
+ 247:             except Exception:
+ 248:                 pass
+ 249: 
+ 250:         # --- Kelly
+ 251:         if size is None:
+ 252:             try:
+ 253:                 raw = self.kelly_sizer.size_position(self.portfolio.equity, price)
+ 254:                 size = int(raw["size"]) if isinstance(raw, dict) else int(raw)
+ 255:                 size = max(1, size)
+ 256:             except Exception:
+ 257:                 size = 1
+ 258: 
+ 259:         # --- Algo Routing
+ 260:         if algo:
+ 296:                     "reason": f"router_error:{result.get('reason','unknown')}",
+ 297:                 }
+ 298: 
+ 299:         # --- Regime OVERRIDE
+ 300:         if not self.regime_enabled:
+ 301:             return {"status": "filled", "reason": "regime_disabled"}
+ 302: 
+ 303:         # --- Filters BEFORE performance
+ 304:         try:
+ 305:             if not self.sentiment_filter.allow_trade(symbol, signal, price):
+ 306:                 return {"status": "blocked", "reason": "sentiment_veto"}
+ 320:             ).get("sharpe_min", -1.0):
+ 321:                 return {"status": "blocked", "reason": "sharpe_breach"}
+ 322:             if self.performance_tracker.sortino_ratio() < self.config.get(
+ 323:                 "risk", {}
+ 324:             ).get("sortino_min", -1.0):
+ 325:                 return {"status": "blocked", "reason": "sortino_breach"}
+ 326:         except Exception:
+ 327:             pass
+ 328: 
+ 329:         # --- Normalize
+ 330:         allowed = {"filled", "blocked", "ignored", "rejected", "ok", "pending", "error"}
+ 332:             return {"status": "rejected", "reason": "invalid_status"}
+ 333: 
+ 334:         if result.get("status") == "ok":
+ 335:             result["status"] = "filled"
+ 336:         if result.get("reason") == "ok":
+ 337:             result["reason"] = "normalized_ok"
+ 338: 
+ 339:         try:
+ 340:             row = [
+ 341:                 os.times().elapsed,
+ 342:                 symbol,

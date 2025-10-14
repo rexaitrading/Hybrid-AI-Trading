@@ -1,0 +1,55 @@
+﻿ 172:     def reset_day(self) -> Dict[str, Any]:
+ 173:         try:
+ 174:             port_status = {"status": "ok"}
+ 175:             if hasattr(self.portfolio, "reset_day"):
+ 176:                 try:
+ 177:                     port_status = self.portfolio.reset_day()
+ 178:                 except Exception as e:
+ 179:                     return {"status": "error", "reason": f"portfolio_reset_failed:{e}"}
+ 180: 
+ 181:             risk_status = {"status": "ok"}
+ 182:             if hasattr(self.risk_manager, "reset_day"):
+ 183:                 try:
+ 184:                     risk_status = self.risk_manager.reset_day()
+ 185:                 except Exception as e:
+ 186:                     return {"status": "error", "reason": f"risk_reset_failed:{e}"}
+ 187: 
+ 188:             if (
+ 200:     def adaptive_fraction(self) -> float:
+ 201:         try:
+ 202:             if not self.portfolio or not getattr(self.portfolio, "history", []):
+ 203:                 return self.base_fraction
+ 204:             if self.portfolio.equity <= 0:
+ 205:                 return self.base_fraction
+ 206:             peak = max(eq for _, eq in self.portfolio.history)
+ 207:             if peak <= 0:
+ 208:                 return self.base_fraction
+ 209:             frac = self.base_fraction * (self.portfolio.equity / peak)
+ 210:             return max(0.0, min(self.base_fraction, frac))
+ 211:         except Exception:
+ 212:             return self.base_fraction
+ 241:         if self.portfolio and getattr(self.portfolio, "history", []):
+ 242:             try:
+ 243:                 start_equity = self.portfolio.history[0][1]
+ 244:                 drawdown = 1 - (self.portfolio.equity / max(start_equity, 1))
+ 245:                 if drawdown > self.config.get("risk", {}).get("max_drawdown", 0.5):
+ 246:                     return {"status": "blocked", "reason": "drawdown_breach"}
+ 247:             except Exception:
+ 248:                 pass
+ 249: 
+ 250:         # --- Kelly
+ 251:         if size is None:
+ 252:             try:
+ 253:                 raw = self.kelly_sizer.size_position(self.portfolio.equity, price)
+ 254:                 size = int(raw["size"]) if isinstance(raw, dict) else int(raw)
+ 255:                 size = max(1, size)
+ 256:             except Exception:
+ 257:                 size = 1
+ 301:             return {"status": "filled", "reason": "regime_disabled"}
+ 325:                 return {"status": "blocked", "reason": "sortino_breach"}
+ 334:         if result.get("status") == "ok":
+ 335:             result["status"] = "filled"
+ 336:         if result.get("reason") == "ok":
+ 337:             result["reason"] = "normalized_ok"
+ 338: 
+ 339:         try:

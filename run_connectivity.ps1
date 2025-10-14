@@ -1,4 +1,4 @@
-﻿# ===========================
+# ===========================
 # Hedge-Fund OE Connectivity Runner (Bot Token first, webhook opt-in)
 # ===========================
 $ErrorActionPreference = "Stop"

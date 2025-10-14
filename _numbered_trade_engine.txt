@@ -1,0 +1,387 @@
+﻿   1: """
+   2: Trade Engine (Hybrid AI Quant Pro v17.5 â€“ Hedge Fund Grade, Loop-Proof Normalized)
+   3: ---------------------------------------------------------------------------------
+   4: - Guardrails BEFORE routing: equity â†’ sector â†’ hedge â†’ drawdown
+   5: - Router normalized BEFORE regime/filters/performance
+   6: - Regime-disabled overrides Sharpe/Sortino âœ…
+   7: - Sentiment BEFORE GateScore BEFORE Sharpe/Sortino âœ…
+   8: - Kelly config sanitized (drops "enabled")
+   9: - Audit logging always creates files
+  10: - alert() implemented for Slack/Telegram/Email
+  11: - record_trade_outcome added âœ…
+  12: - reset_day patched with safe fallback âœ…
+  13: - ðŸ”‘ Final normalization: "ok" â†’ "filled" for both status and reason
+  14: - ðŸ”’ FIX: unknown algo now returns early as rejected (no normalization overwrite)
+  15: """
+  16: 
+  17: import csv
+  18: import importlib
+  19: import logging
+  20: import os
+  21: import smtplib
+  22: from typing import Any, Dict, List, Optional
+  23: 
+  24: import requests
+  25: 
+  26: from hybrid_ai_trading.execution.order_manager import OrderManager
+  27: from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
+  28: from hybrid_ai_trading.execution.smart_router import SmartOrderRouter
+  29: from hybrid_ai_trading.performance_tracker import PerformanceTracker
+  30: from hybrid_ai_trading.risk.gatescore import GateScore
+  31: from hybrid_ai_trading.risk.kelly_sizer import KellySizer
+  32: from hybrid_ai_trading.risk.regime_detector import RegimeDetector
+  33: from hybrid_ai_trading.risk.risk_manager import RiskManager
+  34: from hybrid_ai_trading.risk.sentiment_filter import SentimentFilter
+  35: 
+  36: logger = logging.getLogger(__name__)
+  37: 
+  38: 
+  39: class TradeEngine:
+  40:     def __init__(
+  41:         self,
+  42:         config: Dict[str, Any],
+  43:         portfolio: Optional[PortfolioTracker] = None,
+  44:         brokers: Optional[Dict[str, Any]] = None,
+  45:     ) -> None:
+  46:         self.config = config or {}
+  47:         self.mode = self.config.get("mode", "paper")
+  48:         self.portfolio = portfolio or PortfolioTracker(
+  49:             self.config.get("risk", {}).get("equity", 100000.0)
+  50:         )
+  51: 
+  52:         # Audit logs
+  53:         self.audit_log = self.config.get("audit_log_path", "audit.csv")
+  54:         self.backup_log = self.config.get("backup_log_path", "backup.csv")
+  55: 
+  56:         # Risk Manager
+  57:         risk_cfg = self.config.get("risk", {})
+  58:         self.risk_manager = RiskManager(
+  59:             daily_loss_limit=risk_cfg.get("max_daily_loss", -0.03),
+  60:             trade_loss_limit=risk_cfg.get("max_position_risk", -0.01),
+  61:             max_leverage=risk_cfg.get("max_leverage", 5.0),
+  62:             equity=risk_cfg.get("equity", 100000.0),
+  63:             max_portfolio_exposure=risk_cfg.get("max_portfolio_exposure", 0.5),
+  64:             portfolio=self.portfolio,
+  65:         )
+  66: 
+  67:         # Kelly config sanitize
+  68:         kelly_cfg = dict(risk_cfg.get("kelly", {}))
+  69:         kelly_cfg.pop("enabled", None)
+  70:         if not kelly_cfg:
+  71:             kelly_cfg = {"win_rate": 0.5, "payoff": 1.0, "fraction": 1.0}
+  72:         self.kelly_sizer = KellySizer(**kelly_cfg)
+  73:         self.base_fraction = kelly_cfg.get("fraction", 1.0)
+  74: 
+  75:         self.sentiment_filter = SentimentFilter(**self.config.get("sentiment", {}))
+  76:         self.gatescore = GateScore(**self.config.get("gatescore", {}))
+  77: 
+  78:         self.regime_enabled = self.config.get("regime", {}).get("enabled", True)
+  79:         self.regime_detector = (
+  80:             RegimeDetector(**self.config.get("regime", {}))
+  81:             if self.regime_enabled
+  82:             else None
+  83:         )
+  84: 
+  85:         self.performance_tracker = PerformanceTracker(window=50)
+  86: 
+  87:         # Execution
+  88:         self.order_manager = OrderManager(
+  89:             self.risk_manager,
+  90:             self.portfolio,
+  91:             dry_run=self.mode != "live",
+  92:             costs=self.config.get("costs", {}),
+  93:             use_paper_simulator=self.config.get("use_paper_simulator", False),
+  94:         )
+  95:         self.router = SmartOrderRouter(
+  96:             brokers or {"alpaca": self.order_manager}, self.config.get("execution", {})
+  97:         )
+  98: 
+  99:     # ------------------------------------------------------------------
+ 100:     def _fire_alert(self, message: str) -> None:
+ 101:         try:
+ 102:             self.router._send_alert(f"Router error: {message}")
+ 103:         except Exception:
+ 104:             logger.error("Router alert dispatch failed: %s", message)
+ 105: 
+ 106:     def alert(self, message: str) -> Dict[str, Any]:
+ 107:         results = {}
+ 108:         try:
+ 109:             slack_url = os.getenv(
+ 110:                 self.config.get("alerts", {}).get("slack_webhook_env", ""), ""
+ 111:             )
+ 112:             if slack_url:
+ 113:                 r = requests.post(slack_url, json={"text": message})
+ 114:                 results["slack"] = r.status_code
+ 115:         except Exception as e:
+ 116:             results["slack"] = "error"
+ 117:             logger.error("Slack alert failed: %s", e)
+ 118: 
+ 119:         try:
+ 120:             tg_bot = os.getenv(
+ 121:                 self.config.get("alerts", {}).get("telegram_bot_env", ""), ""
+ 122:             )
+ 123:             tg_chat = os.getenv(
+ 124:                 self.config.get("alerts", {}).get("telegram_chat_id_env", ""), ""
+ 125:             )
+ 126:             if tg_bot and tg_chat:
+ 127:                 url = f"https://api.telegram.org/bot{tg_bot}/sendMessage"
+ 128:                 r = requests.get(url, params={"chat_id": tg_chat, "text": message})
+ 129:                 results["telegram"] = r.status_code
+ 130:         except Exception as e:
+ 131:             results["telegram"] = "error"
+ 132:             logger.error("Telegram alert failed: %s", e)
+ 133: 
+ 134:         try:
+ 135:             email_to = os.getenv(self.config.get("alerts", {}).get("email_env", ""), "")
+ 136:             if email_to:
+ 137:                 with smtplib.SMTP("localhost") as smtp:
+ 138:                     smtp.send_message(f"Subject: Alert\n\n{message}")
+ 139:                 results["email"] = "sent"
+ 140:         except Exception as e:
+ 141:             results["email"] = "error"
+ 142:             logger.error("Email alert failed: %s", e)
+ 143: 
+ 144:         return results or {"status": "no_alerts"}
+ 145: 
+ 146:     # ------------------------------------------------------------------
+ 147:     def _write_audit(self, row: List[Any]) -> None:
+ 148:         for path in [self.audit_log, self.backup_log]:
+ 149:             try:
+ 150:                 os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+ 151:                 exists = os.path.exists(path)
+ 152:                 with open(path, "a", newline="") as f:
+ 153:                     w = csv.writer(f)
+ 154:                     if not exists:
+ 155:                         w.writerow(
+ 156:                             [
+ 157:                                 "time",
+ 158:                                 "symbol",
+ 159:                                 "side",
+ 160:                                 "size",
+ 161:                                 "price",
+ 162:                                 "status",
+ 163:                                 "equity",
+ 164:                                 "reason",
+ 165:                             ]
+ 166:                         )
+ 167:                     w.writerow(row)
+ 168:             except Exception as e:
+ 169:                 logger.error("Audit write failed (%s): %s", path, e)
+ 170: 
+ 171:     # ------------------------------------------------------------------
+ 172:     def reset_day(self) -> Dict[str, Any]:
+ 173:         try:
+ 174:             port_status = {"status": "ok"}
+ 175:             if hasattr(self.portfolio, "reset_day"):
+ 176:                 try:
+ 177:                     port_status = self.portfolio.reset_day()
+ 178:                 except Exception as e:
+ 179:                     return {"status": "error", "reason": f"portfolio_reset_failed:{e}"}
+ 180: 
+ 181:             risk_status = {"status": "ok"}
+ 182:             if hasattr(self.risk_manager, "reset_day"):
+ 183:                 try:
+ 184:                     risk_status = self.risk_manager.reset_day()
+ 185:                 except Exception as e:
+ 186:                     return {"status": "error", "reason": f"risk_reset_failed:{e}"}
+ 187: 
+ 188:             if (
+ 189:                 port_status.get("status") == "error"
+ 190:                 or risk_status.get("status") == "error"
+ 191:             ):
+ 192:                 return {
+ 193:                     "status": "error",
+ 194:                     "reason": f"Portfolio={port_status}, Risk={risk_status}",
+ 195:                 }
+ 196:             return {"status": "ok", "reason": "Daily reset complete"}
+ 197:         except Exception as e:
+ 198:             return {"status": "error", "reason": str(e)}
+ 199: 
+ 200:     def adaptive_fraction(self) -> float:
+ 201:         try:
+ 202:             if not self.portfolio or not getattr(self.portfolio, "history", []):
+ 203:                 return self.base_fraction
+ 204:             if self.portfolio.equity <= 0:
+ 205:                 return self.base_fraction
+ 206:             peak = max(eq for _, eq in self.portfolio.history)
+ 207:             if peak <= 0:
+ 208:                 return self.base_fraction
+ 209:             frac = self.base_fraction * (self.portfolio.equity / peak)
+ 210:             return max(0.0, min(self.base_fraction, frac))
+ 211:         except Exception:
+ 212:             return self.base_fraction
+ 213: 
+ 214:     # ------------------------------------------------------------------
+ 215:     def process_signal(
+ 216:         self,
+ 217:         symbol: str,
+ 218:         signal: str,
+ 219:         price: Optional[float] = None,
+ 220:         size: Optional[int] = None,
+ 221:         algo: Optional[str] = None,
+ 222:     ) -> Dict[str, Any]:
+ 223:         # --- Validate
+ 224:         if not isinstance(signal, str):
+ 225:             return {"status": "rejected", "reason": "signal_not_string"}
+ 226:         signal = signal.upper().strip()
+ 227:         if signal not in {"BUY", "SELL", "HOLD"}:
+ 228:             return {"status": "rejected", "reason": f"invalid_signal:{signal}"}
+ 229:         if signal == "HOLD":
+ 230:             return {"status": "ignored", "reason": "hold_signal"}
+ 231:         if price is None or price <= 0:
+ 232:             return {"status": "rejected", "reason": "invalid_price"}
+ 233: 
+ 234:         # --- Guardrails
+ 235:         if self.portfolio.equity <= 0:
+ 236:             return {"status": "blocked", "reason": "equity_depleted"}
+ 237:         if signal in {"BUY", "SELL"} and self._sector_exposure_breach(symbol):
+ 238:             return {"status": "blocked", "reason": "sector_exposure"}
+ 239:         if signal in {"BUY", "SELL"} and self._hedge_trigger(symbol):
+ 240:             return {"status": "blocked", "reason": "hedge_rule"}
+ 241:         if self.portfolio and getattr(self.portfolio, "history", []):
+ 242:             try:
+ 243:                 start_equity = self.portfolio.history[0][1]
+ 244:                 drawdown = 1 - (self.portfolio.equity / max(start_equity, 1))
+ 245:                 if drawdown > self.config.get("risk", {}).get("max_drawdown", 0.5):
+ 246:                     return {"status": "blocked", "reason": "drawdown_breach"}
+ 247:             except Exception:
+ 248:                 pass
+ 249: 
+ 250:         # --- Kelly
+ 251:         if size is None:
+ 252:             try:
+ 253:                 raw = self.kelly_sizer.size_position(self.portfolio.equity, price)
+ 254:                 size = int(raw["size"]) if isinstance(raw, dict) else int(raw)
+ 255:                 size = max(1, size)
+ 256:             except Exception:
+ 257:                 size = 1
+ 258: 
+ 259:         # --- Algo Routing
+ 260:         if algo:
+ 261:             try:
+ 262:                 if algo.lower() == "twap":
+ 263:                     mod = importlib.import_module("hybrid_ai_trading.algos.twap")
+ 264:                     result = mod.TWAPExecutor(self.order_manager).execute(
+ 265:                         symbol, signal, size, price
+ 266:                     )
+ 267:                 elif algo.lower() == "vwap":
+ 268:                     mod = importlib.import_module("hybrid_ai_trading.algos.vwap")
+ 269:                     result = mod.VWAPExecutor(self.order_manager).execute(
+ 270:                         symbol, signal, size, price
+ 271:                     )
+ 272:                 elif algo.lower() == "iceberg":
+ 273:                     mod = importlib.import_module("hybrid_ai_trading.algos.iceberg")
+ 274:                     result = mod.IcebergExecutor(self.order_manager).execute(
+ 275:                         symbol, signal, size, price
+ 276:                     )
+ 277:                 else:
+ 278:                     logger.warning("Unknown algo requested: %s", algo)
+ 279:                     # ðŸ”‘ FIX: Early return ensures unknown algo is not normalized to "filled"
+ 280:                     return {"status": "rejected", "reason": "unknown_algo"}
+ 281:             except Exception as e:
+ 282:                 return {"status": "error", "reason": f"algo_error:{e}"}
+ 283:         else:
+ 284:             try:
+ 285:                 result = self.router.route_order(symbol, signal, size, price)
+ 286:             except Exception as e:
+ 287:                 self._fire_alert(str(e))
+ 288:                 return {"status": "blocked", "reason": f"router_error:{e}"}
+ 289:             if result is None:
+ 290:                 self._fire_alert("router_failed")
+ 291:                 return {"status": "blocked", "reason": "router_failed"}
+ 292:             if isinstance(result, dict) and result.get("status") == "error":
+ 293:                 self._fire_alert(result.get("reason", "router_error"))
+ 294:                 return {
+ 295:                     "status": "blocked",
+ 296:                     "reason": f"router_error:{result.get('reason','unknown')}",
+ 297:                 }
+ 298: 
+ 299:         # --- Regime OVERRIDE
+ 300:         if not self.regime_enabled:
+ 301:             return {"status": "filled", "reason": "regime_disabled"}
+ 302: 
+ 303:         # --- Filters BEFORE performance
+ 304:         try:
+ 305:             if not self.sentiment_filter.allow_trade(symbol, signal, price):
+ 306:                 return {"status": "blocked", "reason": "sentiment_veto"}
+ 307:         except Exception:
+ 308:             return {"status": "blocked", "reason": "sentiment_error"}
+ 309: 
+ 310:         try:
+ 311:             if not self.gatescore.allow_trade(symbol, signal, price):
+ 312:                 return {"status": "blocked", "reason": "gatescore_veto"}
+ 313:         except Exception:
+ 314:             return {"status": "blocked", "reason": "gatescore_error"}
+ 315: 
+ 316:         # --- Performance AFTER filters
+ 317:         try:
+ 318:             if self.performance_tracker.sharpe_ratio() < self.config.get(
+ 319:                 "risk", {}
+ 320:             ).get("sharpe_min", -1.0):
+ 321:                 return {"status": "blocked", "reason": "sharpe_breach"}
+ 322:             if self.performance_tracker.sortino_ratio() < self.config.get(
+ 323:                 "risk", {}
+ 324:             ).get("sortino_min", -1.0):
+ 325:                 return {"status": "blocked", "reason": "sortino_breach"}
+ 326:         except Exception:
+ 327:             pass
+ 328: 
+ 329:         # --- Normalize
+ 330:         allowed = {"filled", "blocked", "ignored", "rejected", "ok", "pending", "error"}
+ 331:         if not isinstance(result, dict) or result.get("status") not in allowed:
+ 332:             return {"status": "rejected", "reason": "invalid_status"}
+ 333: 
+ 334:         if result.get("status") == "ok":
+ 335:             result["status"] = "filled"
+ 336:         if result.get("reason") == "ok":
+ 337:             result["reason"] = "normalized_ok"
+ 338: 
+ 339:         try:
+ 340:             row = [
+ 341:                 os.times().elapsed,
+ 342:                 symbol,
+ 343:                 signal,
+ 344:                 size,
+ 345:                 price,
+ 346:                 result.get("status"),
+ 347:                 self.portfolio.equity,
+ 348:                 result.get("reason", ""),
+ 349:             ]
+ 350:             self._write_audit(row)
+ 351:         except Exception as e:
+ 352:             logger.error("Audit log capture failed: %s", e)
+ 353: 
+ 354:         return result
+ 355: 
+ 356:     # ------------------------------------------------------------------
+ 357:     def _sector_exposure_breach(self, symbol: str) -> bool:
+ 358:         cap = self.config.get("risk", {}).get("intraday_sector_exposure", 1.0)
+ 359:         tech = {"AAPL", "MSFT", "NVDA", "AMD", "META", "GOOGL"}
+ 360:         exposure = sum(
+ 361:             v["size"] * v.get("avg_price", 0)
+ 362:             for s, v in self.portfolio.get_positions().items()
+ 363:             if s in tech
+ 364:         )
+ 365:         return symbol in tech and exposure / max(self.portfolio.equity, 1) >= cap
+ 366: 
+ 367:     def _hedge_trigger(self, symbol: str) -> bool:
+ 368:         return symbol in self.config.get("risk", {}).get("hedge_rules", {}).get(
+ 369:             "equities_vol_spike", []
+ 370:         )
+ 371: 
+ 372:     def get_equity(self) -> float:
+ 373:         return float(self.portfolio.equity)
+ 374: 
+ 375:     def get_positions(self) -> Dict[str, Any]:
+ 376:         return self.portfolio.get_positions()
+ 377: 
+ 378:     def get_history(self) -> List[Any]:
+ 379:         return self.portfolio.history
+ 380: 
+ 381:     # ------------------------------------------------------------------
+ 382:     def record_trade_outcome(self, pnl: float) -> None:
+ 383:         """Record trade outcome into performance tracker (for archive harness)."""
+ 384:         try:
+ 385:             self.performance_tracker.record_trade(pnl)
+ 386:         except Exception as e:
+ 387:             logger.error("Failed to record trade outcome: %s", e)

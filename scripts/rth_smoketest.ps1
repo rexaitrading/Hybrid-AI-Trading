@@ -1,4 +1,4 @@
-﻿$env:PYTHONPATH="src"
+$env:PYTHONPATH="src"
 $env:IB_HOST="127.0.0.1"; $env:IB_PORT="7497"; $env:IB_CLIENT_ID="201"
 $env:TIF="IOC"; $env:TICK_CAP="20"; $env:MAX_NOTIONAL_USD="1000"
 $env:OUTSIDE_RTH="true"; $env:ABORT_IF_NO_QUOTE="true"

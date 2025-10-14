@@ -1,4 +1,4 @@
-﻿import os
+import os
 import pytest
 from hybrid_ai_trading.data.clients.benzinga_client import BenzingaClient, BenzingaAPIError
 

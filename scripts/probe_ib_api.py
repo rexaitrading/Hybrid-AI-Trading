@@ -1,4 +1,4 @@
-﻿from ib_insync import *
+from ib_insync import *
 import os
 
 HOST = os.getenv("IB_HOST", "127.0.0.1")
