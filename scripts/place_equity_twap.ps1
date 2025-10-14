@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$Symbol = "AAPL",
   [ValidateSet("BUY","SELL")][string]$Side = "BUY",
   [int]$TotalQty = 6,

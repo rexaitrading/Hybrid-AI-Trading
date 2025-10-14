@@ -1,4 +1,4 @@
-﻿param(
+param(
   [switch]$Install,
   [ValidateSet("Isolated","RespectIni")]
   [string]$Mode = "Isolated"

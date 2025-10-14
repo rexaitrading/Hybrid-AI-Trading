@@ -1,4 +1,4 @@
-﻿# --- SETTINGS (adjust TWS path if different) ---
+# --- SETTINGS (adjust TWS path if different) ---
 $twsExe   = "C:\Jts\tws.exe"           # <-- change if your TWS is elsewhere
 $port     = 7497                       # Paper
 $maxWaitS = 180

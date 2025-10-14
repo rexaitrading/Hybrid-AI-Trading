@@ -1,0 +1,38 @@
+account: PAPER
+ib:
+  host: "localhost"
+  port: 7497
+  client_id: 3101
+trading_window:
+  tz: "America/Vancouver"
+  start: "06:00"
+  end: "21:00"
+risk:
+  equity: 100000
+  max_daily_loss_pct: 1.2        # kill session if breached
+  max_gross_leverage: 2.0
+  per_symbol_risk_bp: 20         # bps of equity risk per trade
+  per_symbol_gross_cap: 15       # % gross exposure cap per symbol
+  hard_flatten_at_close: "20:59"
+  vol_floor_atr_mult: 1.0
+hedge:
+  enabled: true
+  method: "tail-put"             # or "vix-call"
+  target_var_reduction: 0.25
+  reeval_minutes: 30
+symbols:
+  equities: ["AAPL","MSFT","NVDA","META","TSLA","AMD","NFLX","SHOP","AMZN"]
+  ipo_watch: ["ARM","KVYO","CART"]
+  crypto: []
+bars:
+  duration: "2 D"
+  bar_size: "5 mins"
+  whatToShow: "TRADES"
+execution:
+  allow_short: true
+  allow_margin: true
+  tif: "DAY"
+logging:
+  level: "INFO"
+  file: "logs/live_paper_%Y%m%d.log"
+

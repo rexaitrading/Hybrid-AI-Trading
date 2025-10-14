@@ -1,4 +1,4 @@
-﻿# Flatten AAPL/MSFT just in case (safe if already flat)
+# Flatten AAPL/MSFT just in case (safe if already flat)
 $env:SYMBOL="AAPL"; python .\scripts\ib_flatten_symbol.py | Out-Null
 $env:SYMBOL="MSFT"; python .\scripts\ib_flatten_symbol.py | Out-Null
 # Cancel any open orders

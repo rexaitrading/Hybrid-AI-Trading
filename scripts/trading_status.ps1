@@ -1,4 +1,4 @@
-﻿$env:PYTHONPATH="src"
+$env:PYTHONPATH="src"
 python - << 'PY'
 from ib_insync import *
 import os, pathlib
