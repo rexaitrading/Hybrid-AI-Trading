@@ -1,4 +1,4 @@
-﻿# coverage_report.ps1
+# coverage_report.ps1
 # --------------------------------------------------------
 # Run all tests with coverage and generate reports:
 #  1. Terminal summary (per-file coverage with missing lines)

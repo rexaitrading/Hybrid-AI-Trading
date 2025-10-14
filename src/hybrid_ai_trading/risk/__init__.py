@@ -1,4 +1,4 @@
-﻿"""
+"""
 hybrid_ai_trading.risk package
 - Lazy exports to avoid import-time cycles & side-effects
 - No eager imports (esp. patch_api)

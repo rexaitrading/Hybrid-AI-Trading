@@ -1,4 +1,4 @@
-﻿# ===============================
+# ===============================
 # Script: update_gitignore.ps1
 # Purpose: Overwrite .gitignore with v4.4 (Hedge-Fund Grade)
 # ===============================

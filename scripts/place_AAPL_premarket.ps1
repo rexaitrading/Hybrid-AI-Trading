@@ -1,4 +1,4 @@
-﻿$env:PYTHONPATH = "src"
+$env:PYTHONPATH = "src"
 python -m hybrid_ai_trading.execution.paper_order
   --host 127.0.0.1 --port 7497 --client-id 2001
   --symbol AAPL --side BUY --qty 1

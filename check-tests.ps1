@@ -1,4 +1,4 @@
-﻿# ===========================================
+# ===========================================
 # Hybrid AI Quant Pro – Local CI Debug Script
 # ===========================================
 # Runs pytest, coverage, and linting exactly like CI.

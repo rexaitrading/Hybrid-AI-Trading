@@ -1,13 +1,10 @@
-﻿root = true
+root = true
 
 [*]
+charset = utf-8
 end_of_line = lf
 insert_final_newline = true
-charset = utf-8
 trim_trailing_whitespace = true
 
-[*.{ps1,psm1,psd1,bat,cmd}]
+[*.{ps1,psm1,bat,cmd}]
 end_of_line = crlf
-
-[*.{py,yml,yaml,sh,md,toml,ini}]
-end_of_line = lf

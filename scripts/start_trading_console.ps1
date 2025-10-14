@@ -1,4 +1,4 @@
-﻿cd "$PSScriptRoot\.."
+cd "$PSScriptRoot\.."
 .\.venv\Scripts\Activate.ps1
 $env:PYTHONPATH="src"
 $env:IB_HOST="127.0.0.1"; $env:IB_PORT="7497"; $env:IB_CLIENT_ID="201"

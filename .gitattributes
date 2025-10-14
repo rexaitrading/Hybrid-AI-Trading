@@ -1,26 +1,12 @@
-﻿# Default: text normalized to LF in repo
-*           text=auto eol=lf
+* text=auto
+*.py  text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.txt text eol=lf
 
-# Python / YAML / JSON / Shell / Markdown → LF
-*.py        text eol=lf
-*.yml       text eol=lf
-*.yaml      text eol=lf
-*.json      text eol=lf
-*.sh        text eol=lf
-*.md        text eol=lf
-*.toml      text eol=lf
-*.ini       text eol=lf
-
-# GitHub Actions → LF
-.github/**/*.yml text eol=lf
-
-# PowerShell scripts on Windows → CRLF in working tree, LF in repo
-*.ps1       text eol=crlf
-*.psm1      text eol=crlf
-*.psd1      text eol=crlf
-
-# Windows batch → CRLF
-*.bat       text eol=crlf
-*.cmd       text eol=crlf
-
-# Misc
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
