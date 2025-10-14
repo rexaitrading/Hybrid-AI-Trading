@@ -317,3 +317,8 @@ def test_llvm_execution_engine_alias_inits():
     eng = LLVMExecutionEngine()
     assert isinstance(eng, ExecutionEngine)
     assert eng.dry_run is True
+def test_config_guard_bad_sentiment_model(config_stub):
+    cfg = dict(config_stub)
+    cfg["sentiment"] = {"model": "bad"}
+    with pytest.raises(ValueError):
+        ExecutionEngine(dry_run=True, config=cfg)

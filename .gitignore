@@ -225,3 +225,5 @@ config/kraken_api.json
 
 !src/hybrid_ai_trading/data/clients/*.py
 !/.github/
+__phase3_preview_*.txt
+*.bak_20*

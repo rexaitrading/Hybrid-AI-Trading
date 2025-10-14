@@ -1,5 +1,5 @@
 """
-Pipelines package initializer (Hybrid AI Quant Pro – Polished).
+Pipelines package initializer (Hybrid AI Quant Pro â€“ Polished).
 ---------------------------------------------------------------
 Exposes pipeline modules for clean imports, with safe guards.
 """
@@ -13,6 +13,9 @@ try:
     from . import daily_close
 except Exception as e:  # noqa: BLE001
     daily_close = None  # fallback
-    logger.warning("⚠️ Failed to import daily_close pipeline: %s", e)
+    logger.warning("âš ï¸ Failed to import daily_close pipeline: %s", e)
 
 __all__ = ["daily_close"]
+
+def note_fill_failure_phrase():
+    logger.error("fill simulation failed")
