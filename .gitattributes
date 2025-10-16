@@ -1,12 +1,10 @@
-* text=auto
+﻿# Python & text use LF
 *.py  text eol=lf
-*.yml text eol=lf
-*.yaml text eol=lf
-*.ini text eol=lf
-*.cfg text eol=lf
 *.txt text eol=lf
-
+*.md  text eol=lf
+# PowerShell stays CRLF
 *.ps1 text eol=crlf
-*.psm1 text eol=crlf
-*.bat text eol=crlf
-*.cmd text eol=crlf
+# images/binaries
+*.png binary
+*.jpg binary
+*.zip binary
