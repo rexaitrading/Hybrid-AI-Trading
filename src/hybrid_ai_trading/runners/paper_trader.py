@@ -1,3 +1,22 @@
+# --- Risk approve adapter (idempotent) ---------------------------------------
+def _safe_approve_trade(risk_mgr, symbol=None, side=None, qty=None, price=None):
+    import inspect
+    notional = (qty or 0) * (float(price or 0.0))
+    if not hasattr(risk_mgr, "approve_trade"):
+        return {"approved": False, "reason": "risk_method_missing"}
+    try:
+        sig = inspect.signature(risk_mgr.approve_trade)
+        kw  = {"symbol": symbol, "side": side, "qty": qty, "notional": notional, "price": price}
+        fkw = {k:v for k,v in kw.items() if k in sig.parameters}
+        if fkw:
+            return _safe_approve_trade(risk_mgr, **fkw)
+        else:
+            return _safe_approve_trade(risk_mgr, side, qty, notional)
+    except TypeError as e2:
+        return {"approved": False, "reason": f"risk_call_failed: {e2}"}
+    except Exception as e:
+        return {"approved": False, "reason": f"risk_call_failed: {e}"}
+# -----------------------------------------------------------------------------
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 import os, time
@@ -142,6 +161,36 @@ def run_paper_session(args) -> int:
         if getattr(args, "once", False):
             result = run_once(cfg, logger, snapshots=snapshots)
             _riskhub_checks(snapshots, result, logger)
+    # enforce RiskHub (paper-safe)
+    if getattr(args, "enforce_riskhub", False):
+        try:
+            from hybrid_ai_trading.utils.risk_client import RISK_HUB_URL
+        except Exception:
+            RISK_HUB_URL = "http://127.0.0.1:8787"
+        denied = []
+        for _d in (result or {}).get("decisions", []):
+            try:
+                resp = next((i["response"] for i in ([]) if False), None)  # placeholder
+            except Exception:
+                resp = None
+        # evaluate directly using quantities from result + snapshots map
+        price_map = { (s.get("symbol") if isinstance(s, dict) else None): (s.get("price") if isinstance(s, dict) else None)
+                      for s in (snapshots or []) if isinstance(s, dict) and s.get("symbol") }
+        for d in (result or {}).get("decisions", []):
+            sym = d.get("symbol")
+            ks  = d.get("kelly_size") or {}
+            try: qty = float(ks.get("qty") or d.get("qty") or 0.0)
+            except: qty = 0.0
+            try: px = float(price_map.get(sym) or 0.0)
+            except: px = 0.0
+            notion = qty * px
+            from hybrid_ai_trading.utils.risk_client import check_decision
+            resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, "BUY")
+            if not resp.get("ok", False):
+                denied.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
+        if denied:
+            logger.info("risk_enforced_denied", items=denied)
+            return 0
             logger.info("once_done", note="single pass complete", result=result)
             return 0
 
@@ -150,6 +199,32 @@ def run_paper_session(args) -> int:
             result = run_once(cfg, logger, snapshots=snapshots)
             _riskhub_checks(snapshots, result, logger)
             logger.info("decision_snapshot", result=result)
+            if getattr(args, "enforce_riskhub", False):
+                price_map = { (s.get("symbol") if isinstance(s, dict) else None): (s.get("price") if isinstance(s, dict) else None)
+                              for s in (snapshots or []) if isinstance(s, dict) and s.get("symbol") }
+                denied = []
+                try:
+                    from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
+                except Exception:
+                    def check_decision(*a, **k): return {"ok": False, "reason":"risk_client_unavailable"}
+                    RISK_HUB_URL = "http://127.0.0.1:8787"
+                for d in (result or {}).get("decisions", []):
+                    sym = d.get("symbol")
+                    ks  = d.get("kelly_size") or {}
+                    try: qty = float(ks.get("qty") or d.get("qty") or 0.0)
+                    except: qty = 0.0
+                    try: px = float(price_map.get(sym) or 0.0)
+                    except: px = 0.0
+                    notion = qty * px
+                    resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, "BUY")
+                    if not resp.get("ok", False):
+                        denied.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
+                if denied:
+                    logger.info("risk_enforced_denied", items=denied)
+                    # continue loop without further action
+                    ib.sleep(sleep_sec)
+                    continue
+
             ib.sleep(sleep_sec)
             if os.environ.get("STOP_PAPER_LOOP", "0") == "1":
                 logger.info("loop_stop", note="STOP_PAPER_LOOP env detected")
