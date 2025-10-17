@@ -1,65 +1,53 @@
 param(
-  [string]$Cfg     = "hybrid_ai_trading\cfg\paper.yaml",
-  [string]$ApiHost = "localhost",
-  [int]   $Port    = 7497,
-  [string]$VenvPy  = ".\.venv\Scripts\python.exe"
+  [string]$Cfg      = "config\paper_runner.yaml",
+  [string]$ApiHost  = "127.0.0.1",
+  [int]   $Port     = 4002,
+  [string]$VenvPy   = ".\.venv\Scripts\python.exe",
+
+  [ValidateSet('', 'BUY', 'SELL')] [string]$Force = '',
+  [switch]$Transmit,
+  [switch]$Console,
+
+  # New after-hours controls
+  [switch]$OutsideRth,
+  [ValidateSet('LMT','MKT')] [string]$OrderType = 'LMT',
+  [double]$LimitOffset = 0.30,
+  [ValidateSet('','SMART','ISLAND','ARCA','NASDAQ')] [string]$Dest = '',
+  [switch]$Once
 )
 
-
-# Normalize localhost to IPv4 (avoids IPv6/::1 handshake issues on IBG)
-if (\ -eq 'localhost') { \ = '127.0.0.1' }  # Normalize localhost to 127.0.0.1
-# Resolve Python
-if (Test-Path $VenvPy) {
-  $VenvPy = (Resolve-Path $VenvPy).Path
-} else {
-  $defaultPy = (Resolve-Path (Join-Path $PSScriptRoot "..\.venv\Scripts\python.exe") -ErrorAction SilentlyContinue)
-  if ($defaultPy) { $VenvPy = $defaultPy.Path }
-}
-
-if (-not (Test-Path $VenvPy)) {
-  Write-Error "Python not found. Pass -VenvPy (e.g. .\.venv\Scripts\python.exe)"
-  exit 1
-}
-
-# Export env for downstream processes
+# Env for IB API
 $env:IB_HOST = $ApiHost
 $env:IB_PORT = "$Port"
-if (-not $env:IB_CLIENT_ID) { $env:IB_CLIENT_ID = "3001" }
 
-# Quick PS-native port probe (renamed params to avoid $Host collision)
-function Test-TcpOpen {
-  param(
-    [string]$HostName,
-    [int]$TcpPort,
-    [int]$TimeoutMs = 4000
-  )
-  try {
-    $client = New-Object System.Net.Sockets.TcpClient
-    $iar = $client.BeginConnect($HostName, $TcpPort, $null, $null)
-    if (-not $iar.AsyncWaitHandle.WaitOne($TimeoutMs)) {
-      $client.Close(); return $false
-    }
-    $client.EndConnect($iar); $client.Close(); return $true
-  } catch { return $false }
+# Make sure Python can import from .\src
+$pwdSrc = (Resolve-Path ".\src").Path
+$env:PYTHONPATH = if ($env:PYTHONPATH) { "$pwdSrc;$env:PYTHONPATH" } else { $pwdSrc }
+
+# Invoke runner by path (avoids -m import quirk)
+$runnerPath = (Resolve-Path ".\src\hybrid_ai_trading\runners\runner_paper.py").Path
+$argsList = @('-u', $runnerPath, '--config', $Cfg)
+
+# Core options
+if ($Force)    { $argsList += @('--force', $Force) }
+if ($Transmit) { $argsList += '--transmit' }
+if ($Console)  { $argsList += @('--json','--log-level','DEBUG','--log-file','NUL') }
+
+# AH options (forward only if present / meaningful)
+if ($OutsideRth)           { $argsList += '--outside-rth' }
+if ($OrderType)            { $argsList += @('--order-type', $OrderType) }
+if ($LimitOffset -ne $null){ $argsList += @('--limit-offset', ('{0:N2}' -f $LimitOffset)) }
+if ($Dest)                 { $argsList += @('--dest', $Dest) }
+if ($Once)                 { $argsList += '--once' }
+
+# Client id
+if (-not $env:IB_CLIENT_ID) { $env:IB_CLIENT_ID = '5007' }
+$argsList += @('--client-id', $env:IB_CLIENT_ID)
+
+Write-Host ("Running: {0} {1}" -f $VenvPy, ($argsList -join ' ')) -ForegroundColor Cyan
+& $VenvPy @argsList
+$exit = $LASTEXITCODE
+if ($exit -ne 0) {
+  Write-Host "Runner exited with code $exit" -ForegroundColor Yellow
+  exit $exit
 }
-
-$open = Test-TcpOpen -HostName $ApiHost -TcpPort $Port -TimeoutMs 4000
-if ($open) {
-  Write-Host ("[run] IB API listening at {0}:{1} (clientId={2})" -f $ApiHost,$Port,$env:IB_CLIENT_ID) -ForegroundColor Green
-} else {
-  Write-Warning ("[run] {0}:{1} not open. Launching anyway (the pipeline may wait for IB)." -f $ApiHost,$Port)
-}
-
-# Launch live loop (no retry loop)
-Write-Host ("[run] launching live_loop (host={0}, port={1}, cid={2}, cfg={3})" -f $ApiHost,$Port,$env:IB_CLIENT_ID,$Cfg)
-& $VenvPy -u -m hybrid_ai_trading.pipelines.live_loop --cfg "$Cfg"
-$code = $LASTEXITCODE
-
-# Map Ctrl+C (0xC000013A) to a friendly exit code 130
-if ($code -eq 3221225786) {
-  Write-Host "[run] live_loop stopped by user (Ctrl+C)" -ForegroundColor Yellow
-  $code = 130
-} else {
-  Write-Host "[run] live_loop exited with code $code"
-}
-exit $code

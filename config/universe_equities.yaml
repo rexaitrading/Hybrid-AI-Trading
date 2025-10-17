@@ -1,0 +1,19 @@
+symbols:
+  - AAPL
+  - MSFT
+  - NVDA
+  - AMZN
+  - GOOGL
+  - META
+  - TSLA
+  - AMD
+  - AVGO
+  - NFLX
+  - SPY
+  - QQQ
+  - IWM
+  - TLT
+  - HYG
+  - XLF
+  - XLE
+  - file: data/daily/gappers.txt
