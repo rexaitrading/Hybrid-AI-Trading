@@ -1,5 +1,8 @@
-# Stable parser for Hybrid AI Quant Pro Paper Runner
+# Stable parser + loader for Hybrid AI Quant Pro Paper Runner
+
 import argparse
+import pathlib
+import yaml
 
 def build_parser():
     ap = argparse.ArgumentParser(prog="Hybrid AI Quant Pro Paper Runner")
@@ -25,7 +28,19 @@ def build_parser():
 
     return ap
 
-def parse_args():
+def parse_args(argv=None):
     ap = build_parser()
-    args, _unknown = ap.parse_known_args()
+    args, _unknown = ap.parse_known_args(argv)
     return args
+
+def load_config(path: str) -> dict:
+    """Simple YAML loader used by runner/trader."""
+    try:
+        pp = pathlib.Path(path)
+        if not pp.exists():
+            return {}
+        data = yaml.safe_load(pp.read_text(encoding="utf-8"))
+        return data or {}
+    except Exception as e:
+        # keep runner resilient
+        return {"_error": f"load_config_failed: {e}"}
