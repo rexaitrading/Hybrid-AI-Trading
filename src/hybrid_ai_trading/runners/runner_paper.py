@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import os, sys, pathlib
 # Bootstrap when run as a script (so absolute imports work)
 if __package__ in (None, ""):

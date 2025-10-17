@@ -46,36 +46,49 @@ class QuantCore:
         self.sentiment = SentimentFilter(cfg.get("sentiment", {}))
 
     def evaluate(self, market_data: dict) -> dict:
-        regime = self.regime.detect(market_data)
-        sentiment = self.sentiment.score(market_data)
-        sizing = self.sizer.size(market_data)
-        # derive qty & notional robustly
-        try:
-            qty = float((sizing or {}).get("qty") or market_data.get("qty") or 0.0)
-        except Exception:
-            qty = 0.0
-        try:
-            price = float(market_data.get("price") or market_data.get("last") or market_data.get("close") or market_data.get("vwap") or 0.0)
-        except Exception:
-            price = 0.0
-        notional = qty * price
-        # risk approval: prefer (side, qty, notional), fallback to (market_data)
-        approval = {"approved": True, "reason": "stub"}
-        try:
-            approval = self.risk.approve_trade("BUY", qty, notional)
-        except TypeError:
-            try:
-                approval = self.risk.approve_trade(market_data)
-            except Exception as e:
-                approval = {"approved": False, "reason": f"risk_call_failed: {e}"}
-        return {
-            "regime": regime,
-            "sentiment": sentiment,
-            "kelly_size": sizing,
-            "risk_approved": approval,
-        }
+    import inspect
+    regime = self.regime.detect(market_data)
+    sentiment = self.sentiment.score(market_data)
+    sizing = self.sizer.size(market_data)
+    # derive qty & notional robustly
+    try:
+        qty = float((sizing or {}).get("qty") or market_data.get("qty") or 0.0)
+    except Exception:
+        qty = 0.0
+    try:
+        price = float(market_data.get("price") or market_data.get("last") or market_data.get("close") or market_data.get("vwap") or 0.0)
+    except Exception:
+        price = 0.0
+    notional = qty * price
 
-def run_once(cfg: dict, logger, snapshots: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
+    approval = {"approved": True, "reason": "stub"}
+    ap = getattr(self.risk, "approve_trade", None)
+    if callable(ap):
+        try:
+            sig = inspect.signature(ap)
+            params = [p.name for p in sig.parameters.values()][1:]  # drop self
+            # prefer side/qty/notional if available
+            if {"side","qty","notional"}.issubset(set(params)) or len(params) >= 3:
+                approval = ap("BUY", qty, notional)
+            else:
+                approval = ap(market_data)
+        except TypeError:
+            # alternate call if the first style didn't match
+            try:
+                approval = ap(market_data)
+            except Exception as e2:
+                approval = {"approved": False, "reason": f"risk_call_failed: {e2}"}
+        except Exception as e:
+            approval = {"approved": False, "reason": f"risk_call_failed: {e}"}
+    else:
+        approval = {"approved": False, "reason": "risk_method_missing"}
+
+    return {
+        "regime": regime,
+        "sentiment": sentiment,
+        "kelly_size": sizing,
+        "risk_approved": approval,
+    }def run_once(cfg: dict, logger, snapshots: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
     """
     Evaluate one pass on provided market snapshots.
     snapshots: list of {symbol, price, bid, ask, last, close, vwap, volume, ts}
