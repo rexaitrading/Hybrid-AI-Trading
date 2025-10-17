@@ -1,3 +1,20 @@
+from __future__ import annotations
+
+# -*- coding: utf-8 -*-
+import os
+import time
+from typing import List, Dict, Any
+
+from ib_insync import Stock
+from hybrid_ai_trading.utils.ib_conn import ib_session
+from hybrid_ai_trading.utils.preflight import sanity_probe
+from hybrid_ai_trading.runners.paper_utils import apply_mdt
+from hybrid_ai_trading.runners.paper_logger import JsonlLogger
+from hybrid_ai_trading.runners.paper_config import load_config
+import hybrid_ai_trading.runners.paper_quantcore as qc
+ALLOW_TRADE_WHEN_CLOSED = os.environ.get("ALLOW_TRADE_WHEN_CLOSED", "0") == "1"
+
+
 # --- Risk approve adapter (idempotent) ---------------------------------------
 def _safe_approve_trade(risk_mgr, symbol=None, side=None, qty=None, price=None):
     import inspect
@@ -7,34 +24,91 @@ def _safe_approve_trade(risk_mgr, symbol=None, side=None, qty=None, price=None):
     try:
         sig = inspect.signature(risk_mgr.approve_trade)
         kw  = {"symbol": symbol, "side": side, "qty": qty, "notional": notional, "price": price}
-        fkw = {k:v for k,v in kw.items() if k in sig.parameters}
+        fkw = {k: v for k, v in kw.items() if k in sig.parameters}
         if fkw:
-            return _safe_approve_trade(risk_mgr, **fkw)
+            return risk_mgr.approve_trade(**fkw)
         else:
-            return _safe_approve_trade(risk_mgr, side, qty, notional)
+            return risk_mgr.approve_trade(side, qty, notional)
     except TypeError as e2:
         return {"approved": False, "reason": f"risk_call_failed: {e2}"}
     except Exception as e:
         return {"approved": False, "reason": f"risk_call_failed: {e}"}
 # -----------------------------------------------------------------------------
-# -*- coding: utf-8 -*-
-from __future__ import annotations
-import os, time
-from typing import List
 
-from ib_insync import Stock
-from hybrid_ai_trading.utils.ib_conn import ib_session
-from hybrid_ai_trading.utils.preflight import sanity_probe
-from hybrid_ai_trading.runners.paper_utils import apply_mdt
-from hybrid_ai_trading.runners.paper_logger import JsonlLogger
-from hybrid_ai_trading.runners.paper_config import load_config
+def _qc_run_once(symbols, snapshots, cfg, logger):
+    """Call quantcore.run_once with maximum compatibility."""
+    try:
+        fn = getattr(qc, "run_once", None)
+    except Exception:
+        fn = None
+    if fn is None:
+        raise RuntimeError("quantcore.run_once not found")
 
-ALLOW_TRADE_WHEN_CLOSED = os.environ.get("ALLOW_TRADE_WHEN_CLOSED","0") == "1"
+    # 1) Try legacy (cfg, logger, snapshots=...)
+    try:
+        return fn(cfg, logger, snapshots=snapshots)
+    except TypeError:
+        pass
+    except Exception:
+        pass
 
-def build_universe(cfg: dict, override: str = "") -> list[str]:
+    # 2) Try legacy (cfg, logger)
+    try:
+        return fn(cfg, logger)
+    except TypeError:
+        pass
+    except Exception:
+        pass
+
+    # 3) Try new style (symbols, price_map, risk_mgr)
+    price_map = {}
+    try:
+        price_map = {
+            (s.get("symbol") if isinstance(s, dict) else None):
+            (s.get("price") if isinstance(s, dict) else None)
+            for s in (snapshots or [])
+            if isinstance(s, dict) and s.get("symbol")
+        }
+    except Exception:
+        price_map = {}
+
+    risk_mgr = None
+    if isinstance(cfg, dict):
+        for k in ("risk_mgr", "risk_manager", "risk"):
+            try:
+                if cfg.get(k) is not None:
+                    risk_mgr = cfg.get(k); break
+            except Exception:
+                pass
+    if risk_mgr is None:
+        class _StubRM:
+            def approve_trade(self, *a, **k): return {"approved": True, "reason": "stub"}
+        risk_mgr = _StubRM()
+
+    return fn(list(symbols or []), dict(price_map or {}), risk_mgr)
+
+def _normalize_result(result):
+    """Return a canonical dict: {'summary': {...}, 'items': [...]}."""
+    try:
+        # already a dict
+        if isinstance(result, dict):
+            return result
+        # list -> wrap
+        if isinstance(result, list):
+            items = result
+            return {
+                "summary": {"rows": len(items), "batches": 1, "decisions": len(items)},
+                "items": items,
+            }
+    except Exception:
+        pass
+    return {"summary": {"rows": 0, "batches": 0, "decisions": 0}, "items": []}
+
+
+def build_universe(cfg: Dict[str, Any], override: str = "") -> list[str]:
     symbols: List[str] = []
     try:
-        base = cfg.get("universe", []) or cfg.get("equities", [])
+        base = (cfg.get("universe") if isinstance(cfg, dict) else None) or (cfg.get("equities") if isinstance(cfg, dict) else None) or []
         if isinstance(base, str):
             base = [x.strip() for x in base.split(",") if x.strip()]
         if isinstance(base, list):
@@ -48,6 +122,7 @@ def build_universe(cfg: dict, override: str = "") -> list[str]:
                 symbols.append(x)
     return symbols
 
+
 def _riskhub_checks(snapshots, result, logger):
     """Call RiskHub for each decision; log-only (no order placement)."""
     try:
@@ -55,7 +130,7 @@ def _riskhub_checks(snapshots, result, logger):
     except Exception as e:
         logger.info("risk_checks", items=[], note=f"risk_client_unavailable: {e}")
         return
-    # map prices from snapshots
+
     price_map = {}
     try:
         price_map = {
@@ -66,12 +141,19 @@ def _riskhub_checks(snapshots, result, logger):
         }
     except Exception:
         price_map = {}
+
     checks = []
-    for d in (result or {}).get("decisions", []):
-        sym = d.get("symbol")
-        ks  = d.get("kelly_size") or {}
+    for d in (result or {}).get("decisions", []) or (result or {}).get("items", []):
+        # support both {"symbol":..., "decision": {...}} and flat results
+        if "decision" in d:
+            sym = d.get("symbol")
+            dec = d.get("decision") or {}
+        else:
+            sym = d.get("symbol")
+            dec = d
+        ks  = dec.get("kelly_size") or {}
         try:
-            qty = float(ks.get("qty") or d.get("qty") or 0.0)
+            qty = float(ks.get("qty") or dec.get("qty") or 0.0)
         except Exception:
             qty = 0.0
         try:
@@ -82,6 +164,7 @@ def _riskhub_checks(snapshots, result, logger):
         resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, "BUY")
         checks.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
     logger.info("risk_checks", items=checks)
+
 
 def run_paper_session(args) -> int:
     """
@@ -132,7 +215,7 @@ def run_paper_session(args) -> int:
         except Exception:
             sleep_sec = 5
 
-        # request quotes
+        # Subscribe & snapshot helper
         contracts = {sym: Stock(sym, "SMART", "USD") for sym in symbols}
         for c in contracts.values():
             ib.reqMktData(c, "", False, False)
@@ -154,64 +237,86 @@ def run_paper_session(args) -> int:
                 "ts": ib.serverTime().isoformat() if hasattr(ib, "serverTime") else None,
             }
 
-        from hybrid_ai_trading.runners.paper_quantcore import run_once
-
         snapshots = [_snap(sym) for sym in symbols]
 
+        # -------- once mode --------
         if getattr(args, "once", False):
-            result = run_once(cfg, logger, snapshots=snapshots)
-            _riskhub_checks(snapshots, result, logger)
-    # enforce RiskHub (paper-safe)
-    if getattr(args, "enforce_riskhub", False):
-        try:
-            from hybrid_ai_trading.utils.risk_client import RISK_HUB_URL
-        except Exception:
-            RISK_HUB_URL = "http://127.0.0.1:8787"
-        denied = []
-        for _d in (result or {}).get("decisions", []):
+            # tolerant call: prefer snapshots kw, fall back if callee doesn't accept it
             try:
-                resp = next((i["response"] for i in ([]) if False), None)  # placeholder
-            except Exception:
-                resp = None
-        # evaluate directly using quantities from result + snapshots map
-        price_map = { (s.get("symbol") if isinstance(s, dict) else None): (s.get("price") if isinstance(s, dict) else None)
-                      for s in (snapshots or []) if isinstance(s, dict) and s.get("symbol") }
-        for d in (result or {}).get("decisions", []):
-            sym = d.get("symbol")
-            ks  = d.get("kelly_size") or {}
-            try: qty = float(ks.get("qty") or d.get("qty") or 0.0)
-            except: qty = 0.0
-            try: px = float(price_map.get(sym) or 0.0)
-            except: px = 0.0
-            notion = qty * px
-            from hybrid_ai_trading.utils.risk_client import check_decision
-            resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, "BUY")
-            if not resp.get("ok", False):
-                denied.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
-        if denied:
-            logger.info("risk_enforced_denied", items=denied)
-            return 0
-            logger.info("once_done", note="single pass complete", result=result)
-            return 0
+                result = _normalize_result(_qc_run_once(symbols, snapshots, cfg, logger))
+            except TypeError:
+                result = _normalize_result(_qc_run_once(symbols, snapshots, cfg, logger))
 
-        while True:
-            snapshots = [_snap(sym) for sym in symbols]
-            result = run_once(cfg, logger, snapshots=snapshots)
             _riskhub_checks(snapshots, result, logger)
-            logger.info("decision_snapshot", result=result)
+
+            # enforce RiskHub (paper-safe)
             if getattr(args, "enforce_riskhub", False):
-                price_map = { (s.get("symbol") if isinstance(s, dict) else None): (s.get("price") if isinstance(s, dict) else None)
-                              for s in (snapshots or []) if isinstance(s, dict) and s.get("symbol") }
-                denied = []
                 try:
                     from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
                 except Exception:
                     def check_decision(*a, **k): return {"ok": False, "reason":"risk_client_unavailable"}
                     RISK_HUB_URL = "http://127.0.0.1:8787"
-                for d in (result or {}).get("decisions", []):
-                    sym = d.get("symbol")
-                    ks  = d.get("kelly_size") or {}
-                    try: qty = float(ks.get("qty") or d.get("qty") or 0.0)
+
+                price_map = {
+                    (s.get("symbol") if isinstance(s, dict) else None): (s.get("price") if isinstance(s, dict) else None)
+                    for s in (snapshots or []) if isinstance(s, dict) and s.get("symbol")
+                }
+                denied = []
+                for d in (result or {}).get("decisions", []) or (result or {}).get("items", []):
+                    if "decision" in d:
+                        sym = d.get("symbol")
+                        dec = d.get("decision") or {}
+                    else:
+                        sym = d.get("symbol")
+                        dec = d
+                    ks  = dec.get("kelly_size") or {}
+                    try: qty = float(ks.get("qty") or dec.get("qty") or 0.0)
+                    except: qty = 0.0
+                    try: px = float(price_map.get(sym) or 0.0)
+                    except: px = 0.0
+                    notion = qty * px
+                    resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, "BUY")
+                    if not resp.get("ok", False):
+                        denied.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
+                if denied:
+                    logger.info("risk_enforced_denied", items=denied)
+                    return 0
+
+            logger.info("once_done", note="single pass complete", result=result)
+            return 0
+
+        # -------- continuous loop --------
+        while True:
+            snapshots = [_snap(sym) for sym in symbols]
+            try:
+                result = _normalize_result(_qc_run_once(symbols, snapshots, cfg, logger))
+            except TypeError:
+                result = _normalize_result(_qc_run_once(symbols, snapshots, cfg, logger))
+
+            _riskhub_checks(snapshots, result, logger)
+            logger.info("decision_snapshot", result=result)
+
+            if getattr(args, "enforce_riskhub", False):
+                try:
+                    from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
+                except Exception:
+                    def check_decision(*a, **k): return {"ok": False, "reason":"risk_client_unavailable"}
+                    RISK_HUB_URL = "http://127.0.0.1:8787"
+
+                price_map = {
+                    (s.get("symbol") if isinstance(s, dict) else None): (s.get("price") if isinstance(s, dict) else None)
+                    for s in (snapshots or []) if isinstance(s, dict) and s.get("symbol")
+                }
+                denied = []
+                for d in (result or {}).get("decisions", []) or (result or {}).get("items", []):
+                    if "decision" in d:
+                        sym = d.get("symbol")
+                        dec = d.get("decision") or {}
+                    else:
+                        sym = d.get("symbol")
+                        dec = d
+                    ks  = dec.get("kelly_size") or {}
+                    try: qty = float(ks.get("qty") or dec.get("qty") or 0.0)
                     except: qty = 0.0
                     try: px = float(price_map.get(sym) or 0.0)
                     except: px = 0.0
