@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Quant-core shim for simulation and testing only.
 Connects RiskManager, KellySizer, RegimeDetector, SentimentFilter, etc.
@@ -6,31 +6,31 @@ Safe-imports with fallbacks if modules are not present yet.
 """
 from __future__ import annotations
 import time
+from typing import Dict, List, Any
 
-# --- Safe imports with stubs -------------------------------------------------
 try:
-    from hybrid_ai_trading.risk_manager import RiskManager
+    from hybrid_ai_trading.risk.risk_manager import RiskManager
 except Exception:
     class RiskManager:
         def __init__(self, *a, **k): pass
         def approve_trade(self, market_data): return {"approved": True, "reason": "stub"}
 
 try:
-    from hybrid_ai_trading.kelly_sizer import KellySizer
+    from hybrid_ai_trading.sizing.kelly_sizer import KellySizer
 except Exception:
     class KellySizer:
         def __init__(self, *a, **k): pass
         def size(self, market_data): return {"f": 0.05, "qty": 1, "reason": "stub"}
 
 try:
-    from hybrid_ai_trading.regime_detector import RegimeDetector
+    from hybrid_ai_trading.regime.regime_detector import RegimeDetector
 except Exception:
     class RegimeDetector:
         def __init__(self, *a, **k): pass
         def detect(self, market_data): return {"regime": "neutral", "confidence": 0.5, "reason": "stub"}
 
 try:
-    from hybrid_ai_trading.sentiment_filter import SentimentFilter
+    from hybrid_ai_trading.sentiment.sentiment_filter import SentimentFilter
 except Exception:
     class SentimentFilter:
         def __init__(self, *a, **k): pass
@@ -49,7 +49,25 @@ class QuantCore:
         regime = self.regime.detect(market_data)
         sentiment = self.sentiment.score(market_data)
         sizing = self.sizer.size(market_data)
-        approval = self.risk.approve_trade(market_data)
+        # derive qty & notional robustly
+        try:
+            qty = float((sizing or {}).get("qty") or market_data.get("qty") or 0.0)
+        except Exception:
+            qty = 0.0
+        try:
+            price = float(market_data.get("price") or market_data.get("last") or market_data.get("close") or market_data.get("vwap") or 0.0)
+        except Exception:
+            price = 0.0
+        notional = qty * price
+        # risk approval: prefer (side, qty, notional), fallback to (market_data)
+        approval = {"approved": True, "reason": "stub"}
+        try:
+            approval = self.risk.approve_trade("BUY", qty, notional)
+        except TypeError:
+            try:
+                approval = self.risk.approve_trade(market_data)
+            except Exception as e:
+                approval = {"approved": False, "reason": f"risk_call_failed: {e}"}
         return {
             "regime": regime,
             "sentiment": sentiment,
@@ -57,4 +75,20 @@ class QuantCore:
             "risk_approved": approval,
         }
 
-def run_once(cfg: dict, logger, snapshots=None):\n    \"\"\"Evaluate one pass on provided market snapshots.\n    snapshots: list of {symbol, price, bid, ask, last, close, vwap, volume, ts}\n    If None, we fall back to a single dummy sample.\n    \"\"\"\n    qc = QuantCore(cfg)\n    decisions = []\n    data = snapshots or [{\"symbol\": \"AAPL\", \"price\": 246.9, \"vol\": 0.03}]\n    for md in data:\n        md2 = {**md}\n        if \"price\" not in md2:\n            # pick best available price field\n            md2[\"price\"] = md2.get(\"last\") or md2.get(\"close\") or md2.get(\"vwap\")\n        d = qc.evaluate(md2)\n        logger.info(\"quantcore_eval\", symbol=md2.get(\"symbol\"), decision=d)\n        decisions.append({\"symbol\": md2.get(\"symbol\"), **d})\n    return {\"decisions\": decisions}
+def run_once(cfg: dict, logger, snapshots: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
+    """
+    Evaluate one pass on provided market snapshots.
+    snapshots: list of {symbol, price, bid, ask, last, close, vwap, volume, ts}
+    If None, we fall back to a single dummy sample.
+    """
+    qc = QuantCore(cfg)
+    decisions: List[Dict[str, Any]] = []
+    data = snapshots or [{"symbol": "AAPL", "price": 246.9, "vol": 0.03}]
+    for md in data:
+        md2 = dict(md)
+        if "price" not in md2 or md2.get("price") is None:
+            md2["price"] = md2.get("last") or md2.get("close") or md2.get("vwap")
+        d = qc.evaluate(md2)
+        logger.info("quantcore_eval", symbol=md2.get("symbol"), decision=d)
+        decisions.append({"symbol": md2.get("symbol"), **d})
+    return {"decisions": decisions}
