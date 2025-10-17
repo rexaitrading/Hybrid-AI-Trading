@@ -21,3 +21,5 @@ execution:
   tif: GTC
 provider_only: false
 prefer_providers: true
+ib_host: ::1
+ib_port: 7497
