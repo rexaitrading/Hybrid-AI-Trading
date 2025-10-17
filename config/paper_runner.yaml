@@ -19,3 +19,5 @@ logging:
 execution:
   outside_rth: true
   tif: GTC
+provider_only: false
+prefer_providers: true
