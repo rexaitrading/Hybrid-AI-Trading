@@ -12,9 +12,6 @@ from hybrid_ai_trading.runners.paper_config import load_config
 
 ALLOW_TRADE_WHEN_CLOSED = os.environ.get("ALLOW_TRADE_WHEN_CLOSED","0") == "1"
 
-# ---------------------------------------------------------------------------
-# Utility: build trading universe from YAML + CLI override
-# ---------------------------------------------------------------------------
 def build_universe(cfg: dict, override: str = "") -> list[str]:
     symbols: List[str] = []
     try:
@@ -32,17 +29,48 @@ def build_universe(cfg: dict, override: str = "") -> list[str]:
                 symbols.append(x)
     return symbols
 
-# ---------------------------------------------------------------------------
-# Core session
-# ---------------------------------------------------------------------------
+def _riskhub_checks(snapshots, result, logger):
+    """Call RiskHub for each decision; log-only (no order placement)."""
+    try:
+        from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
+    except Exception as e:
+        logger.info("risk_checks", items=[], note=f"risk_client_unavailable: {e}")
+        return
+    # map prices from snapshots
+    price_map = {}
+    try:
+        price_map = {
+            (s.get("symbol") if isinstance(s, dict) else None):
+            (s.get("price") if isinstance(s, dict) else None)
+            for s in (snapshots or [])
+            if isinstance(s, dict) and s.get("symbol")
+        }
+    except Exception:
+        price_map = {}
+    checks = []
+    for d in (result or {}).get("decisions", []):
+        sym = d.get("symbol")
+        ks  = d.get("kelly_size") or {}
+        try:
+            qty = float(ks.get("qty") or d.get("qty") or 0.0)
+        except Exception:
+            qty = 0.0
+        try:
+            px = float(price_map.get(sym) or 0.0)
+        except Exception:
+            px = 0.0
+        notion = qty * px
+        resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, "BUY")
+        checks.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
+    logger.info("risk_checks", items=checks)
+
 def run_paper_session(args) -> int:
     """
     Main paper session:
       1) Load config and merge universe
       2) Preflight safety (strict or forced)
-      3) IB session -> build snapshots -> QuantCore evaluate
+      3) IB session -> snapshots -> QuantCore evaluate
     """
-    # ---- Load YAML config ----
     cfg_path = getattr(args, "config", "config/paper_runner.yaml")
     try:
         cfg = load_config(cfg_path)
@@ -57,12 +85,10 @@ def run_paper_session(args) -> int:
 
     # ---- Preflight ----
     force = bool(ALLOW_TRADE_WHEN_CLOSED or getattr(args, "dry_drill", False))
-    probe = sanity_probe(symbol="AAPL", qty=1, cushion=0.10,
-                         allow_ext=True, force_when_closed=force)
+    probe = sanity_probe(symbol="AAPL", qty=1, cushion=0.10, allow_ext=True, force_when_closed=force)
     if not probe.get("ok"):
         raise RuntimeError(f"Preflight failed: {probe}")
 
-    # Strict skip when CLOSED and not forced
     if not probe["session"]["ok_time"] and not force:
         print(f"Market closed ({probe['session']['session']}), skipping trading window.")
         return 0
@@ -70,26 +96,24 @@ def run_paper_session(args) -> int:
     logger = JsonlLogger(getattr(args, "log_file", "logs/runner_paper.jsonl"))
     logger.info("preflight", probe=probe, universe=symbols)
 
-    loop_cfg = (cfg.get("loop") or {}) if isinstance(cfg, dict) else {}
-    try:
-        sleep_sec = int(loop_cfg.get("sleep_sec", 5))
-    except Exception:
-        sleep_sec = 5
-
-    # Drill handling:
-    # - If CLOSED and forced but snapshots_when_closed=False -> drill only (skip second IB session)
-    # - If CLOSED and forced and snapshots_when_closed=True  -> continue to snapshots + QuantCore
+    # Drill handling (snapshots_when_closed lets us proceed)
     if not probe["session"]["ok_time"] and force and not getattr(args, "snapshots_when_closed", False):
         logger.info("drill_only", note="market closed; forced preflight ran; skipping second IB session")
         return 0
 
-    # ---- IB connection & QuantCore snapshots ----
     with ib_session() as ib:
         apply_mdt(ib, getattr(args, "mdt", 3))
         acct = probe.get("account")
         logger.info("ib_connected", account=acct, symbols=symbols)
 
-        # Build live snapshots for all symbols
+        # loop cadence from YAML
+        loop_cfg = (cfg.get("loop") or {}) if isinstance(cfg, dict) else {}
+        try:
+            sleep_sec = int(loop_cfg.get("sleep_sec", 5))
+        except Exception:
+            sleep_sec = 5
+
+        # request quotes
         contracts = {sym: Stock(sym, "SMART", "USD") for sym in symbols}
         for c in contracts.values():
             ib.reqMktData(c, "", False, False)
@@ -111,41 +135,21 @@ def run_paper_session(args) -> int:
                 "ts": ib.serverTime().isoformat() if hasattr(ib, "serverTime") else None,
             }
 
-        # Import QuantCore runner
         from hybrid_ai_trading.runners.paper_quantcore import run_once
 
         snapshots = [_snap(sym) for sym in symbols]
 
         if getattr(args, "once", False):
             result = run_once(cfg, logger, snapshots=snapshots)
+            _riskhub_checks(snapshots, result, logger)
             logger.info("once_done", note="single pass complete", result=result)
             return 0
 
         while True:
             snapshots = [_snap(sym) for sym in symbols]
             result = run_once(cfg, logger, snapshots=snapshots)
-            # RiskHub checks (log-only; no order placement here)
-from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
-price_map = { s.get("symbol"): s.get("price") for s in snapshots if isinstance(s, dict) }
-checks = []
-for d in (result or {}).get("decisions", []):
-    sym = d.get("symbol")
-    qty = 0.0
-    ks  = d.get("kelly_size") or {}
-    try:
-        qty = float(ks.get("qty") or d.get("qty") or 0)
-    except Exception:
-        qty = 0.0
-    px  = 0.0
-    try:
-        px = float(price_map.get(sym) or 0)
-    except Exception:
-        px = 0.0
-    notion = qty * px
-    resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, "BUY")
-    checks.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
-logger.info("risk_checks", items=checks)
-logger.info("decision_snapshot", result=result)
+            _riskhub_checks(snapshots, result, logger)
+            logger.info("decision_snapshot", result=result)
             ib.sleep(sleep_sec)
             if os.environ.get("STOP_PAPER_LOOP", "0") == "1":
                 logger.info("loop_stop", note="STOP_PAPER_LOOP env detected")
