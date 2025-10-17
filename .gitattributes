@@ -1,10 +1,14 @@
-﻿# Python & text use LF
-*.py  text eol=lf
-*.txt text eol=lf
-*.md  text eol=lf
-# PowerShell stays CRLF
-*.ps1 text eol=crlf
-# images/binaries
-*.png binary
-*.jpg binary
-*.zip binary
+# Text defaults
+* text=auto eol=lf
+
+# Python, YAML, JSON -> LF
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.json  text eol=lf
+
+# PowerShell, cmd, bat -> CRLF
+*.ps1   text eol=crlf
+*.psm1  text eol=crlf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
