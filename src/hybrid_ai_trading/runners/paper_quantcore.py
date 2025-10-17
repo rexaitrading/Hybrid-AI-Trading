@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Quant-core shim for simulation and testing only.
 Connects RiskManager, KellySizer, RegimeDetector, SentimentFilter, etc.
@@ -57,11 +57,4 @@ class QuantCore:
             "risk_approved": approval,
         }
 
-def run_once(cfg: dict, logger):
-    qc = QuantCore(cfg)
-    # You can replace this with live snapshot passed down from paper_trader later
-    sample_md = {"symbol": "AAPL", "price": 246.9, "vol": 0.03}
-    decision = qc.evaluate(sample_md)
-    logger.info("quantcore_eval", decision=decision)
-    time.sleep(1.0)
-    return decision
+def run_once(cfg: dict, logger, snapshots=None):\n    \"\"\"Evaluate one pass on provided market snapshots.\n    snapshots: list of {symbol, price, bid, ask, last, close, vwap, volume, ts}\n    If None, we fall back to a single dummy sample.\n    \"\"\"\n    qc = QuantCore(cfg)\n    decisions = []\n    data = snapshots or [{\"symbol\": \"AAPL\", \"price\": 246.9, \"vol\": 0.03}]\n    for md in data:\n        md2 = {**md}\n        if \"price\" not in md2:\n            # pick best available price field\n            md2[\"price\"] = md2.get(\"last\") or md2.get(\"close\") or md2.get(\"vwap\")\n        d = qc.evaluate(md2)\n        logger.info(\"quantcore_eval\", symbol=md2.get(\"symbol\"), decision=d)\n        decisions.append({\"symbol\": md2.get(\"symbol\"), **d})\n    return {\"decisions\": decisions}

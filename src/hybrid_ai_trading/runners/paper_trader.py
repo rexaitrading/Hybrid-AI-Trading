@@ -84,7 +84,47 @@ def run_paper_session(args) -> int:
             px = t.last or t.marketPrice() or t.close or None
             logger.info("price_snapshot", symbol=sym, price=px)
 
-                # --- QuantCore simulation loop (research / paper only) ---`r`n        from hybrid_ai_trading.runners.paper_quantcore import run_once`r`n`r`n        if getattr(args, "once", False):`r`n            decision = run_once(cfg, logger)`r`n            logger.info("once_done", note="single pass complete", decision=decision)`r`n            return 0`r`n`r`n        while True:`r`n            decision = run_once(cfg, logger)`r`n            logger.info("decision_snapshot", data=decision)`r`n            ib.sleep(5)`r`n            if os.environ.get("STOP_PAPER_LOOP", "0") == "1":`r`n                logger.info("loop_stop", note="STOP_PAPER_LOOP env detected")`r`n                break
+                        # --- QuantCore v3: build live snapshots then evaluate ---
+        from hybrid_ai_trading.runners.paper_quantcore import run_once
+
+        # Request quotes for all symbols
+        contracts = {sym: Stock(sym, "SMART", "USD") for sym in symbols}
+        for c in contracts.values():
+            ib.reqMktData(c, "", False, False)
+        ib.sleep(1.5)
+
+        def _snap(sym):
+            c = contracts[sym]
+            t = ib.ticker(c)
+            # robust price pick
+            price = t.last or t.marketPrice() or t.close or t.vwap or None
+            return {
+                "symbol": sym,
+                "price": float(price) if price is not None else None,
+                "bid": float(t.bid) if t.bid is not None else None,
+                "ask": float(t.ask) if t.ask is not None else None,
+                "last": float(t.last) if t.last is not None else None,
+                "close": float(getattr(t, "close", None)) if getattr(t, "close", None) is not None else None,
+                "vwap": float(getattr(t, "vwap", None)) if getattr(t, "vwap", None) is not None else None,
+                "volume": float(getattr(t, "volume", 0.0) or 0.0),
+                "ts": ib.serverTime().isoformat() if hasattr(ib, "serverTime") else None,
+            }
+
+        snapshots = [_snap(sym) for sym in symbols]
+
+        if getattr(args, "once", False):
+            result = run_once(cfg, logger, snapshots=snapshots)
+            logger.info("once_done", note="single pass complete", result=result)
+            return 0
+
+        while True:
+            snapshots = [_snap(sym) for sym in symbols]
+            result = run_once(cfg, logger, snapshots=snapshots)
+            logger.info("decision_snapshot", result=result)
+            ib.sleep(5)
+            if os.environ.get("STOP_PAPER_LOOP", "0") == "1":
+                logger.info("loop_stop", note="STOP_PAPER_LOOP env detected")
+                break
 
         while True:
             for sym in symbols:
@@ -96,3 +136,4 @@ def run_paper_session(args) -> int:
                 break
 
     return 0
+
