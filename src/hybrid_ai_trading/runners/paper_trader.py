@@ -3,6 +3,7 @@ from __future__ import annotations
 # -*- coding: utf-8 -*-
 import os
 import time
+import types
 from typing import List, Dict, Any
 
 from ib_insync import Stock
@@ -12,31 +13,28 @@ from hybrid_ai_trading.runners.paper_utils import apply_mdt
 from hybrid_ai_trading.runners.paper_logger import JsonlLogger
 from hybrid_ai_trading.runners.paper_config import load_config
 import hybrid_ai_trading.runners.paper_quantcore as qc
+
 ALLOW_TRADE_WHEN_CLOSED = os.environ.get("ALLOW_TRADE_WHEN_CLOSED", "0") == "1"
 
 
-# --- Risk approve adapter (idempotent) ---------------------------------------
-def _safe_approve_trade(risk_mgr, symbol=None, side=None, qty=None, price=None):
-    import inspect
-    notional = (qty or 0) * (float(price or 0.0))
-    if not hasattr(risk_mgr, "approve_trade"):
-        return {"approved": False, "reason": "risk_method_missing"}
+def _normalize_result(result):
+    """Return a canonical dict: {'summary': {...}, 'items': [...]}."""
     try:
-        sig = inspect.signature(risk_mgr.approve_trade)
-        kw  = {"symbol": symbol, "side": side, "qty": qty, "notional": notional, "price": price}
-        fkw = {k: v for k, v in kw.items() if k in sig.parameters}
-        if fkw:
-            return risk_mgr.approve_trade(**fkw)
-        else:
-            return risk_mgr.approve_trade(side, qty, notional)
-    except TypeError as e2:
-        return {"approved": False, "reason": f"risk_call_failed: {e2}"}
-    except Exception as e:
-        return {"approved": False, "reason": f"risk_call_failed: {e}"}
-# -----------------------------------------------------------------------------
+        if isinstance(result, dict):
+            return result
+        if isinstance(result, list):
+            items = result
+            return {
+                "summary": {"rows": len(items), "batches": 1, "decisions": len(items)},
+                "items": items,
+            }
+    except Exception:
+        pass
+    return {"summary": {"rows": 0, "batches": 0, "decisions": 0}, "items": []}
+
 
 def _qc_run_once(symbols, snapshots, cfg, logger):
-    """Call quantcore.run_once with maximum compatibility."""
+    """Call quantcore.run_once with maximum compatibility, normalized to dict."""
     try:
         fn = getattr(qc, "run_once", None)
     except Exception:
@@ -44,23 +42,23 @@ def _qc_run_once(symbols, snapshots, cfg, logger):
     if fn is None:
         raise RuntimeError("quantcore.run_once not found")
 
-    # 1) Try legacy (cfg, logger, snapshots=...)
+    # 1) legacy (cfg, logger, snapshots=...)
     try:
-        return fn(cfg, logger, snapshots=snapshots)
+        return _normalize_result(fn(cfg, logger, snapshots=snapshots))
     except TypeError:
         pass
     except Exception:
         pass
 
-    # 2) Try legacy (cfg, logger)
+    # 2) legacy (cfg, logger)
     try:
-        return fn(cfg, logger)
+        return _normalize_result(fn(cfg, logger))
     except TypeError:
         pass
     except Exception:
         pass
 
-    # 3) Try new style (symbols, price_map, risk_mgr)
+    # 3) new style (symbols, price_map, risk_mgr)
     price_map = {}
     try:
         price_map = {
@@ -77,38 +75,24 @@ def _qc_run_once(symbols, snapshots, cfg, logger):
         for k in ("risk_mgr", "risk_manager", "risk"):
             try:
                 if cfg.get(k) is not None:
-                    risk_mgr = cfg.get(k); break
+                    risk_mgr = cfg.get(k)
+                    break
             except Exception:
                 pass
     if risk_mgr is None:
-        class _StubRM:
-            def approve_trade(self, *a, **k): return {"approved": True, "reason": "stub"}
-        risk_mgr = _StubRM()
+        # inline stub object avoids nested class indentation issues
+        risk_mgr = types.SimpleNamespace(
+            approve_trade=lambda *a, **k: {"approved": True, "reason": "stub"}
+        )
 
-    return fn(list(symbols or []), dict(price_map or {}), risk_mgr)
-
-def _normalize_result(result):
-    """Return a canonical dict: {'summary': {...}, 'items': [...]}."""
-    try:
-        # already a dict
-        if isinstance(result, dict):
-            return result
-        # list -> wrap
-        if isinstance(result, list):
-            items = result
-            return {
-                "summary": {"rows": len(items), "batches": 1, "decisions": len(items)},
-                "items": items,
-            }
-    except Exception:
-        pass
-    return {"summary": {"rows": 0, "batches": 0, "decisions": 0}, "items": []}
+    return _normalize_result(fn(list(symbols or []), dict(price_map or {}), risk_mgr))
 
 
 def build_universe(cfg: Dict[str, Any], override: str = "") -> list[str]:
     symbols: List[str] = []
     try:
-        base = (cfg.get("universe") if isinstance(cfg, dict) else None) or (cfg.get("equities") if isinstance(cfg, dict) else None) or []
+        base = (cfg.get("universe") if isinstance(cfg, dict) else None) or \
+               (cfg.get("equities") if isinstance(cfg, dict) else None) or []
         if isinstance(base, str):
             base = [x.strip() for x in base.split(",") if x.strip()]
         if isinstance(base, list):
@@ -131,6 +115,7 @@ def _riskhub_checks(snapshots, result, logger):
         logger.info("risk_checks", items=[], note=f"risk_client_unavailable: {e}")
         return
 
+    # build price map
     price_map = {}
     try:
         price_map = {
@@ -143,14 +128,15 @@ def _riskhub_checks(snapshots, result, logger):
         price_map = {}
 
     checks = []
-    for d in (result or {}).get("decisions", []) or (result or {}).get("items", []):
-        # support both {"symbol":..., "decision": {...}} and flat results
-        if "decision" in d:
+    # support both {"items":[{"symbol":..,"decision":{..}}]} and {"decisions":[...]}
+    iterable = (result or {}).get("items") or (result or {}).get("decisions") or []
+    for d in iterable:
+        if isinstance(d, dict) and "decision" in d:
             sym = d.get("symbol")
             dec = d.get("decision") or {}
         else:
-            sym = d.get("symbol")
-            dec = d
+            sym = d.get("symbol") if isinstance(d, dict) else None
+            dec = d if isinstance(d, dict) else {}
         ks  = dec.get("kelly_size") or {}
         try:
             qty = float(ks.get("qty") or dec.get("qty") or 0.0)
@@ -241,12 +227,7 @@ def run_paper_session(args) -> int:
 
         # -------- once mode --------
         if getattr(args, "once", False):
-            # tolerant call: prefer snapshots kw, fall back if callee doesn't accept it
-            try:
-                result = _normalize_result(_qc_run_once(symbols, snapshots, cfg, logger))
-            except TypeError:
-                result = _normalize_result(_qc_run_once(symbols, snapshots, cfg, logger))
-
+            result = _qc_run_once(symbols, snapshots, cfg, logger)
             _riskhub_checks(snapshots, result, logger)
 
             # enforce RiskHub (paper-safe)
@@ -262,13 +243,9 @@ def run_paper_session(args) -> int:
                     for s in (snapshots or []) if isinstance(s, dict) and s.get("symbol")
                 }
                 denied = []
-                for d in (result or {}).get("decisions", []) or (result or {}).get("items", []):
-                    if "decision" in d:
-                        sym = d.get("symbol")
-                        dec = d.get("decision") or {}
-                    else:
-                        sym = d.get("symbol")
-                        dec = d
+                for d in (result or {}).get("items", []):
+                    sym = d.get("symbol")
+                    dec = d.get("decision") or {}
                     ks  = dec.get("kelly_size") or {}
                     try: qty = float(ks.get("qty") or dec.get("qty") or 0.0)
                     except: qty = 0.0
@@ -288,10 +265,7 @@ def run_paper_session(args) -> int:
         # -------- continuous loop --------
         while True:
             snapshots = [_snap(sym) for sym in symbols]
-            try:
-                result = _normalize_result(_qc_run_once(symbols, snapshots, cfg, logger))
-            except TypeError:
-                result = _normalize_result(_qc_run_once(symbols, snapshots, cfg, logger))
+            result = _qc_run_once(symbols, snapshots, cfg, logger)
 
             _riskhub_checks(snapshots, result, logger)
             logger.info("decision_snapshot", result=result)
@@ -308,13 +282,9 @@ def run_paper_session(args) -> int:
                     for s in (snapshots or []) if isinstance(s, dict) and s.get("symbol")
                 }
                 denied = []
-                for d in (result or {}).get("decisions", []) or (result or {}).get("items", []):
-                    if "decision" in d:
-                        sym = d.get("symbol")
-                        dec = d.get("decision") or {}
-                    else:
-                        sym = d.get("symbol")
-                        dec = d
+                for d in (result or {}).get("items", []):
+                    sym = d.get("symbol")
+                    dec = d.get("decision") or {}
                     ks  = dec.get("kelly_size") or {}
                     try: qty = float(ks.get("qty") or dec.get("qty") or 0.0)
                     except: qty = 0.0
@@ -326,7 +296,6 @@ def run_paper_session(args) -> int:
                         denied.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
                 if denied:
                     logger.info("risk_enforced_denied", items=denied)
-                    # continue loop without further action
                     ib.sleep(sleep_sec)
                     continue
 
