@@ -105,8 +105,18 @@ def build_universe(cfg: Dict[str, Any], override: str = "") -> list[str]:
             if x and x not in symbols:
                 symbols.append(x)
     return symbols
-
-
+def _norm_approval(a):
+    try:
+        if isinstance(a, dict):
+            return {"approved": bool(a.get("approved")), "reason": str(a.get("reason",""))}
+        if isinstance(a, (tuple, list)) and a:
+            ok = bool(a[0]); rs = "" if len(a)<2 else str(a[1])
+            return {"approved": ok, "reason": rs}
+        if isinstance(a, bool):
+            return {"approved": a, "reason": ""}
+    except Exception:
+        pass
+    return {"approved": False, "reason": "normalize_error"}
 def _riskhub_checks(snapshots, result, logger):
     """Call RiskHub for each decision; log-only (no order placement)."""
     try:
@@ -150,6 +160,54 @@ def _riskhub_checks(snapshots, result, logger):
         resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, "BUY")
         checks.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
     logger.info("risk_checks", items=checks)
+def _provider_only_run(args, cfg, symbols, logger):
+    """Run once using providers only (no IB session)."""
+    prov_map = _provider_price_map(symbols)
+    # synth "snapshots"
+    snapshots = [{"symbol": s, "price": (None if prov_map.get(s) is None else float(prov_map.get(s)))} for s in symbols]
+    # Optionally override (provider-first)
+    if getattr(args, "prefer_providers", False):
+        snapshots = _apply_provider_prices(snapshots, prov_map, override=True)
+    # Evaluate via QuantCore adapter (no IB risk; risk_mgr via cfg/stub handled in adapter)
+    result = _qc_run_once(symbols, snapshots, cfg, logger)
+    _riskhub_checks(snapshots, result, logger)
+    logger.info("once_done", note="provider-only run", result=result)
+    print("provider-only run")
+    return 0
+def _inject_provider_cli(args):
+    """
+    Ensure CLI flags work even if the main parser didn't define them.
+    If "--provider-only"/"--prefer-providers" appear in sys.argv,
+    set args.provider_only / args.prefer_providers when missing.
+    """
+    try:
+        argv = sys.argv or []
+    except Exception:
+        return args
+    if "--provider-only" in argv and not hasattr(args, "provider_only"):
+        try:
+            setattr(args, "provider_only", True)
+        except Exception:
+            pass
+    if "--prefer-providers" in argv and not hasattr(args, "prefer_providers"):
+        try:
+            setattr(args, "prefer_providers", True)
+        except Exception:
+            pass
+    return args
+def _merge_provider_flags(args, cfg):
+    """Merge provider-only/prefer-providers flags from cfg + CLI (CLI wins)."""
+    cfg = dict(cfg or {})
+    cfg_provider_only = bool(cfg.get("provider_only", False))
+    cfg_prefer_prov   = bool(cfg.get("prefer_providers", False))
+    # CLI (or shim) wins:
+    if getattr(args, "provider_only", None) is True:
+        cfg_provider_only = True
+    if getattr(args, "prefer_providers", None) is True:
+        cfg_prefer_prov = True
+    cfg["provider_only"] = cfg_provider_only
+    cfg["prefer_providers"] = cfg_prefer_prov
+    return cfg
 
 
 def run_paper_session(args) -> int:
@@ -170,6 +228,10 @@ def run_paper_session(args) -> int:
     if not symbols:
         print("[CONFIG] Universe empty -> nothing to trade.")
         return 0
+
+        # Provider-only mode fast path
+        if getattr(args, "provider_only", False):
+            return _provider_only_run(args, cfg, symbols, logger)
 
     # ---- Preflight ----
     force = bool(ALLOW_TRADE_WHEN_CLOSED or getattr(args, "dry_drill", False))
@@ -305,3 +367,4 @@ def run_paper_session(args) -> int:
                 break
 
     return 0
+import sys
