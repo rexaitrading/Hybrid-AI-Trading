@@ -1,3 +1,4 @@
+# src/hybrid_ai_trading/utils/ib_conn.py
 from __future__ import annotations
 
 import os
@@ -12,26 +13,33 @@ from .structured_log import get_logger
 logger = get_logger("hybrid_ai_trading.ib")
 
 DEFAULT_HOST = os.getenv("IB_HOST", "127.0.0.1")
-DEFAULT_PORT = int(os.getenv("IB_PORT", "4003"))
+DEFAULT_PORT = int(os.getenv("IB_PORT", "4003"))          # env will override to 7497
 DEFAULT_CLIENT_ID = int(os.getenv("IB_CLIENT_ID", "3021"))
 DEFAULT_TIMEOUT = int(os.getenv("IB_TIMEOUT", "60"))
 
 
 def _attach_default_listeners(ib: IB):
+    """
+    Attach listeners with SAFE logging payloads.
+    Never put reserved logging keys (msg, args, levelname, ...) inside `extra`.
+    Prefer putting structured data inside a namespaced key or the message itself.
+    """
     def onError(reqId, code, msg, contract):
-        payload = {"reqId": reqId, "code": code, "msg": msg}
+        payload = {
+            "ib_reqId": reqId,
+            "ib_code": code,
+            "ib_text": msg,
+        }
         try:
             if contract:
-                payload["contract"] = getattr(contract, "localSymbol", None) or getattr(
-                    contract, "conId", None
-                )
+                payload["ib_contract"] = getattr(contract, "localSymbol", None) or getattr(contract, "conId", None)
         except Exception:
             pass
-        logger.warning("ib_error", extra=payload)
+        logger.warning("ib_error | %s", payload)
 
     ib.errorEvent += onError
-    ib.disconnectedEvent += lambda: logger.warning("ib_disconnected")
-    ib.connectedEvent += lambda: logger.info("ib_connected")
+    ib.disconnectedEvent += (lambda: logger.warning("ib_disconnected"))
+    ib.connectedEvent += (lambda: logger.info("ib_connected"))
 
 
 def connect_ib(
@@ -44,6 +52,7 @@ def connect_ib(
 ) -> IB:
     if log:
         util.logToConsole(True)
+
     h = host or DEFAULT_HOST
     p = int(port or DEFAULT_PORT)
     cid = int(client_id or DEFAULT_CLIENT_ID)
@@ -60,14 +69,22 @@ def connect_ib(
             ok = ib.connect(h, p, clientId=cid, timeout=t)
             if not ok:
                 raise RuntimeError("connect returned falsy")
+
             _attach_default_listeners(ib)
+
+            # set market data type if requested
             if market_data_type is not None:
-                ib.reqMarketDataType(int(market_data_type))
+                try:
+                    ib.reqMarketDataType(int(market_data_type))
+                except Exception as e:
+                    logger.warning("ib_req_mdt_failed | %s", {"error": str(e)})
+
             logger.info(
                 "ib_connect_ok",
                 extra={"host": h, "port": p, "clientId": cid, "attempt": attempt},
             )
             return ib
+
         except Exception as e:
             last_err = e
             emsg = str(e)
@@ -79,8 +96,10 @@ def connect_ib(
                 ib.disconnect()
             except Exception:
                 pass
+
+            # retry on common transient errors; bump clientId to dodge stale session
             if ("TimeoutError" in emsg) or ("refused" in emsg.lower()):
-                cid += 1  # bump clientId to avoid stale session clash
+                cid += 1
                 time.sleep(1.0 + attempt)
                 continue
             raise
@@ -116,4 +135,4 @@ def ib_session(
             ib.disconnect()
             logger.info("ib_disconnect_ok")
         except Exception as e:
-            logger.warning("ib_disconnect_err", extra={"error": str(e)})
+            logger.warning("ib_disconnect_err | %s", {"error": str(e)})

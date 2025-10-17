@@ -64,7 +64,7 @@ async def connect_with_retry(ib: IB, host: str, port: int, cid: int,
             except Exception:
                 pass
             wait = min(5 * i, 30)
-            print(f"[connect] attempt {i}/{attempts} failed: {type(e).__name__} — retrying in {wait}s", flush=True)
+            print(f"[connect] attempt {i}/{attempts} failed: {type(e).__name__} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â retrying in {wait}s", flush=True)
             await asyncio.sleep(wait)
     return False
 
@@ -80,7 +80,7 @@ async def main():
         return
 
     # 1=REALTIME, 3=DELAYED
-    mdt = int(os.getenv("IB_MDT", "3"))
+    mdt = int(os.getenv("HAT_MARKET_DATA") or os.getenv("HAT_MDT") or os.getenv("IB_MDT") or "3")
     try:
         ib.reqMarketDataType(mdt)
         print("[runner] marketDataType=" + ("REALTIME" if mdt == 1 else "DELAYED"), flush=True)
@@ -108,7 +108,7 @@ async def main():
         ib.reqMktData(c, "", True, False)
 
     store = FeatureStore(root="data/feature_store")
-    can_trade = (mdt == 1)  # never place orders when delayed
+    can_trade = (mdt == 1 and not os.getenv("HAT_READONLY"))  # never place orders when delayed
 
     def on_tick(tkr):
         try:
@@ -130,6 +130,13 @@ async def main():
             if can_trade:
                 sig = decide_signal(tkr)
                 if getattr(sig, "action", None) and getattr(sig, "order", None):
+                                        # guard: ignore invalid/non-positive limit prices
+                    if getattr(sig.order, "lmtPrice", None) is not None:
+                        try:
+                            if float(sig.order.lmtPrice) <= 0:
+                                return
+                        except Exception:
+                            return
                     ib.placeOrder(c, sig.order)
 
         except Exception as e:
@@ -150,3 +157,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
