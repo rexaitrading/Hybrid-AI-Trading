@@ -1,4 +1,17 @@
-# QuantCore (paper) Ã¢â‚¬â€œ minimal, stable
+﻿def _norm_approval(a):
+    # Accept dict / tuple / list / bool, normalize to {"approved": bool, "reason": str}
+    try:
+        if isinstance(a, dict):
+            return {"approved": bool(a.get("approved")), "reason": str(a.get("reason", ""))}
+        if isinstance(a, (tuple, list)) and a:
+            ok = bool(a[0]); rs = "" if len(a) < 2 else str(a[1])
+            return {"approved": ok, "reason": rs}
+        if isinstance(a, bool):
+            return {"approved": a, "reason": ""}
+    except Exception:
+        pass
+    return {"approved": False, "reason": "normalize_error"}
+# QuantCore (paper) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ minimal, stable
 
 def evaluate(symbol, price_map, risk_mgr):
     """Return a decision bundle for the symbol (stub regime/sentiment/kelly).
@@ -43,7 +56,7 @@ def evaluate(symbol, price_map, risk_mgr):
         "regime": regime,
         "sentiment": sentiment,
         "kelly_size": sizing,
-        "risk_approved": approval,
+        "risk_approved": _norm_approval(approval),
     }
 
 

@@ -18,7 +18,7 @@ $env:COOLDOWN_MIN="5"              # block for 5 minutes after a realized losing
 $env:ADAPTIVE_SPREAD_FACTOR="0.5"  # eff_bps = max(floor_bps, 0.5*spread_bps), clamped by TICK_CAP
 $env:MAX_SLIPPAGE_BPS="20"
 
-$Host.UI.RawUI.WindowTitle = "Hybrid Trading Console (Paper | IOC | Guards v2)"
+$ApiHost.UI.RawUI.WindowTitle = "Hybrid Trading Console (Paper | IOC | Guards v2)"
 Write-Host "[READY] Trading console loaded at $(Get-Location)" -ForegroundColor Green
 python .\scripts\trading_status.py
 Remove-Item Env:IB_ACCOUNT -ErrorAction SilentlyContinue

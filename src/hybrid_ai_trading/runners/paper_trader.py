@@ -1,3 +1,6 @@
+"""
+Provider-only fast path (before preflight)
+"""
 from __future__ import annotations
 
 # -*- coding: utf-8 -*-
@@ -165,8 +168,8 @@ def _provider_only_run(args, cfg, symbols, logger):
     prov_map = _provider_price_map(symbols)
     # synth "snapshots"
     snapshots = [{"symbol": s, "price": (None if prov_map.get(s) is None else float(prov_map.get(s)))} for s in symbols]
-    # Optionally override (provider-first)
-    if getattr(args, "prefer_providers", False):
+    # Optionally override (provider-first)\r
+        if getattr(args, "prefer_providers", False):
         snapshots = _apply_provider_prices(snapshots, prov_map, override=True)
     # Evaluate via QuantCore adapter (no IB risk; risk_mgr via cfg/stub handled in adapter)
     result = _qc_run_once(symbols, snapshots, cfg, logger)
@@ -198,6 +201,10 @@ def _inject_provider_cli(args):
 def _merge_provider_flags(args, cfg):
     """Merge provider-only/prefer-providers flags from cfg + CLI (CLI wins)."""
     cfg = dict(cfg or {})
+try:
+    cfg["risk_mgr"] = rm
+except NameError:
+    pass  # risk_mgr injection skipped if rm not defined yet
     cfg_provider_only = bool(cfg.get("provider_only", False))
     cfg_prefer_prov   = bool(cfg.get("prefer_providers", False))
     # CLI (or shim) wins:
@@ -212,6 +219,7 @@ def _merge_provider_flags(args, cfg):
 
 def run_paper_session(args) -> int:
     """
+    poll_sec = cfg.get('poll_sec', 2)
     Main paper session:
       1) Load config and merge universe
       2) Preflight safety (strict or forced)
@@ -279,8 +287,10 @@ def run_paper_session(args) -> int:
                 "bid": float(t.bid) if t.bid is not None else None,
                 "ask": float(t.ask) if t.ask is not None else None,
                 "last": float(t.last) if t.last is not None else None,
-                "close": float(getattr(t, "close", None)) if getattr(t, "close", None) is not None else None,
-                "vwap": float(getattr(t, "vwap", None)) if getattr(t, "vwap", None) is not None else None,
+                "close": float(getattr(t, "close", None))\r
+        if getattr(t, "close", None) is not None else None,
+                "vwap": float(getattr(t, "vwap", None))\r
+        if getattr(t, "vwap", None) is not None else None,
                 "volume": float(getattr(t, "volume", 0.0) or 0.0),
                 "ts": ib.serverTime().isoformat() if hasattr(ib, "serverTime") else None,
             }
@@ -292,8 +302,8 @@ def run_paper_session(args) -> int:
             result = _qc_run_once(symbols, snapshots, cfg, logger)
             _riskhub_checks(snapshots, result, logger)
 
-            # enforce RiskHub (paper-safe)
-            if getattr(args, "enforce_riskhub", False):
+            # enforce RiskHub (paper-safe)\r
+        if getattr(args, "enforce_riskhub", False):
                 try:
                     from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
                 except Exception:
@@ -332,7 +342,30 @@ def run_paper_session(args) -> int:
             _riskhub_checks(snapshots, result, logger)
             logger.info("decision_snapshot", result=result)
 
-            if getattr(args, "enforce_riskhub", False):
+            # ---- executor (DRY_RUN guarded) ----
+            if os.environ.get('DRY_RUN','1') == '0':
+                try:
+                    from hybrid_ai_trading.execution.route_exec import place_entry
+                    decs = (result or {}).get('items', [])
+                    for d in decs:
+                        sym = d.get('symbol')
+                        dec = d.get('decision') or {}
+                        ks  = dec.get('kelly_size') or {}
+                        try:
+                            qty = int(ks.get('qty') or dec.get('qty') or 0)
+                        except Exception:
+                            qty = 0
+                        try:
+                            px  = float(dec.get('limit_px') or dec.get('px') or 0.0)
+                        except Exception:
+                            px  = 0.0
+                        side = str(dec.get('side') or 'BUY').upper()
+                        if sym and qty > 0 and px > 0.0:
+                            resp = place_entry(sym, side, qty, px)
+                            logger.info('exec_place', symbol=sym, side=side, qty=qty, px=px, resp=resp)
+                except Exception as _e:
+                    logger.error('exec_error', extra={'error': str(_e)})\r
+        if getattr(args, "enforce_riskhub", False):
                 try:
                     from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
                 except Exception:
@@ -368,3 +401,6 @@ def run_paper_session(args) -> int:
 
     return 0
 import sys
+import yaml
+
+
