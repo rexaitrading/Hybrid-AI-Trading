@@ -20,11 +20,15 @@ def build_parser():
     ap.add_argument("--log-file", type=str, default=None,
                     help="Optional JSONL log file path.")
     ap.add_argument("--dry-drill", action="store_true",
-                    help="Don’t place/route orders; dry run signals only.")
+                    help="DonÃ¢â‚¬â„¢t place/route orders; dry run signals only.")
     ap.add_argument("--snapshots-when-closed", action="store_true",
                     help="When market is CLOSED and preflight is forced, still proceed to IB snapshots + QuantCore eval.")
     ap.add_argument("--enforce-riskhub", action="store_true",
                     help="If set, deny actions when RiskHub returns ok=false (paper-safe gate).")
+
+    ap.add_argument("--prefer-providers", action="store_true", help="Use provider prices to override IB snapshots when available.")
+
+    ap.add_argument("--provider-only", action="store_true", help="Skip IB session and use provider prices only.")
 
     return ap
 

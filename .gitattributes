@@ -1,14 +1,13 @@
-# Text defaults
-* text=auto eol=lf
-
-# Python, YAML, JSON -> LF
-*.py    text eol=lf
-*.yml   text eol=lf
-*.yaml  text eol=lf
-*.json  text eol=lf
-
-# PowerShell, cmd, bat -> CRLF
-*.ps1   text eol=crlf
-*.psm1  text eol=crlf
-*.bat   text eol=crlf
-*.cmd   text eol=crlf
+# Enforce consistent line endings
+*.py   text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.txt  text eol=lf
+*.md   text eol=lf
+*.ps1  text eol=crlf
+*.py  text eol=lf
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.bat text eol=crlf
+*.sh  text eol=lf
+*.yml text eol=lf

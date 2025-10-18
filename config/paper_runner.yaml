@@ -1,25 +1,16 @@
-timezone: America/Vancouver
+﻿timezone: America/Vancouver
 equities:
   trading_window_pt: ["00:00-23:59"]
   symbols: ["AAPL","MSFT","NVDA"]
   lot_size: 1
   max_risk_usd: 600
-  gatescore_min: 0.50
+  gatescore_min: 0.65
   whatif: false
 loop:
   poll_sec: 30
   max_runtime_min: 240
 risk:
-  daily_loss_cap_pct: 1.0
+  daily_loss_cap_pct: 0.5
   kelly_fraction: 0.5
-control:
-  pause_file: "control/PAUSE"
-logging:
-  audit_jsonl: "logs/paper_trades.jsonl"
-execution:
-  outside_rth: true
-  tif: GTC
-provider_only: false
-prefer_providers: true
-ib_host: ::1
-ib_port: 7497
+  use_live_price_rm: true
+  regime_filter: true
