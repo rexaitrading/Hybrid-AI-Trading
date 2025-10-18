@@ -3,8 +3,8 @@ from typing import Any, Dict
 
 class Client:
     """
-    Minimal Polygon client for equities.
-    Expects kwargs: key (api key), base (e.g., https://api.polygon.io)
+    Minimal Polygon client for equities, some currencies, and CL1! best-effort.
+    kwargs: key (api key), base (e.g., https://api.polygon.io)
     """
     def __init__(self, key: str, base: str = "https://api.polygon.io", **_):
         if not key or not base:
@@ -21,16 +21,15 @@ class Client:
             return {"_error": f"{type(e).__name__}: {e}"}
 
     def _pick_price(self, j: Dict[str, Any]):
-        """Extract a price from common Polygon shapes."""
         if not isinstance(j, dict):
             return None
-        # v3 last trade: {"results":{"price":..., ...}} or {"results":{"p":...}}
+        # v3 last trade
         res = j.get("results")
         if isinstance(res, dict):
             p = res.get("price", res.get("p"))
             if isinstance(p, (int, float)):
                 return float(p)
-        # v2 last trade: {"last":{"price":...}} or {"last":{"p":...}}
+        # v2 last trade
         last = j.get("last")
         if isinstance(last, dict):
             p = last.get("price", last.get("p"))
@@ -42,16 +41,34 @@ class Client:
             return float(p)
         return None
 
+    def _is_fx_6(self, s: str) -> bool:
+        s = (s or "").upper()
+        return len(s) == 6 and s.isalpha()
+
     def last_quote(self, symbol: str) -> Dict[str, Any]:
-        """
-        Try, in order:
-          1) /v3/trades/{ticker}/last
-          2) /v2/last/trade/{ticker}
-          3) /v2/aggs/ticker/{ticker}/prev (close)
-        Returns: {"symbol": ..., "price": float|None, "source": "polygon", "reason"?: str}
-        """
         sym = (symbol or "").upper().strip()
-        reasons = []
+
+        # Special case: continuous oil future -> try C:CL1! previous close
+        if sym == "CL1!":
+            urlc = f"{self.base}/v2/aggs/ticker/C:CL1!/prev?adjusted=true&apiKey={self.key}"
+            jc = self._http_json(urlc)
+            if isinstance(jc, dict):
+                res = jc.get("results")
+                if isinstance(res, list) and res:
+                    c = res[0].get("c")
+                    if isinstance(c, (int, float)):
+                        return {"symbol": sym, "price": float(c), "source": "polygon"}
+
+        # FX 6-letter pairs (e.g., USDJPY/EURUSD) -> try C:<PAIR> previous close
+        if self._is_fx_6(sym):
+            urlf = f"{self.base}/v2/aggs/ticker/C:{sym}/prev?adjusted=true&apiKey={self.key}"
+            jf = self._http_json(urlf)
+            if isinstance(jf, dict):
+                res = jf.get("results")
+                if isinstance(res, list) and res:
+                    c = res[0].get("c")
+                    if isinstance(c, (int, float)):
+                        return {"symbol": sym, "price": float(c), "source": "polygon"}
 
         # 1) v3 last trade
         url1 = f"{self.base}/v3/trades/{sym}/last?apiKey={self.key}"
@@ -59,8 +76,6 @@ class Client:
         p1 = self._pick_price(j1)
         if isinstance(p1, (int, float)):
             return {"symbol": sym, "price": float(p1), "source": "polygon"}
-        if isinstance(j1, dict):
-            reasons.append(j1.get("status") or j1.get("_error") or "no_price_v3")
 
         # 2) v2 last trade
         url2 = f"{self.base}/v2/last/trade/{sym}?apiKey={self.key}"
@@ -68,8 +83,6 @@ class Client:
         p2 = self._pick_price(j2)
         if isinstance(p2, (int, float)):
             return {"symbol": sym, "price": float(p2), "source": "polygon"}
-        if isinstance(j2, dict):
-            reasons.append(j2.get("status") or j2.get("_error") or "no_price_v2")
 
         # 3) previous day close
         url3 = f"{self.base}/v2/aggs/ticker/{sym}/prev?adjusted=true&apiKey={self.key}"
@@ -80,8 +93,19 @@ class Client:
                 c = res[0].get("c")
                 if isinstance(c, (int, float)):
                     return {"symbol": sym, "price": float(c), "source": "polygon"}
-            reasons.append(j3.get("status") or j3.get("_error") or "no_prev_close")
 
-        # Aggregate reason; don't short-circuit on benign statuses like DELAYED
-        reason = ",".join([r for r in reasons if r]) or "no_price"
-        return {"symbol": sym, "price": None, "source": "polygon", "reason": reason}
+        reason = None
+        for j in (j1, j2, j3):
+            if isinstance(j, dict):
+                reason = reason or j.get("_error") or j.get("status")
+        # If CL1! not available on this plan, try USO ETF as a proxy (prev close)
+        if sym == "CL1!":
+            urlu = f"{self.base}/v2/aggs/ticker/USO/prev?adjusted=true&apiKey={self.key}"
+            ju = self._http_json(urlu)
+            if isinstance(ju, dict):
+                resu = ju.get("results")
+                if isinstance(resu, list) and resu:
+                    cu = resu[0].get("c")
+                    if isinstance(cu, (int, float)):
+                        return {"symbol": sym, "price": float(cu), "source": "polygon(USO-proxy)"}
+        return {"symbol": sym, "price": None, "source": "polygon", "reason": reason or "no_price"}

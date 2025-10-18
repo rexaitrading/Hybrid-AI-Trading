@@ -2,7 +2,7 @@ import os, re, pathlib, json
 from typing import Any, Dict
 import urllib.request, urllib.error
 
-__all__ = ["load_providers", "get_price", "get_price_retry"]
+__all__ = ["load_providers", "get_price", "get_price_retry", "get_prices"]
 
 # tiny in-process cache to reduce API traffic during loops
 _CACHE: dict = {}
@@ -57,13 +57,31 @@ def _is_crypto_symbol(symbol: str) -> bool:
         return True
     return False
 
+def _is_fx_symbol(symbol: str) -> bool:
+    import re
+    s = (symbol or '').upper().strip()
+    # majors like EURUSD, USDJPY
+    if re.match(r'^[A-Z]{6}$', s) and s.endswith(('USD','EUR','JPY','GBP','AUD','CAD','CHF','NZD','CNH')):
+        return True
+    if any(x in s for x in ('/','-','_')):
+        parts = re.split(r'[/\-_]', s)
+        if len(parts)==2 and len(parts[0])==3 and len(parts[1])==3:
+            return True
+    return False
+
+def _is_metal_symbol(symbol: str) -> bool:
+    s = (symbol or '').upper().strip()
+    return s in ('XAUUSD','XAGUSD')
+
 def get_price(symbol: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Route by asset class:
-      - Equities -> polygon
-      - Crypto   -> coinapi (normalized pairs) with kraken fallback
-    Try multiple, soft-skip 'not_implemented', return first price.
-    Apply in-process cache per symbol (ttl from env; disable via HAT_NO_CACHE).
+    Routing rules:
+      - Metals: XAUUSD/XAGUSD -> CoinAPI exchangerate
+      - FX: EURUSD, USDJPY, ... -> CoinAPI exchangerate, then Polygon fallback (C:<PAIR> prev)
+      - Crypto: CoinAPI -> Kraken -> CryptoCompare
+      - Equity/other: Polygon -> CoinAPI (secondary)
+      - CL1!: force Polygon only (avoid CoinAPI 550 noise)
+    Cache controlled by HAT_NO_CACHE/HAT_CACHE_TTL_SEC.
     """
     import time
     now = time.time()
@@ -74,40 +92,77 @@ def get_price(symbol: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
 
     result = {"symbol": symbol, "price": None, "source": "none", "reason": "no_clients"}
     providers = cfg.get("providers", {}) if isinstance(cfg, dict) else {}
-
     constructed = []
-    is_crypto = _is_crypto_symbol(symbol)
 
-    if is_crypto:
-        # coinapi first for crypto
+    # Metals first
+    if _is_metal_symbol(symbol):
+        try:
+            from hybrid_ai_trading.data_clients.coinapi_client import Client as Coin
+            ccfg = dict(providers.get("coinapi", {}) or {})
+            constructed = [("coinapi", Coin(**ccfg))]
+        except Exception:
+            constructed = []
+
+    # FX next
+    elif _is_fx_symbol(symbol):
         try:
             from hybrid_ai_trading.data_clients.coinapi_client import Client as Coin
             ccfg = dict(providers.get("coinapi", {}) or {})
             constructed.append(("coinapi", Coin(**ccfg)))
         except Exception:
             pass
-        # kraken as fallback (public endpoint)
-        try:
-            from hybrid_ai_trading.data_clients.kraken_client import Client as Krk
-            kcfg = dict(providers.get("kraken", {}) or {})
-            constructed.append(("kraken", Krk(**kcfg)))
-        except Exception:
-            pass
-    else:
-        # polygon for equities
         try:
             from hybrid_ai_trading.data_clients.polygon_client import Client as Poly
             pcfg = dict(providers.get("polygon", {}) or {})
             constructed.append(("polygon", Poly(**pcfg)))
         except Exception:
             pass
-        # coinapi fallback (rare for equities)
-        try:
-            from hybrid_ai_trading.data_clients.coinapi_client import Client as Coin
-            ccfg = dict(providers.get("coinapi", {}) or {})
-            constructed.append(("coinapi", Coin(**ccfg)))
-        except Exception:
-            pass
+
+    else:
+        # Crypto?
+        is_crypto = _is_crypto_symbol(symbol)
+        if is_crypto:
+            try:
+                from hybrid_ai_trading.data_clients.coinapi_client import Client as Coin
+                ccfg = dict(providers.get("coinapi", {}) or {})
+                constructed.append(("coinapi", Coin(**ccfg)))
+            except Exception:
+                pass
+            try:
+                from hybrid_ai_trading.data_clients.kraken_client import Client as Krk
+                kcfg = dict(providers.get("kraken", {}) or {})
+                constructed.append(("kraken", Krk(**kcfg)))
+            except Exception:
+                pass
+            try:
+                from hybrid_ai_trading.data_clients.cryptocompare_client import Client as CC
+                cccfg = dict(providers.get("cryptocompare", {}) or {})
+                constructed.append(("cryptocompare", CC(**cccfg)))
+            except Exception:
+                pass
+        else:
+            # Equities / everything else
+            # Special-case: CL1! -> force Polygon only (skip CoinAPI 550 noise)
+            if symbol.upper().strip() == "CL1!":
+                try:
+                    from hybrid_ai_trading.data_clients.polygon_client import Client as Poly
+                    pcfg = dict(providers.get("polygon", {}) or {})
+                    constructed.append(("polygon", Poly(**pcfg)))
+                except Exception:
+                    pass
+            else:
+                try:
+                    from hybrid_ai_trading.data_clients.polygon_client import Client as Poly
+                    pcfg = dict(providers.get("polygon", {}) or {})
+                    constructed.append(("polygon", Poly(**pcfg)))
+                except Exception:
+                    pass
+                try:
+                    from hybrid_ai_trading.data_clients.coinapi_client import Client as Coin
+                    ccfg = dict(providers.get("coinapi", {}) or {})
+                    constructed.append(("coinapi", Coin(**ccfg)))
+                except Exception:
+                    pass
 
     if not constructed:
         out = {"symbol": symbol, "price": None, "source": "none", "reason": "no_clients_constructed"}
@@ -144,3 +199,13 @@ def get_price_retry(symbol, cfg, attempts=3, delay=0.4):
             return last
         time.sleep(delay * (1 + i))
     return last or {"symbol": symbol, "price": None, "source": "none", "reason": "retry_exhausted"}
+
+def get_prices(symbols, cfg):
+    """Batch aggregator: returns list of {symbol, price, source, reason?} with basic isolation."""
+    out = []
+    for s in symbols or []:
+        try:
+            out.append(get_price(s, cfg))
+        except Exception as e:
+            out.append({"symbol": s, "price": None, "source": "none", "reason": f"error:{type(e).__name__}"})
+    return out
