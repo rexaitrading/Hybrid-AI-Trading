@@ -8,8 +8,8 @@ def _drawdown_scale(equity_peak: float,
                     equity_now: float,
                     dd_max: float = 0.20,
                     gamma: float = 1.0) -> float:
-    \"\"\"Return [0,1] scale that shrinks risk as drawdown deepens.
-    dd = (peak - now)/peak. When dd>=dd_max => 0.  Smooth with gamma.\"\"\"
+    """Return [0,1] scale that shrinks risk as drawdown deepens.
+    dd = (peak - now)/peak. When dd>=dd_max => 0.  Smooth with gamma."""
     if equity_peak <= 0 or equity_now <= 0:
         return 0.0
     dd = max(0.0, (equity_peak - equity_now) / equity_peak)
@@ -63,19 +63,19 @@ def size_for_signal(signal_strength: float,
                     dd_max: float = 0.20,
                     gamma: float = 1.5,
                     notional_cap: float | None = None) -> dict:
-    \"\"\"Return clamped Kelly fraction and resulting size.
+    """Return clamped Kelly fraction and resulting size.
 
     signal_strength: base Kelly fraction suggestion (0..1 typical).
     risk_per_trade: additional cap vs account (fallback if signal missing).
     notional_cap: optional hard cap on dollars per position.
-    \"\"\"
+    """
     k_base = max(0.0, float(signal_strength)) if signal_strength is not None else float(risk_per_trade)
     k = _kelly_clamp(k_base, kelly_min, kelly_max)
     s = _drawdown_scale(equity_peak=equity_peak, equity_now=equity_now, dd_max=dd_max, gamma=gamma)
     k_eff = k * s
 
     if price <= 0 or equity_now <= 0:
-      return {\"fraction\": 0.0, \"qty\": 0.0, \"notional\": 0.0}
+      return {"fraction": 0.0, "qty": 0.0, "notional": 0.0}
 
     notional = k_eff * equity_now
     if notional_cap is not None and notional_cap > 0:
@@ -84,17 +84,17 @@ def size_for_signal(signal_strength: float,
     qty = max(0.0, notional / price)
 
     return {
-        \"fraction\": float(k_eff),
-        \"qty\": float(qty),
-        \"notional\": float(notional),
-        \"meta\": {
-            \"kelly_raw\": float(k_base),
-            \"kelly_clamped\": float(k),
-            \"dd_scale\": float(s),
-            \"kelly_min\": kelly_min,
-            \"kelly_max\": kelly_max,
-            \"dd_max\": dd_max,
-            \"gamma\": gamma,
-            \"risk_per_trade\": risk_per_trade,
+        "fraction": float(k_eff),
+        "qty": float(qty),
+        "notional": float(notional),
+        "meta": {
+            "kelly_raw": float(k_base),
+            "kelly_clamped": float(k),
+            "dd_scale": float(s),
+            "kelly_min": kelly_min,
+            "kelly_max": kelly_max,
+            "dd_max": dd_max,
+            "gamma": gamma,
+            "risk_per_trade": risk_per_trade,
         }
     }
