@@ -169,7 +169,6 @@ def _provider_only_run(args, cfg, symbols, logger):
     # synth "snapshots"
     snapshots = [{"symbol": s, "price": (None if prov_map.get(s) is None else float(prov_map.get(s)))} for s in symbols]
     # Optionally override (provider-first)\r
-        if getattr(args, "prefer_providers", False):
         snapshots = _apply_provider_prices(snapshots, prov_map, override=True)
     # Evaluate via QuantCore adapter (no IB risk; risk_mgr via cfg/stub handled in adapter)
     result = _qc_run_once(symbols, snapshots, cfg, logger)
