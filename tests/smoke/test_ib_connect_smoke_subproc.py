@@ -36,6 +36,7 @@ def _probe_cmd():
 
 @pytest.mark.skipif(not _port_open(HOST, PORT), reason=f'IB not listening on {HOST}:{PORT}')
 @pytest.mark.skipif(not _port_open(HOST, PORT), reason=f'IB not listening on {HOST}:{PORT}')
+@pytest.mark.skipif(not _port_open(HOST, PORT), reason=f'IB not listening on {HOST}:{PORT}')
 def test_ib_connect_probe_subprocess():
     # Single subprocess attempt (the external probe is stable)
     p = subprocess.run(_probe_cmd(), capture_output=True, text=True)
