@@ -1,3 +1,8 @@
+import os
+import socket
+import pytest
+HOST = os.getenv('IB_HOST','127.0.0.1')
+PORT = int(os.getenv('IB_PORT','4002'))
 def _port_open(host: str, port: int) -> bool:
     try:
         for fam in (socket.AF_INET, ):
@@ -14,12 +19,7 @@ def _port_open(host: str, port: int) -> bool:
     except Exception:
         return False
     return False
-HOST = os.getenv('IB_HOST','127.0.0.1')
-import socket
-import pytest
 import os, subprocess, sys, pytest
-
-PORT = int(os.environ.get("IB_PORT", "4002"))
 CID  = int(os.environ.get("IB_CLIENT_ID", "3021"))
 
 def _probe_cmd():
@@ -34,6 +34,7 @@ def _probe_cmd():
     )
     return [sys.executable, "-c", code]
 
+@pytest.mark.skipif(not _port_open(HOST, PORT), reason=f'IB not listening on {HOST}:{PORT}')
 @pytest.mark.skipif(not _port_open(HOST, PORT), reason=f'IB not listening on {HOST}:{PORT}')
 def test_ib_connect_probe_subprocess():
     # Single subprocess attempt (the external probe is stable)
