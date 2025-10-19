@@ -166,10 +166,14 @@ def _riskhub_checks(snapshots, result, logger):
 def _provider_only_run(args, cfg, symbols, logger):
     """Run once using providers only (no IB session)."""
     prov_map = _provider_price_map(symbols)
-    # synth "snapshots"
-    snapshots = [{"symbol": s, "price": (None if prov_map.get(s) is None else float(prov_map.get(s)))} for s in symbols]
-    # Optionally override (provider-first)\r
+    snapshots = [
+        {"symbol": s, "price": (None if prov_map.get(s) is None else float(prov_map.get(s)))}
+        for s in symbols
+    ]
+    # Optionally override (provider-first)
+    if getattr(args, "prefer_providers", False):
         snapshots = _apply_provider_prices(snapshots, prov_map, override=True)
+
     # Evaluate via QuantCore adapter (no IB risk; risk_mgr via cfg/stub handled in adapter)
     result = _qc_run_once(symbols, snapshots, cfg, logger)
     _riskhub_checks(snapshots, result, logger)
@@ -197,16 +201,16 @@ def _inject_provider_cli(args):
         except Exception:
             pass
     return args
-def _merge_provider_flags(args, cfg):
+def _merge_provider_flags(args, cfg, rm=None):
     """Merge provider-only/prefer-providers flags from cfg + CLI (CLI wins)."""
     cfg = dict(cfg or {})
-try:
-    cfg["risk_mgr"] = rm
-except NameError:
-    pass  # risk_mgr injection skipped if rm not defined yet
+    if rm is not None:
+        try:
+            cfg["risk_mgr"] = rm
+        except Exception:
+            pass
     cfg_provider_only = bool(cfg.get("provider_only", False))
     cfg_prefer_prov   = bool(cfg.get("prefer_providers", False))
-    # CLI (or shim) wins:
     if getattr(args, "provider_only", None) is True:
         cfg_provider_only = True
     if getattr(args, "prefer_providers", None) is True:
@@ -214,8 +218,6 @@ except NameError:
     cfg["provider_only"] = cfg_provider_only
     cfg["prefer_providers"] = cfg_prefer_prov
     return cfg
-
-
 def run_paper_session(args) -> int:
     """
     poll_sec = cfg.get('poll_sec', 2)
@@ -275,25 +277,21 @@ def run_paper_session(args) -> int:
         for c in contracts.values():
             ib.reqMktData(c, "", False, False)
         ib.sleep(1.5)
-
-        def _snap(sym: str):
-            c = contracts[sym]
-            t = ib.ticker(c)
-            price = t.last or t.marketPrice() or getattr(t, "close", None) or getattr(t, "vwap", None) or None
-            return {
-                "symbol": sym,
-                "price": float(price) if price is not None else None,
-                "bid": float(t.bid) if t.bid is not None else None,
-                "ask": float(t.ask) if t.ask is not None else None,
-                "last": float(t.last) if t.last is not None else None,
-                "close": float(getattr(t, "close", None))\r
-        if getattr(t, "close", None) is not None else None,
-                "vwap": float(getattr(t, "vwap", None))\r
-        if getattr(t, "vwap", None) is not None else None,
-                "volume": float(getattr(t, "volume", 0.0) or 0.0),
-                "ts": ib.serverTime().isoformat() if hasattr(ib, "serverTime") else None,
-            }
-
+def _snap(sym: str):
+    c = contracts[sym]
+    t = ib.ticker(c)
+    price = t.last or t.marketPrice() or getattr(t, "close", None) or getattr(t, "vwap", None) or None
+    return {
+        "symbol": sym,
+        "price": float(price) if price is not None else None,
+        "bid": float(t.bid) if getattr(t, "bid", None) is not None else None,
+        "ask": float(t.ask) if getattr(t, "ask", None) is not None else None,
+        "last": float(t.last) if getattr(t, "last", None) is not None else None,
+        "close": float(getattr(t, "close", None)) if getattr(t, "close", None) is not None else None,
+        "vwap": float(getattr(t, "vwap", None)) if getattr(t, "vwap", None) is not None else None,
+        "volume": float(getattr(t, "volume", 0.0) or 0.0),
+        "ts": ib.serverTime().isoformat() if hasattr(ib, "serverTime") else None,
+    }
         snapshots = [_snap(sym) for sym in symbols]
 
         # -------- once mode --------
@@ -301,7 +299,7 @@ def run_paper_session(args) -> int:
             result = _qc_run_once(symbols, snapshots, cfg, logger)
             _riskhub_checks(snapshots, result, logger)
 
-            # enforce RiskHub (paper-safe)\r
+            # enforce RiskHub (paper-safe)
         if getattr(args, "enforce_riskhub", False):
                 try:
                     from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
@@ -363,7 +361,7 @@ def run_paper_session(args) -> int:
                             resp = place_entry(sym, side, qty, px)
                             logger.info('exec_place', symbol=sym, side=side, qty=qty, px=px, resp=resp)
                 except Exception as _e:
-                    logger.error('exec_error', extra={'error': str(_e)})\r
+                    logger.error('exec_error', extra={'error': str(_e)})
         if getattr(args, "enforce_riskhub", False):
                 try:
                     from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
