@@ -1,20 +1,11 @@
-import os
-import socket
-import pytest
-import subprocess
-import sys
-HOST = os.getenv('IB_HOST', '127.0.0.1')
-PORT = int(os.getenv('IB_PORT', '4002'))
-CID  = int(os.getenv('IB_CLIENT_ID', '3021'))
+import os, socket, pytest, subprocess, sys
+
+HOST = os.getenv("IB_HOST", "127.0.0.1")
+PORT = int(os.getenv("IB_PORT", "4002"))
+CID  = int(os.getenv("IB_CLIENT_ID", "3021"))
 
 def _port_open(host: str, port: int) -> bool:
-    fams = []
-    if host == '::1':
-        fams = [socket.AF_INET6]
-    elif host == '127.0.0.1':
-        fams = [socket.AF_INET]
-    else:
-        fams = [socket.AF_INET, socket.AF_INET6]
+    fams = [socket.AF_INET6] if host == '::1' else [socket.AF_INET] if host == '127.0.0.1' else [socket.AF_INET, socket.AF_INET6]
     for fam in fams:
         try:
             s = socket.socket(fam, socket.SOCK_STREAM)
@@ -27,39 +18,22 @@ def _port_open(host: str, port: int) -> bool:
                 s.close()
         except Exception:
             pass
-    return Falsedef _port_open(host: str, port: int) -> bool:
-    try:
-        for fam in (socket.AF_INET, ):
-            s = socket.socket(fam, socket.SOCK_STREAM)
-            s.settimeout(0.25)
-            try:
-                s.connect((host, port))
-                return True
-            except Exception:
-                pass
-            finally:
-                try: s.close()
-                except Exception: pass
-    except Exception:
-        return False
     return False
-import os, subprocess, sys, pytest
 
 def _probe_cmd():
+    # One-line python snippet run in a child process (ib_insync handshake)
     code = (
-        "from ib_insync import IB; "
-        "ib=IB(); "
-        f"ok=ib.connect('{HOST}',{PORT},clientId={CID},timeout=20); "
-        "print('ok',bool(ok)); "
-        "print('t', ib.reqCurrentTime() if ok else None); "
-        "ib.disconnect(); "
-        "import sys as _s; _s.exit(0 if ok else 2)"
+        "from ib_insync import IB;import os,sys;"
+        "h=os.getenv('IB_HOST','127.0.0.1');p=int(os.getenv('IB_PORT','4002'));cid=int(os.getenv('IB_CLIENT_ID','3021'));"
+        "ib=IB();ok=ib.connect(h,p,clientId=cid,timeout=20);"
+        "rc=0 if (ok and ib.isConnected()) else 1;"
+        "print('ok=',bool(ok) and ib.isConnected());"
+        "ib.disconnect();sys.exit(rc)"
     )
     return [sys.executable, "-c", code]
 
 @pytest.mark.skipif(not _port_open(HOST, PORT), reason=f'IB not listening on {HOST}:{PORT}')
 def test_ib_connect_probe_subprocess():
-    # Single subprocess attempt (the external probe is stable)
     p = subprocess.run(_probe_cmd(), capture_output=True, text=True)
     sys.stdout.write(p.stdout or "")
     sys.stderr.write(p.stderr or "")
