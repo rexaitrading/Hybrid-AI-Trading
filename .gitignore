@@ -1,27 +1,21 @@
-# caches & envs
+﻿# Python
+.venv/
 __pycache__/
 *.pyc
-.venv/
-research-env/
-.ipynb_checkpoints/
-.logs/
+*.pyo
+*.pyd
+
+# Editors/IDE
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Local data/logs
 logs/
+*.log
 
-# archives / snapshots
-archive/
-archive_legacy_pkg_*/
-__files_active_tree.txt
-__git_health.txt
-__layout_audit.txt
-
-# backups / temp
-*.bak
-*.bak*/
-*.bak_*
-*.orig
-*~
-/coverage.xml
-/.coverage
-/reports/
-/data/
-/src/hybrid_ai_trading.egg-info/
+# TWS/IB local artifacts (dont version your personal config)
+Jts/
