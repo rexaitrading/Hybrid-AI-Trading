@@ -19,3 +19,18 @@ logs/
 
 # TWS/IB local artifacts (dont version your personal config)
 Jts/
+# generated/ephemeral
+reports/
+data/
+.logs/
+.backup/
+coverage.xml
+.coverage
+research-env/
+*.log
+*.png
+*.xlsx
+*.html
+
+# local tools + egg-info
+src/hybrid_ai_trading.egg-info/
