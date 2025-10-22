@@ -1,3 +1,7 @@
-* text=auto
-*.py  text eol=lf
+# Normalize everything to LF in the repo
+* text=auto eol=lf
+
+# Keep PowerShell scripts as CRLF in working tree if you prefer:
 *.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
