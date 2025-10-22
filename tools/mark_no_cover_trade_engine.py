@@ -1,4 +1,4 @@
-﻿import os, sys, io
+import os, sys, io
 import coverage
 
 # Use env COVERAGE_FILE or default

@@ -1,4 +1,4 @@
-﻿param([switch]$Unset = $false)
+param([switch]$Unset = $false)
 if ($Unset) {
   Remove-Item Env:STOP_PAPER_LOOP -ErrorAction SilentlyContinue
   "Unset STOP_PAPER_LOOP"

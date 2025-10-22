@@ -1,4 +1,4 @@
-﻿from importlib import import_module as _imp
+from importlib import import_module as _imp
 TE = _imp("hybrid_ai_trading.trade_engine")
 
 def test_base_fraction_fallbacks():

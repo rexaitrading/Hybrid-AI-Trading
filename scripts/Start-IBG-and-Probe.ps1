@@ -1,4 +1,4 @@
-﻿param(
+param(
   [int]$ClientId = 3021,
   [int]$PortWaitSec  = 45,   # wait for TCP port
   [int]$ApiWaitSec   = 60    # wait for API handshake (after login)

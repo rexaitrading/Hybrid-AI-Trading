@@ -1,4 +1,4 @@
-﻿name: Basic Python Test
+name: Basic Python Test
 on:
   push:
     branches: [ "main" ]

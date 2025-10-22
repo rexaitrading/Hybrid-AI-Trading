@@ -1,4 +1,4 @@
-﻿# src/hybrid_ai_trading/data/clients/alpaca_client.py
+# src/hybrid_ai_trading/data/clients/alpaca_client.py
 """
 Alpaca Client (Hybrid AI Quant Pro v11.0 – Hedge-Fund Grade, Clean)
 -------------------------------------------------------------------

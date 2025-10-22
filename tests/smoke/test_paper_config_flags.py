@@ -1,4 +1,4 @@
-﻿from hybrid_ai_trading.runners.paper_config import parse_args
+from hybrid_ai_trading.runners.paper_config import parse_args
 def test_flags_parse_known():
     a = parse_args([
         "--config","config/paper_runner.yaml",

@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$HealthUrl     = "http://127.0.0.1:8789/health/providers",
   [int]   $IBPortPrimary = 4002,
   [string[]]$Symbols     = @("AAPL","BTCUSD","BTC/USDT","EURUSD","USDJPY","XAUUSD","CL1!")

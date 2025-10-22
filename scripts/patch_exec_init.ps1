@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
 $init = Join-Path (Join-Path (Get-Location).Path 'src\hybrid_ai_trading\execution') '__init__.py'
 if(-not (Test-Path $init)){ throw "Missing execution/__init__.py: $init" }
 $txt = Get-Content -Raw -LiteralPath $init

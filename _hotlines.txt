@@ -1,4 +1,4 @@
-﻿ 172:     def reset_day(self) -> Dict[str, Any]:
+ 172:     def reset_day(self) -> Dict[str, Any]:
  173:         try:
  174:             port_status = {"status": "ok"}
  175:             if hasattr(self.portfolio, "reset_day"):

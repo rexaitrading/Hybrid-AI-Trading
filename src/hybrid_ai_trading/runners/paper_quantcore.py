@@ -1,4 +1,4 @@
-﻿def _norm_approval(a):
+def _norm_approval(a):
     # Accept dict / tuple / list / bool, normalize to {"approved": bool, "reason": str}
     try:
         if isinstance(a, dict):

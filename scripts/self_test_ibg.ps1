@@ -1,4 +1,4 @@
-﻿param(
+param(
   [ValidateSet('paper','live')] [string]$Mode = 'paper',
   [int]$TcpTimeoutMs = 2000,
   [int]$Retries = 10,

@@ -1,4 +1,4 @@
-﻿param(
+param(
   [int]$BufferMinutes = 5,
   [string]$Entry      = "hybrid_ai_trading.runners.paper_trader",
   [string]$ScriptPath = "",

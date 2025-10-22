@@ -1,4 +1,4 @@
-﻿import time, threading, sys
+import time, threading, sys
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
 

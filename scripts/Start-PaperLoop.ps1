@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$Config   = "config/paper_runner.yaml",
   [string]$Universe = "AAPL,MSFT",
   [int]   $MDT      = 3,

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 """
 Coinbase Executor (Hybrid AI Quant Pro v1.0 – DRY-RUN Safe)
 - Uses coinbase-advanced-py RESTClient.

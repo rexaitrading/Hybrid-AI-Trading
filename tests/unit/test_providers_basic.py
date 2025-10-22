@@ -1,4 +1,4 @@
-﻿from hybrid_ai_trading.utils.providers import load_providers, get_price
+from hybrid_ai_trading.utils.providers import load_providers, get_price
 
 def test_load_providers_and_get_price_stub(tmp_path, monkeypatch):
     # create a minimal providers.yaml that references env var (left unset)

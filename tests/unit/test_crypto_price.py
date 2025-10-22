@@ -1,4 +1,4 @@
-﻿from hybrid_ai_trading.utils.providers import load_providers, get_price
+from hybrid_ai_trading.utils.providers import load_providers, get_price
 
 def test_get_price_crypto_returns_number():
     cfg = load_providers("config/providers.yaml")

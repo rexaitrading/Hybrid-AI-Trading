@@ -1,4 +1,4 @@
-﻿param(
+param(
   [ValidateSet('gateway','tws')]
   [string]$Mode      = 'gateway',
   [string]$ApiHost   = '::1',

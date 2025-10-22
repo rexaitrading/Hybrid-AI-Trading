@@ -1,4 +1,4 @@
-﻿from hybrid_ai_trading.runners.paper_trader import _normalize_result
+from hybrid_ai_trading.runners.paper_trader import _normalize_result
 
 def test_normalize_result_from_list():
     li = [{"symbol":"AAPL","decision":{}},{"symbol":"MSFT","decision":{}}]

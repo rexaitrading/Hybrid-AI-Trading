@@ -1,4 +1,4 @@
-﻿   1: """
+   1: """
    2: Trade Engine (Hybrid AI Quant Pro v17.5 â€“ Hedge Fund Grade, Loop-Proof Normalized)
    3: ---------------------------------------------------------------------------------
    4: - Guardrails BEFORE routing: equity â†’ sector â†’ hedge â†’ drawdown

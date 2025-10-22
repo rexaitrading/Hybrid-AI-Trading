@@ -1,4 +1,4 @@
-﻿param([int]$WaitSec = 90)
+param([int]$WaitSec = 90)
 $ErrorActionPreference = 'Stop'
 
 # 1) Kill stray processes (non-fatal if not running)

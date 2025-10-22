@@ -1,4 +1,4 @@
-﻿param(
+param(
   # Prefer module path (no function) for modules that act as scripts:
   #   -Entry "hybrid_ai_trading.runners.paper_trader"
   # If you do have a function, you can pass: module:function
