@@ -1,4 +1,4 @@
-﻿param([string]$Host="127.0.0.1",[int]$Port=4002,[int]$ClientId=1001)
+param([string]$Host="127.0.0.1",[int]$Port=4002,[int]$ClientId=1001)
 
 $py="$env:USERPROFILE\OneDrive\文件\HybridAITrading\.venv\Scripts\python.exe"
 @"

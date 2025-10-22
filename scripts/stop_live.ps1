@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 Get-CimInstance Win32_Process |
   ? { $_.Name -eq "python.exe" -and $_.CommandLine -match "hybrid_ai_trading\.pipelines\.live_loop" } |
   % { try { Stop-Process -Id $_.ProcessId -Force } catch {} }

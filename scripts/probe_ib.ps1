@@ -1,4 +1,4 @@
-﻿param(
+param(
   [ValidateSet("paper","live")] [string]$Mode="paper",
   [int]$Retries = 20
 )

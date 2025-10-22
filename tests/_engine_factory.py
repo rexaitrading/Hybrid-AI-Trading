@@ -1,4 +1,4 @@
-﻿from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional
 from hybrid_ai_trading.trade_engine import TradeEngine
 
 def make_engine(config: Optional[Dict[str,Any]] = None) -> TradeEngine:

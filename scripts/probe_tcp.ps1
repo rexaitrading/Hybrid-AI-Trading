@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$Addr = '127.0.0.1',
   [int]$Port = 4002,      # 4002=Paper, 4001=Live
   [int]$Retries = 999,

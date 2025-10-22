@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$Url = "http://127.0.0.1:8789/health/providers",
   [string]$Log = ".\.logs\provider_health.log"
 )

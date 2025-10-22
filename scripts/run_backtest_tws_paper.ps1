@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [int]$ClientId = 3021,
   [int]$WaitListenSec = 120,

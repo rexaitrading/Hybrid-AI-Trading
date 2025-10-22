@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 """
 LiveGuard (Hybrid AI Quant Pro v1.0) - simple per-trade & daily caps
 - Env caps (all optional):

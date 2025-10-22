@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
 function Write-Section([string]$t){ $bar=('='*78); Write-Host "`n$bar`n# $t`n$bar" }
 
 $root=(Get-Location).Path

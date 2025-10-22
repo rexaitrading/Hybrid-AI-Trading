@@ -1,4 +1,4 @@
-﻿from ib_insync import *
+from ib_insync import *
 import os
 HOST=os.getenv("IB_HOST","127.0.0.1"); PORT=int(os.getenv("IB_PORT","4002")); CID=int(os.getenv("IB_CLIENT_ID","3021"))
 ib=IB(); ib.connect(HOST,PORT,clientId=CID,timeout=25)

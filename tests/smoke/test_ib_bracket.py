@@ -1,4 +1,4 @@
-﻿import os, socket, pytest
+import os, socket, pytest
 try:
     from ib_insync import IB
 except Exception as e:

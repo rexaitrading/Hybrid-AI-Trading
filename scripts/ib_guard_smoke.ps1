@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$ApiHost = '::1',
   [int]$Port = 7497,
   [int]$ClientId = 3021,

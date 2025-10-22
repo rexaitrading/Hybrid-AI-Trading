@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$Repo   = (Get-Location).Path,
   [string]$SrcRel = "src",
   [string]$Py     = ".\.venv\Scripts\python.exe",

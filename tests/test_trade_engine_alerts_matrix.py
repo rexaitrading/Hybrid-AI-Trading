@@ -1,4 +1,4 @@
-﻿import sys, types
+import sys, types
 from importlib import import_module as _imp
 
 def make_engine():
