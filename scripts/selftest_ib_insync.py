@@ -1,4 +1,4 @@
-﻿import json, sys, time, socket
+import json, sys, time, socket
 from ib_insync import IB
 
 mode = (sys.argv[1] if len(sys.argv)>1 else "paper").lower()

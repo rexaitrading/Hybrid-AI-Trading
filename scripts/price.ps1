@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory=$true)][string]$Symbol)
+param([Parameter(Mandatory=$true)][string]$Symbol)
 
 $ErrorActionPreference = "Stop"
 $env:PYTHONPATH = "$PWD\src;$env:PYTHONPATH"

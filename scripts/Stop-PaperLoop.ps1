@@ -1,4 +1,4 @@
-﻿param([string]$JobName = "PaperLoop")
+param([string]$JobName = "PaperLoop")
 $ErrorActionPreference = 'Stop'
 $j = Get-Job -Name $JobName -ErrorAction SilentlyContinue
 if (-not $j) { "No job named $JobName"; exit 0 }

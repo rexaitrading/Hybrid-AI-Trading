@@ -1,4 +1,4 @@
-﻿import sys, types, pathlib
+import sys, types, pathlib
 from types import SimpleNamespace
 from hybrid_ai_trading.runners.paper_config import parse_args
 from hybrid_ai_trading.runners import paper_trader as PT

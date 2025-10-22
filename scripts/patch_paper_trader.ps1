@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
 $pt = Join-Path (Join-Path (Get-Location).Path 'src\hybrid_ai_trading\runners') 'paper_trader.py'
 if(-not (Test-Path $pt)){ throw "Missing runners/paper_trader.py: $pt" }
 $txt = Get-Content -Raw -LiteralPath $pt

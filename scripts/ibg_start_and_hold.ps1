@@ -1,4 +1,4 @@
-﻿param([int]$HoldSec = 30)
+param([int]$HoldSec = 30)
 $ErrorActionPreference = 'Stop'
 
 # Ensure IBG is up (waits for 4002 if needed)

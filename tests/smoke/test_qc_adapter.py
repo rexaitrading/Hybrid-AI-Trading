@@ -1,4 +1,4 @@
-﻿import types
+import types
 import hybrid_ai_trading.runners.paper_quantcore as qc
 from hybrid_ai_trading.runners.paper_trader import _qc_run_once
 

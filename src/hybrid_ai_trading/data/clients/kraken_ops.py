@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 """
 Kraken Ops (Hybrid AI Quant Pro v1.0 - Practical Ops Tools)
 - --balances

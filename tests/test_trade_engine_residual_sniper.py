@@ -1,4 +1,4 @@
-﻿import sys, types, inspect
+import sys, types, inspect
 from _engine_factory import make_engine, call_signal, find
 
 def _sig(fn):

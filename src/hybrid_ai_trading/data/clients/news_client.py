@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 from hybrid_ai_trading.utils.time_utils import utc_now
 """
 News Client (Hybrid AI Quant Pro v2.1 Ã¢â‚¬â€œ Hedge Fund OE Grade, DB-Integrated)

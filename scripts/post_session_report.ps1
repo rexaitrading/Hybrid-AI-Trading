@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference='Stop'
+$ErrorActionPreference='Stop'
 New-Item -ItemType Directory -Force -Path .\.logs\session_reports | Out-Null
 $report = Join-Path .\.logs\session_reports ("report_{0}.txt" -f (Get-Date -Format 'yyyy-MM-dd'))
 

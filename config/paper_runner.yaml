@@ -1,4 +1,4 @@
-﻿timezone: America/Vancouver
+timezone: America/Vancouver
 equities:
   trading_window_pt: ["00:00-23:59"]
   symbols: ["AAPL","MSFT","NVDA"]

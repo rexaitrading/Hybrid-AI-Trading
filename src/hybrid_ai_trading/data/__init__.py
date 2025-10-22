@@ -1,4 +1,4 @@
-﻿"""
+"""
 Hybrid AI Quant Pro – Data Layer
 --------------------------------
 Unified access to external market data clients and adapters.

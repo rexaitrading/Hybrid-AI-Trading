@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference="Stop"
+$ErrorActionPreference="Stop"
 $log = ".\.logs\preflight.log"
 $stamp = (Get-Date).ToString("s")
 $psi = New-Object System.Diagnostics.ProcessStartInfo

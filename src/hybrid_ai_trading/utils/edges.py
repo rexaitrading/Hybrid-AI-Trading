@@ -1,4 +1,4 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 from ib_insync import LimitOrder
 
 @dataclass
