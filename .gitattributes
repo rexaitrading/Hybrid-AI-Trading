@@ -1,7 +1,14 @@
-# Normalize everything to LF in the repo
+﻿# Default: text normalized to LF
 * text=auto eol=lf
 
-# Keep PowerShell scripts as CRLF in working tree if you prefer:
+# Windows scripts keep CRLF
 *.ps1 text eol=crlf
-*.psm1 text eol=crlf
-*.psd1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Unix-y things stay LF
+*.sh  text eol=lf
+*.py  text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
