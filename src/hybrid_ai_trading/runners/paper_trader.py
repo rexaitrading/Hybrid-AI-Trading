@@ -1,7 +1,8 @@
+from __future__ import annotations
+import sys
 """
 Provider-only fast path (before preflight)
 """
-from __future__ import annotations
 
 # -*- coding: utf-8 -*-
 import os
@@ -17,7 +18,9 @@ from hybrid_ai_trading.runners.paper_logger import JsonlLogger
 from hybrid_ai_trading.runners.paper_config import load_config
 import hybrid_ai_trading.runners.paper_quantcore as qc
 
+from hybrid_ai_trading.execution.route_exec import place_entry as route_place_entry
 ALLOW_TRADE_WHEN_CLOSED = os.environ.get("ALLOW_TRADE_WHEN_CLOSED", "0") == "1"
+contracts = {}
 
 
 def _normalize_result(result):
@@ -163,6 +166,30 @@ def _riskhub_checks(snapshots, result, logger):
         resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, "BUY")
         checks.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
     logger.info("risk_checks", items=checks)
+
+def _provider_price_map(symbols):
+    """Minimal provider map stub: returns empty prices (None)."""
+    try:
+        return {s: None for s in (symbols or [])}
+    except Exception:
+        return {}
+
+def _apply_provider_prices(snapshots, prov_map, *, override=False):
+    """If override, fill snapshot['price'] from prov_map when available."""
+    out = []
+    try:
+        for s in snapshots or []:
+            d = dict(s or {})
+            sym = d.get("symbol")
+            if override and sym in (prov_map or {}) and prov_map.get(sym) is not None:
+                try:
+                    d["price"] = float(prov_map[sym])
+                except Exception:
+                    pass
+            out.append(d)
+    except Exception:
+        return list(snapshots or [])
+    return out
 def _provider_only_run(args, cfg, symbols, logger):
     """Run once using providers only (no IB session)."""
     prov_map = _provider_price_map(symbols)
@@ -176,6 +203,7 @@ def _provider_only_run(args, cfg, symbols, logger):
 
     # Evaluate via QuantCore adapter (no IB risk; risk_mgr via cfg/stub handled in adapter)
     result = _qc_run_once(symbols, snapshots, cfg, logger)
+    _route_decisions_via_exec(result, cfg.get("risk_mgr"), logger)
     _riskhub_checks(snapshots, result, logger)
     logger.info("once_done", note="provider-only run", result=result)
     print("provider-only run")
@@ -220,8 +248,7 @@ def _merge_provider_flags(args, cfg, rm=None):
     return cfg
 
 # --- appended clean overrides: paper_trader runtime-safe definitions ---
-
-def _snap(sym: str):
+def _snap(ib, sym: str):
     c = contracts[sym]
     t = ib.ticker(c)
     price = t.last or t.marketPrice() or getattr(t, "close", None) or getattr(t, "vwap", None) or None
@@ -236,7 +263,6 @@ def _snap(sym: str):
         "volume": float(getattr(t, "volume", 0.0) or 0.0),
         "ts": ib.serverTime().isoformat() if hasattr(ib, "serverTime") else None,
     }
-
 def _merge_provider_flags(args, cfg, rm=None):
     """Merge provider-only/prefer-providers flags from cfg + CLI (CLI wins)."""
     cfg = dict(cfg or {})
@@ -265,10 +291,10 @@ def _provider_only_run(args, cfg, symbols, logger):
     if getattr(args, "prefer_providers", False):
         snapshots = _apply_provider_prices(snapshots, prov_map, override=True)
     result = _qc_run_once(symbols, snapshots, cfg, logger)
+    _route_decisions_via_exec(result, cfg.get("risk_mgr"), logger)
     _riskhub_checks(snapshots, result, logger)
     logger.info("once_done", note="provider-only run", result=result)
     return 0
-
 def run_paper_session(args) -> int:
     """
     Clean runtime-safe implementation that passes smoke tests.
@@ -284,8 +310,8 @@ def run_paper_session(args) -> int:
     if not symbols:
         print("[CONFIG] Universe empty -> nothing to trade.")
         return 0
-
     logger = JsonlLogger(getattr(args, "log_file", "logs/runner_paper.jsonl"))
+    logger.info("run_start", cfg=cfg, symbols=symbols)
 
     # Provider-only fast path
     if getattr(args, "provider_only", False):
@@ -300,13 +326,11 @@ def run_paper_session(args) -> int:
     if not probe["session"]["ok_time"] and not force:
         print(f"Market closed ({probe['session']['session']}), skipping trading window.")
         return 0
-
     logger.info("preflight", probe=probe, universe=symbols)
 
     if not probe["session"]["ok_time"] and force and not getattr(args, "snapshots_when_closed", False):
         logger.info("drill_only", note="market closed; forced preflight ran; skipping trading")
         return 0
-
     with ib_session() as ib:
         apply_mdt(ib, getattr(args, "mdt", 3))
         logger.info("ib_connected", account=probe.get("account"), symbols=symbols)
@@ -320,12 +344,12 @@ def run_paper_session(args) -> int:
 
         # Once mode
         if getattr(args, "once", False):
-            snapshots = [_snap(sym) for sym in symbols]
+            snapshots = [_snap(ib, sym) for sym in symbols]
             result = _qc_run_once(symbols, snapshots, cfg, logger)
+            _route_decisions_via_exec(result, cfg.get("risk_mgr"), logger)
             _riskhub_checks(snapshots, result, logger)
             logger.info("once_done", note="single pass complete", result=result)
             return 0
-
         # Continuous loop
         loop_cfg = (cfg.get("loop") or {}) if isinstance(cfg, dict) else {}
         try:
@@ -334,10 +358,70 @@ def run_paper_session(args) -> int:
             sleep_sec = 5
 
         while True:
-            snapshots = [_snap(sym) for sym in symbols]
+            snapshots = [_snap(ib, sym) for sym in symbols]
             result = _qc_run_once(symbols, snapshots, cfg, logger)
+            _route_decisions_via_exec(result, cfg.get("risk_mgr"), logger)
             _riskhub_checks(snapshots, result, logger)
             logger.info("decision_snapshot", result=result)
             time.sleep(sleep_sec)
 
 # --- end appended clean overrides ---
+
+
+def _route_decisions_via_exec(result, risk_mgr, logger, limit_pad_bps: int = 5):
+    """
+    Route BUY/SELL decisions to ExecRouter with risk_mgr.
+    Supports:
+      - {"items":[{"symbol":"AAPL","decision":{"kelly_size":{"qty":..},"side":"BUY","price":..}}]}
+      - {"decisions":[...]}
+    """
+    try:
+        items = (result or {}).get("items") or (result or {}).get("decisions") or []
+        routed = []
+        for d in items:
+            if isinstance(d, dict) and "decision" in d:
+                sym = d.get("symbol")
+                dec = d.get("decision") or {}
+            else:
+                sym = d.get("symbol") if isinstance(d, dict) else None
+                dec = d if isinstance(d, dict) else {}
+
+            side = str(dec.get("side") or "BUY").upper()
+            ks   = dec.get("kelly_size") or {}
+            qty  = int(ks.get("qty") or dec.get("qty") or 0)
+            limit_px = float(dec.get("limit") or dec.get("price") or 0.0)
+
+            if not sym or qty <= 0 or side not in ("BUY","SELL") or limit_px <= 0.0:
+                routed.append({"symbol": sym, "status": "skip", "reason": "bad_inputs", "side": side, "qty": qty, "limit": limit_px})
+                continue
+
+            # risk gate
+            try:
+                ok, reason = True, ""
+                gate = getattr(risk_mgr, "approve_trade", None)
+                if callable(gate):
+                    g = gate(sym, side, qty, float(qty)*limit_px)
+                    if isinstance(g, dict):
+                        ok, reason = bool(g.get("approved")), str(g.get("reason",""))
+                    elif isinstance(g, (tuple, list)) and g:
+                        ok, reason = bool(g[0]), ("" if len(g)<2 else str(g[1]))
+                    else:
+                        ok, reason = bool(g), ""
+                if not ok:
+                    routed.append({"symbol": sym, "status": "veto", "reason": reason, "side": side, "qty": qty, "limit": limit_px})
+                    continue
+            except Exception as e:
+                routed.append({"symbol": sym, "status": "error", "reason": f"risk:{e}", "side": side, "qty": qty, "limit": limit_px})
+                continue
+
+            try:
+                resp = route_place_entry(sym, side, qty, limit_px, risk_manager=risk_mgr)
+                routed.append({"symbol": sym, **(resp or {})})
+            except Exception as e:
+                routed.append({"symbol": sym, "status": "error", "reason": f"route:{e}", "side": side, "qty": qty, "limit": limit_px})
+
+        logger.info("route_result", items=routed)
+        return routed
+    except Exception as e:
+        logger.error("route_error", error=str(e))
+        return []
