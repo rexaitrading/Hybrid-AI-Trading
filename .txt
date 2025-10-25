@@ -1,0 +1,9 @@
+[33mcommit 59b6934f75ad95cf4befe54bbcd78cb22850ace9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;33mtag: [m[1;33mv0.0.1[m[33m)[m
+Author: rexaitrading <rhcy9181@gmail.com>
+Date:   Tue Oct 21 15:29:18 2025 -0700
+
+    Pin ibapi==9.81.1.post1 and add working TWS probe (connectAck+startApi)
+
+.gitignore
+requirements.txt
+scripts/ib_probe.py

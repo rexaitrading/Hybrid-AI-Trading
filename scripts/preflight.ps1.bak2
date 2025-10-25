@@ -1,0 +1,236 @@
+﻿New-Item -ItemType Directory -Force -Path .\scripts | Out-Null
+
+@'
+param(
+  # --- Provider service health ---
+  [string]$HealthUrl     = "http://127.0.0.1:8789/health/providers",
+
+  # --- IB Gateway / API ---
+  [int]   $IBPortPrimary = 4002,
+  [string]$IBGoodRoot    = "C:\Jts\ibgateway\1039\",
+  [switch]$KillStrayIBG,                # kill any ibgateway.exe under .bak/disabled
+  [Nullable[int]]$IBUseSSL = $null,     # 0, 1, or $null to auto-detect
+
+  # --- Optional order-route smoke (paper, cancel) ---
+  [switch]$WithIBSmoke,
+  [string]$SmokeSymbol   = "AAPL",
+  [ValidateSet("BUY","SELL")] [string]$SmokeSide = "BUY",
+  [int]   $SmokeQty      = 1,
+  [double]$SmokeOffsetCents = 2.0,
+  [int]   $IBClientId    = 951,
+  [int]   $SmokeCancelAfterSec = 5,
+
+  # --- Provider mini snapshot ---
+  [string[]]$Symbols     = @("AAPL","BTCUSD","BTC/USDT","EURUSD","USDJPY","XAUUSD","CL1!")
+)
+
+$ErrorActionPreference = "Stop"
+$fail = @()
+
+function Add-Fail([string]$msg) { $script:fail += $msg }
+function Step([string]$name)    { Write-Host ("[preflight] " + $name) }
+
+# 0) Basic env prep
+try {
+  Step "env:PYTHONPATH"
+  $env:PYTHONPATH = "$PWD\src;$env:PYTHONPATH"
+} catch {
+  Add-Fail "PYTHONPATH set failed: $($_.Exception.Message)"
+}
+
+# 1) Provider health
+try {
+  Step "providers: health GET $HealthUrl"
+  Add-Type -AssemblyName System.Net.Http | Out-Null
+  $http = [System.Net.Http.HttpClient]::new()
+  $http.Timeout = [TimeSpan]::FromSeconds(8)
+  $jsonText = $http.GetStringAsync($HealthUrl).GetAwaiter().GetResult()
+  $json     = $jsonText | ConvertFrom-Json
+  $bad      = @($json.checks | Where-Object { -not $_.ok })
+  if ($bad.Count -gt 0) {
+    Add-Fail ("Health BAD: " + ($bad | ForEach-Object { "$($_.provider):$($_.symbol)" } -join ", "))
+  }
+} catch {
+  Add-Fail "Health fetch failed: $($_.Exception.Message)"
+}
+
+# 2) IB API: optional cleanup
+try {
+  if ($KillStrayIBG.IsPresent) {
+    Step "ibg: kill stray .bak/disabled"
+    Get-CimInstance Win32_Process | Where-Object {
+      $_.ExecutablePath -match 'ibgateway' -and $_.ExecutablePath -match '\.bak|disabled'
+    } | ForEach-Object {
+      try { Stop-Process -Id $_.ProcessId -Force -EA Stop } catch {}
+    }
+  }
+} catch {
+  Add-Fail "KillStrayIBG failed: $($_.Exception.Message)"
+}
+
+# 3) IB API port + owner path
+try {
+  Step "ibg: probe port $IBPortPrimary"
+  $tcp = Test-NetConnection 127.0.0.1 -Port $IBPortPrimary -WarningAction SilentlyContinue
+  if (-not ($tcp -and $tcp.TcpTestSucceeded)) {
+    Add-Fail "IB API not listening on $IBPortPrimary (Gateway Paper expected)"
+  } else {
+    $lis = Get-NetTCPConnection -State Listen -LocalPort $IBPortPrimary -EA SilentlyContinue | Select-Object -First 1
+    if (-not $lis) {
+      Add-Fail "IB API listening check inconsistent (socket vanished)"
+    } else {
+      $ci = Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $lis.OwningProcess) -EA SilentlyContinue
+      $owner = $ci.ExecutablePath
+      Write-Host "  owner: $owner"
+      if (-not $owner) {
+        Add-Fail "Cannot read IB Gateway owner ExecutablePath (try Admin shell)"
+      } elseif ($owner -notlike "$IBGoodRoot*") {
+        Add-Fail "Wrong IBG owner: $owner  (expected under $IBGoodRoot)"
+      }
+    }
+  }
+} catch {
+  Add-Fail "IB probe failed: $($_.Exception.Message)"
+}
+
+# 4) IB UseSSL auto-detect
+try {
+  if ($IBUseSSL -eq $null -and -not ($fail.Count)) {
+    Step "ibg: auto-detect UseSSL"
+$probePy = @'
+from ib_insync import IB
+import os, sys
+host = os.getenv("IB_HOST","127.0.0.1")
+port = int(os.getenv("IB_PORT", os.getenv("IB_PROBE_PORT","4002")))
+timeout = 10
+def try_connect(ssl):
+    ib = IB()
+    try:
+        ib.client.setConnectOptions(f"UseSSL={1 if ssl else 0}")
+        ok = ib.connect(host, port, clientId=930+(1 if ssl else 0), timeout=timeout)
+        print(f"PROBE UseSSL={int(ssl)} -> {'OK' if ok else 'FAIL'}")
+        return bool(ok)
+    except Exception as e:
+        print(f"PROBE UseSSL={int(ssl)} -> EXC:{type(e).__name__}")
+        return False
+    finally:
+        try: ib.disconnect()
+        except: pass
+ok0 = try_connect(False)
+ok1 = False if ok0 else try_connect(True)
+print("RESULT", "ok0" if ok0 else ("ok1" if ok1 else "none"))
+'@
+    $tmpProbe = Join-Path $env:TEMP ("ib_ssl_probe_{0}.py" -f ([guid]::NewGuid().ToString("N")))
+    [IO.File]::WriteAllText($tmpProbe, $probePy, (New-Object System.Text.UTF8Encoding($false)))
+    $env:IB_PROBE_PORT = "$IBPortPrimary"
+    $pyExe = (Resolve-Path .\.venv\Scripts\python.exe).Path
+    $txt = & $pyExe $tmpProbe 2>&1 | Out-String
+    Remove-Item $tmpProbe -EA SilentlyContinue
+    $mode = ($txt -split "`r?`n" | Where-Object { $_ -match '^RESULT ' } | ForEach-Object { ($_ -split '\s+',2)[1] })
+    if (-not $mode -or $mode -eq 'none') {
+      Add-Fail "IB SSL probe could not connect (finish login/2FA?)"
+    } else {
+      $IBUseSSL = if ($mode -eq 'ok0') { 0 } else { 1 }
+      Write-Host "  UseSSL=$IBUseSSL"
+      $env:IB_SMOKE_SSL = "$IBUseSSL"
+      $env:IB_HOST = "127.0.0.1"
+      $env:IB_PORT = "$IBPortPrimary"
+    }
+  } elseif ($IBUseSSL -in 0,1) {
+    Step "ibg: UseSSL forced -> $IBUseSSL"
+    $env:IB_SMOKE_SSL = "$IBUseSSL"
+    $env:IB_HOST = "127.0.0.1"
+    $env:IB_PORT = "$IBPortPrimary"
+  }
+} catch {
+  Add-Fail "IB SSL auto-detect failed: $($_.Exception.Message)"
+}
+
+# 5) Provider mini price snapshot
+try {
+  Step "providers: mini snapshot"
+  $pySyms = ($Symbols | ForEach-Object { "'" + ($_ -replace "'", "''") + "'" }) -join ", "
+$py = @"
+from hybrid_ai_trading.utils.providers import load_providers, get_prices
+cfg = load_providers('config/providers.yaml')
+syms = [$pySyms]
+out  = get_prices(syms, cfg)
+bad  = [o for o in out if not isinstance(o.get('price'), (int,float))]
+print('__OK__' if not bad else '__BAD__:' + ';'.join(f"{b.get('symbol')}:{b.get('reason')}" for b in bad))
+'@
+  $tmp = Join-Path $env:TEMP ("preflight_{0}.py" -f ([guid]::NewGuid().ToString("N")))
+  [IO.File]::WriteAllText($tmp, $py, (New-Object System.Text.UTF8Encoding($false)))
+  $res = & .\.venv\Scripts\python.exe $tmp
+  Remove-Item $tmp -ErrorAction SilentlyContinue
+  if (-not $res) { Add-Fail "Snapshot returned no output" }
+  elseif ($res -like '__BAD__*') { Add-Fail ("Snapshot BAD: " + $res.Substring(7)) }
+} catch {
+  Add-Fail "Snapshot failed: $($_.Exception.Message)"
+}
+
+# 6) Optional: IB order-route smoke
+try {
+  if ($WithIBSmoke.IsPresent -and -not ($fail.Count)) {
+    Step "ibg: smoke place->cancel"
+ = @'
+from ib_insync import *
+import time, sys
+sym, side, qty, off, host, port, cid, ussl, secs = sys.argv[1:]
+qty=int(qty); off=float(off); port=int(port); cid=int(cid); ussl=int(ussl); secs=int(secs)
+ib = IB()
+ib.client.setConnectOptions(f"UseSSL={ussl}")
+assert ib.connect(host, port, clientId=cid, timeout=15), 'connect failed'
+ib.reqMarketDataType(3)
+c = Stock(sym, 'SMART', 'USD')
+ib.qualifyContracts(c)
+t = ib.reqMktData(c, '', False, False)
+ib.sleep(1.5)
+bid = t.bid or t.close or t.last
+ask = t.ask or t.close or t.last
+if not (bid and ask):
+    print('no quotes; abort'); ib.disconnect(); sys.exit(2)
+if side == 'BUY':
+    px = round(max(0.01, min(ask, max(bid, 0)) - off/100.0), 2)
+else:
+    px = round(max(0.01, max(bid, 0) + off/100.0), 2)
+o = LimitOrder(side, qty, px)
+tr = ib.placeOrder(c, o)
+print('placed', tr.orderStatus.status, side, qty, sym, 'at', px)
+deadline = time.time() + secs
+while time.time() < deadline and tr.orderStatus.status in ('PendingSubmit','PendingCancel','PreSubmitted','Submitted'):
+    ib.sleep(0.25)
+print('status_before_cancel:', tr.orderStatus.status)
+ib.cancelOrder(o)
+ib.sleep(1.0)
+print('status_after_cancel:', tr.orderStatus.status)
+ib.disconnect()
+"
+    $tmpS = Join-Path $env:TEMP ("ib_smoke_{0}.py" -f ([guid]::NewGuid().ToString("N")))
+    [IO.File]::WriteAllText($tmpS, $pySmoke, (New-Object System.Text.UTF8Encoding($false)))
+    $pyExe = (Resolve-Path .\.venv\Scripts\python.exe).Path
+    $out = & $pyExe $tmpS $SmokeSymbol $SmokeSide $SmokeQty $SmokeOffsetCents $env:IB_HOST $env:IB_PORT $IBClientId $env:IB_SMOKE_SSL $SmokeCancelAfterSec
+    Remove-Item $tmpS -EA SilentlyContinue
+    if (-not $out) { Add-Fail "IB smoke produced no output" }
+    elseif ($out -match 'connect failed') { Add-Fail "IB smoke connect failed" }
+    elseif ($out -notmatch 'placed .* at .*status_before_cancel: .*status_after_cancel:') {
+      Add-Fail "IB smoke unexpected output: $out"
+    }
+  }
+} catch {
+  Add-Fail "IB smoke failed: $($_.Exception.Message)"
+}
+
+# 7) Final verdict
+if ($fail.Count -eq 0) {
+  Write-Host "âœ… PRE-FLIGHT: GO"
+  if ($IBUseSSL -ne $null) {
+    Write-Host ("  IB UseSSL={0} on {1}:{2}" -f $IBUseSSL, $env:IB_HOST, $env:IB_PORT)
+  }
+  exit 0
+} else {
+  Write-Host "âŒ PRE-FLIGHT: NO-GO"
+  $fail | ForEach-Object { Write-Host " - $_" }
+  exit 1
+}
+'@ | Set-Content -Path .\scripts\preflight.ps1 -Encoding UTF8
+

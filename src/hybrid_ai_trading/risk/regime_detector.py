@@ -1,7 +1,7 @@
 from hybrid_ai_trading.utils.time_utils import utc_now
 
 """
-Regime Detector (Hybrid AI Quant Pro v16.13 â€“ Suite-Aligned, Fully Covered)
+Regime Detector (Hybrid AI Quant Pro v16.13 Ã¢â‚¬â€œ Suite-Aligned, Fully Covered)
 ----------------------------------------------------------------------------
 - Classifies regimes (bull, bear, sideways, crisis, transition, neutral)
 - Configurable thresholds (return, volatility, min_samples)
@@ -16,10 +16,15 @@ from datetime import timedelta
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
-
-from hybrid_ai_trading.config.settings import CONFIG
-from hybrid_ai_trading.data.store.database import Price, SessionLocal
-
+try:
+    from hybrid_ai_trading.config.settings import CONFIG  # type: ignore
+except Exception:
+    CONFIG = {}
+try:
+    from hybrid_ai_trading.data.store.database import Price, SessionLocal  # type: ignore
+except Exception:
+    Price = None
+    SessionLocal = None
 logger = logging.getLogger("hybrid_ai_trading.risk.regime_detector")
 
 
@@ -54,7 +59,7 @@ class RegimeDetector:
         self.history: Dict[str, List[str]] = {}
 
         logger.info(
-            "âœ… RegimeDetector initialized | enabled=%s | method=%s | "
+            "Ã¢Å“â€¦ RegimeDetector initialized | enabled=%s | method=%s | "
             "lookback=%dd | bull>%s | bear<%s | crisis_vol>%s | min_samples=%s",
             self.enabled,
             self.method,
@@ -73,12 +78,12 @@ class RegimeDetector:
 
         closes = self._get_prices(symbol, prices)
         if closes.empty:
-            logger.warning("No data for %s â†’ returning neutral", symbol)
+            logger.warning("No data for %s Ã¢â€ â€™ returning neutral", symbol)
             return "neutral"
 
         if len(closes) < self.min_samples:
             logger.warning(
-                "Insufficient data for %s: have %d, need â‰¥ %d â†’ returning neutral",
+                "Insufficient data for %s: have %d, need Ã¢â€°Â¥ %d Ã¢â€ â€™ returning neutral",
                 symbol,
                 len(closes),
                 self.min_samples,
@@ -87,7 +92,7 @@ class RegimeDetector:
 
         rets = closes.pct_change().dropna()
         if rets.empty:
-            logger.warning("Empty returns for %s â†’ returning sideways", symbol)
+            logger.warning("Empty returns for %s Ã¢â€ â€™ returning sideways", symbol)
             return "sideways"
 
         try:
@@ -95,7 +100,7 @@ class RegimeDetector:
             vol = float(rets.std())
         except Exception as e:
             logger.error(
-                "Return stats failed for %s: %s â†’ returning neutral", symbol, e
+                "Return stats failed for %s: %s Ã¢â€ â€™ returning neutral", symbol, e
             )
             return "neutral"
 
@@ -114,7 +119,7 @@ class RegimeDetector:
         self.history.setdefault(symbol, []).append(regime)
 
         logger.info(
-            "ðŸ“Š Regime calc %s | regime=%s | avg_ret=%.4f | vol=%.4f | n=%d",
+            "Ã°Å¸â€œÅ  Regime calc %s | regime=%s | avg_ret=%.4f | vol=%.4f | n=%d",
             symbol,
             regime,
             avg_return,
@@ -169,34 +174,41 @@ class RegimeDetector:
     # ------------------------------------------------------------------
     def reset(self) -> None:
         """Clear internal history."""
-        logger.info("ðŸ”„ Resetting regime history")
+        logger.info("Ã°Å¸â€â€ž Resetting regime history")
         self.history.clear()
 
     # ------------------------------------------------------------------
-    def _get_prices(
-        self, symbol: str, prices: Optional[List[float]] = None
-    ) -> pd.Series:
-        """Return price series from list or DB, coerced to floats with guards."""
-        if prices is not None:
-            try:
-                return pd.Series([float(p) for p in prices], dtype="float64").dropna()
-            except Exception as e:
-                logger.error("âŒ Bad price data for %s: %s", symbol, e)
-                return pd.Series(dtype="float64")
-
-        since = utc_now() - timedelta(days=self.lookback_days)
-        session = SessionLocal()
+def _get_prices(
+    self, symbol: str, prices: Optional[List[float]] = None
+) -> pd.Series:
+    """Return price series from list or DB, coerced to floats with guards."""
+    if prices is not None:
         try:
-            rows = (
-                session.query(Price)
-                .filter(Price.symbol == symbol, Price.timestamp >= since)
-                .order_by(Price.timestamp.asc())
-                .all()
-            )
-            closes = pd.Series([r.close for r in rows], dtype="float64")
+            return pd.Series([float(p) for p in prices], dtype="float64").dropna()
         except Exception as e:
-            logger.error("âŒ DB error for %s: %s", symbol, e)
+            logger.error("Bad price data for %s: %s", symbol, e)
             return pd.Series(dtype="float64")
-        finally:
+
+    # DB path optional in tests
+    if SessionLocal is None or Price is None:
+        return pd.Series(dtype="float64")
+
+    since = utc_now() - timedelta(days=self.lookback_days)
+    session = SessionLocal()
+    try:
+        rows = (
+            session.query(Price)
+            .filter(Price.symbol == symbol, Price.timestamp >= since)
+            .order_by(Price.timestamp.asc())
+            .all()
+        )
+        closes = pd.Series([r.close for r in rows], dtype="float64")
+    except Exception as e:
+        logger.error("DB error for %s: %s", symbol, e)
+        return pd.Series(dtype="float64")
+    finally:
+        try:
             session.close()
-        return closes
+        except Exception:
+            pass
+    return closes

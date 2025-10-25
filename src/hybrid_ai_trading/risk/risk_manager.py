@@ -95,36 +95,102 @@ class RiskManager:
         self._cooldown_until_ms: int | None = None
         self._last_bar_ts_ms: int | None = None
 
+        # daily realized PnL tracking for day loss caps
+        self._pnl_today: float = 0.0
+        # equity snapshot used for drawdown checks
+        if not hasattr(self, "starting_equity"):
+            try:
+                eq0 = self._resolve_equity()
+                if eq0 is not None:
+                    self.starting_equity = float(eq0)
+            except Exception:
+                pass
     # --------- core gate used by order manager ---------
-    def approve_trade(self, symbol: str, side: str, qty: float, notional: float) -> Tuple[bool, str]:
-        try:
-            if self.daily_loss_limit is not None and float(self.daily_loss_limit) <= 0.0:
-                return False, "daily_loss_limit<=0 disables trading"
-        except Exception:
-            return False, "invalid daily_loss_limit"
+def approve_trade(self, symbol: str, side: str, qty: float, notional: float) -> Tuple[bool, str]:
+    # 0) explicit disable guard
+    try:
+        if self.daily_loss_limit is not None and float(self.daily_loss_limit) <= 0.0:
+            return False, "daily_loss_limit<=0 disables trading"
+    except Exception:
+        return False, "invalid_daily_loss_limit"
 
-        eq = self._resolve_equity()
+    eq = self._resolve_equity()
 
-        try:
-            mpe = self.max_portfolio_exposure
-            if eq is not None and mpe is not None:
-                if float(notional) > float(eq) * max(0.0, float(mpe)):
-                    return False, "exceeds max_portfolio_exposure"
-        except Exception:
-            pass
+    # 1) per-trade notional cap
+    try:
+        cap = getattr(self, "per_trade_notional_cap", None)
+        if cap is None and self.config is not None:
+            cap = getattr(self.config, "per_trade_notional_cap", None)
+        if cap is not None and float(notional) > max(0.0, float(cap)):
+            return False, "exceeds_per_trade_notional_cap"
+    except Exception:
+        pass
 
-        try:
-            ml = self.max_leverage
-            if eq not in (None, 0) and ml is not None:
-                if (float(notional) / float(eq)) > max(0.0, float(ml)):
-                    return False, "exceeds max_leverage"
-        except Exception:
-            pass
+    # 2) max trades per day
+    try:
+        mtpd = getattr(self, "max_trades_per_day", None)
+        if mtpd is None and self.config is not None:
+            mtpd = getattr(self.config, "max_trades_per_day", None)
+        if mtpd is not None and self._trades_today >= int(mtpd):
+            return False, "max_trades_per_day"
+    except Exception:
+        pass
 
-        return True, ""
+    # 3) cooldown active?
+    try:
+        if self._cooldown_until_ms is not None:
+            now_ms = self._last_bar_ts_ms
+            if now_ms is None or int(now_ms) < int(self._cooldown_until_ms):
+                return False, "cooldown_active"
+    except Exception:
+        pass
 
-    # --------- helpers ---------
-    def _resolve_equity(self) -> Optional[float]:
+    # 4) day loss cap (% of equity/starting equity)
+    try:
+        dl_pct = getattr(self, "day_loss_cap_pct", None)
+        if dl_pct is None and self.config is not None:
+            dl_pct = getattr(self.config, "day_loss_cap_pct", None)
+        if dl_pct is not None:
+            base = self.starting_equity if hasattr(self, "starting_equity") else (eq or 0.0)
+            if base and float(self._pnl_today) <= -abs(float(dl_pct)) * float(base):
+                return False, "day_loss_cap_pct"
+    except Exception:
+        pass
+
+    # 5) max portfolio exposure
+    try:
+        mpe = self.max_portfolio_exposure
+        if eq is not None and mpe is not None:
+            if float(notional) > float(eq) * max(0.0, float(mpe)):
+                return False, "exceeds_max_portfolio_exposure"
+    except Exception:
+        pass
+
+    # 6) max leverage
+    try:
+        ml = self.max_leverage
+        if eq not in (None, 0) and ml is not None:
+            if (float(notional) / float(eq)) > max(0.0, float(ml)):
+                return False, "exceeds_max_leverage"
+    except Exception:
+        pass
+
+    # 7) max drawdown
+    try:
+        dd_pct = getattr(self, "max_drawdown_pct", None)
+        if dd_pct is None and self.config is not None:
+            dd_pct = getattr(self.config, "max_drawdown_pct", None)
+        if dd_pct is not None and hasattr(self, "starting_equity"):
+            se = float(self.starting_equity)
+            cur = float(eq) if eq is not None else se + float(self._pnl_today)
+            if se > 0:
+                dd = max(0.0, (se - cur) / se)
+                if dd >= max(0.0, float(dd_pct)):
+                    return False, "max_drawdown_pct"
+    except Exception:
+        pass
+
+    return True, ""    def _resolve_equity(self) -> Optional[float]:
         if self.equity is not None:
             try:
                 return float(self.equity)
@@ -146,47 +212,51 @@ class RiskManager:
     def on_fill(self, side: str, qty: float, px: float, bar_ts: int | None = None, pnl: float | None = None) -> None:
         """Increment per-run trade counter after a fill."""
         self._trades_today += 1
+def record_close_pnl(self, pnl: float, bar_ts_ms: int | None = None) -> None:
+    """
+    Record realized PnL and start a cooldown window when a loser streak reaches the threshold.
+    Cooldown blocks trades while bar_ts < _cooldown_until_ms.
+    """
+    self._last_bar_ts_ms = bar_ts_ms
+    # accumulate realized PnL for day caps
+    try:
+        if pnl is not None:
+            self._pnl_today += float(pnl)
+    except Exception:
+        pass
 
-    def record_close_pnl(self, pnl: float, bar_ts_ms: int | None = None) -> None:
-        """
-        Record realized PnL and start a cooldown window when a loser streak reaches the threshold.
-        Cooldown blocks trades while bar_ts < _cooldown_until_ms.
-        """
-        self._last_bar_ts_ms = bar_ts_ms
-        try:
-            if pnl is not None and float(pnl) < 0.0:
-                self._loser_streak += 1
-            else:
-                self._loser_streak = 0
-        except Exception:
+    # loser streak update
+    try:
+        if pnl is not None and float(pnl) < 0.0:
+            self._loser_streak += 1
+        else:
             self._loser_streak = 0
+    except Exception:
+        self._loser_streak = 0
 
-        try:
-            thr = getattr(self, "max_consecutive_losers", None)
-            if thr is None and getattr(self, "config", None) is not None:
+    # threshold / cooldown computation
+    try:
+        thr = getattr(self, "max_consecutive_losers", None)
+        if thr is None and getattr(self, "config", None) is not None:
+            try:
+                thr = getattr(self.config, "max_consecutive_losers")
+            except Exception:
+                thr = None
+        if thr is not None and self._loser_streak >= int(thr):
+            bars = getattr(self, "cooldown_bars", None)
+            if bars is None and getattr(self, "config", None) is not None:
                 try:
-                    thr = getattr(self.config, "max_consecutive_losers")
+                    bars = getattr(self.config, "cooldown_bars")
                 except Exception:
-                    thr = None
-            if thr is not None and self._loser_streak >= int(thr):
-                bars = getattr(self, "cooldown_bars", None)
-                if bars is None and getattr(self, "config", None) is not None:
-                    try:
-                        bars = getattr(self.config, "cooldown_bars")
-                    except Exception:
-                        bars = None
-                if bar_ts_ms is not None and bars is not None:
-                    per_bar_ms = 60_000
-                    self._cooldown_until_ms = int(bar_ts_ms) + int(bars) * per_bar_ms
-                else:
-                    self._cooldown_until_ms = (bar_ts_ms or 0) + 1
-                self._loser_streak = 0
-        except Exception:
-            # non-fatal
-            pass
-
-    # --------- minimal policy gate for tests/risk_halts.py ---------
-    def allow_trade(self, notional: float, side: str = "BUY", bar_ts: int | None = None) -> tuple[bool, str]:
+                    bars = None
+            if bar_ts_ms is not None and bars is not None:
+                per_bar_ms = 60_000
+                self._cooldown_until_ms = int(bar_ts_ms) + int(bars) * per_bar_ms
+            else:
+                self._cooldown_until_ms = (bar_ts_ms or 0) + 1
+            self._loser_streak = 0
+    except Exception:
+        pass    def allow_trade(self, notional: float, side: str = "BUY", bar_ts: int | None = None) -> tuple[bool, str]:
         # cooldown window check
         try:
             if getattr(self, "_cooldown_until_ms", None) is not None and bar_ts is not None:

@@ -192,22 +192,27 @@ def _apply_provider_prices(snapshots, prov_map, *, override=False):
     return out
 def _provider_only_run(args, cfg, symbols, logger):
     """Run once using providers only (no IB session)."""
-    prov_map = _provider_price_map(symbols)
-    snapshots = [
-        {"symbol": s, "price": (None if prov_map.get(s) is None else float(prov_map.get(s)))}
-        for s in symbols
-    ]
+    prov_map = _provider_price_map(symbols)  # currently returns {sym: None}
+    snapshots = [{"symbol": s, "price": (None if prov_map.get(s) is None else float(prov_map.get(s)))} for s in symbols]
+
     # Optionally override (provider-first)
     if getattr(args, "prefer_providers", False):
         snapshots = _apply_provider_prices(snapshots, prov_map, override=True)
 
     # Evaluate via QuantCore adapter (no IB risk; risk_mgr via cfg/stub handled in adapter)
     result = _qc_run_once(symbols, snapshots, cfg, logger)
-    _route_decisions_via_exec(result, cfg.get("risk_mgr"), logger)
+
+    # Provider-only mode is analysis-only: log RiskHub, do NOT route
     _riskhub_checks(snapshots, result, logger)
     logger.info("once_done", note="provider-only run", result=result)
-    print("provider-only run")
+
+    try:
+        print("provider-only run (no routing)")
+    except Exception:
+        pass
+
     return 0
+
 def _inject_provider_cli(args):
     """
     Ensure CLI flags work even if the main parser didn't define them.
@@ -263,38 +268,6 @@ def _snap(ib, sym: str):
         "volume": float(getattr(t, "volume", 0.0) or 0.0),
         "ts": ib.serverTime().isoformat() if hasattr(ib, "serverTime") else None,
     }
-def _merge_provider_flags(args, cfg, rm=None):
-    """Merge provider-only/prefer-providers flags from cfg + CLI (CLI wins)."""
-    cfg = dict(cfg or {})
-    if rm is not None:
-        try:
-            cfg["risk_mgr"] = rm
-        except Exception:
-            pass
-    cfg_provider_only = bool(cfg.get("provider_only", False))
-    cfg_prefer_prov   = bool(cfg.get("prefer_providers", False))
-    if getattr(args, "provider_only", None) is True:
-        cfg_provider_only = True
-    if getattr(args, "prefer_providers", None) is True:
-        cfg_prefer_prov = True
-    cfg["provider_only"]    = cfg_provider_only
-    cfg["prefer_providers"] = cfg_prefer_prov
-    return cfg
-
-def _provider_only_run(args, cfg, symbols, logger):
-    """Run once using providers only (no IB session)."""
-    prov_map = _provider_price_map(symbols)
-    snapshots = [
-        {"symbol": s, "price": (None if prov_map.get(s) is None else float(prov_map.get(s)))}
-        for s in symbols
-    ]
-    if getattr(args, "prefer_providers", False):
-        snapshots = _apply_provider_prices(snapshots, prov_map, override=True)
-    result = _qc_run_once(symbols, snapshots, cfg, logger)
-    _route_decisions_via_exec(result, cfg.get("risk_mgr"), logger)
-    _riskhub_checks(snapshots, result, logger)
-    logger.info("once_done", note="provider-only run", result=result)
-    return 0
 def run_paper_session(args) -> int:
     """
     Clean runtime-safe implementation that passes smoke tests.
@@ -310,7 +283,12 @@ def run_paper_session(args) -> int:
     if not symbols:
         print("[CONFIG] Universe empty -> nothing to trade.")
         return 0
-    logger = JsonlLogger(getattr(args, "log_file", "logs/runner_paper.jsonl"))
+    log_path = getattr(args, "log_file", "logs/runner_paper.jsonl")
+    try:
+        os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
+    except Exception:
+        pass
+    logger = JsonlLogger(log_path)
     logger.info("run_start", cfg=cfg, symbols=symbols)
 
     # Provider-only fast path
@@ -346,7 +324,7 @@ def run_paper_session(args) -> int:
         if getattr(args, "once", False):
             snapshots = [_snap(ib, sym) for sym in symbols]
             result = _qc_run_once(symbols, snapshots, cfg, logger)
-            _route_decisions_via_exec(result, cfg.get("risk_mgr"), logger)
+            _route_decisions_via_exec(result, cfg.get("risk_mgr"), logger, snapshots=snapshots)
             _riskhub_checks(snapshots, result, logger)
             logger.info("once_done", note="single pass complete", result=result)
             return 0
@@ -356,19 +334,30 @@ def run_paper_session(args) -> int:
             sleep_sec = int(loop_cfg.get("sleep_sec", 5))
         except Exception:
             sleep_sec = 5
+        # NEW: respect HAT_MAX_LOOPS env (defaults infinite)
+        try:
+            _max_loops = int(os.environ.get("HAT_MAX_LOOPS", "0") or "0")
+        except Exception:
+            _max_loops = 0
+        _loops = 0
 
         while True:
             snapshots = [_snap(ib, sym) for sym in symbols]
             result = _qc_run_once(symbols, snapshots, cfg, logger)
-            _route_decisions_via_exec(result, cfg.get("risk_mgr"), logger)
+            _route_decisions_via_exec(result, cfg.get("risk_mgr"), logger, snapshots=snapshots)
             _riskhub_checks(snapshots, result, logger)
             logger.info("decision_snapshot", result=result)
+
+            _loops += 1
+            if _max_loops and _loops >= _max_loops:
+                break
+
             time.sleep(sleep_sec)
 
 # --- end appended clean overrides ---
 
 
-def _route_decisions_via_exec(result, risk_mgr, logger, limit_pad_bps: int = 5):
+def _route_decisions_via_exec(result, risk_mgr, logger, limit_pad_bps: int = 5, snapshots=None):
     """
     Route BUY/SELL decisions to ExecRouter with risk_mgr.
     Supports:
@@ -378,6 +367,14 @@ def _route_decisions_via_exec(result, risk_mgr, logger, limit_pad_bps: int = 5):
     try:
         items = (result or {}).get("items") or (result or {}).get("decisions") or []
         routed = []
+        price_map_snap = {}
+        try:
+            if snapshots:
+                for s in (snapshots or []):
+                    if isinstance(s, dict) and s.get('symbol'):
+                        price_map_snap[s['symbol']] = float(s.get('price') or 0.0)
+        except Exception:
+            price_map_snap = {}
         for d in items:
             if isinstance(d, dict) and "decision" in d:
                 sym = d.get("symbol")
@@ -390,7 +387,11 @@ def _route_decisions_via_exec(result, risk_mgr, logger, limit_pad_bps: int = 5):
             ks   = dec.get("kelly_size") or {}
             qty  = int(ks.get("qty") or dec.get("qty") or 0)
             limit_px = float(dec.get("limit") or dec.get("price") or 0.0)
-
+            # fill price from snapshots if needed
+            if (limit_px <= 0.0) and sym in price_map_snap and price_map_snap[sym] > 0.0:
+                px = price_map_snap[sym]
+                pad = float(limit_pad_bps)/10000.0
+                limit_px = px * (1.0 + pad if side == 'BUY' else 1.0 - pad)
             if not sym or qty <= 0 or side not in ("BUY","SELL") or limit_px <= 0.0:
                 routed.append({"symbol": sym, "status": "skip", "reason": "bad_inputs", "side": side, "qty": qty, "limit": limit_px})
                 continue
@@ -425,3 +426,36 @@ def _route_decisions_via_exec(result, risk_mgr, logger, limit_pad_bps: int = 5):
     except Exception as e:
         logger.error("route_error", error=str(e))
         return []
+
+# ---- CLI entrypoint (safe) ----
+def _cli_main():
+    try:
+        from hybrid_ai_trading.runners.paper_config import parse_args
+    except Exception:
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--provider-only", action="store_true")
+        parser.add_argument("--prefer-providers", action="store_true")
+        parser.add_argument("--once", action="store_true")
+        parser.add_argument("--universe", type=str, default="AAPL")
+        parser.add_argument("--mdt", type=int, default=3)
+        parser.add_argument("--log-file", type=str, default="logs/runner_paper.jsonl")
+        args = parser.parse_args()
+    else:
+        args = parse_args()
+
+    # allow flag injection from argv
+    try:
+        args = _inject_provider_cli(args)
+    except Exception:
+        pass
+
+    rc = run_paper_session(args)
+    return 0 if (rc is None) else int(rc)
+
+if __name__ == "__main__":
+    raise SystemExit(_cli_main())
+
+
+
+

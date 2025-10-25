@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import json, os, time, threading
 from typing import Any, Dict, Optional
 

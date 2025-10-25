@@ -1,4 +1,4 @@
-﻿import os, subprocess, sys, tempfile
+import os, subprocess, sys, tempfile
 
 RUN_SMOKE = os.getenv("IB_SMOKE_RUN", "0") == "1"
 

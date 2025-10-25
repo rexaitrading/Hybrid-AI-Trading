@@ -1,0 +1,5 @@
+# config/replay.yaml
+universe: "AAPL,MSFT"
+risk_mgr:
+  class: dummy
+  params: {}

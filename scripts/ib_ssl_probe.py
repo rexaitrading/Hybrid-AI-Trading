@@ -1,4 +1,4 @@
-﻿from ib_insync import IB
+from ib_insync import IB
 import os
 host = os.getenv("IB_HOST","127.0.0.1")
 port = int(os.getenv("IB_PORT", os.getenv("IB_PROBE_PORT","4002")))
