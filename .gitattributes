@@ -1,14 +1,32 @@
-﻿# Default: text normalized to LF
-* text=auto eol=lf
+# Text defaults
+* text=auto
 
-# Windows scripts keep CRLF
-*.ps1 text eol=crlf
-*.bat text eol=crlf
-*.cmd text eol=crlf
+# Python: LF
+*.py text eol=lf
+*.pyw text eol=lf
 
-# Unix-y things stay LF
-*.sh  text eol=lf
-*.py  text eol=lf
+# YAML/JSON/CSV/MD: LF
 *.yml text eol=lf
 *.yaml text eol=lf
-*.toml text eol=lf
+*.json text eol=lf
+*.csv text eol=lf
+*.md  text eol=lf
+
+# PowerShell: CRLF (Windows-native)
+*.ps1  text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+
+# Shell: LF
+*.sh text eol=lf
+
+# Logs and data: treat as text but don't convert accidentally
+*.jsonl text eol=lf
+*.log   text eol=lf
+
+# Binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
