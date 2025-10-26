@@ -45,3 +45,16 @@ data/**
 # If you want to allow specific files, add whitelists, e.g.:
 # !data/README.md
 # !data/*.csv
+# --- local artifacts ---
+
+coverage.xml
+
+portfolio_report.html
+
+# ignore any backup files under tools
+
+src/hybrid_ai_trading/tools/*.bak*
+
+# research notebooks/env (we parked it outside repo above)
+
+research-env/
