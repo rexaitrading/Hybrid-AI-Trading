@@ -16,31 +16,32 @@ if spec is None:
 # === IB_INSYNC_TEST_SHIM_BEGIN ===
 # Minimal ib_insync stub for smoke tests when real package is absent.
 try:
-    import ib_insync  # type: ignore
+    import ib_insync  # type=ignore
 except Exception:
     import sys, types
     m = types.ModuleType("ib_insync")
-    class _Dummy:
-        def __init__(self, *a, **k): pass
-        def __call__(self, *a, **k): return self
+    class _IBDummy:
+        def __init__(self,*a,**k): pass
+        def __call__(self,*a,**k): return self
         def __getattr__(self, _): return self
-    class IB(_Dummy):
-        def connect(self, *a, **k): return True
-        def disconnect(self): return None
-    class Contract(_Dummy): pass
-    class Stock(_Dummy): pass
-    class Forex(_Dummy): pass
-    class MarketOrder(_Dummy): pass
-    class LimitOrder(_Dummy): pass
-    class ContractDetails(_Dummy): pass
-    class Ticker(_Dummy): pass
-    class util(_Dummy): pass
-    m.IB = IB; m.Contract = Contract; m.Stock = Stock; m.Forex = Forex
-    m.MarketOrder = MarketOrder; m.LimitOrder = LimitOrder; m.ContractDetails = ContractDetails; m.Ticker = Ticker; m.util = util
-    def __getattr__(name):  # allow any other symbol (Order, TagValue, etc.)
-        return _Dummy()
-    m.__getattr__ = __getattr__
+    class IB(_IBDummy):
+        def connect(self,*a,**k): return True
+        def disconnect(self,*a,**k): return None
+    class Contract(_IBDummy): pass
+    class Stock(_IBDummy):   pass
+    class Forex(_IBDummy):   pass
+    class MarketOrder(_IBDummy): pass
+    class LimitOrder(_IBDummy):  pass
+    class ContractDetails(_IBDummy): pass
+    class Ticker(_IBDummy):       pass
+    class util(_IBDummy):         pass
+    m.IB=IB; m.Contract=Contract; m.Stock=Stock; m.Forex=Forex
+    m.MarketOrder=MarketOrder; m.LimitOrder=LimitOrder; m.ContractDetails=ContractDetails; m.Ticker=Ticker; m.util=util
+    def _ibins_getattr(name):  # catch-all for any other symbol (Order, TagValue, etc.)
+        return _IBDummy()
+    m.__getattr__ = _ibins_getattr
     sys.modules["ib_insync"] = m
 # === IB_INSYNC_TEST_SHIM_END ===
+
 
 
