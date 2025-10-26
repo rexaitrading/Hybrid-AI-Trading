@@ -1,52 +1,47 @@
-# venv / caches
-.venv/
+﻿# --- Python ---
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
-.ipynb_checkpoints/
-.ruff_cache/
-.mypy_cache/
+*.so
+.venv/
+.env
+.env.*
+.venv*/
+dist/
+build/
+.eggs/
+*.egg-info/
+.coverage*
+htmlcov/
 .pytest_cache/
 
-# logs & outputs
+# --- Editors / IDE ---
+.vscode/
+*.code-workspace
+.idea/
+*.iml
+
+# --- OS / OneDrive noise ---
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+*.tmp
+*.bak
+
+# --- Logs ---
 logs/
 *.log
-*.jsonl
-equity*.csv
-replay_journal*.csv
+*.err
+*.out
 
-# generated data
-data/*.csv
+# --- Notebooks / checkpoints ---
+.ipynb_checkpoints/
 
-# backups & BOM cleanups
-*.bak
-*.bom.bak
-*.bak_*
+# --- Data (default ignore all) ---
+data/**
 
-# local ops
-.DS_Store
-Thumbs.db
-
-# archives (kept under archive/ but ignore future additions)
-archive/
-!archive/README.md# Python
-__pycache__/
-*.pyc
-.venv/
-
-# Logs
-.logs/
-logs/
-
-# Local data (keep sample only)
-data/*.csv
-data/*.parquet
-!data/AAPL_1m.csv
-
-# Backups & temp
-*.bak*
-*.bak_*
-*~ 
-.DS_Store
-Thumbs.db
+# If you want to allow specific files, add whitelists, e.g.:
+# !data/README.md
+# !data/*.csv
