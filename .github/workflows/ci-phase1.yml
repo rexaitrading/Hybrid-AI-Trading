@@ -26,8 +26,9 @@ jobs:
             python -m pip install -r .\requirements.txt
           }
           # project in editable mode if build file exists
-          if (Test-Path .\pyproject.toml -or Test-Path .\setup.py) { python -m pip install -e . }
+          if ((Test-Path .\pyproject.toml) -or (Test-Path .\setup.py)) { python -m pip install -e . }
 
       - name: Smoke tests
         run: |
           python -m pytest -q tests/smoke
+

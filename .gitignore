@@ -34,3 +34,4 @@ research-env/
 
 # local tools + egg-info
 src/hybrid_ai_trading.egg-info/
+# Python caches
