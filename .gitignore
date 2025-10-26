@@ -30,4 +30,23 @@ Thumbs.db
 
 # archives (kept under archive/ but ignore future additions)
 archive/
-!archive/README.md
+!archive/README.md# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Logs
+.logs/
+logs/
+
+# Local data (keep sample only)
+data/*.csv
+data/*.parquet
+!data/AAPL_1m.csv
+
+# Backups & temp
+*.bak*
+*.bak_*
+*~ 
+.DS_Store
+Thumbs.db
