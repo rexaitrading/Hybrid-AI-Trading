@@ -1,3 +1,10 @@
+﻿# PYTEST_IMPORT_SHIM: ensure repo src/ is importable regardless of CWD/interpreter
+import os, sys, pathlib
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+SRC = ROOT / "src"
+s = str(SRC)
+if s not in sys.path: sys.path.insert(0, s)
+
 import types
 import hybrid_ai_trading.runners.paper_quantcore as qc
 from hybrid_ai_trading.runners.paper_trader import _qc_run_once
@@ -32,3 +39,4 @@ def test_qc_adapter_newstyle(monkeypatch):
                        {"x":1}, None)
     assert isinstance(out, dict) and "items" in out
     assert len(out["items"]) == 2
+
