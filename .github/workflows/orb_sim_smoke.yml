@@ -18,7 +18,8 @@ jobs:
       - name: Install deps (pandas only)
         run: |
           python -m pip install --upgrade pip
-          pip install pandas
+          pip install pandas ib_insync
       - name: Run CSV SIM (no IB needed)
         run: |
           python scripts/live_orb_play_forward.py --from-csv data/AAPL_1m.csv --sim --symbol AAPL --mdt 3 --rth 0 --orb-minutes 15 --qty 100 --fees 0
+
