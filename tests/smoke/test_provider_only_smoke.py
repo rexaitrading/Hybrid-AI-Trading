@@ -2,7 +2,10 @@ import os, sys, subprocess, pathlib
 
 def test_provider_only_smoke():
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(pathlib.Path("src").resolve())
+    root = str(pathlib.Path(__file__).resolve().parents[2])
+    tests_dir = str((pathlib.Path(root) / "tests").resolve())
+    src = str((pathlib.Path(root) / "src").resolve())
+    env["PYTHONPATH"] = os.pathsep.join([tests_dir, src])
 
     cmd = [
         sys.executable,
