@@ -58,3 +58,4 @@ src/hybrid_ai_trading/tools/*.bak*
 # research notebooks/env (we parked it outside repo above)
 
 research-env/
+.ruff_cache/
