@@ -1,4 +1,12 @@
-﻿* text=auto
+﻿# Python uses LF
+*.py text eol=lf
+
+# PowerShell uses CRLF
 *.ps1 text eol=crlf
-*.py  text eol=lf
-*.csv text eol=lf
+
+# Markdown/text LF (or set to crlf if you prefer)
+*.md text eol=lf
+*.txt text eol=lf
+
+# CSVs: keep as-is (platform neutral)
+*.csv text
