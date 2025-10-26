@@ -52,7 +52,7 @@ jobs:
       # ------------------------------------------------------------------
       - name: Run TradeEngine Dev Tests (pytest.ini)
         run: |
-          pytest -c pytest.ini
+          python -m pip install -U pip pytest && python -m pip install -e . && export PYTHONPATH="$GITHUB_WORKSPACE/src" && pytest -c pytest.ini
 
       # ------------------------------------------------------------------
       # Strict CI/CD coverage (full repo, 100% enforced)
@@ -60,3 +60,4 @@ jobs:
       - name: Run Full Repo Tests (pytest_strict.ini)
         run: |
           pytest -c pytest_strict.ini
+
