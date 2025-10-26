@@ -29,7 +29,30 @@ jobs:
           python -c "import sys,requests; print(sys.executable); print('requests', requests.__version__)"
 
       - name: Set PYTHONPATH
-        run: echo "PYTHONPATH=/src" >> 
+        run: echo "PYTHONPATH=\/src" >> \
+
+      - name: List workspace files
+        run: |
+          pwd
+          ls -la
+          ls -la data || true
+
+      - name: Ensure CSV fixture (AAPL_1m.csv)
+        run: |
+          mkdir -p data
+          if [ ! -f data/AAPL_1m.csv ]; then
+            echo "time,open,high,low,close,volume" > data/AAPL_1m.csv
+            echo "2024-01-02 09:30:00,187.10,187.50,186.90,187.30,120000" >> data/AAPL_1m.csv
+            echo "2024-01-02 09:31:00,187.30,187.60,187.10,187.40,90000"  >> data/AAPL_1m.csv
+            echo "2024-01-02 09:32:00,187.40,187.70,187.20,187.55,85000"  >> data/AAPL_1m.csv
+            echo "2024-01-02 09:33:00,187.55,187.90,187.40,187.85,100000" >> data/AAPL_1m.csv
+            echo "2024-01-02 09:34:00,187.85,188.00,187.70,187.95,95000"  >> data/AAPL_1m.csv
+            echo "2024-01-02 09:35:00,187.95,188.10,187.80,188.05,88000"  >> data/AAPL_1m.csv
+            echo "2024-01-02 09:36:00,188.05,188.20,187.90,188.15,91000"  >> data/AAPL_1m.csv
+            echo "2024-01-02 09:37:00,188.15,188.30,188.00,188.25,87000"  >> data/AAPL_1m.csv
+            echo "2024-01-02 09:38:00,188.25,188.40,188.10,188.35,86000"  >> data/AAPL_1m.csv
+            echo "2024-01-02 09:39:00,188.35,188.50,188.20,188.45,84000"  >> data/AAPL_1m.csv
+          fi
 
       - name: Run CSV SIM (no IB needed)
         run: |
