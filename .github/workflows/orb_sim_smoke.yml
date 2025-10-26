@@ -15,6 +15,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
       - name: Install smoke deps
+      - name: Sanity: python & requests
+        run: |
+          which python || where python
+          python -V
+          python -c "import sys,requests; print(sys.executable); print('requests', requests.__version__)"
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-smoke.txt
@@ -42,6 +47,7 @@ run: python -m pip install --upgrade pip
 
       - name: Run CSV SIM (no IB needed)
 run: python scripts/live_orb_play_forward.py --from-csv data/AAPL_1m.csv --sim --symbol AAPL --mdt 3 --rth 0 --orb-minutes 15 --qty 100 --fees 0
+
 
 
 
