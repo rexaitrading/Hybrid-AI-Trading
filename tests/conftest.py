@@ -1,39 +1,12 @@
-import os, pytest
-from pathlib import Path
-
-# Default unit tests to FAKE broker; scrub IB env to avoid live connects
-os.environ.setdefault("BROKER_BACKEND", "fake")
-for k in ("IB_HOST","IB_PORT","IB_CLIENT_ID","IB_TIMEOUT"):
-    os.environ.pop(k, None)
-
-def pytest_addoption(parser):
-    parser.addoption("--run-integration", action="store_true", default=False,
-                     help="run tests marked as integration (needs IBG)")
-    parser.addoption("--include-legacy", action="store_true", default=False,
-                     help="collect legacy tests that import _engine_factory")
-
-def pytest_configure(config):
-    config.addinivalue_line("markers", "integration: mark tests as integration (needs IBG)")
-
-def pytest_collection_modifyitems(config, items):
-    if not config.getoption("--run-integration"):
-        skip_it = pytest.mark.skip(reason="need --run-integration to run")
-        for item in items:
-            if "integration" in item.keywords:
-                item.add_marker(skip_it)
-
-def pytest_ignore_collect(collection_path: Path, config):
-    # skip legacy files unless explicitly requested
-    legacy = {
-        "test_trade_engine_master_full.py",
-        "test_trade_engine_residual_sniper.py",
-        "test_trade_engine_sweeper.py",
-        "test_trade_engine_targeted_cases.py",
-    }
-    # ignore archive/ and scripts/ by default
-    parts = collection_path.parts
-    if ("archive" in parts or "scripts" in parts) and not config.getoption("--include-legacy"):
-        return True
-    if collection_path.name in legacy and not config.getoption("--include-legacy"):
-        return True
-    return False
+﻿# Ensures src/ is on sys.path during tests (CI/local), independent of CWD or runner shell
+import sys, pathlib, importlib, os
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if SRC.exists():
+    s = str(SRC)
+    if s not in sys.path:
+        sys.path.insert(0, s)
+try:
+    importlib.import_module("hybrid_ai_trading")
+except Exception as e:
+    sys.stderr.write(f"[conftest] warning: could not import `hybrid_ai_trading`: {e}\n")
