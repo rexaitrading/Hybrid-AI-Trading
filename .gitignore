@@ -1,4 +1,8 @@
-﻿.venv/
+﻿
+# Allow sample CSVs for Phase1
+!data/*.csv
+.venv/
 __pycache__/
 logs/
 *.log
+
