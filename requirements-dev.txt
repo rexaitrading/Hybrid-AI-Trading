@@ -1,10 +1,27 @@
-# === Testing & Coverage ===
-pytest==8.4.1
-pytest-cov==6.2.1
-pytest-html==4.1.1
-coverage==7.6.1
-
-# === Linters & QA (optional but recommended) ===
-black==24.8.0
-flake8==7.1.0
-mypy==1.11.0
+﻿certifi==2025.10.5
+charset-normalizer==3.4.4
+colorama==0.4.6
+coverage==7.11.0
+eventkit==1.0.3
+-e git+https://github.com/rexaitrading/Hybrid-AI-Trading.git@933730b1cd7e958631025a0db006de4c39a6032c#egg=hybrid_ai_trading
+ib-insync==0.9.86
+ibapi==9.81.1.post1
+idna==3.11
+iniconfig==2.3.0
+nest-asyncio==1.6.0
+numpy==2.3.4
+packaging==25.0
+pandas==2.3.3
+pluggy==1.6.0
+Pygments==2.19.2
+pytest==8.4.2
+pytest-cov==7.0.0
+python-dateutil==2.9.0.post0
+pytz==2025.2
+PyYAML==6.0.3
+requests==2.32.5
+setuptools==80.9.0
+six==1.17.0
+tzdata==2025.2
+urllib3==2.5.0
+wheel==0.45.1
