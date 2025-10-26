@@ -194,6 +194,38 @@ def on_rt_bar(rtbar, *, state):
                                force_exit=True, notion=False)
         summary = _extract_summary(res)
         print(f"[live] {ts_last} {summary}", flush=True)
+def run_from_csv(csv_path):
+    # Load minute bars from CSV and drive SIM without IB
+    import os
+    df = pd.read_csv(csv_path)
+    cols = {c.lower(): c for c in df.columns}
+    required = ["timestamp","open","high","low","close"]
+    for k in required:
+        if k not in cols:
+            raise ValueError(f"CSV missing required column: {k}")
+    # Normalize column names
+    df = df.rename(columns={cols["timestamp"]:"timestamp",
+                            cols["open"]:"open",
+                            cols["high"]:"high",
+                            cols["low"]:"low",
+                            cols["close"]:"close"})
+    if "volume" in cols:
+        df = df.rename(columns={cols["volume"]:"volume"})
+    else:
+        df["volume"] = 0
+    # Ensure string timestamps for our existing pipeline
+    df["timestamp"] = pd.to_datetime(df["timestamp"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+    # Build seed + state, then drive SIM
+    print(f"[csv] loaded {len(df)} rows from {csv_path}", flush=True)
+    five_s = deque(maxlen=12000)
+    for _, r in df.tail(SEED_MIN).iterrows():
+        t = pd.to_datetime(r["timestamp"]).to_pydatetime()
+        five_s.append(_RT(t, r["open"], r["high"], r["low"], r["close"], int(r["volume"]), w=r["close"], count=1))
+    state = {"five_s": five_s}
+    if os.getenv("LIVE_SIM", "0") not in ("1","true","True","YES","yes"):
+        os.environ["LIVE_SIM"] = "1"
+    _simulate_from_seed(df.tail(ORB_MIN + 8), state=state, pace_sec=0.05)
+
 def main():
     print(f"[connect] {HOST}:{PORT} cid={CID} symbol={SYMBOL}", flush=True)
     ib.connect(HOST, PORT, clientId=CID)
@@ -243,10 +275,36 @@ def main():
 
     print(f"[ready] seed={len(seed_df)}  orb_min={ORB_MIN}  qty={QTY}  fees={FEES}  mode={MODE}  useRTH={USE_RTH}", flush=True)
     ib.run()
-
 if __name__ == "__main__":
+    import argparse, os
+    p = argparse.ArgumentParser(description="Live ORB play-forward runner (with optional SIM & CSV)")
+    p.add_argument("--sim", action="store_true", help="Enable SIM mode (no RT subscription)")
+    p.add_argument("--from-csv", type=str, default=None, help="Path to minute-bar CSV to drive SIM without IB")
+    p.add_argument("--symbol", type=str, default=os.getenv("LIVE_SYMBOL", "AAPL"))
+    p.add_argument("--primary", type=str, default=os.getenv("LIVE_PRIMARY", "NASDAQ"))
+    p.add_argument("--mdt", type=int, choices=[1,2,3,4], default=int(os.getenv("LIVE_MDT", "3")))
+    p.add_argument("--rth", type=int, choices=[0,1], default=1 if os.getenv("LIVE_USE_RTH","1") in ("1","true","True","YES","yes") else 0)
+    p.add_argument("--qty", type=int, default=int(os.getenv("LIVE_QTY","100")))
+    p.add_argument("--fees", type=float, default=float(os.getenv("LIVE_FEES","0")))
+    p.add_argument("--orb-minutes", type=int, default=int(os.getenv("LIVE_ORB_MINUTES","15")))
+    args = p.parse_args()
+
+    # push into env so existing code paths keep working
+    os.environ["LIVE_SYMBOL"] = args.symbol
+    os.environ["LIVE_PRIMARY"] = args.primary
+    os.environ["LIVE_MDT"] = str(args.mdt)
+    os.environ["LIVE_USE_RTH"] = "1" if args.rth == 1 else "0"
+    os.environ["LIVE_QTY"] = str(args.qty)
+    os.environ["LIVE_FEES"] = str(args.fees)
+    os.environ["LIVE_ORB_MINUTES"] = str(args.orb_minutes)
+    if args.sim:
+        os.environ["LIVE_SIM"] = "1"
+
     try:
-        main()
+        if args.from_csv:
+            run_from_csv(args.from_csv)
+        else:
+            main()
     except Exception as e:
         print("[fatal]", repr(e), file=sys.stderr)
         try:
@@ -254,5 +312,3 @@ if __name__ == "__main__":
         except Exception:
             pass
         sys.exit(1)
-
-
