@@ -49,3 +49,11 @@ python -m venv .venv
 source .venv/bin/activate  # Linux/Mac
 
 pip install -r requirements.txt
+## ORB Play-Forward Runner
+
+[![ORB CSV SIM Smoke](https://github.com/rexaitrading/Hybrid-AI-Trading/actions/workflows/orb_sim_smoke.yml/badge.svg)](https://github.com/rexaitrading/Hybrid-AI-Trading/actions/workflows/orb_sim_smoke.yml)
+
+**CSV SIM (no IB needed)**
+```powershell
+python scripts/live_orb_play_forward.py --from-csv data/AAPL_1m.csv --sim --symbol AAPL --mdt 3 --rth 0 --orb-minutes 15 --qty 100 --fees 0
+
