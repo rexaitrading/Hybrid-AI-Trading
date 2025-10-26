@@ -6,8 +6,45 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Dict, Any, Iterator
 import pandas as pd
 import numpy as np
-import requests
+try:
+    import requests
+except Exception:
+    requests = None
 
+def _http_get(url: str) -> bytes:
+    if requests is not None:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        return r.content
+    import urllib.request
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        return resp.read()
+try:
+    import requests
+try:
+    import requests
+except Exception:
+    requests = None
+
+def _http_get(url: str) -> bytes:
+    if requests is not None:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        return r.content
+    import urllib.request
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        return resp.read()
+except Exception:
+    requests = None
+
+def _http_get(url: str) -> bytes:
+    if requests is not None:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        return r.content
+    import urllib.request
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        return resp.read()
 NOTION_VERSION = "2022-06-28"
 
 def _to_datetime_col(s: pd.Series) -> pd.Series:
@@ -252,3 +289,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
