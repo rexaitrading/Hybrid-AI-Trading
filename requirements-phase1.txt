@@ -3,7 +3,7 @@ charset-normalizer==3.4.4
 colorama==0.4.6
 coverage==7.11.0
 eventkit==1.0.3
--e git+https://github.com/rexaitrading/Hybrid-AI-Trading.git@df13032c04b2a309801eecdd913b864bf8c83c54#egg=hybrid_ai_trading
+-e git+https://github.com/rexaitrading/Hybrid-AI-Trading.git@af91013615598f80ee764b216affdf8f86093d38#egg=hybrid_ai_trading
 ib-insync==0.9.86
 ibapi==9.81.1.post1
 idna==3.11
