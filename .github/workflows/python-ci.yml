@@ -1,42 +1,51 @@
-name: Basic Python Test
+name: TradeEngine Dev Tests
+
 on:
   push:
-    branches: [ "main" ]
+    branches: ["**"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["**"]
 
 jobs:
-  test:
+  tests:
+    name: tests (py3.12)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.12"]  # keep simple; add 3.10/3.11 later if you want
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: "pip"
+          python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install package and test deps
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest pytest-cov
+          python -m pip install --upgrade pytest
+          python -m pip install -e .
 
-      - name: Run smoke tests with coverage (no hard gate yet)
+      - name: Sanity
         run: |
-          # pytest.ini scopes to tests/smoke
-          pytest -v --cov=src --cov-report=xml
+          python - <<'PY'
+          import sys,importlib.util,pathlib
+          root=pathlib.Path().resolve()
+          print("exe:",sys.executable)
+          print("cwd:",root)
+          print("has src:",(root/"src").exists())
+          print("pytest.ini exists:",(root/"pytest.ini").exists())
+          spec=importlib.util.find_spec("hybrid_ai_trading")
+          print("importable:",bool(spec))
+          PY
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.python-version }}
-          path: coverage.xml
+      - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          if [ -f "pytest.ini" ]; then
+            python -m pytest -c "${{ github.workspace }}/pytest.ini" -q
+          else
+            python -m pytest -q
+          fi

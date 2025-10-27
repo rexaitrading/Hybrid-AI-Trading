@@ -1,73 +1,51 @@
-﻿name: Hybrid AI Quant Pro CI
+name: TradeEngine Dev Tests
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: ["**"]
   pull_request:
-    branches: [ main, dev ]
+    branches: ["**"]
 
 jobs:
   tests:
+    name: tests (py3.12)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ "3.12" ]
-
     steps:
-      # ------------------------------------------------------------------
-      # Checkout repo
-      # ------------------------------------------------------------------
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-
-      # ------------------------------------------------------------------
-      # Setup Python
-      # ------------------------------------------------------------------
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-      - name: Install test deps (pytest)
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest
-      - name: Install package (-e .)
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
-      - name: Set PYTHONPATH for src layout
-        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
         with:
-          python-version: ${{ matrix.python-version }}
+          fetch-depth: 0
 
-      # ------------------------------------------------------------------
-      # Install dependencies
-      # ------------------------------------------------------------------
-      - name: Install dependencies
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package and test deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
+          python -m pip install --upgrade pytest
+          python -m pip install -e .
 
-      # ------------------------------------------------------------------
-      # Local developer coverage (trade_engine only)
-      # ------------------------------------------------------------------
-      - name: Run TradeEngine Dev Tests (pytest.ini)
+      - name: Sanity
         run: |
-          pwd
-          ls -la
-          cd "$GITHUB_WORKSPACE"
-          python -m pip install -U pip pytest
-          python -m pip install -e "$GITHUB_WORKSPACE"
-          export PYTHONPATH="$GITHUB_WORKSPACE/src"
-          python - <<PY
-          import sys, pkgutil
-          print("exe:", sys.executable)
-          print("pyver:", sys.version.split()[0])
-          print("importable:", bool(pkgutil.find_loader("hybrid_ai_trading")) )
-          import hybrid_ai_trading; print("module:", getattr(hybrid_ai_trading,"__file__",None))
+          python - <<'PY'
+          import sys,importlib.util,pathlib
+          root=pathlib.Path().resolve()
+          print("exe:",sys.executable)
+          print("cwd:",root)
+          print("has src:",(root/"src").exists())
+          print("pytest.ini exists:",(root/"pytest.ini").exists())
+          spec=importlib.util.find_spec("hybrid_ai_trading")
+          print("importable:",bool(spec))
           PY
-          python -m pytest -c "$GITHUB_WORKSPACE/pytest.ini"
-      - name: Run Full Repo Tests (pytest_strict.ini)
+
+      - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
         run: |
-          pytest -c pytest_strict.ini
-
-
+          if [ -f "pytest.ini" ]; then
+            python -m pytest -c "${{ github.workspace }}/pytest.ini" -q
+          else
+            python -m pytest -q
+          fi

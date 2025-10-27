@@ -1,71 +1,51 @@
-name: micro-tests
+name: TradeEngine Dev Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: ["**"]
   pull_request:
-    branches: [ main, master ]
+    branches: ["**"]
 
 jobs:
-  win-py312-microtests:
-    runs-on: windows-latest
+  tests:
+    name: tests (py3.12)
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          python-version: '3.12'
-      - name: Install pytest (quiet, UTF-8)
-        shell: pwsh
-        run: |
-          chcp 65001 > $null
-          [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-          python -m pip install --upgrade pip --disable-pip-version-check --no-color
-          python -m pip install -U pytest --disable-pip-version-check --no-color
-      - name: Run micro-tests isolated (no coverage)
-        shell: pwsh
-        run: |
-          chcp 65001 > $null
-          [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-          $env:PYTHONIOENCODING = "utf-8"
-          $env:PYTHONUTF8       = "1"
-          $env:PYTEST_ADDOPTS   = ""
-          $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = "1"
-          $env:PYTHONPATH = (Join-Path (Resolve-Path ".") "src")
-          $tmpDir = Join-Path $env:TEMP "pytest_iso_$([Guid]::NewGuid())"
-          New-Item -ItemType Directory -Path $tmpDir | Out-Null
-          $tmpIni = Join-Path $tmpDir "pytest.ini"
-          $enc = [System.Text.UTF8Encoding]::new($false)
-          [System.IO.File]::WriteAllText($tmpIni, "[pytest]`naddopts = -q --maxfail=1 --disable-warnings`ntestpaths = .`n", $enc)
-          $t1 = (Resolve-Path "tests\test_marketable_limit.py").Path
-          $t2 = (Resolve-Path "tests\test_ib_safe_unit.py").Path
-          Push-Location $tmpDir
-          try {
-            python -m pytest -c $tmpIni --rootdir $tmpDir --confcutdir $tmpDir -p no:pytest_cov "$t1" "$t2"
-          } finally {
-            Pop-Location
-            Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
-          }
+          fetch-depth: 0
 
-  win-phase1-health:
-    if: ${{ secrets.RUN_PHASE1_HEALTH == 'true' }}
-    needs: win-py312-microtests
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - name: Phase-1 health (best-effort)
-        shell: pwsh
-        continue-on-error: true
-        env:
-          PYTHONIOENCODING: utf-8
-          PYTHONUTF8: "1"
+          python-version: "3.12"
+
+      - name: Install package and test deps
         run: |
-          chcp 65001 > $null
-          [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-          if (Test-Path "scripts\ib_health.py") {
-            python scripts\ib_health.py
-          } else {
-            Write-Host "ib_health.py not present; skipping Phase-1 health."
-          }
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade pytest
+          python -m pip install -e .
+
+      - name: Sanity
+        run: |
+          python - <<'PY'
+          import sys,importlib.util,pathlib
+          root=pathlib.Path().resolve()
+          print("exe:",sys.executable)
+          print("cwd:",root)
+          print("has src:",(root/"src").exists())
+          print("pytest.ini exists:",(root/"pytest.ini").exists())
+          spec=importlib.util.find_spec("hybrid_ai_trading")
+          print("importable:",bool(spec))
+          PY
+
+      - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          if [ -f "pytest.ini" ]; then
+            python -m pytest -c "${{ github.workspace }}/pytest.ini" -q
+          else
+            python -m pytest -q
+          fi

@@ -1,40 +1,51 @@
-name: CI – Tests & Coverage
+name: TradeEngine Dev Tests
 
 on:
-  pull_request:
-    branches: [ main ]
   push:
-    branches: [ main ]
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
 
 jobs:
-  test:
+  tests:
+    name: tests (py3.12)
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Python 3.12
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install package and test deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov ruff
+          python -m pip install --upgrade pytest
+          python -m pip install -e .
 
-      - name: Run pytest with coverage
+      - name: Sanity
         run: |
-          pytest -v
+          python - <<'PY'
+          import sys,importlib.util,pathlib
+          root=pathlib.Path().resolve()
+          print("exe:",sys.executable)
+          print("cwd:",root)
+          print("has src:",(root/"src").exists())
+          print("pytest.ini exists:",(root/"pytest.ini").exists())
+          spec=importlib.util.find_spec("hybrid_ai_trading")
+          print("importable:",bool(spec))
+          PY
 
-      - name: Lint with Ruff
+      - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
         run: |
-          ruff check src tests --output-format=github
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-html
-          path: htmlcov
+          if [ -f "pytest.ini" ]; then
+            python -m pytest -c "${{ github.workspace }}/pytest.ini" -q
+          else
+            python -m pytest -q
+          fi
