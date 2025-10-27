@@ -30,14 +30,13 @@ jobs:
       - name: Sanity
         run: |
           python - <<'PY'
-          import sys,importlib.util,pathlib
-          root=pathlib.Path().resolve()
-          print("exe:",sys.executable)
-          print("cwd:",root)
-          print("has src:",(root/"src").exists())
-          print("pytest.ini exists:",(root/"pytest.ini").exists())
-          spec=importlib.util.find_spec("hybrid_ai_trading")
-          print("importable:",bool(spec))
+          import sys, importlib.util, pathlib
+          root = pathlib.Path().resolve()
+          print("exe:", sys.executable)
+          print("cwd:", root)
+          print("has src:", (root/"src").exists())
+          print("pytest.ini exists:", (root/"pytest.ini").exists())
+          print("importable:", bool(importlib.util.find_spec("hybrid_ai_trading")))
           PY
 
       - name: Run tests
