@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$OutFile = ".\data\SYNTH_1m.csv",
   [int]$Minutes = 240,
   [double]$Start = 100.0

@@ -1,0 +1,60 @@
+name: Performance Tests
+
+on:
+  workflow_dispatch:        # ✅ Manual trigger
+  schedule:
+    - cron: "0 3 * * *"     # ✅ Run every day at 03:00 UTC
+
+jobs:
+  perf-tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.12" ]   # ✅ Perf tests only on latest stable
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-perf-${{ matrix.python-version }}-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-perf-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-perf-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          pip install pytest pytest-html
+
+      - name: Run performance tests
+        run: |
+          mkdir -p perf-results
+          pytest -v -m perf `
+            --import-mode=importlib `
+            --maxfail=1 `
+            --disable-warnings `
+            -ra -q -s `
+            --junitxml=perf-results/junit.xml `
+            --html=perf-results/report.html --self-contained-html
+
+      - name: Upload perf test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-results-${{ matrix.python-version }}
+          path: perf-results/
