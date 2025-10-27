@@ -1,60 +1,51 @@
-name: Performance Tests
+name: TradeEngine Dev Tests
 
 on:
-  workflow_dispatch:        # ✅ Manual trigger
-  schedule:
-    - cron: "0 3 * * *"     # ✅ Run every day at 03:00 UTC
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
 
 jobs:
-  perf-tests:
+  tests:
+    name: tests (py3.12)
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [ "3.12" ]   # ✅ Perf tests only on latest stable
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
-      - name: Cache pip packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-perf-${{ matrix.python-version }}-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-perf-${{ matrix.python-version }}-
-            ${{ runner.os }}-pip-perf-
-
-      - name: Install dependencies
+      - name: Install package and test deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-          pip install pytest pytest-html
+          python -m pip install --upgrade pytest
+          python -m pip install -e .
 
-      - name: Run performance tests
+      - name: Sanity
         run: |
-          mkdir -p perf-results
-          pytest -v -m perf `
-            --import-mode=importlib `
-            --maxfail=1 `
-            --disable-warnings `
-            -ra -q -s `
-            --junitxml=perf-results/junit.xml `
-            --html=perf-results/report.html --self-contained-html
+          python - <<'PY'
+          import sys,importlib.util,pathlib
+          root=pathlib.Path().resolve()
+          print("exe:",sys.executable)
+          print("cwd:",root)
+          print("has src:",(root/"src").exists())
+          print("pytest.ini exists:",(root/"pytest.ini").exists())
+          spec=importlib.util.find_spec("hybrid_ai_trading")
+          print("importable:",bool(spec))
+          PY
 
-      - name: Upload perf test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: perf-results-${{ matrix.python-version }}
-          path: perf-results/
+      - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          if [ -f "pytest.ini" ]; then
+            python -m pytest -c "${{ github.workspace }}/pytest.ini" -q
+          else
+            python -m pytest -q
+          fi

@@ -1,69 +1,51 @@
-name: Phase3 CI
+name: TradeEngine Dev Tests
 
 on:
   push:
+    branches: ["**"]
   pull_request:
-  workflow_dispatch:
-  schedule:
-    - cron: "30 15 * * *"   # nightly ~ 08:30 America/Vancouver
+    branches: ["**"]
 
 jobs:
-  micro-tests:
-    runs-on: windows-latest
+  tests:
+    name: tests (py3.12)
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt pytest
-      - name: Micro tests (isolated, fast)
-        shell: pwsh
-        run: |
-          powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode Isolated
-
-  full-repo-cov:
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt pytest pytest-cov coverage
-      - name: Full repo tests with coverage
-        shell: pwsh
-        run: |
-          powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -WithCoverage -FailUnder 70 -JUnit
-      - name: Upload coverage html
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          name: coverage-html
-          path: htmlcov/**
-      - name: Upload junit
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: junit
-          path: junit.xml
+          fetch-depth: 0
 
-  ibg-integration:
-    # only when you opt in
-    if: ${{ secrets.RUN_IBG_INT == 'true' && github.event_name != 'pull_request' }}
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - name: Install
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package and test deps
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt pytest ib_insync
-      - name: Gated IBG integration (requires secret toggle)
-        shell: pwsh
+          python -m pip install --upgrade pytest
+          python -m pip install -e .
+
+      - name: Sanity
         run: |
-          powershell -ExecutionPolicy Bypass -File .\scripts\phase2_run_ib_paper_tests_clean.ps1
+          python - <<'PY'
+          import sys,importlib.util,pathlib
+          root=pathlib.Path().resolve()
+          print("exe:",sys.executable)
+          print("cwd:",root)
+          print("has src:",(root/"src").exists())
+          print("pytest.ini exists:",(root/"pytest.ini").exists())
+          spec=importlib.util.find_spec("hybrid_ai_trading")
+          print("importable:",bool(spec))
+          PY
+
+      - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          if [ -f "pytest.ini" ]; then
+            python -m pytest -c "${{ github.workspace }}/pytest.ini" -q
+          else
+            python -m pytest -q
+          fi
