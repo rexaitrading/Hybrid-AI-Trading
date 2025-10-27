@@ -1,4 +1,4 @@
-﻿# Activates venv, forces UTF-8, and self-heals pip if missing
+# Activates venv, forces UTF-8, and self-heals pip if missing
 param()
 
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}

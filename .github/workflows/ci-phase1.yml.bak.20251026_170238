@@ -1,0 +1,48 @@
+﻿name: CI (Phase 1)
+
+on:
+  push:
+    branches: [ "main", "feature/**" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Install package (-e .)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Set PYTHONPATH for src layout
+        run: echo "PYTHONPATH=\/src" >> \
+
+      - name: Install test deps (pytest)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+      
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps (locked)
+        run: |
+          python -m pip install -U pip wheel setuptools
+          if (Test-Path .\requirements-phase1.txt) {
+            python -m pip install -r .\requirements-phase1.txt
+          } else {
+            python -m pip install -r .\requirements.txt
+          }
+          # project in editable mode if build file exists
+          if ((Test-Path .\pyproject.toml) -or (Test-Path .\setup.py)) { python -m pip install -e . }
+
+      - name: Smoke tests
+        run: |
+          python -m pytest -q tests/smoke
+
+
+
