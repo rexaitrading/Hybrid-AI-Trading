@@ -132,6 +132,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
+          python -m pip install -e .
           python -m pip install -r requirements.txt pytest
       - name: Micro tests (isolated, fast)
         shell: pwsh
@@ -182,6 +183,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
+          python -m pip install -e .
           python -m pip install -r requirements.txt pytest pytest-cov coverage
       - name: Full repo tests with coverage
         shell: pwsh
@@ -244,6 +246,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
+          python -m pip install -e .
           python -m pip install -r requirements.txt pytest ib_insync
       - name: Gated IBG integration (requires secret toggle)
         shell: pwsh
@@ -255,4 +258,5 @@ jobs:
           # Install the repo itself as an editable package
           python -m pip install -e .
           # Install deps and test tools
+          python -m pip install -e .
           python -m pip install -r requirements.txt pytest pytest-cov coverage

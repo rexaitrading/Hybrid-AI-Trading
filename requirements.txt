@@ -1,4 +1,4 @@
-alpaca-py==0.42.2
+﻿alpaca-py==0.42.2
 anyio==4.11.0
 ccxt==4.5.2
 certifi==2025.10.5
@@ -17,7 +17,6 @@ git-filter-repo==2.47.0
 h11==0.16.0
 httptools==0.7.1
 huggingface-hub==0.35.1
-hybrid_ai_trading==0.1.0
 ib-insync==0.9.86
 ibapi==9.81.1.post1
 idna==3.11
@@ -70,3 +69,5 @@ wheel==0.45.1
 xlsxwriter==3.2.5
 yarl==1.20.1
 zipp==3.23.0
+
+
