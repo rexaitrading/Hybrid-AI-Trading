@@ -27,7 +27,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Prepare Git on Windows
+      - name: Ensure CI dirs
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .ci | Out-Null      - name: Prepare Git on Windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -56,7 +60,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Prepare Git on Windows
+      - name: Ensure CI dirs
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .ci | Out-Null      - name: Prepare Git on Windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -97,7 +105,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Prepare Git on Windows
+      - name: Ensure CI dirs
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .ci | Out-Null      - name: Prepare Git on Windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
