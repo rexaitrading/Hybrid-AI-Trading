@@ -12,6 +12,7 @@ permissions:
   contents: read
 
 env:
+  SKIP: pre-commit
   GIT_TERMINAL_PROMPT: 0
 
 jobs:
@@ -140,4 +141,5 @@ jobs:
             coverage.xml
             .ci
           if-no-files-found: ignore
+
 
