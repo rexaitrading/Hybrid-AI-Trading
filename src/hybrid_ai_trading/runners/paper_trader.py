@@ -295,7 +295,7 @@ def run_paper_session(args) -> int:
         report_dir = os.getenv("HAT_REPORT_DIR") or os.getenv("GITHUB_WORKSPACE") or "."
         log_path = os.path.join(report_dir, "paper_runner.log")
     os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
-    logger = JsonlLogger(log_path)  # CI-NULL-PATH-GUARD
+    logger = JsonlLogger(_hat_safe_log_path(log_path))
     logger.info("run_start", cfg=cfg, symbols=symbols)
 
     # Provider-only fast path
@@ -440,6 +440,20 @@ def _cli_main():
         from hybrid_ai_trading.runners.paper_config import parse_args
     except Exception:
         import argparse
+# HAT-SAFE-LOG-PATH (paper_trader)
+def _hat_safe_log_path(path):
+    base = os.environ.get('HAT_REPORT_DIR') or os.environ.get('GITHUB_WORKSPACE') or ''
+    # Default to <base>/.ci/paper_runner.log or ./.ci if base is empty
+    if path is None or (isinstance(path, str) and not path.strip()):
+        report_dir = os.path.join(base, '.ci') if base else '.ci'
+        os.makedirs(report_dir, exist_ok=True)
+        return os.path.join(report_dir, 'paper_runner.log')
+    p = os.fspath(path)
+    d = os.path.dirname(p)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    return p
+
         parser = argparse.ArgumentParser()
         parser.add_argument("--provider-only", action="store_true")
         parser.add_argument("--prefer-providers", action="store_true")
