@@ -3,7 +3,7 @@ name: Phase3 CI
 on:
   workflow_dispatch:
   push:
-    branches: [ "" ]
+    branches: [ "main" ]
 
 jobs:
 micro-tests:
