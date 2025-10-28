@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 
 import os
 
@@ -297,8 +298,13 @@ def run_paper_session(args) -> int:
     if not symbols:
         print("[CONFIG] Universe empty -> nothing to trade.")
         return 0
-
-    log_path = getattr(args, "log_file", "logs/runner_paper.jsonl")
+log_path = getattr(args, "log_file", None) or os.getenv("HAT_LOG_FILE") or "logs/runner_paper.jsonl"
+if not isinstance(log_path, str) or not log_path.strip():
+    log_path = "logs/runner_paper.jsonl"
+try:
+    os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
+except Exception:
+    pass
     try:
         os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
     except Exception:
