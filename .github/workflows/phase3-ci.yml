@@ -5,14 +5,23 @@ on:
   push:
     branches: [ "main" ]
 
-# Map Actions Variables -> env once, then use env.* in if:
-env:
-  RUN_PHASE3_ENABLED: ${{ vars.RUN_PHASE3_ENABLED }}
-  RUN_IBG_INT:       ${{ vars.RUN_IBG_INT }}
-
 jobs:
+  gate:
+    name: Resolve gates
+    runs-on: ubuntu-latest
+    outputs:
+      phase3: ${{ steps.out.outputs.phase3 }}
+      ibg:    ${{ steps.out.outputs.ibg }}
+    steps:
+      - id: out
+        shell: bash
+        run: |
+          echo "phase3=${{ vars.RUN_PHASE3_ENABLED }}" >> "$GITHUB_OUTPUT"
+          echo "ibg=${{ vars.RUN_IBG_INT }}" >> "$GITHUB_OUTPUT"
+
   micro-tests:
-    if: ${{ env.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    needs: gate
+    if: ${{ needs.gate.outputs.phase3 == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +38,8 @@ jobs:
           powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode Isolated
 
   full-repo-cov:
-    if: ${{ env.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    needs: gate
+    if: ${{ needs.gate.outputs.phase3 == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,7 +68,8 @@ jobs:
           path: junit.xml
 
   ibg-integration:
-    if: ${{ (env.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch') && env.RUN_IBG_INT == 'true' }}
+    needs: gate
+    if: ${{ (needs.gate.outputs.phase3 == 'true' || github.event_name == 'workflow_dispatch') && needs.gate.outputs.ibg == 'true' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
