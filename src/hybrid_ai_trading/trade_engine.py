@@ -1,17 +1,17 @@
 """
-Trade Engine (Hybrid AI Quant Pro v17.5 â€“ Hedge Fund Grade, Loop-Proof Normalized)
+Trade Engine (Hybrid AI Quant Pro v17.5 Ã¢â‚¬â€œ Hedge Fund Grade, Loop-Proof Normalized)
 ---------------------------------------------------------------------------------
-- Guardrails BEFORE routing: equity â†’ sector â†’ hedge â†’ drawdown
+- Guardrails BEFORE routing: equity Ã¢â€ â€™ sector Ã¢â€ â€™ hedge Ã¢â€ â€™ drawdown
 - Router normalized BEFORE regime/filters/performance
-- Regime-disabled overrides Sharpe/Sortino âœ…
-- Sentiment BEFORE GateScore BEFORE Sharpe/Sortino âœ…
+- Regime-disabled overrides Sharpe/Sortino Ã¢Å“â€¦
+- Sentiment BEFORE GateScore BEFORE Sharpe/Sortino Ã¢Å“â€¦
 - Kelly config sanitized (drops "enabled")
 - Audit logging always creates files
 - alert() implemented for Slack/Telegram/Email
-- record_trade_outcome added âœ…
-- reset_day patched with safe fallback âœ…
-- ðŸ”‘ Final normalization: "ok" â†’ "filled" for both status and reason
-- ðŸ”’ FIX: unknown algo now returns early as rejected (no normalization overwrite)
+- record_trade_outcome added Ã¢Å“â€¦
+- reset_day patched with safe fallback Ã¢Å“â€¦
+- Ã°Å¸â€â€˜ Final normalization: "ok" Ã¢â€ â€™ "filled" for both status and reason
+- Ã°Å¸â€â€™ FIX: unknown algo now returns early as rejected (no normalization overwrite)
 """
 
 import csv
@@ -292,7 +292,7 @@ class TradeEngine:
                     )
                 else:
                     logger.warning("Unknown algo requested: %s", algo)
-                    # ðŸ”‘ FIX: Early return ensures unknown algo is not normalized to "filled"
+                    # Ã°Å¸â€â€˜ FIX: Early return ensures unknown algo is not normalized to "filled"
                     return {"status": "rejected", "reason": "unknown_algo"}
             except Exception as e:
                 return {"status": "error", "reason": f"algo_error:{e}"}
