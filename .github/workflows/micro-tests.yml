@@ -47,7 +47,7 @@ jobs:
           }
 
   win-phase1-health:
-    if: ${{ env.RUN_PHASE1_HEALTH == 'true' }}
+    if: ${{ vars.RUN_PHASE1_HEALTH == 'true' }}
     needs: win-py312-microtests
     runs-on: windows-latest
     steps:

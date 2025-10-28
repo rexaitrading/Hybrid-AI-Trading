@@ -30,3 +30,10 @@
 *.jpeg binary
 *.gif binary
 *.pdf binary
+
+* text=auto eol=lf
+*.ps1 text eol=lf
+*.py  text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.csv text eol=lf

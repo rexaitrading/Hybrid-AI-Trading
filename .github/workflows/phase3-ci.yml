@@ -1,5 +1,4 @@
 env:
-  RUN_IBG_INT: ${{ secrets.RUN_IBG_INT }}
 name: Phase3 CI
 
 on:
@@ -55,7 +54,7 @@ jobs:
 
   ibg-integration:
     # only when you opt in
-    if: ${{ env.RUN_IBG_INT == 'true' && github.event_name != 'pull_request' }}
+    if: ${{ vars.RUN_IBG_INT == 'true' && github.event_name != 'pull_request' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
