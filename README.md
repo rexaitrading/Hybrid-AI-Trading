@@ -63,3 +63,6 @@ python scripts/live_orb_play_forward.py --from-csv data/AAPL_1m.csv --sim --symb
 ```powershell
 python scripts/live_orb_play_forward.py --symbol AAPL --primary NASDAQ --mdt 1 --rth 1 --orb-minutes 15 --qty 100 --fees 0
 ```
+
+![ORB Smoke](https://github.com/rexaitrading/Hybrid-AI-Trading/actions/workflows/orb_smoke.yml/badge.svg)
+
