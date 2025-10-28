@@ -1,9 +1,9 @@
-name: Phase3 CI
-
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: [ "
+main
+" ]
 
 jobs:
   gate:
@@ -33,7 +33,7 @@ jobs:
         run: |
           git config --global user.email "ci@example.invalid"
           git config --global user.name  "CI"
-          git config --global --add safe.directory "C:\Dev\HybridAITrading"
+          git config --global --add safe.directory "$PWD"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -70,10 +70,6 @@ jobs:
             $req = Get-Content .\requirements.txt -Raw
             $req2 = ($req -split "`r?`n") | Where-Object { name: Phase3 CI
 
-on:
-  workflow_dispatch:
-  push:
-    branches: [ "main" ]
 
 jobs:
   gate:
@@ -103,7 +99,7 @@ jobs:
         run: |
           git config --global user.email "ci@example.invalid"
           git config --global user.name  "CI"
-          git config --global --add safe.directory "C:\Dev\HybridAITrading"
+          git config --global --add safe.directory "$PWD"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -155,7 +151,7 @@ jobs:
         run: |
           git config --global user.email "ci@example.invalid"
           git config --global user.name  "CI"
-          git config --global --add safe.directory "C:\Dev\HybridAITrading"
+          git config --global --add safe.directory "$PWD"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -219,7 +215,7 @@ jobs:
         run: |
           git config --global user.email "ci@example.invalid"
           git config --global user.name  "CI"
-          git config --global --add safe.directory "C:\Dev\HybridAITrading"
+          git config --global --add safe.directory "$PWD"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
