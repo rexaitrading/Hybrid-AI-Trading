@@ -1,7 +1,12 @@
 name: Micro Tests Hotfix
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Git ref (branch/sha) to test"
+        required: false
+        default: "main"
   push:
     branches: [ "main" ]
 
@@ -15,12 +20,18 @@ jobs:
       HAT_PRETEND_VERSION: 0.0+ci
 
     steps:
-      - name: Checkout
+      - name: Echo selected ref
+        shell: pwsh
+        run: |
+          Write-Host "Target ref: ${{ inputs.target_ref }}"
+
+      - name: Checkout target ref
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: false
           lfs: false
+          ref: ${{ inputs.target_ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
