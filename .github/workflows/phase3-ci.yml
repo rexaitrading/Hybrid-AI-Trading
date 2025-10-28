@@ -5,9 +5,14 @@ on:
   push:
     branches: [ "main" ]
 
+# Map Actions Variables -> env once, then use env.* in if:
+env:
+  RUN_PHASE3_ENABLED: ${{ vars.RUN_PHASE3_ENABLED }}
+  RUN_IBG_INT:       ${{ vars.RUN_IBG_INT }}
+
 jobs:
   micro-tests:
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ env.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +29,7 @@ jobs:
           powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode Isolated
 
   full-repo-cov:
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ env.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +58,7 @@ jobs:
           path: junit.xml
 
   ibg-integration:
-    if: ${{ (vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch') && vars.RUN_IBG_INT == 'true' }}
+    if: ${{ (env.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch') && env.RUN_IBG_INT == 'true' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
