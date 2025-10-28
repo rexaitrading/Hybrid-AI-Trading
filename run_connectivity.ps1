@@ -2,7 +2,7 @@
 # Hedge-Fund OE Connectivity Runner (Bot Token first, webhook opt-in)
 # ===========================
 $ErrorActionPreference = "Stop"
-Set-Location "C:\Users\rhcy9\OneDrive\文件\HybridAITrading"
+Set-Location "C:\Users\rhcy9\OneDrive\æ–‡ä»¶\HybridAITrading"
 
 # Ensure TLS1.2
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
@@ -73,7 +73,7 @@ function Send-SlackWebhook {
   } catch {
     $msg = $_.Exception.Message
     if ($msg -match '\(404\)') {
-      Write-Host "Slack webhook HTTP 404 → invalid or revoked. Recreate an Incoming Webhook and update ALERT_SLACK_WEBHOOK in .env" -ForegroundColor Yellow
+      Write-Host "Slack webhook HTTP 404 â†’ invalid or revoked. Recreate an Incoming Webhook and update ALERT_SLACK_WEBHOOK in .env" -ForegroundColor Yellow
     } else {
       Write-Host "Slack webhook alert failed: $msg" -ForegroundColor Yellow
     }

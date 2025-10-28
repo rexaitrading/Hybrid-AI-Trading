@@ -27,7 +27,7 @@ $lis = Get-NetTCPConnection -State Listen -LocalPort 4002 -ErrorAction SilentlyC
 if (-not $lis) { throw "Port 4002 not listening. Is IB Gateway (Paper, IB API) logged in?" }
 $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($lis.OwningProcess)"
 if ($proc.ExecutablePath -ne (Get-Item $GoodExe).FullName) {
-  "⚠️  4002 owned by: $($proc.ExecutablePath)`n    Expected: $GoodExe" | Tee-Object -FilePath $LogPath -Append
+  "âš ï¸  4002 owned by: $($proc.ExecutablePath)`n    Expected: $GoodExe" | Tee-Object -FilePath $LogPath -Append
   throw "Mismatched IBG version on 4002"
 }
 
@@ -88,9 +88,9 @@ $run | Tee-Object -FilePath $LogPath -Append
 # --- Assert final status and finish ---
 $passed = $run -match 'final_status\s+Cancelled'
 if ($passed) {
-  "✅ Paper order open/cancel smoke passed (RTH-safe)." | Tee-Object -FilePath $LogPath -Append
+  "âœ… Paper order open/cancel smoke passed (RTH-safe)." | Tee-Object -FilePath $LogPath -Append
   if ($Ci) { exit 0 } else { Read-Host "`nPress <Enter> to close"; return }
 } else {
-  "⚠️  Did not see final_status Cancelled in output." | Tee-Object -FilePath $LogPath -Append
+  "âš ï¸  Did not see final_status Cancelled in output." | Tee-Object -FilePath $LogPath -Append
   if ($Ci) { exit 2 } else { Read-Host "`nPress <Enter> to close"; return }
 }

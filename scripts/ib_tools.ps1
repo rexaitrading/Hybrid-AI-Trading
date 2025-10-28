@@ -1,6 +1,6 @@
 param([string]$Host="127.0.0.1",[int]$Port=4002,[int]$ClientId=1001)
 
-$py="$env:USERPROFILE\OneDrive\文件\HybridAITrading\.venv\Scripts\python.exe"
+$py="$env:USERPROFILE\OneDrive\æ–‡ä»¶\HybridAITrading\.venv\Scripts\python.exe"
 @"
 from ib_insync import *
 ib=IB(); ib.connect("$Host",$Port,clientId=$ClientId,timeout=30)

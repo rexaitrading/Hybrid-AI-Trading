@@ -79,7 +79,7 @@ for ($i=1; $i -le $Slices; $i++) {
 
   $lmt = [double](Get-ProtectiveLimit); if (-not $lmt) { throw "Failed to compute limit." }
 
-  # CAD value cap per slice → allowed shares by value
+  # CAD value cap per slice â†’ allowed shares by value
   $allowedUSD = $MaxOrderValueCAD / $usdcad
   $allowedByValue = [int][math]::Floor($allowedUSD / $lmt)
 

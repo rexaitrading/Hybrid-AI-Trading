@@ -53,7 +53,7 @@ function New-SyntheticBars {
     $px = $Start
 
     for ($i=0; $i -lt $Count; $i++) {
-        # chronological: oldest Ã¢â€ â€™ newest
+        # chronological: oldest ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ newest
         $t     = (Get-Date).ToUniversalTime().AddMinutes($i - ($Count - 1))
         $step  = ($rnd.NextDouble() - 0.5) * 0.6
         $open  = [math]::Round($px, 2)

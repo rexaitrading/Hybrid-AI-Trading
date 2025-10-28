@@ -10,7 +10,7 @@ pip list | Select-String "pytest|coverage|pandas|requests"
 Write-Host "`n=== [2] Virtual Environment ===" -ForegroundColor Cyan
 Write-Host "Active VENV: $env:VIRTUAL_ENV"
 if (-Not $env:VIRTUAL_ENV) {
-    Write-Host "⚠️ No virtual environment active!" -ForegroundColor Yellow
+    Write-Host "âš ï¸ No virtual environment active!" -ForegroundColor Yellow
 }
 
 Write-Host "`n=== [3] Project Folder Structure (src + tests) ===" -ForegroundColor Cyan
@@ -24,7 +24,7 @@ Get-ChildItem src\hybrid_ai_trading\risk\*.py
 Write-Host "`n=== [5] Run pytest smoke test ===" -ForegroundColor Cyan
 $pytestResult = python -m pytest -q --maxfail=1 --disable-warnings
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "⚠️ pytest had issues" -ForegroundColor Yellow
+    Write-Host "âš ï¸ pytest had issues" -ForegroundColor Yellow
 }
 
 Write-Host "`n=== [6] Coverage quick check (signals only) ===" -ForegroundColor Cyan
