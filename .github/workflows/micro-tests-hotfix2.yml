@@ -1,0 +1,44 @@
+name: Micro Tests (hotfix2)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Branch or SHA to test"
+        required: false
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: micro-tests-hotfix2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          if (Test-Path requirements.txt) { pip install -r requirements.txt }
+          pip install pytest
+
+      - name: Run micro tests
+        run: |
+          pytest -q -k "micro or smoke" || pytest -q
