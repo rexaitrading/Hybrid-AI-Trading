@@ -1,0 +1,30 @@
+name: ORB Smoke
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  schedule:
+    - cron: "20 2 * * *"   # daily @ 02:20 UTC
+
+jobs:
+  orb:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - run: python -V
+      - run: pip install -U pip
+      - run: pip install -r requirements-smoke.txt
+      - name: Verify ORB hook present
+        run: |
+          python - << 'PY'
+          import io, re
+          p = r"src/hybrid_ai_trading/tools/bar_replay.py"
+          with io.open(p, encoding="utf-8") as f:
+              t = f.read()
+          assert 'setup="ORB"' in t, "ORB hook missing"
+          print("OK: ORB present")
+          PY
