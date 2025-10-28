@@ -1,13 +1,12 @@
-repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
-    hooks:
-      - id: fix-byte-order-marker
-        exclude: ^(\.venv/|\.git/|dist/|build/|coverage/|htmlcov/|logs/)
-      - id: end-of-file-fixer
-        exclude: ^(\.venv/|\.git/|dist/|build/|coverage/|htmlcov/|logs/)
-      - id: trailing-whitespace
-        exclude: ^(\.venv/|\.git/|dist/|build/|coverage/|htmlcov/|logs/)
-      - id: mixed-line-ending
-        args: [--fix=lf]
-        exclude: ^(\.venv/|\.git/|dist/|build/|coverage/|htmlcov/|logs/|.*\.ps1$|.*\.psm1$|.*\.bat$|.*\.cmd$)
+﻿repos:
+- repo: https://github.com/psf/black
+  rev: 24.8.0
+  hooks: [{id: black, args: ["--line-length","100"]}]
+- repo: https://github.com/PyCQA/isort
+  rev: 5.13.2
+  hooks: [{id: isort, args: ["--profile","black"]}]
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.6.0
+  hooks:
+    - id: end-of-file-fixer
+    - id: trailing-whitespace
