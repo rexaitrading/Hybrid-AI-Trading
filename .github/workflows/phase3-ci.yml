@@ -53,7 +53,8 @@ jobs:
           python -m pip install --upgrade pip
           if (Test-Path .\requirements.txt) {
             \  = Get-Content .\requirements.txt -Raw
-            \ = (\ -split \"?
+            \ = (\ -split \"
+?
 \") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
             (\ -join \"
 \") + \"
@@ -122,7 +123,8 @@ jobs:
           python -m pip install --upgrade pip
           if (Test-Path .\requirements.txt) {
             \  = Get-Content .\requirements.txt -Raw
-            \ = (\ -split \"?
+            \ = (\ -split \"
+?
 \") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
             (\ -join \"
 \") + \"
@@ -173,7 +175,8 @@ jobs:
           python -m pip install --upgrade pip
           if (Test-Path .\requirements.txt) {
             \  = Get-Content .\requirements.txt -Raw
-            \ = (\ -split \"?
+            \ = (\ -split \"
+?
 \") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
             (\ -join \"
 \") + \"
@@ -236,7 +239,8 @@ jobs:
           python -m pip install --upgrade pip
           if (Test-Path .\requirements.txt) {
             \  = Get-Content .\requirements.txt -Raw
-            \ = (\ -split \"?
+            \ = (\ -split \"
+?
 \") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
             (\ -join \"
 \") + \"
