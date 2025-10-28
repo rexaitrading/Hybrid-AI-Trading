@@ -25,6 +25,15 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare Git on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          git config --global user.email "ci@example.invalid"
+          git config --global user.name  "CI"
+          git config --global --add safe.directory "C:\Dev\HybridAITrading"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -43,6 +52,15 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare Git on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          git config --global user.email "ci@example.invalid"
+          git config --global user.name  "CI"
+          git config --global --add safe.directory "C:\Dev\HybridAITrading"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -73,6 +91,15 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare Git on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          git config --global user.email "ci@example.invalid"
+          git config --global user.name  "CI"
+          git config --global --add safe.directory "C:\Dev\HybridAITrading"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
