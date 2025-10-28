@@ -1,4 +1,4 @@
-﻿# Activates venv, forces UTF-8, then self-heals pip if needed (no emoji, CP1252-safe)
+# Activates venv, forces UTF-8, then self-heals pip if needed (no emoji, CP1252-safe)
 param()
 
 # Force UTF-8 for console and Python I/O

@@ -7,7 +7,7 @@ def make_engine():
 
 def test_alerts_success_and_exceptions(monkeypatch):
     te = make_engine()
-    class R: 
+    class R:
         def __init__(self,c): self.status_code=c
     # success
     monkeypatch.setitem(sys.modules,"requests", types.SimpleNamespace(post=lambda *a,**k:R(200), get=lambda *a,**k:R(200)))

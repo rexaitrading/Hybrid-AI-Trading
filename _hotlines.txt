@@ -6,14 +6,14 @@
  177:                     port_status = self.portfolio.reset_day()
  178:                 except Exception as e:
  179:                     return {"status": "error", "reason": f"portfolio_reset_failed:{e}"}
- 180: 
+ 180:
  181:             risk_status = {"status": "ok"}
  182:             if hasattr(self.risk_manager, "reset_day"):
  183:                 try:
  184:                     risk_status = self.risk_manager.reset_day()
  185:                 except Exception as e:
  186:                     return {"status": "error", "reason": f"risk_reset_failed:{e}"}
- 187: 
+ 187:
  188:             if (
  200:     def adaptive_fraction(self) -> float:
  201:         try:
@@ -36,7 +36,7 @@
  246:                     return {"status": "blocked", "reason": "drawdown_breach"}
  247:             except Exception:
  248:                 pass
- 249: 
+ 249:
  250:         # --- Kelly
  251:         if size is None:
  252:             try:
@@ -51,5 +51,5 @@
  335:             result["status"] = "filled"
  336:         if result.get("reason") == "ok":
  337:             result["reason"] = "normalized_ok"
- 338: 
+ 338:
  339:         try:

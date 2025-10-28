@@ -90,7 +90,7 @@ def test_equity_depleted_236_and_normalize_invalid_status_329_333():
 
 def test_alert_matrix_103_144(monkeypatch):
     te=_mk()
-    class R: 
+    class R:
         def __init__(self,c): self.status_code=c
     # success paths
     monkeypatch.setitem(sys.modules,"requests", types.SimpleNamespace(post=lambda *a,**k:R(200),get=lambda *a,**k:R(200)))
@@ -127,7 +127,7 @@ def test_audit_header_then_exception_154_169(monkeypatch, tmp_path):
 def test_router_error_and_algo_imports_263_288(monkeypatch):
     te=_mk()
     # algo imports
-    class TWAP: 
+    class TWAP:
         def __init__(self,om): pass
         def execute(self): return {"status":"ok","reason":"ok"}
     fake = types.SimpleNamespace(TWAPExecutor=TWAP, VWAPExecutor=TWAP)

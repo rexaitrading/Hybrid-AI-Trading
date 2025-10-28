@@ -28,7 +28,7 @@ def test_alert_errors(monkeypatch, alert_eng):
 def test_alert_success(monkeypatch, alert_eng):
     # Success codes without network I/O
     monkeypatch.setattr("os.getenv", lambda k, d=None: {"SLACK_URL":"x","TG_BOT":"b","TG_CHAT":"c","ALERT_EMAIL":"u@x"} .get(k, d), raising=False)
-    class Resp: 
+    class Resp:
         def __init__(self, code): self.status_code = code
     monkeypatch.setattr("requests.post", lambda *a, **k: Resp(200), raising=False)
     monkeypatch.setattr("requests.get",  lambda *a, **k: Resp(200), raising=False)

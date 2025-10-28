@@ -3,7 +3,7 @@ from _engine_factory import make_engine, call_signal, find
 
 def test_alerts_success_and_exceptions(monkeypatch):
     te = make_engine(alerts=True)
-    class R: 
+    class R:
         def __init__(self,c): self.status_code=c
     # success (113Ã¢â‚¬â€œ115/127Ã¢â‚¬â€œ129/137Ã¢â‚¬â€œ139)
     monkeypatch.setitem(sys.modules,"requests", types.SimpleNamespace(post=lambda *a,**k:R(200), get=lambda *a,**k:R(200)))

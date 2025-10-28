@@ -41,7 +41,7 @@ def test_no_brokers_and_unknown_algo_paths(eng):
     # 1) wipe brokers/smart router if present → trigger "no brokers"/fallback branches
     if hasattr(eng, "brokers"):
         try: eng.brokers.clear()
-        except Exception: 
+        except Exception:
             try: eng.brokers = {}
             except Exception: pass
     if hasattr(eng, "router"):

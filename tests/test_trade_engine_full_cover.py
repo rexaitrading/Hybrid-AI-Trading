@@ -77,7 +77,7 @@ def _call_signal(te, **kw):
 # ---------- scenarios ----------
 def test_alerts_success_and_exceptions(monkeypatch):
     te=_mk()
-    class R: 
+    class R:
         def __init__(self,c): self.status_code=c
     # success (113â€“115/127â€“129/137â€“139)
     monkeypatch.setitem(sys.modules,"requests",types.SimpleNamespace(post=lambda *a,**k:R(200),get=lambda *a,**k:R(200)))
@@ -134,7 +134,7 @@ def test_sector_algo_router(monkeypatch):
     _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
     # algo success 263â€“269
     te2=_mk()
-    class TWAP: 
+    class TWAP:
         def __init__(self,om): pass
         def execute(self): return {"status":"ok","reason":"ok"}
     fake = types.SimpleNamespace(TWAPExecutor=TWAP, VWAPExecutor=TWAP)

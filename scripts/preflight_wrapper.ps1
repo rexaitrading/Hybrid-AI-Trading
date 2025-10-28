@@ -16,4 +16,3 @@ Add-Content -Path $log -Value "[$stamp] exit=$code"
 if ($out) { Add-Content -Path $log -Value $out.Trim() }
 if ($err) { Add-Content -Path $log -Value ("ERR: " + $err.Trim()) }
 exit $code
-

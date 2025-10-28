@@ -20,5 +20,5 @@ def eng_oknorm(tmp_path):
 def test_normalize_ok_happy_path(eng_oknorm):
     r = eng_oknorm.process_signal("AAPL","BUY",price=100,size=1)
     # Depending on pragma, result may be "filled/normalized_ok" or remain "ok"
-    assert r["status"] in {"filled","ok"} 
+    assert r["status"] in {"filled","ok"}
     assert r.get("reason") in {"normalized_ok","ok"}

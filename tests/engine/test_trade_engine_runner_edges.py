@@ -2,7 +2,7 @@ import pytest
 from hybrid_ai_trading.trade_engine import TradeEngine
 
 @pytest.fixture()
-def eng(): 
+def eng():
     return TradeEngine(config={})
 
 def test_runner_branch_edges(eng):
@@ -14,7 +14,7 @@ def test_runner_branch_edges(eng):
             except Exception: pass
 
     # 2) run() with list containing non-dict / missing fields / valid
-    mixed = [123, {}, {"foo":"bar"}, {"symbol":"AAPL"}, {"signal":"SELL"}, 
+    mixed = [123, {}, {"foo":"bar"}, {"symbol":"AAPL"}, {"signal":"SELL"},
              {"symbol":"AAPL","signal":"BUY","price":100.5,"size":1}]
     if hasattr(eng, "run"):
         try: eng.run(mixed)

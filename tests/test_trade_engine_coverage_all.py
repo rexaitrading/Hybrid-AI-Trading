@@ -101,7 +101,7 @@ def _call_signal(te, **kw):
 
 def test_alerts_matrix_success_and_exceptions(monkeypatch):
     te = _mk()
-    class R: 
+    class R:
         def __init__(self,c): self.status_code=c
     # success paths (hits 113–115/127–129/137–139)
     monkeypatch.setitem(sys.modules, "requests", types.SimpleNamespace(

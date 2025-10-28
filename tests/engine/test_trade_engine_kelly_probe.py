@@ -2,7 +2,7 @@ import pytest
 from hybrid_ai_trading.trade_engine import TradeEngine
 
 @pytest.fixture()
-def eng(): 
+def eng():
     return TradeEngine(config={})
 
 def test_kelly_size_none_probe(monkeypatch, eng):

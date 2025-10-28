@@ -15,14 +15,14 @@ Write-Section "Stray Python outside src/hybrid_ai_trading (excluding tests/scrip
 $exclude = '\\\.venv\\|\\tests\\|\\scripts\\|\\research-env\\|\\__pycache__\\|\\logs\\'
 $pyOutside = Get-ChildItem -Recurse -File -Include *.py |
   Where-Object { $_.FullName -notmatch [regex]::Escape($src) -and $_.FullName -notmatch $exclude }
-if($pyOutside){ 
+if($pyOutside){
   $pyOutside | Select-Object FullName,Length,LastWriteTime | Format-Table -Auto | Out-String | % { Out-Both $_ }
 }else{ Out-Both "(none)" }
 
 Write-Section "Backup/temporary sources (*.bak*|*~|.#*|.orig)"
 $bak = Get-ChildItem -Recurse -File -ErrorAction SilentlyContinue |
   Where-Object { $_.Name -match '\.bak|\.orig$|~$|^\.\#' }
-if($bak){ 
+if($bak){
   $bak | Select-Object FullName,LastWriteTime,Length | Format-Table -Auto | Out-String | % { Out-Both $_ }
 }else{ Out-Both "(none)" }
 

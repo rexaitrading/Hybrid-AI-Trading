@@ -33,7 +33,7 @@ def test_targeted_clusters(monkeypatch, tmp_path):
     }
 
     # -------- alerts success & exceptions (103–142)
-    class R: 
+    class R:
         def __init__(self,c): self.status_code=c
     monkeypatch.setitem(sys.modules,"requests", types.SimpleNamespace(
         post=lambda *a,**k:R(200), get=lambda *a,**k:R(200)))

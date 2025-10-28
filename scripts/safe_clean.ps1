@@ -1,4 +1,4 @@
-﻿param(
+param(
   [switch]$DryRun
 )
 $ex = @('-e','.venv/','-e','.venv/*','-e','.pytest_cache/','-e','.ruff_cache/')

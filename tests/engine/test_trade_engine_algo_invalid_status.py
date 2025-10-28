@@ -14,8 +14,8 @@ class WeirdExec:  # returns status not in allowed set → invalid_status
     def __init__(self, om): pass
     def execute(self, *a, **k): return {"status":"weird"}
 
-@pytest.fixture() 
-def eng(): 
+@pytest.fixture()
+def eng():
     return TradeEngine(config={})
 
 def test_algo_invalid_status(monkeypatch, eng):

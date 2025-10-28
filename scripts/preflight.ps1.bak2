@@ -1,4 +1,4 @@
-﻿New-Item -ItemType Directory -Force -Path .\scripts | Out-Null
+New-Item -ItemType Directory -Force -Path .\scripts | Out-Null
 
 @'
 param(
@@ -233,4 +233,3 @@ if ($fail.Count -eq 0) {
   exit 1
 }
 '@ | Set-Content -Path .\scripts\preflight.ps1 -Encoding UTF8
-

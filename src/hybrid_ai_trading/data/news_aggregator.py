@@ -22,7 +22,7 @@ def aggregate_news(symbols_csv: str, limit: int, date_from: str) -> List[Dict[st
         for it in items or []:
             u = it.get("url") or ""
             sid = f"{source_name}:{it.get('id')}"
-            if u and u in seen_url: 
+            if u and u in seen_url:
                 continue
             if sid in seen_sid:
                 continue

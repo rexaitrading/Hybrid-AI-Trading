@@ -1,0 +1,115 @@
+project: HybridAI
+timezone: America/Vancouver
+
+# --- Trading Window ---
+trading_window:
+  start: "05:00"    # Pacific Time (8am New York pre-market)
+  end: "11:00"      # Pacific Time (2pm New York close overlap)
+
+# --- Risk Management ---
+risk:
+  target_daily_return: 0.01      # lock day if +1% equity reached
+  max_daily_loss: -0.03          # stop trading if -3% equity reached
+  max_position_risk: 0.01        # risk 1% of equity per trade
+  max_leverage: 10               # absolute cap (any asset)
+  max_portfolio_exposure: 0.5    # cap total exposure vs equity
+
+  # --- Kelly Sizing ---
+  kelly:
+    enabled: true
+    win_rate: 0.55     # estimated strategy win probability
+    payoff: 1.6        # avg win / avg loss
+    fraction: 0.5      # 0.5 = half-Kelly (use <0.5 for safety)
+
+# --- Asset Class Leverage ---
+leverage:
+  stocks: 2
+  crypto: 3
+  forex: 10
+  ipo: 5
+
+# --- Costs & Assumptions ---
+costs:
+  commission_per_share: 0.005    # $0.005/share (IBKR)
+  min_commission: 1.00           # minimum $1 per trade
+  slippage_per_share: 0.01       # assume $0.01/share slippage
+  margin_interest_rate: 0.06     # 6% annual interest
+  trading_days_per_year: 252
+
+# --- Data Providers (API keys come from env variables) ---
+# --- Data Providers (API keys via env variables) ---
+providers:
+  polygon:
+    api_key_env: POLYGON_KEY
+  alpaca:
+    key_id_env: ALPACA_KEY
+    secret_key_env: ALPACA_SECRET
+  coinapi:
+    api_key_env: COINAPI_KEY
+  benzinga:
+    api_key_env: BENZINGA_KEY
+  cmegroup:
+    token_env: CME_TOKEN
+    access_code_env: CME_ACCESS_CODE
+  cryptocompare:
+    api_key_env: CRYPTOCOMPARE_KEY
+
+# --- Portfolio Strategy ---
+portfolio_choice: sharpe   # options: sharpe, minvol, equal, custom
+
+custom_weights:            # only used if portfolio_choice = custom
+  BTC/USDT: 40
+  ETH/USDT: 20
+  SPY: 25
+  GLD: 10
+  TLT: 5
+
+max_daily_shift: 0.2       # max 20% capital shift in one rebalance
+order_type: market         # market or limit
+slippage: 0.001            # 0.1% assumed slippage in backtest/live
+
+# --- Asset Universe ---
+universe:
+  Core_Stocks:
+    - AAPL
+    - MSFT
+    - NVDA
+    - TSLA
+    - AMD
+    - META
+    - AMZN
+    - GOOGL
+  Macro_Risk:
+    - SPY
+    - QQQ
+    - DIA
+    - VIXY
+    - GLD
+    - TLT
+  Crypto_Signal:
+    - BTCUSD
+    - ETHUSD
+    - SOLUSD
+    - BNBUSD
+  Leverage_Tools:
+    - TQQQ
+    - SQQQ
+    - SOXL
+    - SOXS
+    - UVXY
+  IPO_Watch:
+    - ARM
+    - ABNB
+    - KVYO
+    - CART
+    - SNOW
+    - RIVN
+    - BIRK
+
+# --- System Features ---
+features:
+  enable_black_swan_guard: true   # halt trading on news anomalies
+  enable_leverage_control: true   # enforce max leverage
+  enable_emotional_filter: true   # skip low-liquidity chop days
+  enable_multi_ai_signals: true   # allow model voting
+  enable_portfolio_guard: true    # stop if portfolio drawdown breached

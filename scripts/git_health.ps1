@@ -84,7 +84,7 @@ Write-Section "Conflict markers scan (working tree)"
 $conf = Get-ChildItem -Recurse -File -ErrorAction SilentlyContinue |
   Where-Object { $_.FullName -notmatch '\\\.git\\|\\\.venv\\|\\logs\\|\\__pycache__\\' } |
   Select-String -Pattern '^(<<<<<<<|>>>>>>>)' -SimpleMatch -AllMatches -ErrorAction SilentlyContinue
-if ($conf){ 
+if ($conf){
   ($conf | Select-Object Path,LineNumber,Line | Format-Table -Auto | Out-String) | ForEach-Object { Out-Both $_ }
 } else { Out-Both "(no conflict markers found)" }
 

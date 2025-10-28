@@ -2,7 +2,7 @@ import pytest
 from hybrid_ai_trading.trade_engine import TradeEngine
 
 @pytest.fixture()
-def eng(): 
+def eng():
     return TradeEngine(config={})
 
 def test_process_signal_perf_exception_flows_to_normalization(monkeypatch, eng):

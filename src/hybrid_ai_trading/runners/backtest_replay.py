@@ -24,7 +24,7 @@ def main():
     for row in load_csv(args.input):
         snap = row_to_snapshot(row)
         totals["rows"] += 1
-        if not snap.get("symbol"): 
+        if not snap.get("symbol"):
             continue
         buf.append(snap)
         if len(buf) >= args.batch:

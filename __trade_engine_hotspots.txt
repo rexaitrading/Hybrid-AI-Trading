@@ -1,7 +1,7 @@
  230:             return {"status": "ignored", "reason": "hold_signal"}
  231:         if price is None or price <= 0:
  232:             return {"status": "rejected", "reason": "invalid_price"}
- 233: 
+ 233:
  234:         # --- Guardrails
  235:         if self.portfolio.equity <= 0:
  236:             return {"status": "blocked", "reason": "equity_depleted"}
@@ -17,7 +17,7 @@
  246:                     return {"status": "blocked", "reason": "drawdown_breach"}
  247:             except Exception:
  248:                 pass
- 249: 
+ 249:
  250:         # --- Kelly
  251:         if size is None:
  252:             try:
@@ -26,16 +26,16 @@
  255:                 size = max(1, size)
  256:             except Exception:
  257:                 size = 1
- 258: 
+ 258:
  259:         # --- Algo Routing
  260:         if algo:
  296:                     "reason": f"router_error:{result.get('reason','unknown')}",
  297:                 }
- 298: 
+ 298:
  299:         # --- Regime OVERRIDE
  300:         if not self.regime_enabled:
  301:             return {"status": "filled", "reason": "regime_disabled"}
- 302: 
+ 302:
  303:         # --- Filters BEFORE performance
  304:         try:
  305:             if not self.sentiment_filter.allow_trade(symbol, signal, price):
@@ -48,16 +48,16 @@
  325:                 return {"status": "blocked", "reason": "sortino_breach"}
  326:         except Exception:
  327:             pass
- 328: 
+ 328:
  329:         # --- Normalize
  330:         allowed = {"filled", "blocked", "ignored", "rejected", "ok", "pending", "error"}
  332:             return {"status": "rejected", "reason": "invalid_status"}
- 333: 
+ 333:
  334:         if result.get("status") == "ok":
  335:             result["status"] = "filled"
  336:         if result.get("reason") == "ok":
  337:             result["reason"] = "normalized_ok"
- 338: 
+ 338:
  339:         try:
  340:             row = [
  341:                 os.times().elapsed,

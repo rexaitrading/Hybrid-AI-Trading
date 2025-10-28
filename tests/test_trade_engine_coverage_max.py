@@ -104,7 +104,7 @@ def test_pass_flow_header_and_normalize(tmp_path):
 # ---------- 2) ALERTS: success + exceptions (103–144) ----------
 def test_alerts_success_and_exceptions(monkeypatch):
     te = _mk()
-    class R: 
+    class R:
         def __init__(self,c): self.status_code=c
     # success
     monkeypatch.setitem(sys.modules,"requests",types.SimpleNamespace(post=lambda *a,**k:R(200),get=lambda *a,**k:R(200)))
@@ -237,7 +237,7 @@ def test_reflective_method_fuzzer():
             continue
         # Consider only small arity funcs
         params = list(sig.parameters.values())
-        if len(params) > 6: 
+        if len(params) > 6:
             continue
         # Build args by name; ignore ones we don't know
         kws = {}

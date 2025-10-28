@@ -80,7 +80,7 @@ def pnl_main():
                 continue
 
             entry_ref = float(r1.get("price") or 0.0)  # next decision's close as proxy for next bar close
-            if entry_ref <= 0: 
+            if entry_ref <= 0:
                 continue
             # 1-bar exit: naive proxy (use same next bar as exit), can be replaced by real bar feed later
             exit_ref = entry_ref
