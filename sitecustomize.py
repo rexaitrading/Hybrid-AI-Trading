@@ -1,4 +1,4 @@
-﻿# Auto-add ./src to sys.path for any Python process launched at or below repo root.
+# Auto-add ./src to sys.path for any Python process launched at or below repo root.
 import pathlib
 import sys
 

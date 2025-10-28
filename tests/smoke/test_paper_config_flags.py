@@ -1,4 +1,4 @@
-﻿# PYTEST_IMPORT_SHIM: ensure repo src/ is importable regardless of CWD/interpreter
+# PYTEST_IMPORT_SHIM: ensure repo src/ is importable regardless of CWD/interpreter
 import os
 import pathlib
 import sys

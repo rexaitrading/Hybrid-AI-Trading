@@ -1,4 +1,4 @@
-﻿# Phase 1 — Clean Minimal (bar_replay + sample)
+# Phase 1 — Clean Minimal (bar_replay + sample)
 
 ## Summary
 - Introduces Phase 1 minimal baseline (6 files): .gitattributes, .gitignore, 	ools/bar_replay.py, scripts/make_sample_bars.ps1, scripts/convert_bars.ps1, data/AAPL_1m.csv.

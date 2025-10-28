@@ -1,4 +1,4 @@
-﻿import os
+import os
 
 RUN_SMOKE = os.getenv("IB_SMOKE_RUN", "0") == "1"
 
