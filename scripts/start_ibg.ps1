@@ -70,9 +70,6 @@ try {
       $iniText = Get-Content -LiteralPath $IBC_INI -Raw
       if ($iniText -notmatch 'IbPassword=') {
         $iniText = $iniText -replace '(?ms)(IbLoginId=.*?\r?\n)', "`$1IbPassword=$plain`r`n"
-    # Force IBC to pick Gateway 1040
-    \ = 'C:\Jts\ibgateway'
-    \ = '1040'
       } else {
         $iniText = $iniText -replace '(?m)^IbPassword=.*$', "IbPassword=$plain"
       }

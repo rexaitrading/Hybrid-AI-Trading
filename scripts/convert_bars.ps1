@@ -1,4 +1,4 @@
-﻿param(
+param(
   [Parameter(Mandatory=$true)][string]$In,
   [Parameter(Mandatory=$true)][string]$Out
 )

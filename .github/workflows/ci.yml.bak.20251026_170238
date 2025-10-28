@@ -1,4 +1,4 @@
-name: CI – Tests & Coverage
+﻿name: CI â€“ Tests & Coverage
 
 on:
   pull_request:
@@ -11,6 +11,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+
+      - name: Install package (-e .)
+
+        run: |
+
+          python -m pip install --upgrade pip
+
+          python -m pip install -e .
+
+      - name: Set PYTHONPATH for src layout
+
+        run: echo "PYTHONPATH=\/src" >> \
+
+      - name: Install test deps (pytest)
+
+        run: |
+
+          python -m pip install --upgrade pip
+
+          python -m pip install pytest
+
+      
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -38,3 +61,5 @@ jobs:
         with:
           name: coverage-html
           path: htmlcov
+
+

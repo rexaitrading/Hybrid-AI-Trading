@@ -1,0 +1,13 @@
+[
+  "tests/smoke/test_ib_bracket.py::test_bracket_create_and_cleanup",
+  "tests/smoke/test_ib_connect_smoke.py::test_ib_connect_smoke_strict",
+  "tests/smoke/test_ib_connect_smoke_subproc.py::test_ib_connect_probe_subprocess",
+  "tests/smoke/test_normalize_result.py::test_normalize_result_from_dict",
+  "tests/smoke/test_normalize_result.py::test_normalize_result_from_list",
+  "tests/smoke/test_paper_config_flags.py::test_flags_parse_known",
+  "tests/smoke/test_provider_only_smoke.py::test_provider_only_smoke",
+  "tests/smoke/test_qc_adapter.py::test_qc_adapter_legacy_plain",
+  "tests/smoke/test_qc_adapter.py::test_qc_adapter_legacy_with_snapshots",
+  "tests/smoke/test_qc_adapter.py::test_qc_adapter_newstyle",
+  "tests/smoke/test_smoke.py::test_smoke"
+]

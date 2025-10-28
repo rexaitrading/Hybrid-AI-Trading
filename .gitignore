@@ -1,37 +1,42 @@
-﻿# Python
-.venv/
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.egg-info/
 
-# Editors/IDE
+# pytest
+.pytest_cache/
+
+# editors
+*.swp
+*.swo
 .vscode/
 .idea/
 
-# OS junk
+# OS
 .DS_Store
 Thumbs.db
 
-# Local data/logs
+# our scripts + backups
+scripts/*.bak*
+*.bak
+*.orig
+*.rej
+
+# logs & outputs
 logs/
+.log/
 *.log
+*.jsonl
 
-# TWS/IB local artifacts (dont version your personal config)
-Jts/
-# generated/ephemeral
-reports/
-data/
-.logs/
-.backup/
-coverage.xml
-.coverage
-research-env/
-*.log
-*.png
-*.xlsx
-*.html
+# notebooks (optional)
+.ipynb_checkpoints/
 
-# local tools + egg-info
-src/hybrid_ai_trading.egg-info/
-# Python caches
+# data temp (keep real datasets by path, ignore temp files)
+data/*~ 
+
+.venv/
+# local backups / experiments
+.github/workflows/backup_removed/
+src/hybrid_ai_trading/tools/bar_replay_legacy.*.py

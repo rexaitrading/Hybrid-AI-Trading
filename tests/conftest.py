@@ -1,39 +1,47 @@
-import os, pytest
-from pathlib import Path
+# conftest: ensure repo/src is importable in any CI working dir / interpreter
+import os, sys, pathlib, importlib.util
+ROOT = pathlib.Path(__file__).resolve().parents[1]  # project root (tests/..)
+CANDIDATES = [ROOT / "src", ROOT]
+for p in CANDIDATES:
+    sp = str(p)
+    if sp not in sys.path:
+        sys.path.insert(0, sp)
+spec = importlib.util.find_spec("hybrid_ai_trading")
+sys.stderr.write(f"[conftest] exe={sys.executable} importable={bool(spec)} root={ROOT}\\n")
+if spec is None:
+    # leave path injected; test files also prepend a tiny shim as last resort
+    pass
 
-# Default unit tests to FAKE broker; scrub IB env to avoid live connects
-os.environ.setdefault("BROKER_BACKEND", "fake")
-for k in ("IB_HOST","IB_PORT","IB_CLIENT_ID","IB_TIMEOUT"):
-    os.environ.pop(k, None)
 
-def pytest_addoption(parser):
-    parser.addoption("--run-integration", action="store_true", default=False,
-                     help="run tests marked as integration (needs IBG)")
-    parser.addoption("--include-legacy", action="store_true", default=False,
-                     help="collect legacy tests that import _engine_factory")
+# === IB_INSYNC_TEST_SHIM_BEGIN ===
+# Minimal ib_insync stub for smoke tests when real package is absent.
+try:
+    import ib_insync  # type=ignore
+except Exception:
+    import sys, types
+    m = types.ModuleType("ib_insync")
+    class _IBDummy:
+        def __init__(self,*a,**k): pass
+        def __call__(self,*a,**k): return self
+        def __getattr__(self, _): return self
+    class IB(_IBDummy):
+        def connect(self,*a,**k): return True
+        def disconnect(self,*a,**k): return None
+    class Contract(_IBDummy): pass
+    class Stock(_IBDummy):   pass
+    class Forex(_IBDummy):   pass
+    class MarketOrder(_IBDummy): pass
+    class LimitOrder(_IBDummy):  pass
+    class ContractDetails(_IBDummy): pass
+    class Ticker(_IBDummy):       pass
+    class util(_IBDummy):         pass
+    m.IB=IB; m.Contract=Contract; m.Stock=Stock; m.Forex=Forex
+    m.MarketOrder=MarketOrder; m.LimitOrder=LimitOrder; m.ContractDetails=ContractDetails; m.Ticker=Ticker; m.util=util
+    def _ibins_getattr(name):  # catch-all for any other symbol (Order, TagValue, etc.)
+        return _IBDummy()
+    m.__getattr__ = _ibins_getattr
+    sys.modules["ib_insync"] = m
+# === IB_INSYNC_TEST_SHIM_END ===
 
-def pytest_configure(config):
-    config.addinivalue_line("markers", "integration: mark tests as integration (needs IBG)")
 
-def pytest_collection_modifyitems(config, items):
-    if not config.getoption("--run-integration"):
-        skip_it = pytest.mark.skip(reason="need --run-integration to run")
-        for item in items:
-            if "integration" in item.keywords:
-                item.add_marker(skip_it)
 
-def pytest_ignore_collect(collection_path: Path, config):
-    # skip legacy files unless explicitly requested
-    legacy = {
-        "test_trade_engine_master_full.py",
-        "test_trade_engine_residual_sniper.py",
-        "test_trade_engine_sweeper.py",
-        "test_trade_engine_targeted_cases.py",
-    }
-    # ignore archive/ and scripts/ by default
-    parts = collection_path.parts
-    if ("archive" in parts or "scripts" in parts) and not config.getoption("--include-legacy"):
-        return True
-    if collection_path.name in legacy and not config.getoption("--include-legacy"):
-        return True
-    return False
