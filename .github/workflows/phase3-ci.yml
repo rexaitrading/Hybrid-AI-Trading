@@ -116,4 +116,14 @@ jobs:
       - name: Gated IBG integration (requires secret toggle)
         shell: pwsh
         run: |
+      - name: Sanity import
+        shell: pwsh
+        run: |
+          python - << 'PY'
+          import sys, pkgutil
+          print('PY:', sys.version)
+          print('PKG present?', pkgutil.find_loader('hybrid_ai_trading') is not None)
+          import hybrid_ai_trading as hat
+          print('PKG path:', getattr(hat, '__file__', 'n/a'))
+          PY
           powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode IBG
