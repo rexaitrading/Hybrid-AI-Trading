@@ -461,9 +461,12 @@ def _cli_main():
         parser.add_argument("--log-file", type=str, default="logs/runner_paper.jsonl")
         args = parser.parse_args()
     else:
-        args = parse_args()
-
-    # allow flag injection from argv
+        \1    try:
+        import os
+        if not getattr(args, "log_file", None):
+            setattr(args, "log_file", os.getenv("HAT_LOG_FILE") or "logs/runner_paper.jsonl")
+    except Exception:
+        pass    # allow flag injection from argv
     try:
         args = _inject_provider_cli(args)
     except Exception:
