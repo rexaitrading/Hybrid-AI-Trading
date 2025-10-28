@@ -21,3 +21,5 @@ jobs:
         shell: pwsh
         run: |
           python -c "import io; t=io.open(r'src/hybrid_ai_trading/tools/bar_replay.py', encoding='utf-8').read(); assert 'setup=\"ORB\"' in t, 'ORB hook missing'; print('OK: ORB present')"
+
+# ci: force fresh runner cache
