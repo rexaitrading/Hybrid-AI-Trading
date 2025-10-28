@@ -40,3 +40,11 @@ data/*~
 # local backups / experiments
 .github/workflows/backup_removed/
 src/hybrid_ai_trading/tools/bar_replay_legacy.*.py
+# local ops + caches
+.tmp_pytest_cache/
+.coverage
+dist/
+build/
+*.egg-info/
+**/__pycache__/
+logs/*.tmp
