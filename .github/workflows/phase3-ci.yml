@@ -47,6 +47,19 @@ jobs:
             ($req2 -join ""n") + ""n" | Set-Content .\requirements.txt -Encoding UTF8
           }
           python -m pip install -e .
+      - name: Prepare local package
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path .\requirements.txt) {
+            \  = Get-Content .\requirements.txt -Raw
+            \ = (\ -split \"?
+\") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
+            (\ -join \"
+\") + \"
+\" | Set-Content .\requirements.txt -Encoding UTF8
+          }
+          python -m pip install -e .
       - name: Install
         shell: pwsh
         run: |
@@ -103,6 +116,19 @@ jobs:
             ($req2 -join ""n") + ""n" | Set-Content .\requirements.txt -Encoding UTF8
           }
           python -m pip install -e .
+      - name: Prepare local package
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path .\requirements.txt) {
+            \  = Get-Content .\requirements.txt -Raw
+            \ = (\ -split \"?
+\") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
+            (\ -join \"
+\") + \"
+\" | Set-Content .\requirements.txt -Encoding UTF8
+          }
+          python -m pip install -e .
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -138,6 +164,19 @@ jobs:
             $req  = Get-Content .\requirements.txt -Raw
             $req2 = ($req -split ""r?"n") | Where-Object { $_ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
             ($req2 -join ""n") + ""n" | Set-Content .\requirements.txt -Encoding UTF8
+          }
+          python -m pip install -e .
+      - name: Prepare local package
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path .\requirements.txt) {
+            \  = Get-Content .\requirements.txt -Raw
+            \ = (\ -split \"?
+\") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
+            (\ -join \"
+\") + \"
+\" | Set-Content .\requirements.txt -Encoding UTF8
           }
           python -m pip install -e .
       - name: Install
@@ -187,6 +226,19 @@ jobs:
             $req  = Get-Content .\requirements.txt -Raw
             $req2 = ($req -split ""r?"n") | Where-Object { $_ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
             ($req2 -join ""n") + ""n" | Set-Content .\requirements.txt -Encoding UTF8
+          }
+          python -m pip install -e .
+      - name: Prepare local package
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path .\requirements.txt) {
+            \  = Get-Content .\requirements.txt -Raw
+            \ = (\ -split \"?
+\") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
+            (\ -join \"
+\") + \"
+\" | Set-Content .\requirements.txt -Encoding UTF8
           }
           python -m pip install -e .
       - name: Install
