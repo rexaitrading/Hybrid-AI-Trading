@@ -1,9 +1,9 @@
+name: Phase3 CI
+
 on:
   workflow_dispatch:
   push:
-    branches: [ "
-main
-" ]
+    branches: [ "main" ]
 
 jobs:
   gate:
@@ -37,97 +37,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Prepare local package
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          if (Test-Path .\requirements.txt) {
-            $req  = Get-Content .\requirements.txt -Raw
-            $req2 = ($req -split ""r?"n") | Where-Object { $_ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
-            ($req2 -join ""n") + ""n" | Set-Content .\requirements.txt -Encoding UTF8
-          }
-          python -m pip install -e .
-      - name: Prepare local package
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          if (Test-Path .\requirements.txt) {
-            \  = Get-Content .\requirements.txt -Raw
-            \ = (\ -split \"
-?
-\") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
-            (\ -join \"
-\") + \"
-\" | Set-Content .\requirements.txt -Encoding UTF8
-          }
-          python -m pip install -e .
       - name: Install
         shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          # Remove local project pin from requirements (if present)
-          if (Test-Path .\requirements.txt) {
-            $req = Get-Content .\requirements.txt -Raw
-            $req2 = ($req -split "`r?`n") | Where-Object { name: Phase3 CI
-
-
-jobs:
-  gate:
-    name: Resolve gates
-    runs-on: ubuntu-latest
-    outputs:
-      phase3: ${{ steps.out.outputs.phase3 }}
-      ibg:    ${{ steps.out.outputs.ibg }}
-    steps:
-      - id: out
-        shell: bash
-        run: |
-          echo "phase3=${{ vars.RUN_PHASE3_ENABLED }}" >> "$GITHUB_OUTPUT"
-          echo "ibg=${{ vars.RUN_IBG_INT }}" >> "$GITHUB_OUTPUT"
-
-  micro-tests:
-    needs: gate
-    if: ${{ needs.gate.outputs.phase3 == 'true' || github.event_name == 'workflow_dispatch' }}
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Prepare Git on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          git config --global user.email "ci@example.invalid"
-          git config --global user.name  "CI"
-          git config --global --add safe.directory "$PWD"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Prepare local package
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          if (Test-Path .\requirements.txt) {
-            $req  = Get-Content .\requirements.txt -Raw
-            $req2 = ($req -split ""r?"n") | Where-Object { $_ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
-            ($req2 -join ""n") + ""n" | Set-Content .\requirements.txt -Encoding UTF8
-          }
-          python -m pip install -e .
-      - name: Prepare local package
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          if (Test-Path .\requirements.txt) {
-            \  = Get-Content .\requirements.txt -Raw
-            \ = (\ -split \"
-?
-\") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
-            (\ -join \"
-\") + \"
-\" | Set-Content .\requirements.txt -Encoding UTF8
-          }
-          python -m pip install -e .
-      - name: Install
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
@@ -155,31 +66,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Prepare local package
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          if (Test-Path .\requirements.txt) {
-            $req  = Get-Content .\requirements.txt -Raw
-            $req2 = ($req -split ""r?"n") | Where-Object { $_ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
-            ($req2 -join ""n") + ""n" | Set-Content .\requirements.txt -Encoding UTF8
-          }
-          python -m pip install -e .
-      - name: Prepare local package
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          if (Test-Path .\requirements.txt) {
-            \  = Get-Content .\requirements.txt -Raw
-            \ = (\ -split \"
-?
-\") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
-            (\ -join \"
-\") + \"
-\" | Set-Content .\requirements.txt -Encoding UTF8
-          }
-          python -m pip install -e .
       - name: Install
+        shell: pwsh
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
@@ -219,31 +107,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Prepare local package
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          if (Test-Path .\requirements.txt) {
-            $req  = Get-Content .\requirements.txt -Raw
-            $req2 = ($req -split ""r?"n") | Where-Object { $_ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
-            ($req2 -join ""n") + ""n" | Set-Content .\requirements.txt -Encoding UTF8
-          }
-          python -m pip install -e .
-      - name: Prepare local package
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          if (Test-Path .\requirements.txt) {
-            \  = Get-Content .\requirements.txt -Raw
-            \ = (\ -split \"
-?
-\") | Where-Object { \ -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s*$' }
-            (\ -join \"
-\") + \"
-\" | Set-Content .\requirements.txt -Encoding UTF8
-          }
-          python -m pip install -e .
       - name: Install
+        shell: pwsh
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
@@ -252,11 +117,3 @@ jobs:
         shell: pwsh
         run: |
           powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode IBG
- -notmatch '^\s*hybrid_ai_trading\s*==\s*0\.1\.0\s* }
-            ($req2 -join "`n") + "`n" | Set-Content .\requirements.txt -Encoding UTF8
-          }
-          # Install the repo itself as an editable package
-          python -m pip install -e .
-          # Install deps and test tools
-          python -m pip install -e .
-          python -m pip install -r requirements.txt pytest pytest-cov coverage
