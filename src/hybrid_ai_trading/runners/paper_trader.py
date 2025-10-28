@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 """Provider-only fast path (before preflight)."""
 
 import sys
