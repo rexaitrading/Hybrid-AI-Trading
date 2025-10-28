@@ -48,3 +48,22 @@ build/
 *.egg-info/
 **/__pycache__/
 logs/*.tmp
+# secrets & local configs
+.env
+*.env
+config/*.yml
+config/*.yaml
+**/config.yaml
+**/config.yml
+**/config.ini
+**/jts.ini
+**/IBC/**/config.ini
+
+# logs & local state
+.logs/
+logs/
+*.jsonl
+.state/
+archive/
+backups*/
+.backup/
