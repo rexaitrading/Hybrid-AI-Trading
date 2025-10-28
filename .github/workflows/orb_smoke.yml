@@ -1,4 +1,4 @@
-name: ORB Smoke
+﻿name: ORB Smoke
 
 on:
   push:
@@ -59,15 +59,15 @@ jobs:
             }
           }
 
-      - name: Verify ORB hook present
+            - name: Verify ORB hook present
         run: |
-          python - <<'PY'
-          import io, sys
-          p = r"src/hybrid_ai_trading/tools/bar_replay.py"
-          try:
-              t = io.open(p, encoding="utf-8").read()
-          except FileNotFoundError:
-              raise SystemExit(f"Missing file: {p}")
-          assert 'setup="ORB"' in t, "ORB hook missing"
-          print("OK: ORB present")
-          PY
+          @'
+import io, sys
+p = r"src/hybrid_ai_trading/tools/bar_replay.py"
+try:
+    t = io.open(p, encoding="utf-8").read()
+except FileNotFoundError:
+    raise SystemExit(f"Missing file: {p}")
+assert 'setup=""ORB""' in t, "ORB hook missing"
+print("OK: ORB present")
+'@ | python -
