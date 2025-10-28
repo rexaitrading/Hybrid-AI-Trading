@@ -86,3 +86,6 @@ gitleaks_report*.json
 # caches & venvs
 .venv/
 .pytest_cache/
+
+/Hybrid-AI-Trading
+
