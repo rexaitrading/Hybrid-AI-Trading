@@ -2,7 +2,9 @@ name: Phase3 CI
 
 on:
   workflow_dispatch:
+    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
   push:
+    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     branches: [ "main" ]
 
 jobs:
@@ -22,6 +24,7 @@ micro-tests:
           powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode Isolated
 
   full-repo-cov:
+    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-latest
@@ -51,6 +54,7 @@ micro-tests:
           path: junit.xml
 
   ibg-integration:
+    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     # only when you opt in
     if: ${{ vars.RUN_IBG_INT == 'true' && github.event_name != 'pull_request' }}
