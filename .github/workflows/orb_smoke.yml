@@ -5,7 +5,6 @@ on:
   pull_request:
   schedule:
     - cron: "20 2 * * *"   # daily @ 02:20 UTC
-
 jobs:
   orb:
     runs-on: windows-latest
