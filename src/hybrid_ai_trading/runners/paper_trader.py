@@ -293,6 +293,7 @@ def run_paper_session(args) -> int:
         # fallback into CI report dir or workspace
         report_dir = os.getenv("HAT_REPORT_DIR") or os.getenv("GITHUB_WORKSPACE") or "."
         log_path = os.path.join(report_dir, "paper_runner.log")
+    log_path = _hat_safe_log_path(log_path)
     logger = JsonlLogger(log_path)
     logger.info("run_start", cfg=cfg, symbols=symbols)
 
