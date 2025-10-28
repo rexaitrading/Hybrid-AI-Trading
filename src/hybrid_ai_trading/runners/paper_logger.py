@@ -22,6 +22,7 @@ class JsonlLogger:
     """
     def __init__(self, path: str, flush: bool = True) -> None:
         self.path = path
+        # CI-LOGGER-NONE-GUARD: coerce None/empty path to a safe default         if path is None or (isinstance(path, str) and not path.strip()):             report_dir = os.environ.get('HAT_REPORT_DIR') or os.environ.get('GITHUB_WORKSPACE') or '.ci'             try:                 os.makedirs(report_dir, exist_ok=True)             except Exception:                 report_dir = '.'             path = os.path.join(report_dir, 'paper_runner.log')
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         # open in append text mode; encoding utf-8
         self._fh = open(self.path, "a", encoding="utf-8")
