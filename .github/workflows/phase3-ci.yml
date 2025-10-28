@@ -2,25 +2,18 @@ name: Phase3 CI
 
 on:
   workflow_dispatch:
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
   push:
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     branches: [ "main" ]
 
 jobs:
   micro-tests:
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with:
+          python-version: "3.12"
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -32,18 +25,12 @@ jobs:
 
   full-repo-cov:
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with:
+          python-version: "3.12"
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -66,20 +53,13 @@ jobs:
           path: junit.xml
 
   ibg-integration:
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    # only when you opt in
-    if: ${{ vars.RUN_IBG_INT == 'true' && github.event_name != 'pull_request' }}
+    if: ${{ (vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch') && vars.RUN_IBG_INT == 'true' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with:
+          python-version: "3.12"
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -87,4 +67,4 @@ jobs:
       - name: Gated IBG integration (requires secret toggle)
         shell: pwsh
         run: |
-          powershell -ExecutionPolicy Bypass -File .\scripts\phase2_run_ib_paper_tests_clean.ps1
+          powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode IBG
