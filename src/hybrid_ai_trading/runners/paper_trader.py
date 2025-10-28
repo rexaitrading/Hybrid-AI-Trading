@@ -362,7 +362,13 @@ def run_paper_session(args) -> int:
         try: print("[CONFIG] Universe empty -> nothing to trade.")
         except Exception: pass
         return 0
-    log_path = getattr(args, "log_file", "logs/runner_paper.jsonl")
+log_path = getattr(args, "log_file", None) or os.getenv("HAT_LOG_FILE") or "logs/runner_paper.jsonl"
+if not isinstance(log_path, str) or not log_path.strip():
+    log_path = "logs/runner_paper.jsonl"
+try:
+    os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
+except Exception:
+    pass
     try: os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
     except Exception: pass
     logger = JsonlLogger(log_path)
@@ -444,6 +450,12 @@ def _cli_main():
     else:
         args = parse_args()
 
+    try:
+        import os
+        if not getattr(args, "log_file", None):
+            setattr(args, "log_file", os.getenv("HAT_LOG_FILE") or "logs/runner_paper.jsonl")
+    except Exception:
+        pass
     try: args = _inject_provider_cli(args)
     except Exception: pass
 
