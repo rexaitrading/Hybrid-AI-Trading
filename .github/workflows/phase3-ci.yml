@@ -45,20 +45,15 @@ jobs:
         shell: pwsh
         run: New-Item -ItemType Directory -Force .ci | Out-Null
 
-      - name: Print sys.path & imported logger
+      - name: Print sys.path & imported logger (PowerShell-safe)
         shell: pwsh
-        run: |
-          python - << 'PY'
-          import sys, importlib, inspect, os
-          print("sys.path[:6] =", sys.path[:6])
-          try:
-            m = importlib.import_module("hybrid_ai_trading.runners.paper_logger")
-            print("IMPORTED_FROM:", m.__file__)
-            src = inspect.getsource(m)
-            print("HAS_NORMALIZE:", "_normalize_log_path(" in src)
-          except Exception as e:
-            print("IMPORT_ERROR:", e)
-          PY
+        run: >
+          python -c "import sys,importlib,inspect;
+          print('sys.path[:6]=',sys.path[:6]);
+          m=importlib.import_module('hybrid_ai_trading.runners.paper_logger');
+          print('IMPORTED_FROM:',m.__file__);
+          src=inspect.getsource(m);
+          print('HAS_NORMALIZE:', '_normalize_log_path(' in src)"
 
       - name: Install test deps (no package install)
         shell: pwsh
@@ -108,16 +103,21 @@ jobs:
         shell: pwsh
         run: New-Item -ItemType Directory -Force .ci | Out-Null
 
+      - name: Print sys.path & imported logger (PowerShell-safe)
+        shell: pwsh
+        run: >
+          python -c "import sys,importlib,inspect;
+          print('sys.path[:6]=',sys.path[:6]);
+          m=importlib.import_module('hybrid_ai_trading.runners.paper_logger');
+          print('IMPORTED_FROM:',m.__file__);
+          src=inspect.getsource(m);
+          print('HAS_NORMALIZE:', '_normalize_log_path(' in src)"
+
       - name: Install test deps (no package install)
         shell: pwsh
         run: |
           python -m pip install -U pip wheel
           pip install pytest pytest-cov
-
-      - name: Verify sitecustomize sentinel
-        shell: pwsh
-        run: |
-          if (Test-Path .\.ci\sitecustomize_loaded.txt) { Get-Content .\.ci\sitecustomize_loaded.txt -Tail 5 } else { Write-Host "no sentinel yet" }
 
       - name: Run tests + coverage
         shell: pwsh
