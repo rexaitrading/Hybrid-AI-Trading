@@ -37,3 +37,6 @@ logs/
 data/*~ 
 
 .venv/
+# local backups / experiments
+.github/workflows/backup_removed/
+src/hybrid_ai_trading/tools/bar_replay_legacy.*.py
