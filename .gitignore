@@ -59,3 +59,30 @@ src/hybrid_ai_trading/tools/*.bak*
 
 research-env/
 .ruff_cache/
+# --- security & hygiene (appended) ---
+# local secrets & configs
+.env
+*.env
+config/*.yml
+config/*.yaml
+**/config.yaml
+**/config.yml
+**/config.ini
+**/jts.ini
+**/IBC/**/config.ini
+
+# local logs/state/research
+logs/
+.logs/
+.state/
+archive/
+research-env/
+research-env/**
+
+# history tooling artifacts
+paths_to_purge*.txt
+gitleaks_report*.json
+
+# caches & venvs
+.venv/
+.pytest_cache/
