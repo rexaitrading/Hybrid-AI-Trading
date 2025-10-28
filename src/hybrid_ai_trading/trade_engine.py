@@ -1,17 +1,17 @@
 """
-Trade Engine (Hybrid AI Quant Pro v17.5 – Hedge Fund Grade, Loop-Proof Normalized)
+Trade Engine (Hybrid AI Quant Pro v17.5 â€“ Hedge Fund Grade, Loop-Proof Normalized)
 ---------------------------------------------------------------------------------
-- Guardrails BEFORE routing: equity → sector → hedge → drawdown
+- Guardrails BEFORE routing: equity â†’ sector â†’ hedge â†’ drawdown
 - Router normalized BEFORE regime/filters/performance
-- Regime-disabled overrides Sharpe/Sortino ✅
-- Sentiment BEFORE GateScore BEFORE Sharpe/Sortino ✅
+- Regime-disabled overrides Sharpe/Sortino âœ…
+- Sentiment BEFORE GateScore BEFORE Sharpe/Sortino âœ…
 - Kelly config sanitized (drops "enabled")
 - Audit logging always creates files
 - alert() implemented for Slack/Telegram/Email
-- record_trade_outcome added ✅
-- reset_day patched with safe fallback ✅
-- 🔑 Final normalization: "ok" → "filled" for both status and reason
-- 🔒 FIX: unknown algo now returns early as rejected (no normalization overwrite)
+- record_trade_outcome added âœ…
+- reset_day patched with safe fallback âœ…
+- ðŸ”‘ Final normalization: "ok" â†’ "filled" for both status and reason
+- ðŸ”’ FIX: unknown algo now returns early as rejected (no normalization overwrite)
 """
 
 import csv
@@ -32,6 +32,22 @@ from hybrid_ai_trading.risk.kelly_sizer import KellySizer
 from hybrid_ai_trading.risk.regime_detector import RegimeDetector
 from hybrid_ai_trading.risk.risk_manager import RiskManager
 from hybrid_ai_trading.risk.sentiment_filter import SentimentFilter
+# HAT-SAFE-PATH v1
+def _ensure_report_dir(base: str | None = None) -> str:
+    base = base or os.environ.get('HAT_REPORT_DIR') or os.environ.get('GITHUB_WORKSPACE') or ''
+    report_dir = os.path.join(base, '.ci') if base else '.ci'
+    os.makedirs(report_dir, exist_ok=True)
+    return report_dir
+
+def _normalize_path(p) -> str:
+    if p is None or (isinstance(p, str) and not p.strip()):
+        return os.path.join(_ensure_report_dir(), 'engine.log')
+    s = os.fspath(p)
+    d = os.path.dirname(s)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    return s
+
 
 logger = logging.getLogger(__name__)
 
@@ -276,7 +292,7 @@ class TradeEngine:
                     )
                 else:
                     logger.warning("Unknown algo requested: %s", algo)
-                    # 🔑 FIX: Early return ensures unknown algo is not normalized to "filled"
+                    # ðŸ”‘ FIX: Early return ensures unknown algo is not normalized to "filled"
                     return {"status": "rejected", "reason": "unknown_algo"}
             except Exception as e:
                 return {"status": "error", "reason": f"algo_error:{e}"}
