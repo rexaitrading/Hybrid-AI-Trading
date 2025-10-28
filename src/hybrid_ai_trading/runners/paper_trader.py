@@ -1,22 +1,23 @@
 from __future__ import annotations
+
 import os
+
 """Provider-only fast path (before preflight)."""
 
-import sys
 import os
+import sys
 import time
 import types
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from ib_insync import Stock
+import hybrid_ai_trading.runners.paper_quantcore as qc
+from hybrid_ai_trading.execution.route_exec import place_entry as route_place_entry
+from hybrid_ai_trading.runners.paper_config import load_config
+from hybrid_ai_trading.runners.paper_logger import JsonlLogger
+from hybrid_ai_trading.runners.paper_utils import apply_mdt
 from hybrid_ai_trading.utils.ib_conn import ib_session
 from hybrid_ai_trading.utils.preflight import sanity_probe
-from hybrid_ai_trading.runners.paper_utils import apply_mdt
-from hybrid_ai_trading.runners.paper_logger import JsonlLogger
-from hybrid_ai_trading.runners.paper_config import load_config
-import hybrid_ai_trading.runners.paper_quantcore as qc
-
-from hybrid_ai_trading.execution.route_exec import place_entry as route_place_entry
+from ib_insync import Stock
 
 ALLOW_TRADE_WHEN_CLOSED = os.environ.get("ALLOW_TRADE_WHEN_CLOSED", "0") == "1"
 contracts = {}
@@ -129,7 +130,7 @@ def _norm_approval(a):
 def _riskhub_checks(snapshots, result, logger):
     """Call RiskHub for each decision; log-only (no order placement)."""
     try:
-        from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
+        from hybrid_ai_trading.utils.risk_client import RISK_HUB_URL, check_decision
     except Exception as e:
         logger.info("risk_checks", items=[], note=f"risk_client_unavailable: {e}")
         return

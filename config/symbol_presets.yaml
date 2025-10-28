@@ -1,5 +1,0 @@
-AAPL: { floor_bps: 5 }
-MSFT: { floor_bps: 3 }
-NVDA: { floor_bps: 3 }
-VXX:  { floor_bps: 6 }
-UVXY: { floor_bps: 10 }
