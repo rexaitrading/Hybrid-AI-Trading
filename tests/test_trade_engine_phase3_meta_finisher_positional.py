@@ -1,17 +1,23 @@
 import inspect
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
+
 from tests.test_trade_engine_optionA_exec100 import make_engine
+
 
 def _neutralize(te):
     # sector exposure gates: neutralize any *_exposure_*breach* methods
     for attr in dir(te):
         if "exposure" in attr and "breach" in attr:
-            try: setattr(te, attr, lambda *a, **k: False)
-            except Exception: pass
+            try:
+                setattr(te, attr, lambda *a, **k: False)
+            except Exception:
+                pass
     # ensure PAUSE file is not present
-    try: Path("control/PAUSE").unlink(missing_ok=True)
-    except Exception: pass
+    try:
+        Path("control/PAUSE").unlink(missing_ok=True)
+    except Exception:
+        pass
     # defaults
     if not hasattr(te, "config") or te.config is None:
         te.config = {}
@@ -22,7 +28,11 @@ def _neutralize(te):
     te.portfolio = SimpleNamespace(equity=100.0, history=[("t0", 100.0)])
     # helpful status provider if engine queries it
     if not hasattr(te.portfolio, "status"):
-        te.portfolio.status = lambda: {"equity": te.portfolio.equity, "history": te.portfolio.history}
+        te.portfolio.status = lambda: {
+            "equity": te.portfolio.equity,
+            "history": te.portfolio.history,
+        }
+
 
 def _pos_args_for(fn):
     """
@@ -33,12 +43,12 @@ def _pos_args_for(fn):
     sup = {
         "symbol": "AAPL",
         "ticker": "AAPL",
-        "side":   "BUY",
+        "side": "BUY",
         "signal": "BUY",
-        "qty":    1,
+        "qty": 1,
         "quantity": 1,
-        "size":   1,
-        "price":  100.0,
+        "size": 1,
+        "price": 100.0,
     }
     args = []
     for i, (name, param) in enumerate(sig.parameters.items()):
@@ -61,6 +71,7 @@ def _pos_args_for(fn):
                 args.append(None)
     return args
 
+
 # -------- (241→251) drawdown block executes WITHOUT breach, then continues to sizing -----------
 def test_ps_drawdown_nonbreach_then_kelly_sizing_positional():
     te = make_engine()
@@ -71,13 +82,18 @@ def test_ps_drawdown_nonbreach_then_kelly_sizing_positional():
     te.config["risk"]["max_drawdown"] = 0.99
     # Force Kelly path -> engine should reach sizing code; Kelly raises -> fallback size path
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":None}
-    te.kelly_sizer = SimpleNamespace(size_position=lambda *a, **k: (_ for _ in ()).throw(RuntimeError("kelly boom")))
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": None}
+    te.kelly_sizer = SimpleNamespace(
+        size_position=lambda *a, **k: (_ for _ in ()).throw(RuntimeError("kelly boom"))
+    )
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status":"submitted","order_id":7001}
+        te.order_manager.submit = lambda *a, **k: {"status": "submitted", "order_id": 7001}
     args = _pos_args_for(te.process_signal)
-    try: te.process_signal(*args)
-    except Exception: pass
+    try:
+        te.process_signal(*args)
+    except Exception:
+        pass
+
 
 # -------- (247–248) drawdown try/except path: malformed history triggers except ----------
 def test_ps_drawdown_except_path_malformed_history_positional():
@@ -88,10 +104,13 @@ def test_ps_drawdown_except_path_malformed_history_positional():
     te.portfolio = SimpleNamespace(equity=90.0, history="NOT_A_LIST")
     te.portfolio.status = lambda: {"equity": 90.0, "history": "NOT_A_LIST"}
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":1}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
     args = _pos_args_for(te.process_signal)
-    try: te.process_signal(*args)
-    except Exception: pass
+    try:
+        te.process_signal(*args)
+    except Exception:
+        pass
+
 
 # -------- (301) regime disabled early-return ----------
 def test_ps_regime_disabled_301_positional():
@@ -99,12 +118,15 @@ def test_ps_regime_disabled_301_positional():
     _neutralize(te)
     te.config["regime"]["enabled"] = False
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":1}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status":"ok","order_id":7002}
+        te.order_manager.submit = lambda *a, **k: {"status": "ok", "order_id": 7002}
     args = _pos_args_for(te.process_signal)
-    try: te.process_signal(*args)
-    except Exception: pass
+    try:
+        te.process_signal(*args)
+    except Exception:
+        pass
+
 
 # -------- (325) sortino breach ----------
 def test_ps_sortino_breach_325_positional():
@@ -115,12 +137,15 @@ def test_ps_sortino_breach_325_positional():
     te.config["risk"]["min_sortino"] = 10.0
     te.metrics.sortino = 0.1
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":1}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status":"ok","order_id":7003}
+        te.order_manager.submit = lambda *a, **k: {"status": "ok", "order_id": 7003}
     args = _pos_args_for(te.process_signal)
-    try: te.process_signal(*args)
-    except Exception: pass
+    try:
+        te.process_signal(*args)
+    except Exception:
+        pass
+
 
 # -------- (334–339) tail normalization (status/ reason "ok" -> "filled"/"normalized_ok") ----------
 def test_ps_tail_normalization_334_339_positional():
@@ -129,13 +154,17 @@ def test_ps_tail_normalization_334_339_positional():
     te.config["regime"]["enabled"] = True
     # Direct size so we skip Kelly; submit ok/ok so tail post-processing runs
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":2}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status":"ok","reason":"ok","order_id":7004}
-    for waiter in ("wait_for_fill","await_fill","poll_fill","_await_fill"):
+        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 7004}
+    for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
-            try: setattr(te, waiter, lambda *a, **k: {"status":"ok"})
-            except Exception: pass
+            try:
+                setattr(te, waiter, lambda *a, **k: {"status": "ok"})
+            except Exception:
+                pass
     args = _pos_args_for(te.process_signal)
-    try: te.process_signal(*args)
-    except Exception: pass
+    try:
+        te.process_signal(*args)
+    except Exception:
+        pass

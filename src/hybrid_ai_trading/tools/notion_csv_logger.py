@@ -1,37 +1,56 @@
 from __future__ import annotations
-import csv, os, time
-from dataclasses import dataclass, asdict
+
+import csv
+import os
+import time
+from dataclasses import asdict, dataclass
 from typing import Iterable, Optional
 
 # Columns align to your Notion DB import
 COLUMNS = [
-    "Date","Ticker","Setup","Context","EntryTime","ExitTime",
-    "Entry","Exit","Qty","Fees","Slippage","RM","PnL","Notes","ReplayID"
+    "Date",
+    "Ticker",
+    "Setup",
+    "Context",
+    "EntryTime",
+    "ExitTime",
+    "Entry",
+    "Exit",
+    "Qty",
+    "Fees",
+    "Slippage",
+    "RM",
+    "PnL",
+    "Notes",
+    "ReplayID",
 ]
+
 
 @dataclass
 class TradeRow:
     Date: str
     Ticker: str
     Setup: str
-    Context: str              # semicolon-joined multi-select, e.g. "TrendUp;HighVol"
-    EntryTime: str            # ISO 8601 local, e.g. "2025-10-24T09:31"
+    Context: str  # semicolon-joined multi-select, e.g. "TrendUp;HighVol"
+    EntryTime: str  # ISO 8601 local, e.g. "2025-10-24T09:31"
     ExitTime: str
     Entry: float
     Exit: float
     Qty: int
     Fees: float
     Slippage: float
-    RM: float                 # R multiple
+    RM: float  # R multiple
     PnL: float
     Notes: str
     ReplayID: str
+
 
 class NotionCSVLogger:
     """
     Append-only CSV writer for trade rows (UTF-8, no BOM).
     Ensures header once; idempotent across runs.
     """
+
     def __init__(self, path: str):
         self.path = path
         self._fh = None
@@ -63,6 +82,7 @@ class NotionCSVLogger:
 
     def log(self, row: TradeRow):
         self._writer.writerow(asdict(row))
+
 
 # Convenience helper for quick logging without dataclass construction
 def log_trade(path: str, **kwargs):

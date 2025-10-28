@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 from datetime import datetime
+
 from hybrid_ai_trading.tools.notion_csv_logger import log_trade
+
 
 def log_closed_trade(
     *,
@@ -16,7 +19,7 @@ def log_closed_trade(
     slippage: float = 0.0,
     r_multiple: float = 0.0,
     notes: str = "",
-    replay_id: str = ""
+    replay_id: str = "",
 ) -> None:
     """
     Log a completed trade to logs/theory_trades.csv (UTF-8 no BOM) for Notion import.

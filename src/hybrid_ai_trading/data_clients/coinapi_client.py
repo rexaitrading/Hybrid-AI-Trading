@@ -1,5 +1,9 @@
-import json, urllib.request, urllib.error, re
+import json
+import re
+import urllib.error
+import urllib.request
 from typing import Any, Dict, Tuple
+
 
 class Client:
     """
@@ -7,15 +11,17 @@ class Client:
     Expects kwargs: key (api key), base (e.g., https://rest.coinapi.io)
     last_quote supports symbols like: BTCUSD, BTC/USDT, ETH-USD, eth_usd, etc.
     """
+
     def __init__(self, key: str, base: str = "https://rest.coinapi.io", **_):
         if not key or not base:
             raise ValueError("coinapi_client.Client requires key and base")
-        self.key  = key
+        self.key = key
         self.base = base.rstrip("/")
 
     def _http_json(self, url: str, headers=None, timeout=6) -> Dict[str, Any]:
         hdrs = {"X-CoinAPI-Key": self.key}
-        if headers: hdrs.update(headers)
+        if headers:
+            hdrs.update(headers)
         req = urllib.request.Request(url, headers=hdrs)
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -30,13 +36,17 @@ class Client:
         Accepts: BTCUSD, BTC/USD, BTC-USD, btc_usdt -> ('BTC','USD' or 'USDT')
         """
         s = (sym or "").upper().strip()
-        if "/" in s: parts = s.split("/")
-        elif "-" in s: parts = s.split("-")
-        elif "_" in s: parts = s.split("_")
+        if "/" in s:
+            parts = s.split("/")
+        elif "-" in s:
+            parts = s.split("-")
+        elif "_" in s:
+            parts = s.split("_")
         else:
             # assume last 3-4 letters are quote (USD, USDT, USDC, EUR, CAD)
             m = re.match(r"^([A-Z0-9]+?)(USDT|USDC|USD|EUR|CAD)$", s)
-            if m: return m.group(1), m.group(2)
+            if m:
+                return m.group(1), m.group(2)
             # fallback: unknown split -> default to USD
             return s, "USD"
         if len(parts) == 2:
@@ -59,6 +69,16 @@ class Client:
                 return {"symbol": symbol, "price": float(rate), "source": "coinapi"}
             # CoinAPI sometimes responds with {"error": "..."} on invalid pairs
             if j.get("error"):
-                return {"symbol": symbol, "price": None, "source": "coinapi", "reason": j.get("error")}
+                return {
+                    "symbol": symbol,
+                    "price": None,
+                    "source": "coinapi",
+                    "reason": j.get("error"),
+                }
             return {"symbol": symbol, "price": None, "source": "coinapi", "reason": "no_rate"}
-        return {"symbol": symbol, "price": None, "source": "coinapi", "reason": j.get("_error") if isinstance(j, dict) else "http_error"}
+        return {
+            "symbol": symbol,
+            "price": None,
+            "source": "coinapi",
+            "reason": j.get("_error") if isinstance(j, dict) else "http_error",
+        }

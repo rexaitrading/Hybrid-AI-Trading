@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Coinbase Advanced Trade Client (Hybrid AI Quant Pro v1.2 – Secure)
 - Uses coinbase-advanced-py RESTClient with the new key file format (name + privateKey).
@@ -9,9 +10,10 @@ CLI:
   PYTHONPATH=src python .../coinbase_client.py --ticker BTC-USD
 """
 
-import os
 import argparse
-from typing import Optional, List
+import os
+from typing import List, Optional
+
 from coinbase.rest import RESTClient
 
 
@@ -29,9 +31,13 @@ def _candidate_keyfiles(explicit: Optional[str]) -> List[str]:
     # repo/config: go up from this file to repo root
     here = os.path.dirname(__file__)
     # .../src/hybrid_ai_trading/data/clients -> repo root is four levels up
-    cands.append(os.path.abspath(os.path.join(here, "..", "..", "..", "..", "config", "cdp_api_key.json")))
+    cands.append(
+        os.path.abspath(os.path.join(here, "..", "..", "..", "..", "config", "cdp_api_key.json"))
+    )
     # also try src/config (in case user stored under src/)
-    cands.append(os.path.abspath(os.path.join(here, "..", "..", "..", "config", "cdp_api_key.json")))
+    cands.append(
+        os.path.abspath(os.path.join(here, "..", "..", "..", "config", "cdp_api_key.json"))
+    )
     return cands
 
 

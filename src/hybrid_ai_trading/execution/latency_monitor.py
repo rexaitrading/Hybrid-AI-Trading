@@ -14,9 +14,7 @@ logger = logging.getLogger("hybrid_ai_trading.execution.latency_monitor")
 
 
 class LatencyMonitor:
-    def __init__(
-        self, threshold_ms: float = 500, max_breaches: int = 5, window: int = 50
-    ):
+    def __init__(self, threshold_ms: float = 500, max_breaches: int = 5, window: int = 50):
         self.threshold = max(1e-6, threshold_ms / 1000.0)
         self.max_breaches = max_breaches
         self.breach_count = 0
@@ -68,9 +66,7 @@ class LatencyMonitor:
             )
             if self.breach_count >= self.max_breaches:
                 self.halt = True
-                logger.critical(
-                    "HALTING trading: max breaches reached (%d)", self.breach_count
-                )
+                logger.critical("HALTING trading: max breaches reached (%d)", self.breach_count)
                 return {"status": "halt", "latency": elapsed, "result": result}
             return {"status": "warning", "latency": elapsed, "result": result}
 

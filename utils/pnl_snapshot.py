@@ -21,9 +21,7 @@ def snapshot(host="127.0.0.1", port=7497, client_id=2001) -> Dict[str, Any]:
         ib.sleep(0.7)
         last = float(getattr(t, "last", 0.0) or 0.0)
         upl = (last - avg) * qty
-        rows.append(
-            {"symbol": c.symbol, "qty": qty, "avgCost": avg, "last": last, "UPL": upl}
-        )
+        rows.append({"symbol": c.symbol, "qty": qty, "avgCost": avg, "last": last, "UPL": upl})
         net += upl
     # NetLiq
     ewl = None
@@ -31,9 +29,7 @@ def snapshot(host="127.0.0.1", port=7497, client_id=2001) -> Dict[str, Any]:
         # piggyback earlier helper
         from utils.ib_preview import whatif_preview
 
-        ewl = (
-            whatif_preview(rows[0]["symbol"], qty=1)["equityWithLoan"] if rows else None
-        )
+        ewl = whatif_preview(rows[0]["symbol"], qty=1)["equityWithLoan"] if rows else None
     except Exception:
         pass
     ib.disconnect()

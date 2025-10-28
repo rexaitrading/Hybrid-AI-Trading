@@ -92,17 +92,13 @@ def test_detect_insufficient_data():
 
 def test_detect_empty_returns(monkeypatch):
     d = RegimeDetector()
-    monkeypatch.setattr(
-        pd.Series, "pct_change", lambda self: pd.Series([], dtype="float64")
-    )
+    monkeypatch.setattr(pd.Series, "pct_change", lambda self: pd.Series([], dtype="float64"))
     assert d.detect("AAPL", prices=[100, 101, 102]) == "sideways"
 
 
 def test_detect_exception_in_stats(monkeypatch):
     d = RegimeDetector()
-    monkeypatch.setattr(
-        pd.Series, "mean", lambda *_: (_ for _ in ()).throw(Exception("boom"))
-    )
+    monkeypatch.setattr(pd.Series, "mean", lambda *_: (_ for _ in ()).throw(Exception("boom")))
     assert d.detect("AAPL", prices=[100, 101, 102]) == "neutral"
 
 
@@ -182,18 +178,14 @@ def test_detect_with_metrics_no_data():
 
 def test_detect_with_metrics_flat(monkeypatch):
     d = RegimeDetector()
-    monkeypatch.setattr(
-        pd.Series, "pct_change", lambda self: pd.Series([], dtype="float64")
-    )
+    monkeypatch.setattr(pd.Series, "pct_change", lambda self: pd.Series([], dtype="float64"))
     out = d.detect_with_metrics("AAPL", prices=[100, 100])
     assert out["reason"] == "flat"
 
 
 def test_detect_with_metrics_bad_data(monkeypatch):
     d = RegimeDetector()
-    monkeypatch.setattr(
-        pd.Series, "std", lambda *_: (_ for _ in ()).throw(Exception("bad"))
-    )
+    monkeypatch.setattr(pd.Series, "std", lambda *_: (_ for _ in ()).throw(Exception("bad")))
     out = d.detect_with_metrics("AAPL", prices=[100, 101, 102])
     assert out["reason"] == "bad_data"
 
@@ -270,9 +262,7 @@ def test_reset_history():
 def test_detect_empty_returns(monkeypatch):
     # Ensure we do NOT trip the 'insufficient data' guard; we want the empty-returns branch.
     d = RegimeDetector(min_samples=1)
-    monkeypatch.setattr(
-        pd.Series, "pct_change", lambda self: pd.Series([], dtype="float64")
-    )
+    monkeypatch.setattr(pd.Series, "pct_change", lambda self: pd.Series([], dtype="float64"))
     assert d.detect("AAPL", prices=[100, 101, 102]) == "sideways"
 
 

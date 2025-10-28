@@ -1,5 +1,7 @@
 from typing import Optional
-from ib_insync import IB, util, Stock
+
+from ib_insync import IB, Stock, util
+
 
 def fetch_bars(
     ib: IB,
@@ -8,7 +10,7 @@ def fetch_bars(
     bar_size: str,
     whatToShow: str = "TRADES",
     useRTH: bool = False,
-) :
+):
     """
     Return a pandas.DataFrame of historical bars (index = date).
     Columns include: open, high, low, close, volume, etc.

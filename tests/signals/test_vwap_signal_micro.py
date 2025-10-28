@@ -98,10 +98,7 @@ def vwap_signal(
                 c0, c1 = float(bars[0]["c"]), float(bars[1]["c"])
                 midpoint = (c0 + c1) / 2
                 vwap_two = _compute_vwap(bars)
-                if (
-                    not math.isnan(vwap_two)
-                    and abs(vwap_two - midpoint) <= cfg.tolerance
-                ):
+                if not math.isnan(vwap_two) and abs(vwap_two - midpoint) <= cfg.tolerance:
                     if cfg.tie_policy == "SELL":
                         logger.info("symmetry safeguard → SELL")
                         return "SELL"

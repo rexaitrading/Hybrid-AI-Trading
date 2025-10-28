@@ -37,9 +37,7 @@ def init_baseline(equity_with_loan: float, loss_cap_frac: float) -> Dict[str, An
 def should_halt(current_ewl: float, loss_cap_frac: float | None = None) -> bool:
     st = _read_state()
     base = st.get("baseline_ewl")
-    cap = float(
-        loss_cap_frac if loss_cap_frac is not None else st.get("loss_cap_frac", 0.01)
-    )
+    cap = float(loss_cap_frac if loss_cap_frac is not None else st.get("loss_cap_frac", 0.01))
     if base is None:
         init_baseline(current_ewl, cap)
         return False

@@ -65,4 +65,3 @@ python scripts/live_orb_play_forward.py --symbol AAPL --primary NASDAQ --mdt 1 -
 ```
 
 ![ORB Smoke](https://github.com/rexaitrading/Hybrid-AI-Trading/actions/workflows/orb_smoke.yml/badge.svg)
-

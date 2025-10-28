@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple, Any
+from typing import Any, Optional, Tuple
 
 
 @dataclass
@@ -96,7 +96,9 @@ class RiskManager:
         self._last_bar_ts_ms: int | None = None
 
     # --------- core gate used by order manager ---------
-    def approve_trade(self, symbol: str, side: str, qty: float, notional: float) -> Tuple[bool, str]:
+    def approve_trade(
+        self, symbol: str, side: str, qty: float, notional: float
+    ) -> Tuple[bool, str]:
         try:
             if self.daily_loss_limit is not None and float(self.daily_loss_limit) <= 0.0:
                 return False, "daily_loss_limit<=0 disables trading"
@@ -143,7 +145,9 @@ class RiskManager:
             return None
 
     # --------- event hooks ---------
-    def on_fill(self, side: str, qty: float, px: float, bar_ts: int | None = None, pnl: float | None = None) -> None:
+    def on_fill(
+        self, side: str, qty: float, px: float, bar_ts: int | None = None, pnl: float | None = None
+    ) -> None:
         """Increment per-run trade counter after a fill."""
         self._trades_today += 1
 
@@ -186,7 +190,9 @@ class RiskManager:
             pass
 
     # --------- minimal policy gate for tests/risk_halts.py ---------
-    def allow_trade(self, notional: float, side: str = "BUY", bar_ts: int | None = None) -> tuple[bool, str]:
+    def allow_trade(
+        self, notional: float, side: str = "BUY", bar_ts: int | None = None
+    ) -> tuple[bool, str]:
         # cooldown window check
         try:
             if getattr(self, "_cooldown_until_ms", None) is not None and bar_ts is not None:
@@ -273,7 +279,14 @@ class RiskManager:
                 if isinstance(res, tuple):
                     return bool(res[0])
                 if isinstance(res, dict):
-                    return str(res.get("status", "")).lower() in ("ok", "allow", "approved", "true", "pass", "filled")
+                    return str(res.get("status", "")).lower() in (
+                        "ok",
+                        "allow",
+                        "approved",
+                        "true",
+                        "pass",
+                        "filled",
+                    )
                 return bool(res)
             except Exception:
                 return True

@@ -13,7 +13,7 @@ from .structured_log import get_logger
 logger = get_logger("hybrid_ai_trading.ib")
 
 DEFAULT_HOST = os.getenv("IB_HOST", "127.0.0.1")
-DEFAULT_PORT = int(os.getenv("IB_PORT", "4003"))          # env will override to 7497
+DEFAULT_PORT = int(os.getenv("IB_PORT", "4003"))  # env will override to 7497
 DEFAULT_CLIENT_ID = int(os.getenv("IB_CLIENT_ID", "3021"))
 DEFAULT_TIMEOUT = int(os.getenv("IB_TIMEOUT", "60"))
 
@@ -24,6 +24,7 @@ def _attach_default_listeners(ib: IB):
     Never put reserved logging keys (msg, args, levelname, ...) inside `extra`.
     Prefer putting structured data inside a namespaced key or the message itself.
     """
+
     def onError(reqId, code, msg, contract):
         payload = {
             "ib_reqId": reqId,
@@ -32,14 +33,16 @@ def _attach_default_listeners(ib: IB):
         }
         try:
             if contract:
-                payload["ib_contract"] = getattr(contract, "localSymbol", None) or getattr(contract, "conId", None)
+                payload["ib_contract"] = getattr(contract, "localSymbol", None) or getattr(
+                    contract, "conId", None
+                )
         except Exception:
             pass
         logger.warning("ib_error | %s", payload)
 
     ib.errorEvent += onError
-    ib.disconnectedEvent += (lambda: logger.warning("ib_disconnected"))
-    ib.connectedEvent += (lambda: logger.info("ib_connected"))
+    ib.disconnectedEvent += lambda: logger.warning("ib_disconnected")
+    ib.connectedEvent += lambda: logger.info("ib_connected")
 
 
 def connect_ib(
@@ -104,9 +107,7 @@ def connect_ib(
                 continue
             raise
 
-    logger.error(
-        "ib_connect_failed", extra={"error": str(last_err) if last_err else "unknown"}
-    )
+    logger.error("ib_connect_failed", extra={"error": str(last_err) if last_err else "unknown"})
     raise last_err if last_err else RuntimeError("IB connect failed")
 
 

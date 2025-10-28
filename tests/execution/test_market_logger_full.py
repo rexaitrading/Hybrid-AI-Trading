@@ -235,9 +235,7 @@ def test_shutdown_with_exceptions(monkeypatch, caplog):
     mlogger.ib = fake_ib
     mlogger.subscriptions = {"AAPL": fake_ticker}
 
-    caplog.set_level(
-        logging.WARNING, logger="hybrid_ai_trading.execution.market_logger"
-    )
+    caplog.set_level(logging.WARNING, logger="hybrid_ai_trading.execution.market_logger")
     mlogger.shutdown()
 
     assert "unsubscribe" in caplog.text or "disconnect" in caplog.text

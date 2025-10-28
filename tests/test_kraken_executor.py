@@ -67,9 +67,7 @@ def test_dry_run_market_buy(capsys):
 
 
 def test_dry_run_limit_buy(capsys):
-    run_cli(
-        ["--symbol", "BTC/USDC", "--limit-buy-base", "0.0002", "--below-percent", "5"]
-    )
+    run_cli(["--symbol", "BTC/USDC", "--limit-buy-base", "0.0002", "--below-percent", "5"])
     out = capsys.readouterr().out
     assert "limit_buy" in out
 
@@ -89,9 +87,7 @@ def test_live_requires_env():
 
 
 def test_live_success(capsys):
-    run_cli(
-        ["--symbol", "BTC/USDC", "--market-buy-quote", "5.7", "--live"], env_live=True
-    )
+    run_cli(["--symbol", "BTC/USDC", "--market-buy-quote", "5.7", "--live"], env_live=True)
     out = capsys.readouterr().out
     assert "order" in out
 

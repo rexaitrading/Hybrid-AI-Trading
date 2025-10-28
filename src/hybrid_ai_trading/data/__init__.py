@@ -18,8 +18,8 @@ and live trading.
 from .clients.alpaca_client import AlpacaClient
 from .clients.benzinga_client import BenzingaClient
 from .clients.coinapi_client import CoinAPIClient
-from .clients.polygon_client import PolygonClient
 from .clients.errors import DataClientError
+from .clients.polygon_client import PolygonClient
 
 __all__ = [
     "AlpacaClient",

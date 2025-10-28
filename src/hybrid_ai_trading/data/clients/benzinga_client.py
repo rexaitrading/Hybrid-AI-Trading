@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
 import datetime as _dt
+import os
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, Iterable, Optional, Union, List
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import requests
 
@@ -62,7 +62,7 @@ def _parse_xml_minimal(xml_text: str) -> List[Dict[str, Any]]:
     for item in root.findall(".//item"):
         row: Dict[str, Any] = {}
         for child in list(item):
-            row[child.tag] = (child.text or "")
+            row[child.tag] = child.text or ""
         items.append(row)
     return items
 
@@ -82,7 +82,9 @@ def _resolve_api_key(explicit: Optional[str]) -> str:
     env2 = os.environ.get("BENZINGA_API_KEY")
     if env2:
         return env2
-    raise BenzingaAPIError("Missing Benzinga API key: pass 'api_key' or set BENZINGA_KEY/BENZINGA_API_KEY.")
+    raise BenzingaAPIError(
+        "Missing Benzinga API key: pass 'api_key' or set BENZINGA_KEY/BENZINGA_API_KEY."
+    )
 
 
 class BenzingaClient:
@@ -143,7 +145,9 @@ class BenzingaClient:
             params["date_to"] = dt
 
         if symbols is not None:
-            params["symbols"] = symbols if isinstance(symbols, str) else ",".join(s for s in symbols)
+            params["symbols"] = (
+                symbols if isinstance(symbols, str) else ",".join(s for s in symbols)
+            )
 
         if page is not None:
             params["page"] = page

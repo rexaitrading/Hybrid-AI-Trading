@@ -1,4 +1,5 @@
 from hybrid_ai_trading.utils.time_utils import utc_now
+
 """
 Benzinga News Ingestor (Quant Pro v6.0)
 ---------------------------------------
@@ -18,13 +19,14 @@ from hybrid_ai_trading.data.store.database import News, SessionLocal, init_db
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
-    handlers=[logging.StreamHandler()]
+    handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
 
 
-def ingest_news(symbols="AAPL,TSLA,BTCUSD", outfile="data/news_feed.csv",
-                date_from=None, date_to=None, limit=50):
+def ingest_news(
+    symbols="AAPL,TSLA,BTCUSD", outfile="data/news_feed.csv", date_from=None, date_to=None, limit=50
+):
     """
     Fetch Benzinga headlines and log into CSV + DB.
 
@@ -57,8 +59,7 @@ def ingest_news(symbols="AAPL,TSLA,BTCUSD", outfile="data/news_feed.csv",
     logger.info(f"Date range: {date_from} â†’ {date_to or utc_now().date()}")
 
     # Fetch headlines (API client must support date params)
-    articles = client.get_news(symbols=symbols, limit=limit,
-                               date_from=date_from, date_to=date_to)
+    articles = client.get_news(symbols=symbols, limit=limit, date_from=date_from, date_to=date_to)
 
     if not articles:
         logger.warning("âš ï¸ No articles fetched")
@@ -75,17 +76,19 @@ def ingest_news(symbols="AAPL,TSLA,BTCUSD", outfile="data/news_feed.csv",
                     created=created_dt,
                     title=a.get("title"),
                     url=a.get("url"),
-                    symbols=",".join([s["name"] for s in a.get("stocks", [])])
+                    symbols=",".join([s["name"] for s in a.get("stocks", [])]),
                 )
                 session.add(headline)
 
-                writer.writerow([
-                    a.get("id"),
-                    a.get("created"),
-                    a.get("title"),
-                    a.get("url"),
-                    ",".join([s["name"] for s in a.get("stocks", [])])
-                ])
+                writer.writerow(
+                    [
+                        a.get("id"),
+                        a.get("created"),
+                        a.get("title"),
+                        a.get("url"),
+                        ",".join([s["name"] for s in a.get("stocks", [])]),
+                    ]
+                )
                 new_count += 1
             except Exception as e:
                 logger.error(f"âš ï¸ Error saving article: {e}")

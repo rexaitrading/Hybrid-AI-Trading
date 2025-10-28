@@ -162,9 +162,7 @@ def test_get_latest_headlines_with_and_without_symbol(mock_sess):
     row.title, row.symbols, row.url, row.created = "t", "AAPL", "u", datetime.utcnow()
 
     # Chain for no symbol
-    fake.query.return_value.order_by.return_value.limit.return_value.all.return_value = [
-        row
-    ]
+    fake.query.return_value.order_by.return_value.limit.return_value.all.return_value = [row]
 
     out = news_client.get_latest_headlines(limit=1)
     assert out[0]["title"] == "t"

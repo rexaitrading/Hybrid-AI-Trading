@@ -13,7 +13,10 @@ from typing import Any, Dict, Optional
 from debug_cryptocompare import (
     fetch_prices,  # must return dict like {"BTC": {"USD": 12345.67}}
 )
-from debug_cryptocompare import daily_budget, suggested_interval_seconds
+from debug_cryptocompare import (
+    daily_budget,
+    suggested_interval_seconds,
+)
 
 # === API Key Handling =====================================================
 API_KEY: Optional[str] = os.getenv("CRYPTOCOMPARE_API_KEY")
@@ -113,9 +116,7 @@ def loop_fetch(monthly_calls: Optional[int] = None) -> None:
     per_day = daily_budget(year, month, monthly)
     interval = suggested_interval_seconds(year, month, monthly)
 
-    print(
-        f"[collector] {year}-{month:02d} → target/day ≈ {per_day}, interval ≈ {interval}s"
-    )
+    print(f"[collector] {year}-{month:02d} → target/day ≈ {per_day}, interval ≈ {interval}s")
 
     while True:
         now = datetime.now(timezone.utc)

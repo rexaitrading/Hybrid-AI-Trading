@@ -16,9 +16,7 @@ class Tr:
     def __init__(self, active=True):
         self._a = active
         self.order = types.SimpleNamespace()
-        self.orderStatus = types.SimpleNamespace(
-            status="Filled", filled=1.0, avgFillPrice=1.23
-        )
+        self.orderStatus = types.SimpleNamespace(status="Filled", filled=1.0, avgFillPrice=1.23)
 
     def isActive(self):
         return self._a

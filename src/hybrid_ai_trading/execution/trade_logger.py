@@ -43,9 +43,7 @@ class TradeLogger:
         self._logger = logging.getLogger("hybrid_ai_trading.trade_logger")
         self._logger.setLevel(logging.INFO)
         if not self._logger.handlers:
-            rh = RotatingFileHandler(
-                text_log_path, maxBytes=max_bytes, backupCount=backup_count
-            )
+            rh = RotatingFileHandler(text_log_path, maxBytes=max_bytes, backupCount=backup_count)
             fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
             rh.setFormatter(fmt)
             self._logger.addHandler(rh)

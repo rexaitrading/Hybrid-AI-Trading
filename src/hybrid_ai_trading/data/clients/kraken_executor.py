@@ -65,9 +65,7 @@ def require_live(args: argparse.Namespace) -> bool:
     if not args.live:
         return False
     if os.getenv("KRAKEN_LIVE", "0") != "1":
-        print(
-            "Refusing LIVE: set KRAKEN_LIVE=1 to enable live orders.", file=sys.stderr
-        )
+        print("Refusing LIVE: set KRAKEN_LIVE=1 to enable live orders.", file=sys.stderr)
         sys.exit(2)
     return True
 
@@ -79,6 +77,8 @@ def min_requirements(ex: "ccxt.kraken", symbol: str, last: float) -> Dict[str, f
     min_cost = float(((lims.get("cost") or {}).get("min")) or 0.0)
     req_quote = max(min_cost, min_base * last if min_base else 0.0)
     return {"min_base": min_base, "min_cost": min_cost, "req_quote": req_quote}
+
+
 def available_quote(ex, symbol: str) -> float:
     """
     Return available balance of the quote currency for `symbol`.
@@ -126,6 +126,8 @@ def available_quote(ex, symbol: str) -> float:
         return float(free)
     except Exception:
         return 0.0
+
+
 def main():
     """
     Minimal CLI for tests:
@@ -141,7 +143,9 @@ def main():
       - dry-run:   "dry_run market_buy ..."  OR  "dry_run limit_buy ..."  OR  "dry_run cancel ..."
       - live:      "order market-buy-quote=..."  OR  "order_cancel ..."
     """
-    import os, argparse, sys
+    import argparse
+    import os
+    import sys
 
     parser = argparse.ArgumentParser(prog="kraken-exec")
     parser.add_argument("--symbol", type=str, required=True)
@@ -203,10 +207,14 @@ def main():
             avail = 0.0
 
         if live_flag:
-            print(f"order market-buy-quote={quote_amt:.8f} symbol={symbol} live={live_flag} quote_avail={avail:.8f}")
+            print(
+                f"order market-buy-quote={quote_amt:.8f} symbol={symbol} live={live_flag} quote_avail={avail:.8f}"
+            )
         else:
             tag = " below_exchange_minimum" if quote_amt < 1.0 else ""
-            print(f"dry_run market_buy{tag} quote={quote_amt:.8f} symbol={symbol} quote_avail={avail:.8f}")
+            print(
+                f"dry_run market_buy{tag} quote={quote_amt:.8f} symbol={symbol} quote_avail={avail:.8f}"
+            )
         return 0
 
     # LIMIT BUY (dry-run path in tests)

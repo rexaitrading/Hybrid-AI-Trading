@@ -43,9 +43,7 @@ def test_missing_models_paths(caplog):
 
     caplog.clear()
     caplog.set_level(logging.WARNING, logger="hybrid_ai_trading.risk.gatescore")
-    g_veto = GateScore(
-        models=["m1"], weights={"m1": 1.0}, strict_missing=True, audit_mode=False
-    )
+    g_veto = GateScore(models=["m1"], weights={"m1": 1.0}, strict_missing=True, audit_mode=False)
     assert g_veto.allow_trade({}) is False
     assert "veto" in caplog.text
 
@@ -107,9 +105,7 @@ def test_regime_detector_exception_fallback(monkeypatch, caplog):
     caplog.set_level(logging.ERROR, logger="hybrid_ai_trading.risk.gatescore")
     g = GateScore(models=["regime"], weights={}, audit_mode=True, adaptive=True)
     # make regime detection raise inside allow_trade loop
-    monkeypatch.setattr(
-        g, "_detect_regime", lambda *_: (_ for _ in ()).throw(RuntimeError("boom"))
-    )
+    monkeypatch.setattr(g, "_detect_regime", lambda *_: (_ for _ in ()).throw(RuntimeError("boom")))
     decision, score, thr, regime = g.allow_trade({}, "SYM")
     # total_weight==0 path also should trigger inside allow_trade
     assert decision is False and regime == "neutral"
@@ -120,9 +116,7 @@ def test_regime_detector_exception_fallback(monkeypatch, caplog):
 # pass/fail around threshold + logging
 # ---------------------------
 def test_block_and_pass_paths_and_logging(caplog, monkeypatch):
-    g1 = GateScore(
-        models=["price"], weights={"price": 1.0}, threshold=0.95, audit_mode=False
-    )
+    g1 = GateScore(models=["price"], weights={"price": 1.0}, threshold=0.95, audit_mode=False)
     assert g1.allow_trade({"price": 0.1}) is False
 
     caplog.set_level(logging.INFO, logger="hybrid_ai_trading.risk.gatescore")
@@ -173,18 +167,14 @@ def test_init_none_models_weights_hits_line_31():
 
 def test_strict_missing_veto_audit_mode_hits_line_109():
     # strict_missing=True + audit_mode=True -> tuple(False, ...)
-    g = GateScore(
-        models=["m"], weights={"m": 1.0}, strict_missing=True, audit_mode=True
-    )
+    g = GateScore(models=["m"], weights={"m": 1.0}, strict_missing=True, audit_mode=True)
     decision, score, thr, regime = g.allow_trade({})
     assert decision is False and score == 0.0
 
 
 def test_no_contributing_models_audit_mode_hits_line_123():
     # models present but ignored (relaxed missing) -> no contributing -> tuple(False,...)
-    g = GateScore(
-        models=["m"], weights={"m": 1.0}, strict_missing=False, audit_mode=True
-    )
+    g = GateScore(models=["m"], weights={"m": 1.0}, strict_missing=False, audit_mode=True)
     decision, score, thr, regime = g.allow_trade({}, "XYZ")
     assert decision is False and score == 0.0
 
@@ -193,9 +183,7 @@ def test_regime_detector_exception_again_hits_line_162(monkeypatch, caplog):
     # Force detection failure inside allow_trade loop
     caplog.set_level(logging.ERROR, logger="hybrid_ai_trading.risk.gatescore")
     g = GateScore(models=["regime"], weights={}, audit_mode=True, adaptive=True)
-    monkeypatch.setattr(
-        g, "_detect_regime", lambda *_: (_ for _ in ()).throw(RuntimeError("boom"))
-    )
+    monkeypatch.setattr(g, "_detect_regime", lambda *_: (_ for _ in ()).throw(RuntimeError("boom")))
     decision, score, thr, regime = g.allow_trade({}, "SYM")
     assert decision is False and regime == "neutral"
     assert "Regime detection failed" in caplog.text

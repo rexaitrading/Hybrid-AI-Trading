@@ -35,4 +35,3 @@ execution:
 logging:
   level: "INFO"
   file: "logs/live_paper_%Y%m%d.log"
-

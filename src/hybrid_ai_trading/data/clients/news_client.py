@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from hybrid_ai_trading.utils.time_utils import utc_now
+
 """
 News Client (Hybrid AI Quant Pro v2.1 Ã¢â‚¬â€œ Hedge Fund OE Grade, DB-Integrated)
 ---------------------------------------------------------------------------
@@ -19,12 +21,13 @@ from typing import Any, Dict, List, Optional
 import requests
 from sqlalchemy.exc import IntegrityError
 
-from hybrid_ai_trading.data.store.database import SessionLocal, News
+from hybrid_ai_trading.data.store.database import News, SessionLocal
 
 # ---------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------
 logger = logging.getLogger("hybrid_ai_trading.data.clients.news_client")
+
 
 # ---------------------------------------------------------------------
 # Normalization Helpers
@@ -40,9 +43,11 @@ def _normalize_article(article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         return {
             "article_id": str(article.get("id") or article.get("article_id")),
-            "created": datetime.fromisoformat(article.get("published_utc").replace("Z", "+00:00"))
-            if article.get("published_utc")
-            else utc_now(),
+            "created": (
+                datetime.fromisoformat(article.get("published_utc").replace("Z", "+00:00"))
+                if article.get("published_utc")
+                else utc_now()
+            ),
             "title": article.get("title", "") or "",
             "url": article.get("url", "") or "",
             "symbols": ",".join(article.get("tickers", []) or []),
@@ -175,6 +180,9 @@ def get_latest_headlines(limit: int = 10, symbol: Optional[str] = None) -> List[
         if symbol:
             q = q.filter(News.symbols.contains(symbol))
         rows = q.limit(limit).all()
-        return [{"title": r.title, "symbols": r.symbols, "url": r.url, "created": r.created} for r in rows]
+        return [
+            {"title": r.title, "symbols": r.symbols, "url": r.url, "created": r.created}
+            for r in rows
+        ]
     finally:
         session.close()

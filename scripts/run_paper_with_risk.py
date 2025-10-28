@@ -1,7 +1,11 @@
-import sys, types, pathlib
+import pathlib
+import sys
+import types
 from types import SimpleNamespace
-from hybrid_ai_trading.runners.paper_config import parse_args
+
 from hybrid_ai_trading.runners import paper_trader as PT
+from hybrid_ai_trading.runners.paper_config import parse_args
+
 
 def _patched_load_config(path: str):
     # call the original
@@ -9,6 +13,7 @@ def _patched_load_config(path: str):
     try:
         # inject a real RiskManager (tweak max_notional/params as you like)
         from hybrid_ai_trading.risk.risk_manager import RiskManager
+
         rm = RiskManager(max_notional=1_000_000)
         if isinstance(data, dict):
             data["risk_mgr"] = rm
@@ -16,6 +21,7 @@ def _patched_load_config(path: str):
         # stay resilient; fall back to original data
         pass
     return data or {}
+
 
 if __name__ == "__main__":
     _orig_load = PT.load_config

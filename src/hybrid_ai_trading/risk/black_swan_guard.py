@@ -25,9 +25,7 @@ class BlackSwanGuard:
     def trigger_event(self, source: str, reason: str = "unspecified") -> None:
         """Activate guard due to a catastrophic event."""
         self.events[source] = reason
-        logger.warning(
-            "[BlackSwanGuard] ⚠️ Triggered | source=%s, reason=%s", source, reason
-        )
+        logger.warning("[BlackSwanGuard] ⚠️ Triggered | source=%s, reason=%s", source, reason)
 
     def clear_event(self, source: str) -> None:
         """Clear a specific event if it exists."""

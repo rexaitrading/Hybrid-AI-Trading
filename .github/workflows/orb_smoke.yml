@@ -19,12 +19,6 @@ jobs:
       - run: pip install -U pip
       - run: pip install -r requirements-smoke.txt
       - name: Verify ORB hook present
+        shell: pwsh
         run: |
-          python - << 'PY'
-          import io, re
-          p = r"src/hybrid_ai_trading/tools/bar_replay.py"
-          with io.open(p, encoding="utf-8") as f:
-              t = f.read()
-          assert 'setup="ORB"' in t, "ORB hook missing"
-          print("OK: ORB present")
-          PY
+          python -c "import io; t=io.open(r'src/hybrid_ai_trading/tools/bar_replay.py', encoding='utf-8').read(); assert 'setup=\"ORB\"' in t, 'ORB hook missing'; print('OK: ORB present')"

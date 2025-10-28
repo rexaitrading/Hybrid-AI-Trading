@@ -22,9 +22,7 @@ class TestCoinAPIEnv(unittest.TestCase):
     @patch("hybrid_ai_trading.data.clients.coinapi_client.load_config")
     def test_coinapi_with_valid_key(self, mock_load):
         """Valid config should yield correct header construction."""
-        mock_load.return_value = {
-            "providers": {"coinapi": {"api_key_env": "TEST_COINAPI_KEY"}}
-        }
+        mock_load.return_value = {"providers": {"coinapi": {"api_key_env": "TEST_COINAPI_KEY"}}}
         key = mock_load.return_value["providers"]["coinapi"]["api_key_env"]
 
         # Act

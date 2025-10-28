@@ -14,9 +14,7 @@ import yaml
 logger = logging.getLogger("hybrid_ai_trading.config.settings")
 
 # Project root and config path are constants for clarity and testability
-PROJECT_ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
-)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "config", "config.yaml")
 
 

@@ -122,13 +122,10 @@ def check_risk(current_dd: float, shift_fraction: float) -> None:
         shift_fraction: fraction of portfolio shifted today
     """
     if current_dd < -MAX_DRAWDOWN:
-        raise RuntimeError(
-            f"❌ Max drawdown exceeded ({current_dd:.2%}). Blocked trades."
-        )
+        raise RuntimeError(f"❌ Max drawdown exceeded ({current_dd:.2%}). Blocked trades.")
     if shift_fraction > MAX_DAILY_SHIFT:
         raise RuntimeError(
-            f"❌ Shift {shift_fraction:.2%} exceeds max_daily_shift "
-            f"{MAX_DAILY_SHIFT:.2%}."
+            f"❌ Shift {shift_fraction:.2%} exceeds max_daily_shift " f"{MAX_DAILY_SHIFT:.2%}."
         )
 
 
@@ -173,9 +170,7 @@ def execute_order(
     simulated_price = price * (1 + SLIPPAGE) if price else None
 
     if DRY_RUN:
-        logger.info(
-            "[DRY-RUN] %s %s %s @ %.4f", side, qty, symbol, simulated_price or 0.0
-        )
+        logger.info("[DRY-RUN] %s %s %s @ %.4f", side, qty, symbol, simulated_price or 0.0)
         log_trade(broker_name, symbol, side, qty, simulated_price or 0.0, SLIPPAGE)
         return {"status": "simulated", "price": simulated_price or 0.0}
 

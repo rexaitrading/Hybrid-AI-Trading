@@ -55,9 +55,7 @@ def test_benzinga_json_and_xml(monkeypatch):
     </result>"""
 
     def fake_get_xml(url, params=None, headers=None, timeout=15):
-        return DummyResp(
-            {"content-type": "text/xml"}, json_data=None, text_data=xml_text
-        )
+        return DummyResp({"content-type": "text/xml"}, json_data=None, text_data=xml_text)
 
     # Patch requests.get to JSON then XML
     calls = {"n": 0}

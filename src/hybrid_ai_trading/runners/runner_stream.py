@@ -1,4 +1,8 @@
-import os, sys, asyncio, pathlib, math
+import asyncio
+import math
+import os
+import pathlib
+import sys
 from datetime import datetime, timezone
 
 # Windows selector loop is more reliable for ib_insync networking
@@ -8,16 +12,17 @@ if sys.platform.startswith("win"):
     except Exception:
         pass
 
-from ib_insync import IB, Stock
 import yaml
 
-from hybrid_ai_trading.utils.feature_store import FeatureStore
 from hybrid_ai_trading.utils.edges import decide_signal
 from hybrid_ai_trading.utils.exec import gc_stale_orders
+from hybrid_ai_trading.utils.feature_store import FeatureStore
 from hybrid_ai_trading.utils.risk import intraday_risk_checks
+from ib_insync import IB, Stock
 
 UNIVERSE_FILE = "config/universe_equities.yaml"
 POLL_SEC = 0.5
+
 
 def _nz(x, default=0.0):
     try:
@@ -30,12 +35,14 @@ def _nz(x, default=0.0):
     except Exception:
         return default
 
+
 def _nzi(x, default=0):
     v = _nz(x, None)
     try:
         return int(v) if v is not None else default
     except Exception:
         return default
+
 
 def load_universe():
     with open(UNIVERSE_FILE, "r", encoding="utf-8") as f:
@@ -50,8 +57,10 @@ def load_universe():
                 syms += [s.strip() for s in p.read_text().splitlines() if s.strip()]
     return syms
 
-async def connect_with_retry(ib: IB, host: str, port: int, cid: int,
-                             timeout: int = 40, attempts: int = 8) -> bool:
+
+async def connect_with_retry(
+    ib: IB, host: str, port: int, cid: int, timeout: int = 40, attempts: int = 8
+) -> bool:
     for i in range(1, attempts + 1):
         try:
             await ib.connectAsync(host, port, clientId=cid, timeout=timeout)
@@ -64,14 +73,18 @@ async def connect_with_retry(ib: IB, host: str, port: int, cid: int,
             except Exception:
                 pass
             wait = min(5 * i, 30)
-            print(f"[connect] attempt {i}/{attempts} failed: {type(e).__name__} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â retrying in {wait}s", flush=True)
+            print(
+                f"[connect] attempt {i}/{attempts} failed: {type(e).__name__} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â retrying in {wait}s",
+                flush=True,
+            )
             await asyncio.sleep(wait)
     return False
+
 
 async def main():
     host = os.getenv("IB_HOST", "127.0.0.1")
     port = int(os.getenv("IB_PORT", "7497"))
-    cid  = int(os.getenv("IB_CLIENT_ID", os.getenv("CLIENT_ID", "3021")))
+    cid = int(os.getenv("IB_CLIENT_ID", os.getenv("CLIENT_ID", "3021")))
 
     ib = IB()
     ok = await connect_with_retry(ib, host, port, cid, timeout=40, attempts=8)
@@ -88,7 +101,10 @@ async def main():
         pass
 
     symbols = load_universe()
-    print(f"[{datetime.now(timezone.utc).isoformat()}Z] boot | host={host}:{port} cid={cid} | syms={len(symbols)}", flush=True)
+    print(
+        f"[{datetime.now(timezone.utc).isoformat()}Z] boot | host={host}:{port} cid={cid} | syms={len(symbols)}",
+        flush=True,
+    )
 
     # Contracts
     contracts = [Stock(sym, "SMART", "USD", primaryExchange="NASDAQ") for sym in symbols]
@@ -108,29 +124,33 @@ async def main():
         ib.reqMktData(c, "", True, False)
 
     store = FeatureStore(root="data/feature_store")
-    can_trade = (mdt == 1 and not os.getenv("HAT_READONLY"))  # never place orders when delayed
+    can_trade = mdt == 1 and not os.getenv("HAT_READONLY")  # never place orders when delayed
 
     def on_tick(tkr):
         try:
             c = tkr.contract
-            bid  = float(_nz(getattr(tkr, 'bid',  None), 0.0))
-            ask  = float(_nz(getattr(tkr, 'ask',  None), 0.0))
-            last = float(_nz(getattr(tkr, 'last', None), 0.0))
-            bsz  = _nzi(getattr(tkr, 'bidSize',  None), 0)
-            asz  = _nzi(getattr(tkr, 'askSize',  None), 0)
-            lsz  = _nzi(getattr(tkr, 'lastSize', None), 0)
+            bid = float(_nz(getattr(tkr, "bid", None), 0.0))
+            ask = float(_nz(getattr(tkr, "ask", None), 0.0))
+            last = float(_nz(getattr(tkr, "last", None), 0.0))
+            bsz = _nzi(getattr(tkr, "bidSize", None), 0)
+            asz = _nzi(getattr(tkr, "askSize", None), 0)
+            lsz = _nzi(getattr(tkr, "lastSize", None), 0)
 
             store.write_quote(
                 symbol=c.symbol,
                 ts=datetime.now(timezone.utc),
-                bid=bid, ask=ask, last=last,
-                bidSize=bsz, askSize=asz, lastSize=lsz,
+                bid=bid,
+                ask=ask,
+                last=last,
+                bidSize=bsz,
+                askSize=asz,
+                lastSize=lsz,
             )
 
             if can_trade:
                 sig = decide_signal(tkr)
                 if getattr(sig, "action", None) and getattr(sig, "order", None):
-                                        # guard: ignore invalid/non-positive limit prices
+                    # guard: ignore invalid/non-positive limit prices
                     if getattr(sig.order, "lmtPrice", None) is not None:
                         try:
                             if float(sig.order.lmtPrice) <= 0:
@@ -155,7 +175,6 @@ async def main():
     finally:
         ib.disconnect()
 
+
 if __name__ == "__main__":
     asyncio.run(main())
-
-

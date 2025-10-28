@@ -33,9 +33,7 @@ def _atr_last(
     trs = []
     for i in range(n - period, n):
         prev_close = closes[i - 1]
-        tr = max(
-            highs[i] - lows[i], abs(highs[i] - prev_close), abs(lows[i] - prev_close)
-        )
+        tr = max(highs[i] - lows[i], abs(highs[i] - prev_close), abs(lows[i] - prev_close))
         trs.append(tr)
     return sum(trs) / float(period)
 

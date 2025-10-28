@@ -78,9 +78,7 @@ def test_compute_vwap_no_usable_volume(monkeypatch, caplog):
 
 
 def test_compute_vwap_exception(monkeypatch):
-    monkeypatch.setattr(
-        vwap.np, "dot", lambda *_: (_ for _ in ()).throw(Exception("dot fail"))
-    )
+    monkeypatch.setattr(vwap.np, "dot", lambda *_: (_ for _ in ()).throw(Exception("dot fail")))
     bars = [{"c": 10, "v": 5}, {"c": 20, "v": 5}]
     res = vwap._compute_vwap(bars)
     assert math.isnan(res)
@@ -116,12 +114,10 @@ def test_symmetry_hold_and_sell_tie_policy():
     bars = [{"c": 10, "v": 5}, {"c": 20, "v": 5}]
     bars[-1]["c"] = 15
     assert (
-        vwap.vwap_signal(bars, vwap.VWAPConfig(tie_policy="HOLD", enable_symmetry=True))
-        == "HOLD"
+        vwap.vwap_signal(bars, vwap.VWAPConfig(tie_policy="HOLD", enable_symmetry=True)) == "HOLD"
     )
     assert (
-        vwap.vwap_signal(bars, vwap.VWAPConfig(tie_policy="SELL", enable_symmetry=True))
-        == "SELL"
+        vwap.vwap_signal(bars, vwap.VWAPConfig(tie_policy="SELL", enable_symmetry=True)) == "SELL"
     )
 
 
@@ -155,22 +151,12 @@ def test_core_buy_sell_tolerance_and_tie():
     assert vwap.vwap_signal(bars_sell) == "SELL"
 
     bars_tie = make_bars([10, 10.001], vols=[5, 5])
-    assert (
-        vwap.vwap_signal(bars_tie, vwap.VWAPConfig(tolerance=0.01, tie_policy="HOLD"))
-        == "HOLD"
-    )
-    assert (
-        vwap.vwap_signal(bars_tie, vwap.VWAPConfig(tolerance=0.01, tie_policy="SELL"))
-        == "SELL"
-    )
+    assert vwap.vwap_signal(bars_tie, vwap.VWAPConfig(tolerance=0.01, tie_policy="HOLD")) == "HOLD"
+    assert vwap.vwap_signal(bars_tie, vwap.VWAPConfig(tolerance=0.01, tie_policy="SELL")) == "SELL"
 
     bars_exact_tie = [{"c": 10, "v": 1}, {"c": 20, "v": 1}, {"c": 15, "v": 1}]
-    assert (
-        vwap.vwap_signal(bars_exact_tie, vwap.VWAPConfig(tie_policy="HOLD")) == "HOLD"
-    )
-    assert (
-        vwap.vwap_signal(bars_exact_tie, vwap.VWAPConfig(tie_policy="SELL")) == "SELL"
-    )
+    assert vwap.vwap_signal(bars_exact_tie, vwap.VWAPConfig(tie_policy="HOLD")) == "HOLD"
+    assert vwap.vwap_signal(bars_exact_tie, vwap.VWAPConfig(tie_policy="SELL")) == "SELL"
 
 
 def test_evaluate_true_false_and_exception(monkeypatch):

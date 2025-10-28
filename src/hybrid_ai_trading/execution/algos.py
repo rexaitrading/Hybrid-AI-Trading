@@ -48,6 +48,4 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2,
 )
-logger.warning(
-    "⚠️ DEPRECATED: import from execution.algos; use algos.orchestrator instead."
-)
+logger.warning("⚠️ DEPRECATED: import from execution.algos; use algos.orchestrator instead.")

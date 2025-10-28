@@ -3,17 +3,21 @@ News Aggregator (Hybrid AI Quant Pro v2.0 – OE Grade)
 - Combines Benzinga + Polygon + Alpaca + RSS (Google/Yahoo/extra)
 - Dedupe by URL first, then (source,id)
 """
+
+from typing import Any, Dict, List
+
 import yaml
-from typing import List, Dict, Any
+
+from hybrid_ai_trading.data.clients.alpaca_news_client import AlpacaNewsClient
 from hybrid_ai_trading.data.clients.benzinga_client import BenzingaClient
 from hybrid_ai_trading.data.clients.polygon_news_client import PolygonNewsClient
-from hybrid_ai_trading.data.clients.alpaca_news_client import AlpacaNewsClient
 from hybrid_ai_trading.data.clients.rss_client import RSSClient
 
+
 def aggregate_news(symbols_csv: str, limit: int, date_from: str) -> List[Dict[str, Any]]:
-    with open("config/config.yaml","r",encoding="utf-8") as f:
+    with open("config/config.yaml", "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
-    np = (cfg.get("news_providers") or {})
+    np = cfg.get("news_providers") or {}
     news: List[Dict[str, Any]] = []
     seen_url = set()
     seen_sid = set()
@@ -22,7 +26,7 @@ def aggregate_news(symbols_csv: str, limit: int, date_from: str) -> List[Dict[st
         for it in items or []:
             u = it.get("url") or ""
             sid = f"{source_name}:{it.get('id')}"
-            if u and u in seen_url: 
+            if u and u in seen_url:
                 continue
             if sid in seen_sid:
                 continue
@@ -45,7 +49,7 @@ def aggregate_news(symbols_csv: str, limit: int, date_from: str) -> List[Dict[st
         try:
             pg = PolygonNewsClient()
             symbols = [s.strip().upper() for s in symbols_csv.split(",") if s.strip()]
-            per = max(3, int(round(limit / max(1,len(symbols)))))
+            per = max(3, int(round(limit / max(1, len(symbols)))))
             for sym in symbols:
                 add_batch("polygon", pg.get_news(sym, limit=per, date_from=date_from))
         except Exception:
@@ -78,7 +82,12 @@ def aggregate_news(symbols_csv: str, limit: int, date_from: str) -> List[Dict[st
         cfgx = np.get(name) or {}
         if bool(cfgx.get("enabled", False)):
             try:
-                client = RSSClient(google_template=None, yahoo_template=None, extra_feeds=cfgx.get("feeds") or [], per_feed_max=10)
+                client = RSSClient(
+                    google_template=None,
+                    yahoo_template=None,
+                    extra_feeds=cfgx.get("feeds") or [],
+                    per_feed_max=10,
+                )
                 add_batch(name, client.get_news("", date_from=date_from))
             except Exception:
                 pass

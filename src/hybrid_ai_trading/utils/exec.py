@@ -1,5 +1,7 @@
 import time
+
 from ib_insync import IB
+
 
 def gc_stale_orders(ib: IB, max_age_sec=60):
     now = time.time()

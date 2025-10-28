@@ -42,18 +42,14 @@ def test_yaml_parse_error(monkeypatch, tmp_path, caplog):
     with caplog.at_level("ERROR"):
         cfg = settings.load_config()
     assert cfg == {}
-    assert (
-        "Failed to parse YAML" in caplog.text or "Failed to load/parse" in caplog.text
-    )
+    assert "Failed to parse YAML" in caplog.text or "Failed to load/parse" in caplog.text
 
 
 def test_file_open_exception(monkeypatch, caplog):
     """Covers the bare except branch (lines 45–47)."""
     monkeypatch.setattr(settings, "_find_config_path", lambda: "bad.yaml")
     monkeypatch.setattr("os.path.exists", lambda path: True)
-    monkeypatch.setattr(
-        "builtins.open", lambda *a, **k: (_ for _ in ()).throw(OSError("boom"))
-    )
+    monkeypatch.setattr("builtins.open", lambda *a, **k: (_ for _ in ()).throw(OSError("boom")))
     with caplog.at_level("ERROR"):
         cfg = settings.load_config()
     assert cfg == {}

@@ -137,9 +137,7 @@ def test_record_trade_outcome_exception(engine, monkeypatch, caplog):
 
 def test_normalization_paths(engine, monkeypatch):
     """Router returns ok/ok → normalized to filled/normalized_ok."""
-    monkeypatch.setattr(
-        engine.router, "route_order", lambda *_: {"status": "ok", "reason": "ok"}
-    )
+    monkeypatch.setattr(engine.router, "route_order", lambda *_: {"status": "ok", "reason": "ok"})
     res = engine.process_signal("AAPL", "BUY", 1, 100)
     assert res["status"] == "filled"
     assert res["reason"] == "normalized_ok"
@@ -262,9 +260,7 @@ def test_performance_sortino_breach(engine, monkeypatch):
 
 def test_normalization_reason_ok(engine, monkeypatch):
     """Router returns reason=='ok' → normalized to 'normalized_ok'."""
-    monkeypatch.setattr(
-        engine.router, "route_order", lambda *_: {"status": "ok", "reason": "ok"}
-    )
+    monkeypatch.setattr(engine.router, "route_order", lambda *_: {"status": "ok", "reason": "ok"})
     res = engine.process_signal("AAPL", "BUY", 1, 100)
     assert res["reason"] == "normalized_ok"
 

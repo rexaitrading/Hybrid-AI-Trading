@@ -39,9 +39,7 @@ def g(o, name, default=None):
 print("whatIf.status:", g(state, "status"))
 print("warningText:", g(state, "warningText"))
 print("commission:", g(state, "commission"), g(state, "commissionCurrency", ""))
-print(
-    "minCommission/maxCommission:", g(state, "minCommission"), g(state, "maxCommission")
-)
+print("minCommission/maxCommission:", g(state, "minCommission"), g(state, "maxCommission"))
 print("equityWithLoanChange:", g(state, "equityWithLoanChange"))
 print("initMarginChange:", g(state, "initMarginChange"))
 print("maintMarginChange:", g(state, "maintMarginChange"))

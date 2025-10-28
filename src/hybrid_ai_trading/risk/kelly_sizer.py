@@ -74,9 +74,7 @@ class KellySizer:
             return 0.0
 
     # ------------------------------------------------------------------
-    def size_position(
-        self, equity: float, price: float, risk_veto: bool = False
-    ) -> float:
+    def size_position(self, equity: float, price: float, risk_veto: bool = False) -> float:
         """Return numeric position size. Detailed decision is logged for audit."""
         try:
             if equity <= 0 or price <= 0:

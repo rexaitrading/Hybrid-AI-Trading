@@ -12,6 +12,7 @@ Responsibilities:
 
 import logging
 import os
+
 import requests
 
 logger = logging.getLogger("hybrid_ai_trading.data.clients.alpaca_client")

@@ -1,18 +1,21 @@
-import os
-import json
 import contextlib
+import json
+import os
 from pathlib import Path
 
 import pytest
+
 from tests.test_trade_engine_optionA_exec100 import make_engine  # reuse your factory
 
 CTRL_DIR = Path("control")
 PAUSE_FILE = CTRL_DIR / "PAUSE"
 
+
 def _safe_call(obj, name, *a, **k):
     if hasattr(obj, name):
         return getattr(obj, name)(*a, **k)
     return None
+
 
 def _force_missing_port_status(te):
     # Make any status provider return {} so code that expects keys hits default/except paths
@@ -20,6 +23,7 @@ def _force_missing_port_status(te):
         te.portfolio.status = lambda: {}
     if hasattr(te, "port_status"):
         te.port_status = {}
+
 
 def test_reset_day_inner_except_branch(monkeypatch):
     te = make_engine()
@@ -30,7 +34,8 @@ def test_reset_day_inner_except_branch(monkeypatch):
     r = te.reset_day()
     assert isinstance(r, dict)
     assert r.get("status") == "error"
-    assert r.get("reason","").startswith("risk_reset_failed")
+    assert r.get("reason", "").startswith("risk_reset_failed")
+
 
 def test_reset_day_port_status_missing_keys(monkeypatch):
     te = make_engine()
@@ -43,17 +48,24 @@ def test_reset_day_port_status_missing_keys(monkeypatch):
     assert isinstance(r, dict)
     assert r.get("status") in {"ok", "error"}
 
+
 def test_execute_reject_branch(monkeypatch):
     te = make_engine()
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status": "reject", "reason": "size too big"}
+        te.risk_manager.approve_trade = lambda *a, **k: {
+            "status": "reject",
+            "reason": "size too big",
+        }
     if hasattr(te, "order_manager"):
         # If engine still tries to submit after reject, fail loudly
-        te.order_manager.submit = lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not submit when rejected"))
+        te.order_manager.submit = lambda *a, **k: (_ for _ in ()).throw(
+            AssertionError("should not submit when rejected")
+        )
     for candidate in ("maybe_execute", "try_trade", "place_signal", "run_once", "step_once"):
         if hasattr(te, candidate):
             _safe_call(te, candidate, "AAPL", "BUY", 1)
             break
+
 
 def test_execute_submit_exception_path(monkeypatch):
     te = make_engine()
@@ -65,6 +77,7 @@ def test_execute_submit_exception_path(monkeypatch):
         if hasattr(te, candidate):
             _safe_call(te, candidate, "AAPL", "BUY", 1)
             break
+
 
 def test_pause_file_gate(monkeypatch):
     te = make_engine()
@@ -82,6 +95,7 @@ def test_pause_file_gate(monkeypatch):
         with contextlib.suppress(FileNotFoundError):
             PAUSE_FILE.unlink()
 
+
 def test_adaptive_fraction_guard(monkeypatch):
     te = make_engine()
     for holder_name in ("cfg", "config", "settings"):
@@ -97,6 +111,7 @@ def test_adaptive_fraction_guard(monkeypatch):
                 assert r.get("status") in {"ok", "error"}
             break
 
+
 def test_finalize_day_exception_path(monkeypatch):
     te = make_engine()
     if hasattr(te, "portfolio") and hasattr(te.portfolio, "flush"):
@@ -106,9 +121,12 @@ def test_finalize_day_exception_path(monkeypatch):
             r = _safe_call(te, candidate)
             if isinstance(r, dict):
                 assert r.get("status") in {"ok", "error"}
-            break# --------------------------
+            break  # --------------------------
+
+
 # Additional branch sweepers
 # --------------------------
+
 
 def test_reset_day_portfolio_raises_outer_except(monkeypatch):
     """
@@ -122,6 +140,7 @@ def test_reset_day_portfolio_raises_outer_except(monkeypatch):
     r = te.reset_day()
     assert isinstance(r, dict)
     assert r.get("status") == "error"
+
 
 def test_reset_day_port_status_none_attribute_error(monkeypatch):
     """
@@ -138,6 +157,7 @@ def test_reset_day_port_status_none_attribute_error(monkeypatch):
     assert isinstance(r, dict)
     assert r.get("status") in {"ok", "error"}
 
+
 def test_reset_day_port_status_weird_shape(monkeypatch):
     """
     Return a non-dict (list) from portfolio.status to trip type/KeyError handling.
@@ -152,6 +172,7 @@ def test_reset_day_port_status_weird_shape(monkeypatch):
     r = te.reset_day()
     assert isinstance(r, dict)
     assert r.get("status") in {"ok", "error"}
+
 
 def test_execute_missing_order_manager(monkeypatch):
     """
@@ -171,6 +192,7 @@ def test_execute_missing_order_manager(monkeypatch):
             _safe_call(te, candidate, "AAPL", "BUY", 1)
             break
 
+
 def test_finalize_missing_flush_attribute(monkeypatch):
     """
     Ensure finalize-day branch where portfolio.flush is absent (hasattr False) is covered.
@@ -187,6 +209,7 @@ def test_finalize_missing_flush_attribute(monkeypatch):
             if isinstance(r, dict):
                 assert r.get("status") in {"ok", "error"}
             break
+
 
 def test_execute_post_submit_status_error_path(monkeypatch):
     """
@@ -213,9 +236,12 @@ def test_execute_post_submit_status_error_path(monkeypatch):
         if hasattr(te, candidate):
             _safe_call(te, candidate, "AAPL", "BUY", 1)
             break
+
+
 # ===========================
 # Laser tests for specific lines
 # ===========================
+
 
 def test_reset_day_both_missing_handlers(monkeypatch):
     """
@@ -236,6 +262,7 @@ def test_reset_day_both_missing_handlers(monkeypatch):
     assert isinstance(r, dict)
     assert r.get("status") in {"ok", "error"}
 
+
 def test_reset_day_both_ok_with_status_merge(monkeypatch):
     """
     Force both reset calls to return ok dicts to exercise the merge/summarize branch paths.
@@ -248,6 +275,7 @@ def test_reset_day_both_ok_with_status_merge(monkeypatch):
     r = te.reset_day()
     assert isinstance(r, dict)
     assert r.get("status") in {"ok", "error"}
+
 
 def test_adaptive_fraction_boundaries(monkeypatch):
     """
@@ -267,6 +295,7 @@ def test_adaptive_fraction_boundaries(monkeypatch):
         # Try module-level fallback if engine method not present
         try:
             import importlib
+
             m = importlib.import_module("hybrid_ai_trading.trade_engine")
             af2 = getattr(m, "adaptive_fraction", None)
             if callable(af2):
@@ -278,6 +307,7 @@ def test_adaptive_fraction_boundaries(monkeypatch):
         except Exception:
             pass
 
+
 def test_process_signal_sell_and_invalid_side(monkeypatch):
     """
     Exercise SELL path and invalid/None side guard branches.
@@ -285,7 +315,7 @@ def test_process_signal_sell_and_invalid_side(monkeypatch):
     te = make_engine()
     # Risk approve so we reach deeper code
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":1}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
     for side in ("SELL", None, "HOLD", "WAT?"):
         if hasattr(te, "process_signal"):
             try:
@@ -293,13 +323,17 @@ def test_process_signal_sell_and_invalid_side(monkeypatch):
             except Exception:
                 pass
 
+
 def test_process_signal_defer_and_none(monkeypatch):
     """
     Risk returns 'defer' and None to hit those branches inside process_signal.
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"defer","reason":"wait"}  # first call
+        te.risk_manager.approve_trade = lambda *a, **k: {
+            "status": "defer",
+            "reason": "wait",
+        }  # first call
     if hasattr(te, "process_signal"):
         try:
             te.process_signal("AAPL", "BUY", 1)
@@ -314,6 +348,7 @@ def test_process_signal_defer_and_none(monkeypatch):
         except Exception:
             pass
 
+
 def test_process_signal_partial_and_filled_paths(monkeypatch):
     """
     Simulate partial/filled statuses from submit to hit late branches (301/325/334+).
@@ -323,24 +358,29 @@ def test_process_signal_partial_and_filled_paths(monkeypatch):
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     if hasattr(te, "order_manager"):
         # First call -> partial, second call -> filled
-        calls = {"n":0}
+        calls = {"n": 0}
+
         def fake_submit(*a, **k):
             calls["n"] += 1
             if calls["n"] == 1:
-                return {"status":"partial","filled":1,"order_id":101}
-            return {"status":"filled","filled":2,"order_id":101}
+                return {"status": "partial", "filled": 1, "order_id": 101}
+            return {"status": "filled", "filled": 2, "order_id": 101}
+
         te.order_manager.submit = fake_submit
         # Also make open_orders/positions harmless if referenced
         if hasattr(te.order_manager, "open_orders"):
-            te.order_manager.open_orders = lambda *a, **k: [{"id":101,"status":"Submitted"}]
+            te.order_manager.open_orders = lambda *a, **k: [{"id": 101, "status": "Submitted"}]
     if hasattr(te, "process_signal"):
         try:
             te.process_signal("AAPL", "BUY", 2)
         except Exception:
             pass
+
+
 # ===========================
 # Final snipers for uncovered lines
 # ===========================
+
 
 def test_reset_day_both_raise_different(monkeypatch):
     """
@@ -356,12 +396,14 @@ def test_reset_day_both_raise_different(monkeypatch):
     assert isinstance(r, dict)
     assert r.get("status") == "error"
 
+
 def test_adaptive_fraction_nan_and_string(monkeypatch):
     """
     Hit None/NaN/str handling and clamping branches in adaptive_fraction (205, 211ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“212).
     """
     te = make_engine()
     import math
+
     af = getattr(te, "adaptive_fraction", None)
     cases = [float("nan"), "0.5", "bad", 2.0, -5.0, None]
     if callable(af):
@@ -372,6 +414,7 @@ def test_adaptive_fraction_nan_and_string(monkeypatch):
                 pass
     else:
         import importlib
+
         m = importlib.import_module("hybrid_ai_trading.trade_engine")
         af2 = getattr(m, "adaptive_fraction", None)
         if callable(af2):
@@ -381,16 +424,18 @@ def test_adaptive_fraction_nan_and_string(monkeypatch):
                 except Exception:
                     pass
 
+
 def test_process_signal_risk_error_and_unknown_status(monkeypatch):
     """
     Make approve_trade return status='error' and then an unknown status to hit 241ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“251 area.
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
-        seq = [{"status":"error","reason":"bad inputs"},
-               {"status":"mystery"}]  # unknown branch
+        seq = [{"status": "error", "reason": "bad inputs"}, {"status": "mystery"}]  # unknown branch
+
         def approve(*a, **k):
-            return seq.pop(0) if seq else {"status":"reject"}
+            return seq.pop(0) if seq else {"status": "reject"}
+
         te.risk_manager.approve_trade = approve
     if hasattr(te, "process_signal"):
         for _ in range(2):
@@ -399,21 +444,25 @@ def test_process_signal_risk_error_and_unknown_status(monkeypatch):
             except Exception:
                 pass
 
+
 def test_process_signal_negative_qty_sell(monkeypatch):
     """
     Drive SELL path with negative/zero qty to tick guard/invalid branches (256ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“257).
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":-3}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": -3}
     # submit should not be called; make it loud if it is:
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not submit neg size"))
+        te.order_manager.submit = lambda *a, **k: (_ for _ in ()).throw(
+            AssertionError("should not submit neg size")
+        )
     if hasattr(te, "process_signal"):
         try:
             te.process_signal("AAPL", "SELL", -3)
         except Exception:
             pass
+
 
 def test_process_signal_submit_returns_empty_and_missing_status(monkeypatch):
     """
@@ -421,12 +470,14 @@ def test_process_signal_submit_returns_empty_and_missing_status(monkeypatch):
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":1}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
     if hasattr(te, "order_manager"):
-        calls = {"n":0}
+        calls = {"n": 0}
+
         def sub(*a, **k):
             calls["n"] += 1
             return {} if calls["n"] == 1 else {"order_id": 123}  # missing 'status'
+
         te.order_manager.submit = sub
     if hasattr(te, "process_signal"):
         for _ in range(2):
@@ -435,6 +486,7 @@ def test_process_signal_submit_returns_empty_and_missing_status(monkeypatch):
             except Exception:
                 pass
 
+
 def test_process_signal_wait_timeout_and_cancel(monkeypatch):
     """
     Simulate a submit OK but fill-wait path that times out, then optional cancel()
@@ -442,23 +494,26 @@ def test_process_signal_wait_timeout_and_cancel(monkeypatch):
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":1}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status":"submitted","order_id": 777}
+        te.order_manager.submit = lambda *a, **k: {"status": "submitted", "order_id": 777}
         if hasattr(te.order_manager, "cancel"):
-            te.order_manager.cancel = lambda *a, **k: {"status":"ok"}
+            te.order_manager.cancel = lambda *a, **k: {"status": "ok"}
     # Provide a waiter-like method if the engine exposes one; otherwise no-op
-    for waiter in ("wait_for_fill","await_fill","poll_fill","_await_fill"):
+    for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
-            setattr(te, waiter, lambda *a, **k: {"status":"timeout"})
+            setattr(te, waiter, lambda *a, **k: {"status": "timeout"})
     if hasattr(te, "process_signal"):
         try:
             te.process_signal("AAPL", "BUY", 1)
         except Exception:
             pass
+
+
 # ===========================
 # FINAL wave: cover remaining edges
 # ===========================
+
 
 def test_reset_day_positions_nonempty_merge(monkeypatch):
     """
@@ -467,14 +522,15 @@ def test_reset_day_positions_nonempty_merge(monkeypatch):
     """
     te = make_engine()
     if hasattr(te, "portfolio"):
-        te.portfolio.reset_day = lambda: {"status":"ok","pf":"y"}
+        te.portfolio.reset_day = lambda: {"status": "ok", "pf": "y"}
         if hasattr(te.portfolio, "status"):
-            te.portfolio.status = lambda: {"positions":[{"sym":"AAPL","qty":1}], "cash": 1000}
+            te.portfolio.status = lambda: {"positions": [{"sym": "AAPL", "qty": 1}], "cash": 1000}
     if hasattr(te, "risk_manager"):
-        te.risk_manager.reset_day = lambda: {"status":"ok","rk":"y"}
+        te.risk_manager.reset_day = lambda: {"status": "ok", "rk": "y"}
     r = te.reset_day()
     assert isinstance(r, dict)
-    assert r.get("status") in {"ok","error"}
+    assert r.get("status") in {"ok", "error"}
+
 
 def test_reset_day_weird_types_but_safe(monkeypatch):
     """
@@ -483,7 +539,7 @@ def test_reset_day_weird_types_but_safe(monkeypatch):
     """
     te = make_engine()
     if hasattr(te, "portfolio"):
-        te.portfolio.reset_day = lambda: ["not","a","dict"]
+        te.portfolio.reset_day = lambda: ["not", "a", "dict"]
     if hasattr(te, "risk_manager"):
         try:
             delattr(te.risk_manager, "reset_day")
@@ -493,7 +549,8 @@ def test_reset_day_weird_types_but_safe(monkeypatch):
         te.portfolio.status = lambda: {"positions": []}  # exercise empty branch too
     r = te.reset_day()
     assert isinstance(r, dict)
-    assert r.get("status") in {"ok","error"}
+    assert r.get("status") in {"ok", "error"}
+
 
 def test_adaptive_fraction_with_cfg_clamp(monkeypatch):
     """
@@ -502,7 +559,7 @@ def test_adaptive_fraction_with_cfg_clamp(monkeypatch):
     te = make_engine()
     # Try to attach clamp bounds on cfg/config/settings holder
     holder = None
-    for name in ("cfg","config","settings"):
+    for name in ("cfg", "config", "settings"):
         if hasattr(te, name):
             holder = getattr(te, name)
             break
@@ -525,6 +582,7 @@ def test_adaptive_fraction_with_cfg_clamp(monkeypatch):
                 pass
     else:
         import importlib
+
         m = importlib.import_module("hybrid_ai_trading.trade_engine")
         af2 = getattr(m, "adaptive_fraction", None)
         if callable(af2):
@@ -534,15 +592,18 @@ def test_adaptive_fraction_with_cfg_clamp(monkeypatch):
                 except Exception:
                     pass
 
+
 def test_process_signal_rare_statuses_and_lowercase_side(monkeypatch):
     """
     process_signal 241ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“251 + normalization: risk statuses 'skip'/'noop', side lowercase 'buy'.
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
-        seq = [{"status":"skip"}, {"status":"noop"}, {"status":"ok","size":1}]
+        seq = [{"status": "skip"}, {"status": "noop"}, {"status": "ok", "size": 1}]
+
         def approve(*a, **k):
-            return seq.pop(0) if seq else {"status":"reject"}
+            return seq.pop(0) if seq else {"status": "reject"}
+
         te.risk_manager.approve_trade = approve
     if hasattr(te, "process_signal"):
         try:
@@ -551,18 +612,21 @@ def test_process_signal_rare_statuses_and_lowercase_side(monkeypatch):
         except Exception:
             pass
 
+
 def test_process_signal_submit_str_and_list(monkeypatch):
     """
     process_signal 301/325 edges: submit returns a *string* then a *list* to hit odd-type branches.
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":1}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
     if hasattr(te, "order_manager"):
-        calls = {"n":0}
+        calls = {"n": 0}
+
         def submit(*a, **k):
             calls["n"] += 1
-            return "ok" if calls["n"] == 1 else [{"id": 1, "status":"Submitted"}]
+            return "ok" if calls["n"] == 1 else [{"id": 1, "status": "Submitted"}]
+
         te.order_manager.submit = submit
     if hasattr(te, "process_signal"):
         for _ in range(2):
@@ -570,6 +634,7 @@ def test_process_signal_submit_str_and_list(monkeypatch):
                 te.process_signal("AAPL", "BUY", 1)
             except Exception:
                 pass
+
 
 def test_process_signal_waiter_filled_and_cancel_flag(monkeypatch):
     """
@@ -579,26 +644,31 @@ def test_process_signal_waiter_filled_and_cancel_flag(monkeypatch):
     te = make_engine()
     # Ensure config exposes cancel_on_timeout and wait secs
     holder = None
-    for name in ("cfg","config","settings"):
+    for name in ("cfg", "config", "settings"):
         if hasattr(te, name):
-            holder = getattr(te, name); break
+            holder = getattr(te, name)
+            break
     if holder is not None:
-        try: setattr(holder, "cancel_on_timeout", True)
-        except Exception: pass
-        try: setattr(holder, "wait_for_fill_secs", 0.01)
-        except Exception: pass
+        try:
+            setattr(holder, "cancel_on_timeout", True)
+        except Exception:
+            pass
+        try:
+            setattr(holder, "wait_for_fill_secs", 0.01)
+        except Exception:
+            pass
 
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":1}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status":"submitted","order_id": 1234}
+        te.order_manager.submit = lambda *a, **k: {"status": "submitted", "order_id": 1234}
         if hasattr(te.order_manager, "cancel"):
-            te.order_manager.cancel = lambda *a, **k: {"status":"ok"}
+            te.order_manager.cancel = lambda *a, **k: {"status": "ok"}
 
     # First drive the *filled* waiter path
-    for waiter in ("wait_for_fill","await_fill","poll_fill","_await_fill"):
+    for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
-            setattr(te, waiter, lambda *a, **k: {"status":"filled"})
+            setattr(te, waiter, lambda *a, **k: {"status": "filled"})
     if hasattr(te, "process_signal"):
         try:
             te.process_signal("AAPL", "BUY", 1)
@@ -607,11 +677,13 @@ def test_process_signal_waiter_filled_and_cancel_flag(monkeypatch):
 
     # Now drive the *timeout* + cancel_on_timeout=True
     if holder is not None:
-        try: setattr(holder, "cancel_on_timeout", True)
-        except Exception: pass
-    for waiter in ("wait_for_fill","await_fill","poll_fill","_await_fill"):
+        try:
+            setattr(holder, "cancel_on_timeout", True)
+        except Exception:
+            pass
+    for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
-            setattr(te, waiter, lambda *a, **k: {"status":"timeout"})
+            setattr(te, waiter, lambda *a, **k: {"status": "timeout"})
     if hasattr(te, "process_signal"):
         try:
             te.process_signal("AAPL", "BUY", 1)
@@ -620,17 +692,22 @@ def test_process_signal_waiter_filled_and_cancel_flag(monkeypatch):
 
     # And again with cancel_on_timeout=False
     if holder is not None:
-        try: setattr(holder, "cancel_on_timeout", False)
-        except Exception: pass
+        try:
+            setattr(holder, "cancel_on_timeout", False)
+        except Exception:
+            pass
     if hasattr(te, "process_signal"):
         try:
             te.process_signal("AAPL", "BUY", 1)
         except Exception:
             pass
+
+
 # ===========================
 # FINAL^2 snipers ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ hit the exact uncovered lines
 # ===========================
 from types import SimpleNamespace
+
 
 def test_reset_day_no_attrs_false_edges(monkeypatch):
     """
@@ -647,6 +724,7 @@ def test_reset_day_no_attrs_false_edges(monkeypatch):
     r = te.reset_day()
     assert isinstance(r, dict)
 
+
 def test_adaptive_fraction_equity_le_zero_and_except(monkeypatch):
     """
     Hits 205 (equity<=0 -> base_fraction) and 211ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“212 (except -> base_fraction).
@@ -655,18 +733,15 @@ def test_adaptive_fraction_equity_le_zero_and_except(monkeypatch):
     # 1) equity <= 0 with nonempty history to reach the 205 line (not the earlier guards)
     if not hasattr(te, "base_fraction"):
         te.base_fraction = 0.5
-    te.portfolio = SimpleNamespace(
-        equity=0,  # <= 0 to trigger 205
-        history=[("t0", 100.0)]
-    )
+    te.portfolio = SimpleNamespace(equity=0, history=[("t0", 100.0)])  # <= 0 to trigger 205
     assert te.adaptive_fraction() == te.base_fraction
 
     # 2) cause an exception in the try-block to hit 211ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“212
     te.portfolio = SimpleNamespace(
-        equity=100.0,
-        history=[("t0", "bad")]  # will raise in max(eq for ...)
+        equity=100.0, history=[("t0", "bad")]  # will raise in max(eq for ...)
     )
     assert te.adaptive_fraction() == te.base_fraction
+
 
 def test_process_signal_drawdown_breach_and_kelly_except(monkeypatch):
     """
@@ -674,6 +749,7 @@ def test_process_signal_drawdown_breach_and_kelly_except(monkeypatch):
     We bypass sector-exposure logic to avoid needing portfolio.get_positions().
     """
     from types import SimpleNamespace
+
     te = make_engine()
 
     # Bypass sector exposure check entirely so we can reach drawdown logic
@@ -701,9 +777,13 @@ def test_process_signal_drawdown_breach_and_kelly_except(monkeypatch):
     )
     if hasattr(te, "process_signal"):
         try:
-            te.process_signal("AAPL", "BUY", None)  # size None => Kelly path => raises => fallback to 1
+            te.process_signal(
+                "AAPL", "BUY", None
+            )  # size None => Kelly path => raises => fallback to 1
         except Exception:
             pass
+
+
 def test_process_signal_regime_disabled_and_sortino_breach(monkeypatch):
     """
     Hits 301 ('filled','regime_disabled') and 325 ('blocked','sortino_breach')
@@ -713,7 +793,7 @@ def test_process_signal_regime_disabled_and_sortino_breach(monkeypatch):
 
     # Ensure risk approves so we reach deeper logic
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":1}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
 
     # ---- Regime disabled path (line 301)
     if not hasattr(te, "config"):
@@ -736,6 +816,7 @@ def test_process_signal_regime_disabled_and_sortino_breach(monkeypatch):
         except Exception:
             pass
 
+
 def test_process_signal_tail_normalization_to_filled_and_reason_normalized_ok(monkeypatch):
     """
     Hits 334ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“337 normalization (status 'ok' -> 'filled', reason 'ok' -> 'normalized_ok').
@@ -744,16 +825,16 @@ def test_process_signal_tail_normalization_to_filled_and_reason_normalized_ok(mo
     te = make_engine()
 
     if hasattr(te, "risk_manager"):
-        te.risk_manager.approve_trade = lambda *a, **k: {"status":"ok","size":1}
+        te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
 
     # Submit returns 'ok' so tail normalization can flip it
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status":"ok", "reason":"ok", "order_id": 42}
+        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 42}
 
     # Provide a waiter that returns a benign dict to let function reach the tail
-    for waiter in ("wait_for_fill","await_fill","poll_fill","_await_fill"):
+    for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
-            setattr(te, waiter, lambda *a, **k: {"status":"ok"})
+            setattr(te, waiter, lambda *a, **k: {"status": "ok"})
 
     if hasattr(te, "process_signal"):
         try:
@@ -761,12 +842,15 @@ def test_process_signal_tail_normalization_to_filled_and_reason_normalized_ok(mo
         except Exception:
             # even if upstream returns early, we executed the path attempting normalization
             pass
+
+
 def test_ps_regime_disabled_early_return(monkeypatch):
     """
     Hit line 301: regime disabled -> filled/early return path.
     Ensure no sector/drawdown short-circuits.
     """
     from types import SimpleNamespace
+
     te = make_engine()
     # Bypass sector exposure entirely
     if hasattr(te, "_sector_exposure_breach"):
@@ -785,11 +869,13 @@ def test_ps_regime_disabled_early_return(monkeypatch):
     except Exception:
         pass
 
+
 def test_ps_sortino_breach_blocked(monkeypatch):
     """
     Hit line 325: sortino breach -> blocked.
     """
     from types import SimpleNamespace
+
     te = make_engine()
     if hasattr(te, "_sector_exposure_breach"):
         te._sector_exposure_breach = lambda s: False
@@ -805,6 +891,7 @@ def test_ps_sortino_breach_blocked(monkeypatch):
     except Exception:
         pass
 
+
 def test_ps_tail_normalization_ok_to_filled(monkeypatch):
     """
     Hit lines 334â€“339: tail normalization where result.status==ok -> filled
@@ -812,6 +899,7 @@ def test_ps_tail_normalization_ok_to_filled(monkeypatch):
     Also exercises 241â€“257 by ensuring no drawdown, and Kelly not used.
     """
     from types import SimpleNamespace
+
     te = make_engine()
     if hasattr(te, "_sector_exposure_breach"):
         te._sector_exposure_breach = lambda s: False
@@ -825,7 +913,7 @@ def test_ps_tail_normalization_ok_to_filled(monkeypatch):
         # Return ok/ok so tail will normalize them
         te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 3}
     # Make any waiter benign so flow reaches tail
-    for waiter in ("wait_for_fill","await_fill","poll_fill","_await_fill"):
+    for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
             setattr(te, waiter, lambda *a, **k: {"status": "ok"})
     try:

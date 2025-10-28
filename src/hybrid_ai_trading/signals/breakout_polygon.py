@@ -27,9 +27,7 @@ class PolygonAPIError(RuntimeError):
 
 
 class BreakoutPolygonSignal:
-    def __init__(
-        self, api_key: Optional[str] = None, lookback: int = 3, min_bars: int = 3
-    ):
+    def __init__(self, api_key: Optional[str] = None, lookback: int = 3, min_bars: int = 3):
         self.api_key = api_key or os.getenv("POLYGON_KEY")
         self.lookback = lookback
         self.min_bars = min_bars
@@ -48,24 +46,16 @@ class BreakoutPolygonSignal:
         try:
             resp = requests.get(url, timeout=10)
             if resp.status_code != 200:
-                raise PolygonAPIError(
-                    f"Polygon API error {resp.status_code}: {resp.text[:200]}"
-                )
+                raise PolygonAPIError(f"Polygon API error {resp.status_code}: {resp.text[:200]}")
             data = resp.json().get("results", [])
             return data if isinstance(data, list) else []
         except Exception as e:
             logger.error("❌ Polygon request failed: %s", e)
             return []
 
-    def generate(
-        self, ticker: str, bars: Optional[List[Dict[str, Any]]] = None
-    ) -> Dict[str, Any]:
+    def generate(self, ticker: str, bars: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         try:
-            bars = (
-                bars
-                if bars is not None
-                else self._get_polygon_bars(ticker, limit=self.lookback)
-            )
+            bars = bars if bars is not None else self._get_polygon_bars(ticker, limit=self.lookback)
             if len(bars) < self.min_bars:
                 return {"signal": "HOLD", "reason": "not_enough_bars"}
 

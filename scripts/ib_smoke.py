@@ -1,9 +1,16 @@
-﻿from ib_insync import *
-import time, sys
+﻿import sys
+import time
+
+from ib_insync import *
 
 # args: sym side qty off host port cid ussl secs
 sym, side, qty, off, host, port, cid, ussl, secs = sys.argv[1:]
-qty=int(qty); off=float(off); port=int(port); cid=int(cid); ussl=int(ussl); secs=int(secs)
+qty = int(qty)
+off = float(off)
+port = int(port)
+cid = int(cid)
+ussl = int(ussl)
+secs = int(secs)
 
 ib = IB()
 ib.client.setConnectOptions(f"UseSSL={ussl}")
@@ -17,19 +24,26 @@ ib.sleep(1.5)
 bid = t.bid or t.close or t.last
 ask = t.ask or t.close or t.last
 if not (bid and ask):
-    print("no quotes; abort"); ib.disconnect(); sys.exit(2)
+    print("no quotes; abort")
+    ib.disconnect()
+    sys.exit(2)
 
 if side.upper() == "BUY":
-    px = round(max(0.01, min(ask, max(bid, 0)) - off/100.0), 2)
+    px = round(max(0.01, min(ask, max(bid, 0)) - off / 100.0), 2)
 else:
-    px = round(max(0.01, max(bid, 0) + off/100.0), 2)
+    px = round(max(0.01, max(bid, 0) + off / 100.0), 2)
 
 o = LimitOrder(side.upper(), qty, px)
 tr = ib.placeOrder(c, o)
 print("placed", tr.orderStatus.status, side.upper(), qty, sym, "at", px)
 
 deadline = time.time() + secs
-while time.time() < deadline and tr.orderStatus.status in ("PendingSubmit","PendingCancel","PreSubmitted","Submitted"):
+while time.time() < deadline and tr.orderStatus.status in (
+    "PendingSubmit",
+    "PendingCancel",
+    "PreSubmitted",
+    "Submitted",
+):
     ib.sleep(0.25)
 
 print("status_before_cancel:", tr.orderStatus.status)

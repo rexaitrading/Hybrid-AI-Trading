@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Kraken Ops (Hybrid AI Quant Pro v1.0 - Practical Ops Tools)
 - --balances
@@ -67,7 +68,7 @@ def value_snapshot(ex: "ccxt.kraken", quote: str) -> None:
     details: List[Dict[str, Any]] = []
     ex.load_markets()
 
-    for asset, amt in (free.items() if isinstance(free, dict) else []):
+    for asset, amt in free.items() if isinstance(free, dict) else []:
         try:
             amount = float(amt or 0)
         except Exception:
@@ -87,25 +88,38 @@ def value_snapshot(ex: "ccxt.kraken", quote: str) -> None:
             t = ex.fetch_ticker(pair1)
             last = t.get("last")
             if last is None:
-                last = (t.get("info", {}).get("c", [0])[0])
+                last = t.get("info", {}).get("c", [0])[0]
             px = float(last or 0.0)
             val = amount * px
             total_quote += val
-            details.append({"asset": asset, "amount": amount, "px": px, "value": val, "pair": pair1})
+            details.append(
+                {"asset": asset, "amount": amount, "px": px, "value": val, "pair": pair1}
+            )
             continue
         # Try inverse QUOTE/ASSET (convert)
         if pair2 in ex.markets:
             t = ex.fetch_ticker(pair2)
             last = t.get("last")
             if last is None:
-                last = (t.get("info", {}).get("c", [0])[0])
+                last = t.get("info", {}).get("c", [0])[0]
             px = float(last or 0.0)
             inv_val = amount / px if px else 0.0
             total_quote += inv_val
-            details.append({"asset": asset, "amount": amount, "px": px, "value": inv_val, "pair": pair2, "inverse": True})
+            details.append(
+                {
+                    "asset": asset,
+                    "amount": amount,
+                    "px": px,
+                    "value": inv_val,
+                    "pair": pair2,
+                    "inverse": True,
+                }
+            )
             continue
 
-        details.append({"asset": asset, "amount": amount, "px": None, "value": None, "note": "no market"})
+        details.append(
+            {"asset": asset, "amount": amount, "px": None, "value": None, "note": "no market"}
+        )
 
     _print_json({"quote": quote, "total_value_quote": total_quote, "details": details})
 

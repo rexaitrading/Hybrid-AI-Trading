@@ -1,12 +1,17 @@
-import os, sys, io
+import io
+import os
+import sys
+
 import coverage
 
 # Use env COVERAGE_FILE or default
-cov = coverage.Coverage(data_file=os.getenv("COVERAGE_FILE",".coverage"))
+cov = coverage.Coverage(data_file=os.getenv("COVERAGE_FILE", ".coverage"))
 cov.load()
 
 # Resolve filename exactly as coverage sees it
-src_file = os.path.normpath(r"C:\Users\rhcy9\OneDrive\文件\HybridAITrading\src\hybrid_ai_trading\trade_engine.py")
+src_file = os.path.normpath(
+    r"C:\Users\rhcy9\OneDrive\文件\HybridAITrading\src\hybrid_ai_trading\trade_engine.py"
+)
 
 # Analyze missing lines
 try:
@@ -37,8 +42,10 @@ for ln in to_mark:
     if not stripped or stripped.startswith("#") or "pragma: no cover" in s:
         continue
     # Keep trailing spaces off, add a single space before pragma if needed
-    if s.endswith("  "): s = s.rstrip()
-    if s.endswith(" "):  s = s.rstrip()
+    if s.endswith("  "):
+        s = s.rstrip()
+    if s.endswith(" "):
+        s = s.rstrip()
     if s:
         s = s + "  # pragma: no cover"
     else:

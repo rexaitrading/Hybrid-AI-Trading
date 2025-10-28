@@ -69,9 +69,7 @@ ib.qualifyContracts(c)
 ib.reqMarketDataType(3)
 t = ib.reqMktData(c, "", False, False)
 ib.sleep(1.5)
-base_px = (
-    t.ask if (t.ask and t.ask > 0) else (t.bid if (t.bid and t.bid > 0) else 150.00)
-)
+base_px = t.ask if (t.ask and t.ask > 0) else (t.bid if (t.bid and t.bid > 0) else 150.00)
 base_px = round(base_px, 2)
 
 print("account:", acct, "base_limit:", base_px)

@@ -1,5 +1,7 @@
 ﻿# Auto-add ./src to sys.path for any Python process launched at or below repo root.
-import sys, pathlib
+import pathlib
+import sys
+
 try:
     # Walk up until we find a "src" folder (max 6 levels for safety)
     p = pathlib.Path(__file__).resolve()

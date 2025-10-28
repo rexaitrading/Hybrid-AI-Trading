@@ -21,9 +21,7 @@ print(f"date_from: {res['date_from']}   total stories (watch-filtered): {res['to
 print("\nSymbol  Seen  Allowed  Blocked  AvgScore")
 print("----------------------------------------")
 for sym, d in sorted(res["per_symbol"].items()):
-    print(
-        f"{sym:5}  {d['seen']:4}  {d['allowed']:7}  {d['blocked']:7}  {d['avgScore']:.4f}"
-    )
+    print(f"{sym:5}  {d['seen']:4}  {d['allowed']:7}  {d['blocked']:7}  {d['avgScore']:.4f}")
 
 allowed = [s for s in res["stories"] if s.get("allow")]
 allowed.sort(key=lambda x: x.get("score", 0), reverse=True)

@@ -42,9 +42,7 @@ def patch_polygon(monkeypatch, fake_bars):
     """Patch Polygon data fetcher with deterministic fake bars."""
     monkeypatch.setattr(
         "hybrid_ai_trading.pipelines.backtest.get_intraday_bars",
-        lambda ticker, start, end, api_key=None, interval="1", timespan="minute": list(
-            fake_bars
-        ),
+        lambda ticker, start, end, api_key=None, interval="1", timespan="minute": list(fake_bars),
     )
 
 

@@ -1,1 +1,1 @@
-from .bar_replay import run_replay, load_bars, ReplayResult
+from .bar_replay import ReplayResult, load_bars, run_replay

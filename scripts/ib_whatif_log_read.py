@@ -16,9 +16,7 @@ ib.qualifyContracts(c)
 t = ib.placeOrder(c, LimitOrder("BUY", 1, 100.00, whatIf=True))
 ib.sleep(1.0)
 
-state = next(
-    (e.orderState for e in t.log if hasattr(e, "orderState") and e.orderState), None
-)
+state = next((e.orderState for e in t.log if hasattr(e, "orderState") and e.orderState), None)
 print("whatIfStatus:", t.orderStatus.status)
 if state:
     print(

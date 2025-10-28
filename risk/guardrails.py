@@ -19,9 +19,7 @@ def in_trading_window(start_hm=("06", "00"), end_hm=("11", "00")) -> bool:
     return time(sh, sm) <= now <= time(eh, em)
 
 
-def margin_usage_ok(
-    preview: Dict[str, Any], max_frac: float = 0.20
-) -> Tuple[bool, str]:
+def margin_usage_ok(preview: Dict[str, Any], max_frac: float = 0.20) -> Tuple[bool, str]:
     ewl = preview.get("equityWithLoan")
     init_total = preview.get("initMargin_total")
     if ewl is None:

@@ -249,12 +249,8 @@ def main():
         limit = info["limit"]
         notional = info["notional"]
 
-        print(
-            f"[PLAN] {side} {qty} {symbol} @ ~{limit} (TIF={tif}) notional≈${notional:,.2f}"
-        )
-        tr = ib.placeOrder(
-            c, LimitOrder(side, qty, limit, tif=tif, outsideRth=outside_rth)
-        )
+        print(f"[PLAN] {side} {qty} {symbol} @ ~{limit} (TIF={tif}) notional≈${notional:,.2f}")
+        tr = ib.placeOrder(c, LimitOrder(side, qty, limit, tif=tif, outsideRth=outside_rth))
         print("[SUBMIT] sent, waiting...")
         for _ in range(30):
             ib.sleep(0.2)

@@ -1,4 +1,6 @@
-import json, urllib.request, urllib.error
+import json
+import urllib.error
+import urllib.request
 from typing import Any, Dict
 
 # Minimal Kraken client for public ticker prices (no auth required).
@@ -6,14 +8,23 @@ from typing import Any, Dict
 
 _PAIR_MAP = {
     # BTC
-    "BTCUSD": "XBTUSD", "BTC/USDT": "XBTUSDT", "BTCUSDT": "XBTUSDT",
-    "BTC/EUR": "XBTEUR", "BTCEUR": "XBTEUR",
+    "BTCUSD": "XBTUSD",
+    "BTC/USDT": "XBTUSDT",
+    "BTCUSDT": "XBTUSDT",
+    "BTC/EUR": "XBTEUR",
+    "BTCEUR": "XBTEUR",
     # ETH
-    "ETHUSD": "ETHUSD", "ETH/USDT": "ETHUSDT", "ETHUSDT": "ETHUSDT",
-    "ETH/EUR": "ETHEUR", "ETHEUR": "ETHEUR",
+    "ETHUSD": "ETHUSD",
+    "ETH/USDT": "ETHUSDT",
+    "ETHUSDT": "ETHUSDT",
+    "ETH/EUR": "ETHEUR",
+    "ETHEUR": "ETHEUR",
     # SOL
-    "SOLUSD": "SOLUSD", "SOL/USDT": "SOLUSDT", "SOLUSDT": "SOLUSDT",
+    "SOLUSD": "SOLUSD",
+    "SOL/USDT": "SOLUSDT",
+    "SOLUSDT": "SOLUSDT",
 }
+
 
 def _norm_pair(symbol: str) -> str:
     s = (symbol or "").upper().replace("-", "/").strip()
@@ -21,6 +32,7 @@ def _norm_pair(symbol: str) -> str:
         return _PAIR_MAP[s]
     s2 = s.replace("/", "")  # BTC/USDC -> BTCUSDC
     return _PAIR_MAP.get(s2, s2)  # fallback: raw BTCUSDC etc.
+
 
 class Client:
     def __init__(self, base: str = "https://api.kraken.com", **_):
@@ -42,12 +54,17 @@ class Client:
         Parse result[PAIR]['c'][0] as last trade price
         """
         pair = _norm_pair(symbol)
-        url  = f"{self.base}/0/public/Ticker?pair={pair}"
+        url = f"{self.base}/0/public/Ticker?pair={pair}"
         j = self._http_json(url)
         if not isinstance(j, dict):
             return {"symbol": symbol, "price": None, "source": "kraken", "reason": "bad_json"}
         if j.get("error"):
-            return {"symbol": symbol, "price": None, "source": "kraken", "reason": ";".join(j.get("error") or [])}
+            return {
+                "symbol": symbol,
+                "price": None,
+                "source": "kraken",
+                "reason": ";".join(j.get("error") or []),
+            }
         res = j.get("result")
         if isinstance(res, dict):
             # Kraken sometimes returns different canonical keys; locate the first

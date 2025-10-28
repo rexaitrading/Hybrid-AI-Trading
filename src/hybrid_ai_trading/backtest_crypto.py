@@ -51,9 +51,7 @@ def map_symbol(symbol: str, ex_name: str) -> str:
     return symbol
 
 
-def fetch_ohlcv_forward(
-    ex, symbol: str, tf: str, total: int
-) -> Tuple[List[List[float]], int]:
+def fetch_ohlcv_forward(ex, symbol: str, tf: str, total: int) -> Tuple[List[List[float]], int]:
     """
     Forward pagination:
       - start since = now - total * tf_ms
@@ -69,9 +67,7 @@ def fetch_ohlcv_forward(
 
     while remaining > 0:
         try:
-            batch = ex.fetch_ohlcv(
-                symbol, timeframe=tf, since=since, limit=min(1000, remaining)
-            )
+            batch = ex.fetch_ohlcv(symbol, timeframe=tf, since=since, limit=min(1000, remaining))
         except Exception:
             break
         if not batch:
@@ -238,19 +234,11 @@ def main():
     ap.add_argument("--exchange", default=os.getenv("BT_EXCHANGE", "kraken"))
     ap.add_argument("--tf", default=os.getenv("TC_TF", "5m"))
     ap.add_argument("--limit", type=int, default=int(os.getenv("BT_LIMIT", "1500")))
-    ap.add_argument(
-        "--fee_bps", type=float, default=float(os.getenv("BT_FEE_BPS", "10"))
-    )
+    ap.add_argument("--fee_bps", type=float, default=float(os.getenv("BT_FEE_BPS", "10")))
     ap.add_argument("--atr_k", type=float, default=float(os.getenv("TC_ATR_K", "2.0")))
-    ap.add_argument(
-        "--risk_q", type=float, default=float(os.getenv("TC_RISK_QUOTE", "2.0"))
-    )
-    ap.add_argument(
-        "--min_q", type=float, default=float(os.getenv("TC_SIZE_HINT_QUOTE", "5.8"))
-    )
-    ap.add_argument(
-        "--cap", type=float, default=float(os.getenv("HG_MAX_TRADE_QUOTE", "50"))
-    )
+    ap.add_argument("--risk_q", type=float, default=float(os.getenv("TC_RISK_QUOTE", "2.0")))
+    ap.add_argument("--min_q", type=float, default=float(os.getenv("TC_SIZE_HINT_QUOTE", "5.8")))
+    ap.add_argument("--cap", type=float, default=float(os.getenv("HG_MAX_TRADE_QUOTE", "50")))
     ap.add_argument("--pairs", default=os.getenv("TC_CRYPTO", "BTC/USDC,ETH/USDC"))
     args = ap.parse_args()
 

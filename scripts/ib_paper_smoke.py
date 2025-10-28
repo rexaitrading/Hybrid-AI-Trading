@@ -1,12 +1,16 @@
-import os, asyncio, time
-from ib_insync import IB, Stock, LimitOrder
+import asyncio
+import os
+import time
 
-IB_HOST   = os.getenv("IB_HOST", "127.0.0.1")
-IB_PORT   = int(os.getenv("IB_PORT", "7497"))   # TWS paper default; GW paper often 4002
+from ib_insync import IB, LimitOrder, Stock
+
+IB_HOST = os.getenv("IB_HOST", "127.0.0.1")
+IB_PORT = int(os.getenv("IB_PORT", "7497"))  # TWS paper default; GW paper often 4002
 IB_CLIENT = int(os.getenv("IB_CLIENT_ID", "3021"))
-SYMBOL    = os.getenv("SMOKE_SYMBOL", "AAPL")
-QTY       = int(os.getenv("SMOKE_QTY", "1"))
-LMT       = float(os.getenv("SMOKE_LMT", "1.00"))  # intentionally safe far price for paper
+SYMBOL = os.getenv("SMOKE_SYMBOL", "AAPL")
+QTY = int(os.getenv("SMOKE_QTY", "1"))
+LMT = float(os.getenv("SMOKE_LMT", "1.00"))  # intentionally safe far price for paper
+
 
 def main():
     ib = IB()
@@ -33,6 +37,7 @@ def main():
     print("Final status:", status)
 
     ib.disconnect()
+
 
 if __name__ == "__main__":
     main()

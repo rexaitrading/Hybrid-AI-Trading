@@ -97,9 +97,7 @@ def fetch_crypto(symbol: str, start_date: str) -> pd.DataFrame:
         ohlcv = _binance.fetch_ohlcv(
             symbol, timeframe="1d", since=_binance.parse8601(start_date + "T00:00:00Z")
         )
-        df = pd.DataFrame(
-            ohlcv, columns=["ts", "open", "high", "low", "close", "volume"]
-        )
+        df = pd.DataFrame(ohlcv, columns=["ts", "open", "high", "low", "close", "volume"])
         df["date"] = pd.to_datetime(df["ts"], unit="ms")
         df.set_index("date", inplace=True)
         df["returns"] = np.log(df["close"] / df["close"].shift(1))
@@ -149,13 +147,9 @@ def simulate_portfolio(weights, returns_df, rebalance="daily"):
     daily_returns = (returns_df * weights).sum(axis=1).dropna()
 
     if rebalance == "weekly":
-        daily_returns = (
-            daily_returns.resample("W-MON").mean().reindex(returns_df.index).ffill()
-        )
+        daily_returns = daily_returns.resample("W-MON").mean().reindex(returns_df.index).ffill()
     elif rebalance == "monthly":
-        daily_returns = (
-            daily_returns.resample("M").mean().reindex(returns_df.index).ffill()
-        )
+        daily_returns = daily_returns.resample("M").mean().reindex(returns_df.index).ffill()
 
     port_cum = (1 + daily_returns).cumprod()
     ann_return = daily_returns.mean() * 252
@@ -163,9 +157,7 @@ def simulate_portfolio(weights, returns_df, rebalance="daily"):
     sharpe = (ann_return - RISK_FREE) / ann_vol if ann_vol > 0 else 0
     downside = daily_returns[daily_returns < 0]
     sortino = (
-        (ann_return - RISK_FREE) / (downside.std() * np.sqrt(252))
-        if not downside.empty
-        else None
+        (ann_return - RISK_FREE) / (downside.std() * np.sqrt(252)) if not downside.empty else None
     )
     max_dd = (port_cum / port_cum.cummax() - 1).min()
     calmar = ann_return / abs(max_dd) if max_dd != 0 else None
@@ -208,19 +200,13 @@ def optimize_portfolio(returns_df, max_alloc=0.5, min_alloc=0.05):
 # --- Report Generator ---
 def generate_report_html(opt_metrics, opt_w, tickers, html_file):
     html = "<h1>Portfolio Report</h1>"
-    html += (
-        pd.DataFrame([opt_metrics])
-        .drop(columns=["Cumulative", "DailyReturns"])
-        .to_html()
-    )
+    html += pd.DataFrame([opt_metrics]).drop(columns=["Cumulative", "DailyReturns"]).to_html()
 
     # Equity curve
     fig, ax = plt.subplots(figsize=(8, 4))
     opt_metrics["Cumulative"].plot(ax=ax, title="Equity Curve")
     ax.set_ylabel("Portfolio Value")
-    html += (
-        f"<h2>Equity Curve</h2><img src='data:image/png;base64,{plot_to_base64(fig)}'>"
-    )
+    html += f"<h2>Equity Curve</h2><img src='data:image/png;base64,{plot_to_base64(fig)}'>"
     plt.close(fig)
 
     # Drawdown
@@ -287,9 +273,9 @@ if __name__ == "__main__":
 
     with pd.ExcelWriter(xlsx_file) as writer:
         combined.to_excel(writer, sheet_name="Returns")
-        pd.DataFrame([opt_metrics]).drop(
-            columns=["Cumulative", "DailyReturns"]
-        ).to_excel(writer, sheet_name="Metrics")
+        pd.DataFrame([opt_metrics]).drop(columns=["Cumulative", "DailyReturns"]).to_excel(
+            writer, sheet_name="Metrics"
+        )
 
     generate_report_html(opt_metrics, opt_w, combined.columns, html_file)
 

@@ -3,15 +3,15 @@ s\eventkit\util.py:21: DeprecationWarning: There is no current event loop
 At line:7 char:1
 + python -u -X dev .\src\hybrid_ai_trading\runners\runner_paper.py `
 + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (C:\Users\rhcy9\...rent event 
+    + CategoryInfo          : NotSpecified: (C:\Users\rhcy9\...rent event
     loop:String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
- 
+
   return asyncio.get_event_loop_policy().get_event_loop()
 C:\Users\rhcy9\OneDrive\文件\HybridAITrading\src\hybrid_ai_trading\utils\str
-uctured_log.py:15: DeprecationWarning: 
-datetime.datetime.utcfromtimestamp() is deprecated and scheduled for 
-removal in a future version. Use timezone-aware objects to represent 
-datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, 
+uctured_log.py:15: DeprecationWarning:
+datetime.datetime.utcfromtimestamp() is deprecated and scheduled for
+removal in a future version. Use timezone-aware objects to represent
+datetimes in UTC: datetime.datetime.fromtimestamp(timestamp,
 datetime.UTC).
   "ts": datetime.datetime.utcfromtimestamp(record.created).isoformat(

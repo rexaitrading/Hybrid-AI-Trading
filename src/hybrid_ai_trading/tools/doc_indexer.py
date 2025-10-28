@@ -1,7 +1,10 @@
-import os, json, pathlib
-from typing import List, Dict
+import json
+import os
+import pathlib
+from typing import Dict, List
 
-def index_folder(folder: str, exts={".txt",".md",".yaml",".yml",".json"}):
+
+def index_folder(folder: str, exts={".txt", ".md", ".yaml", ".yml", ".json"}):
     p = pathlib.Path(folder)
     out = []
     for f in p.rglob("*"):
@@ -13,7 +16,9 @@ def index_folder(folder: str, exts={".txt",".md",".yaml",".yml",".json"}):
                 pass
     return out
 
+
 if __name__ == "__main__":
     import sys
-    folder = sys.argv[1] if len(sys.argv)>1 else "."
+
+    folder = sys.argv[1] if len(sys.argv) > 1 else "."
     print(json.dumps(index_folder(folder), indent=2))

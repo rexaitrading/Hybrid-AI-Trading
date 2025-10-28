@@ -77,9 +77,7 @@ class TradeEngine:
 
         self.regime_enabled = self.config.get("regime", {}).get("enabled", True)
         self.regime_detector = (
-            RegimeDetector(**self.config.get("regime", {}))
-            if self.regime_enabled
-            else None
+            RegimeDetector(**self.config.get("regime", {})) if self.regime_enabled else None
         )
 
         self.performance_tracker = PerformanceTracker(window=50)
@@ -106,9 +104,7 @@ class TradeEngine:
     def alert(self, message: str) -> Dict[str, Any]:
         results = {}
         try:
-            slack_url = os.getenv(
-                self.config.get("alerts", {}).get("slack_webhook_env", ""), ""
-            )
+            slack_url = os.getenv(self.config.get("alerts", {}).get("slack_webhook_env", ""), "")
             if slack_url:
                 r = requests.post(slack_url, json={"text": message})
                 results["slack"] = r.status_code
@@ -117,12 +113,8 @@ class TradeEngine:
             logger.error("Slack alert failed: %s", e)
 
         try:
-            tg_bot = os.getenv(
-                self.config.get("alerts", {}).get("telegram_bot_env", ""), ""
-            )
-            tg_chat = os.getenv(
-                self.config.get("alerts", {}).get("telegram_chat_id_env", ""), ""
-            )
+            tg_bot = os.getenv(self.config.get("alerts", {}).get("telegram_bot_env", ""), "")
+            tg_chat = os.getenv(self.config.get("alerts", {}).get("telegram_chat_id_env", ""), "")
             if tg_bot and tg_chat:
                 url = f"https://api.telegram.org/bot{tg_bot}/sendMessage"
                 r = requests.get(url, params={"chat_id": tg_chat, "text": message})
@@ -185,10 +177,7 @@ class TradeEngine:
                 except Exception as e:
                     return {"status": "error", "reason": f"risk_reset_failed:{e}"}
 
-            if (
-                port_status.get("status") == "error"
-                or risk_status.get("status") == "error"
-            ):
+            if port_status.get("status") == "error" or risk_status.get("status") == "error":
                 return {
                     "status": "error",
                     "reason": f"Portfolio={port_status}, Risk={risk_status}",
@@ -241,12 +230,19 @@ class TradeEngine:
         if self.portfolio and getattr(self.portfolio, "history", []):  # pragma: no cover (phase3)
             try:  # pragma: no cover (phase3)
                 start_equity = self.portfolio.history[0][1]  # pragma: no cover (phase3)
-                drawdown = 1 - (self.portfolio.equity / max(start_equity, 1))  # pragma: no cover (phase3)
-                if drawdown > self.config.get("risk", {}).get("max_drawdown", 0.5):  # pragma: no cover (phase3)
-                    return {"status": "blocked", "reason": "drawdown_breach"}  # pragma: no cover (phase3)
+                drawdown = 1 - (
+                    self.portfolio.equity / max(start_equity, 1)
+                )  # pragma: no cover (phase3)
+                if drawdown > self.config.get("risk", {}).get(
+                    "max_drawdown", 0.5
+                ):  # pragma: no cover (phase3)
+                    return {
+                        "status": "blocked",
+                        "reason": "drawdown_breach",
+                    }  # pragma: no cover (phase3)
             except Exception:  # pragma: no cover (phase3)
                 pass  # pragma: no cover (phase3)
-  # pragma: no cover (phase3)
+        # pragma: no cover (phase3)
         # --- Kelly  # pragma: no cover (phase3)
         if size is None:  # pragma: no cover (phase3)
             try:
@@ -315,14 +311,17 @@ class TradeEngine:
 
         # --- Performance AFTER filters
         try:
-            if self.performance_tracker.sharpe_ratio() < self.config.get(
-                "risk", {}
-            ).get("sharpe_min", -1.0):
+            if self.performance_tracker.sharpe_ratio() < self.config.get("risk", {}).get(
+                "sharpe_min", -1.0
+            ):
                 return {"status": "blocked", "reason": "sharpe_breach"}
-            if self.performance_tracker.sortino_ratio() < self.config.get(
-                "risk", {}
-            ).get("sortino_min", -1.0):
-                return {"status": "blocked", "reason": "sortino_breach"}  # pragma: no cover (phase3)
+            if self.performance_tracker.sortino_ratio() < self.config.get("risk", {}).get(
+                "sortino_min", -1.0
+            ):
+                return {
+                    "status": "blocked",
+                    "reason": "sortino_breach",
+                }  # pragma: no cover (phase3)
         except Exception:
             pass
 
@@ -335,7 +334,7 @@ class TradeEngine:
             result["status"] = "filled"  # pragma: no cover (phase3)
         if result.get("reason") == "ok":  # pragma: no cover (phase3)
             result["reason"] = "normalized_ok"  # pragma: no cover (phase3)
-  # pragma: no cover (phase3)
+        # pragma: no cover (phase3)
         try:  # pragma: no cover (phase3)
             row = [
                 os.times().elapsed,

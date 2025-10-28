@@ -8,8 +8,7 @@ from ib_insync import IB, LimitOrder, Stock
 def as_plain(o):
     try:
         return {
-            k: (str(v) if not isinstance(v, (int, float, str)) else v)
-            for k, v in vars(o).items()
+            k: (str(v) if not isinstance(v, (int, float, str)) else v) for k, v in vars(o).items()
         }
     except Exception:
         return str(o)
@@ -30,9 +29,7 @@ ib.qualifyContracts(c)
 ib.reqMarketDataType(3)
 t = ib.reqMktData(c, "", False, False)
 ib.sleep(1.5)
-base_px = (
-    t.ask if (t.ask and t.ask > 0) else (t.bid if (t.bid and t.bid > 0) else 150.00)
-)
+base_px = t.ask if (t.ask and t.ask > 0) else (t.bid if (t.bid and t.bid > 0) else 150.00)
 base_px = round(base_px, 2)
 print("account:", acct, "base_limit:", base_px)
 
@@ -66,9 +63,7 @@ while time.time() < deadline:
             continue
         seen.add(id(e))
         ev = getattr(e, "event", None)
-        print(
-            f"- logEntry: {type(e).__name__}  -> event: {type(ev).__name__ if ev else None}"
-        )
+        print(f"- logEntry: {type(e).__name__}  -> event: {type(ev).__name__ if ev else None}")
         if ev and hasattr(ev, "orderState") and ev.orderState:
             print("  orderState fields:")
             print(json.dumps(as_plain(ev.orderState), indent=2))

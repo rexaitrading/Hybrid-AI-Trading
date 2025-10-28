@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-import os, argparse, json, pathlib
-from typing import List, Dict, Any
+
+import argparse
+import json
+import os
+import pathlib
+from typing import Any, Dict, List
 
 from hybrid_ai_trading.runners.paper_config import load_config
 from hybrid_ai_trading.runners.paper_logger import JsonlLogger
 from hybrid_ai_trading.runners.paper_quantcore import run_once
 from hybrid_ai_trading.utils.backtest_io import load_csv, row_to_snapshot
+
 
 def main():
     ap = argparse.ArgumentParser("Backtest Replay")
@@ -24,7 +29,7 @@ def main():
     for row in load_csv(args.input):
         snap = row_to_snapshot(row)
         totals["rows"] += 1
-        if not snap.get("symbol"): 
+        if not snap.get("symbol"):
             continue
         buf.append(snap)
         if len(buf) >= args.batch:
@@ -43,6 +48,7 @@ def main():
         logger.info("bt_batch", size=len(buf), decisions=n)
 
     print(json.dumps({"summary": totals}, indent=2))
+
 
 if __name__ == "__main__":
     main()

@@ -47,9 +47,7 @@ def test_latency_applied(mock_sleep):
 # ---------------- Limit / Stop Orders ----------------
 def test_limit_order_rejection():
     sim = PaperSimulator(slippage=0.0)
-    result = sim.simulate_fill(
-        "AAPL", "BUY", 10, 105, order_type="limit", limit_price=100
-    )
+    result = sim.simulate_fill("AAPL", "BUY", 10, 105, order_type="limit", limit_price=100)
     assert result["status"] == "rejected"
     assert result["reason"] == "limit_not_triggered"
 

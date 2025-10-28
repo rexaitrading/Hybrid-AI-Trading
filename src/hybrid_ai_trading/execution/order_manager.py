@@ -15,12 +15,14 @@ OrderManager (minimal, test-friendly)
 - active_orders list; flatten_all() returns {"status":"flattened", "flattened": True, "cancelled": N}
 - sync_portfolio logs INFO so caplog sees it
 """
-from typing import Any, Dict, Optional
+
 import logging
 import uuid
 from types import SimpleNamespace
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
+
 
 class OrderManager:
     def __init__(self, risk_mgr=None, portfolio=None, dry_run: bool = True, **kwargs) -> None:
@@ -36,7 +38,9 @@ class OrderManager:
         self.use_paper_simulator: bool = bool(kwargs.get("use_paper_simulator", False))
         self.simulator: Optional[Any] = kwargs.get("simulator")
         if self.use_paper_simulator and self.simulator is None:
-            self.simulator = SimpleNamespace(simulate_fill=lambda *a, **k: {"status": "filled", "_sim": True})
+            self.simulator = SimpleNamespace(
+                simulate_fill=lambda *a, **k: {"status": "filled", "_sim": True}
+            )
 
     def _risk_veto(self, symbol: str, side: str, qf: float, nf: float) -> Dict[str, Any] | None:
         rm = getattr(self, "risk_mgr", None)
@@ -48,13 +52,13 @@ class OrderManager:
         if callable(legacy):
             try:
                 probes = (
-                    (0.0, nf),                       # (pnl, notional)
-                    (0.0,),                          # (pnl)
-                    (0.0, side, qf, nf),             # (pnl, side, size, notional)
-                    (0.0, symbol, side, qf, nf),     # (pnl, symbol, side, size, notional)
-                    (0.0, qf),                       # (pnl, size)
-                    (0.0, side),                     # (pnl, side)
-                    tuple(),                         # ()
+                    (0.0, nf),  # (pnl, notional)
+                    (0.0,),  # (pnl)
+                    (0.0, side, qf, nf),  # (pnl, side, size, notional)
+                    (0.0, symbol, side, qf, nf),  # (pnl, symbol, side, size, notional)
+                    (0.0, qf),  # (pnl, size)
+                    (0.0, side),  # (pnl, side)
+                    tuple(),  # ()
                 )
                 for args in probes:
                     try:
@@ -62,27 +66,52 @@ class OrderManager:
                     except TypeError:
                         continue  # mismatched signature → try next
                     if isinstance(lr, tuple):
-                        ok = bool(lr[0]); reason = lr[1] if len(lr) > 1 else ""
+                        ok = bool(lr[0])
+                        reason = lr[1] if len(lr) > 1 else ""
                         if not ok:
-                            return {"status": "blocked", "reason": (reason or "Risk veto"),
-                                    "symbol": symbol, "side": side, "qty": qf, "notional": nf}
+                            return {
+                                "status": "blocked",
+                                "reason": (reason or "Risk veto"),
+                                "symbol": symbol,
+                                "side": side,
+                                "qty": qf,
+                                "notional": nf,
+                            }
                         return None
                     if isinstance(lr, dict):
                         st = str(lr.get("status", "")).lower()
-                        if st not in ("ok","filled","allow","approved","pass","true"):
-                            return {"status": "blocked", "reason": lr.get("reason", "Risk veto"),
-                                    "symbol": symbol, "side": side, "qty": qf, "notional": nf}
+                        if st not in ("ok", "filled", "allow", "approved", "pass", "true"):
+                            return {
+                                "status": "blocked",
+                                "reason": lr.get("reason", "Risk veto"),
+                                "symbol": symbol,
+                                "side": side,
+                                "qty": qf,
+                                "notional": nf,
+                            }
                         return None
                     if not bool(lr):
-                        return {"status": "blocked", "reason": "Risk veto",
-                                "symbol": symbol, "side": side, "qty": qf, "notional": nf}
+                        return {
+                            "status": "blocked",
+                            "reason": "Risk veto",
+                            "symbol": symbol,
+                            "side": side,
+                            "qty": qf,
+                            "notional": nf,
+                        }
                     return None
                 # all signatures mismatched → proceed to modern checks
             except Exception as e:
                 logger.error("RiskManager error: %s", e)
                 logging.error("RiskManager error: %s", e)
-                return {"status": "blocked", "reason": f"RiskManager error: {e}",
-                        "symbol": symbol, "side": side, "qty": qf, "notional": nf}
+                return {
+                    "status": "blocked",
+                    "reason": f"RiskManager error: {e}",
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qf,
+                    "notional": nf,
+                }
 
         # Positive attributes imply allow
         try:
@@ -94,8 +123,18 @@ class OrderManager:
             pass
 
         # Modern callable approvals (many names + flexible signatures)
-        names = ("approve_trade","approve","check","validate","decide","evaluate",
-                 "should_block","block_trade","blocks","block")
+        names = (
+            "approve_trade",
+            "approve",
+            "check",
+            "validate",
+            "decide",
+            "evaluate",
+            "should_block",
+            "block_trade",
+            "blocks",
+            "block",
+        )
         argsets = (
             (symbol, side, qf, nf),
             (symbol, qf, nf),
@@ -117,20 +156,39 @@ class OrderManager:
                 try:
                     res = func(*args)
                     if isinstance(res, tuple):
-                        ok = bool(res[0]); reason = res[1] if len(res) > 1 else ""
+                        ok = bool(res[0])
+                        reason = res[1] if len(res) > 1 else ""
                         if not ok:
-                            return {"status":"blocked","reason":(reason or "Risk veto"),
-                                    "symbol":symbol,"side":side,"qty":qf,"notional":nf}
+                            return {
+                                "status": "blocked",
+                                "reason": (reason or "Risk veto"),
+                                "symbol": symbol,
+                                "side": side,
+                                "qty": qf,
+                                "notional": nf,
+                            }
                         return None
                     if isinstance(res, dict):
-                        st = str(res.get("status","")).lower()
-                        if st in ("ok","filled","allow","approved","pass","true"):
+                        st = str(res.get("status", "")).lower()
+                        if st in ("ok", "filled", "allow", "approved", "pass", "true"):
                             return None
-                        return {"status":"blocked","reason":res.get("reason","Risk veto"),
-                                "symbol":symbol,"side":side,"qty":qf,"notional":nf}
+                        return {
+                            "status": "blocked",
+                            "reason": res.get("reason", "Risk veto"),
+                            "symbol": symbol,
+                            "side": side,
+                            "qty": qf,
+                            "notional": nf,
+                        }
                     if not bool(res):
-                        return {"status":"blocked","reason":"Risk veto",
-                                "symbol":symbol,"side":side,"qty":qf,"notional":nf}
+                        return {
+                            "status": "blocked",
+                            "reason": "Risk veto",
+                            "symbol": symbol,
+                            "side": side,
+                            "qty": qf,
+                            "notional": nf,
+                        }
                     return None
                 except TypeError as te:
                     last_te = te
@@ -138,33 +196,75 @@ class OrderManager:
                 except Exception as e:
                     logger.error("RiskManager error: %s", e)
                     logging.error("RiskManager error: %s", e)
-                    return {"status":"blocked","reason":f"RiskManager error: {e}",
-                            "symbol":symbol,"side":side,"qty":qf,"notional":nf}
+                    return {
+                        "status": "blocked",
+                        "reason": f"RiskManager error: {e}",
+                        "symbol": symbol,
+                        "side": side,
+                        "qty": qf,
+                        "notional": nf,
+                    }
             if last_te is not None:
                 logger.error("RiskManager error: %s", last_te)
                 logging.error("RiskManager error: %s", last_te)
-                return {"status":"blocked","reason":f"RiskManager signature error: {last_te}",
-                        "symbol":symbol,"side":side,"qty":qf,"notional":nf}
+                return {
+                    "status": "blocked",
+                    "reason": f"RiskManager signature error: {last_te}",
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qf,
+                    "notional": nf,
+                }
 
         # Negative attributes imply veto
         try:
-            if hasattr(rm,"allow") and not bool(getattr(rm,"allow")):
-                return {"status":"blocked","reason":"Risk veto (allow=False)",
-                        "symbol":symbol,"side":side,"qty":qf,"notional":nf}
-            if hasattr(rm,"approved") and not bool(getattr(rm,"approved")):
-                return {"status":"blocked","reason":"Risk veto (approved=False)",
-                        "symbol":symbol,"side":side,"qty":qf,"notional":nf}
-            if hasattr(rm,"block") and bool(getattr(rm,"block")):
-                return {"status":"blocked","reason":"Risk veto (block=True)",
-                        "symbol":symbol,"side":side,"qty":qf,"notional":nf}
-            if hasattr(rm,"veto") and bool(getattr(rm,"veto")):
-                return {"status":"blocked","reason":"Risk veto (veto=True)",
-                        "symbol":symbol,"side":side,"qty":qf,"notional":nf}
+            if hasattr(rm, "allow") and not bool(getattr(rm, "allow")):
+                return {
+                    "status": "blocked",
+                    "reason": "Risk veto (allow=False)",
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qf,
+                    "notional": nf,
+                }
+            if hasattr(rm, "approved") and not bool(getattr(rm, "approved")):
+                return {
+                    "status": "blocked",
+                    "reason": "Risk veto (approved=False)",
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qf,
+                    "notional": nf,
+                }
+            if hasattr(rm, "block") and bool(getattr(rm, "block")):
+                return {
+                    "status": "blocked",
+                    "reason": "Risk veto (block=True)",
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qf,
+                    "notional": nf,
+                }
+            if hasattr(rm, "veto") and bool(getattr(rm, "veto")):
+                return {
+                    "status": "blocked",
+                    "reason": "Risk veto (veto=True)",
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qf,
+                    "notional": nf,
+                }
         except Exception as e:
             logger.error("RiskManager error: %s", e)
             logging.error("RiskManager error: %s", e)
-            return {"status":"blocked","reason":f"RiskManager error: {e}",
-                    "symbol":symbol,"side":side,"qty":qf,"notional":nf}
+            return {
+                "status": "blocked",
+                "reason": f"RiskManager error: {e}",
+                "symbol": symbol,
+                "side": side,
+                "qty": qf,
+                "notional": nf,
+            }
 
         # Default: no explicit veto and no explicit approval ⇒ allow
         return None
@@ -172,19 +272,44 @@ class OrderManager:
     def place_order(self, symbol: str, side: str, qty: float, notional: float) -> Dict[str, Any]:
         # VALIDATION
         if not symbol or not isinstance(symbol, str):
-            return {"symbol": symbol, "side": side, "qty": qty, "notional": notional,
-                    "status": "rejected", "reason": "invalid_input: invalid symbol"}
+            return {
+                "symbol": symbol,
+                "side": side,
+                "qty": qty,
+                "notional": notional,
+                "status": "rejected",
+                "reason": "invalid_input: invalid symbol",
+            }
         try:
-            qf = float(qty); nf = float(notional)
+            qf = float(qty)
+            nf = float(notional)
         except Exception:
-            return {"symbol": symbol, "side": side, "qty": qty, "notional": notional,
-                    "status": "rejected", "reason": "invalid_input: qty/notional not numeric"}
+            return {
+                "symbol": symbol,
+                "side": side,
+                "qty": qty,
+                "notional": notional,
+                "status": "rejected",
+                "reason": "invalid_input: qty/notional not numeric",
+            }
         if qf <= 0 or nf <= 0:
-            return {"symbol": symbol, "side": side, "qty": qty, "notional": notional,
-                    "status": "rejected", "reason": "invalid_input: qty/notional must be > 0"}
+            return {
+                "symbol": symbol,
+                "side": side,
+                "qty": qty,
+                "notional": notional,
+                "status": "rejected",
+                "reason": "invalid_input: qty/notional must be > 0",
+            }
         if str(side).upper() not in ("BUY", "SELL"):
-            return {"symbol": symbol, "side": side, "qty": qty, "notional": notional,
-                    "status": "rejected", "reason": "invalid_input: invalid side"}
+            return {
+                "symbol": symbol,
+                "side": side,
+                "qty": qty,
+                "notional": notional,
+                "status": "rejected",
+                "reason": "invalid_input: invalid side",
+            }
 
         # RISK
         veto = self._risk_veto(symbol, side, qf, nf)
@@ -200,20 +325,47 @@ class OrderManager:
                     oid = raw.get("id") or raw.get("order_id") or (raw.get("_raw") or {}).get("id")
                 if oid:
                     self._open_ids.add(oid)
-                    self.active_orders.append({"order_id": oid, "symbol": symbol, "side": side,
-                                               "qty": qf, "notional": nf, "status": "pending"})
-                return {"symbol": symbol, "side": side, "qty": qty, "notional": notional,
-                        "status": "pending", "order_id": oid, "raw": raw}
+                    self.active_orders.append(
+                        {
+                            "order_id": oid,
+                            "symbol": symbol,
+                            "side": side,
+                            "qty": qf,
+                            "notional": nf,
+                            "status": "pending",
+                        }
+                    )
+                return {
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qty,
+                    "notional": notional,
+                    "status": "pending",
+                    "order_id": oid,
+                    "raw": raw,
+                }
             except Exception as e:
                 logger.error("OrderManager live submit error: %s", e)
-                return {"symbol": symbol, "side": side, "qty": qty, "notional": notional,
-                        "status": "error", "reason": f"live submit error: {e}"}
+                return {
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qty,
+                    "notional": notional,
+                    "status": "error",
+                    "reason": f"live submit error: {e}",
+                }
 
         # PAPER SIM PATH
         if self.dry_run and self.use_paper_simulator:
             if getattr(self, "simulator", None) is None:
-                return {"symbol": symbol, "side": side, "qty": qty, "notional": notional,
-                        "status": "error", "reason": "Simulator not initialized"}
+                return {
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qty,
+                    "notional": notional,
+                    "status": "error",
+                    "reason": "Simulator not initialized",
+                }
             try:
                 res = self.simulator.simulate_fill(symbol, side, qf, nf)
                 base = {"symbol": symbol, "side": side, "qty": qty, "notional": notional}
@@ -227,31 +379,52 @@ class OrderManager:
                         res["order_id"] = oid
                     if oid:
                         self._open_ids.add(oid)
-                        self.active_orders.append({"order_id": oid, "symbol": symbol, "side": side,
-                                                   "qty": qf, "notional": nf, "status": res.get("status","filled")})
+                        self.active_orders.append(
+                            {
+                                "order_id": oid,
+                                "symbol": symbol,
+                                "side": side,
+                                "qty": qf,
+                                "notional": nf,
+                                "status": res.get("status", "filled"),
+                            }
+                        )
                     base.update(res)
                     return base
             except Exception as e:
                 logger.error("OrderManager simulator error: %s", e)
                 logger.error("fill simulation failed: %s", e)
-                return {"symbol": symbol, "side": side, "qty": qty, "notional": notional,
-                        "status": "error", "reason": f"simulator error: {e}"}
+                return {
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qty,
+                    "notional": notional,
+                    "status": "error",
+                    "reason": f"simulator error: {e}",
+                }
 
         # GENERIC DRY-RUN PATH
         details: Dict[str, Any] = {}
         if self.dry_run and self.costs:
             try:
                 cpct = float(self.costs.get("commission_pct", 0) or 0.0)
-                cps  = float(self.costs.get("commission_per_share", 0) or 0.0)
-                sps  = float(self.costs.get("slippage_per_share", 0) or 0.0)
+                cps = float(self.costs.get("commission_per_share", 0) or 0.0)
+                sps = float(self.costs.get("slippage_per_share", 0) or 0.0)
                 commission = cpct * nf + cps * qf
-                slippage   = sps * qf
+                slippage = sps * qf
                 if commission or slippage:
                     details["commission"] = commission
-                    details["slippage"]   = slippage
+                    details["slippage"] = slippage
                     details["effective_notional"] = nf - commission - slippage
-                    logger.info("dry-run costs | symbol=%s side=%s qty=%.4f notional=%.4f commission=%.6f slippage=%.6f",
-                                symbol, side, qf, nf, commission, slippage)
+                    logger.info(
+                        "dry-run costs | symbol=%s side=%s qty=%.4f notional=%.4f commission=%.6f slippage=%.6f",
+                        symbol,
+                        side,
+                        qf,
+                        nf,
+                        commission,
+                        slippage,
+                    )
             except Exception as e:
                 logger.error("OrderManager cost calc error: %s", e)
 
@@ -261,10 +434,24 @@ class OrderManager:
             oid = "SIM-00000000"
         details["order_id"] = oid
         self._open_ids.add(oid)
-        self.active_orders.append({"order_id": oid, "symbol": symbol, "side": side,
-                                   "qty": qf, "notional": nf, "status": "filled"})
+        self.active_orders.append(
+            {
+                "order_id": oid,
+                "symbol": symbol,
+                "side": side,
+                "qty": qf,
+                "notional": nf,
+                "status": "filled",
+            }
+        )
 
-        result = {"symbol": symbol, "side": side, "qty": qty, "notional": notional, "status": "filled"}
+        result = {
+            "symbol": symbol,
+            "side": side,
+            "qty": qty,
+            "notional": notional,
+            "status": "filled",
+        }
         result["details"] = details
         return result
 
@@ -273,7 +460,9 @@ class OrderManager:
         if order_id in getattr(self, "_open_ids", set()):
             try:
                 self._open_ids.discard(order_id)
-                self.active_orders = [o for o in self.active_orders if o.get("order_id") != order_id]
+                self.active_orders = [
+                    o for o in self.active_orders if o.get("order_id") != order_id
+                ]
             except Exception:
                 pass
             return {"status": "cancelled", "order_id": order_id}

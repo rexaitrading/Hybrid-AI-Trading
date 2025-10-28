@@ -13,16 +13,16 @@
   13: - ðŸ”‘ Final normalization: "ok" â†’ "filled" for both status and reason
   14: - ðŸ”’ FIX: unknown algo now returns early as rejected (no normalization overwrite)
   15: """
-  16: 
+  16:
   17: import csv
   18: import importlib
   19: import logging
   20: import os
   21: import smtplib
   22: from typing import Any, Dict, List, Optional
-  23: 
+  23:
   24: import requests
-  25: 
+  25:
   26: from hybrid_ai_trading.execution.order_manager import OrderManager
   27: from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
   28: from hybrid_ai_trading.execution.smart_router import SmartOrderRouter
@@ -32,10 +32,10 @@
   32: from hybrid_ai_trading.risk.regime_detector import RegimeDetector
   33: from hybrid_ai_trading.risk.risk_manager import RiskManager
   34: from hybrid_ai_trading.risk.sentiment_filter import SentimentFilter
-  35: 
+  35:
   36: logger = logging.getLogger(__name__)
-  37: 
-  38: 
+  37:
+  38:
   39: class TradeEngine:
   40:     def __init__(
   41:         self,
@@ -48,11 +48,11 @@
   48:         self.portfolio = portfolio or PortfolioTracker(
   49:             self.config.get("risk", {}).get("equity", 100000.0)
   50:         )
-  51: 
+  51:
   52:         # Audit logs
   53:         self.audit_log = self.config.get("audit_log_path", "audit.csv")
   54:         self.backup_log = self.config.get("backup_log_path", "backup.csv")
-  55: 
+  55:
   56:         # Risk Manager
   57:         risk_cfg = self.config.get("risk", {})
   58:         self.risk_manager = RiskManager(
@@ -63,7 +63,7 @@
   63:             max_portfolio_exposure=risk_cfg.get("max_portfolio_exposure", 0.5),
   64:             portfolio=self.portfolio,
   65:         )
-  66: 
+  66:
   67:         # Kelly config sanitize
   68:         kelly_cfg = dict(risk_cfg.get("kelly", {}))
   69:         kelly_cfg.pop("enabled", None)
@@ -71,19 +71,19 @@
   71:             kelly_cfg = {"win_rate": 0.5, "payoff": 1.0, "fraction": 1.0}
   72:         self.kelly_sizer = KellySizer(**kelly_cfg)
   73:         self.base_fraction = kelly_cfg.get("fraction", 1.0)
-  74: 
+  74:
   75:         self.sentiment_filter = SentimentFilter(**self.config.get("sentiment", {}))
   76:         self.gatescore = GateScore(**self.config.get("gatescore", {}))
-  77: 
+  77:
   78:         self.regime_enabled = self.config.get("regime", {}).get("enabled", True)
   79:         self.regime_detector = (
   80:             RegimeDetector(**self.config.get("regime", {}))
   81:             if self.regime_enabled
   82:             else None
   83:         )
-  84: 
+  84:
   85:         self.performance_tracker = PerformanceTracker(window=50)
-  86: 
+  86:
   87:         # Execution
   88:         self.order_manager = OrderManager(
   89:             self.risk_manager,
@@ -95,14 +95,14 @@
   95:         self.router = SmartOrderRouter(
   96:             brokers or {"alpaca": self.order_manager}, self.config.get("execution", {})
   97:         )
-  98: 
+  98:
   99:     # ------------------------------------------------------------------
  100:     def _fire_alert(self, message: str) -> None:
  101:         try:
  102:             self.router._send_alert(f"Router error: {message}")
  103:         except Exception:
  104:             logger.error("Router alert dispatch failed: %s", message)
- 105: 
+ 105:
  106:     def alert(self, message: str) -> Dict[str, Any]:
  107:         results = {}
  108:         try:
@@ -115,7 +115,7 @@
  115:         except Exception as e:
  116:             results["slack"] = "error"
  117:             logger.error("Slack alert failed: %s", e)
- 118: 
+ 118:
  119:         try:
  120:             tg_bot = os.getenv(
  121:                 self.config.get("alerts", {}).get("telegram_bot_env", ""), ""
@@ -130,7 +130,7 @@
  130:         except Exception as e:
  131:             results["telegram"] = "error"
  132:             logger.error("Telegram alert failed: %s", e)
- 133: 
+ 133:
  134:         try:
  135:             email_to = os.getenv(self.config.get("alerts", {}).get("email_env", ""), "")
  136:             if email_to:
@@ -140,9 +140,9 @@
  140:         except Exception as e:
  141:             results["email"] = "error"
  142:             logger.error("Email alert failed: %s", e)
- 143: 
+ 143:
  144:         return results or {"status": "no_alerts"}
- 145: 
+ 145:
  146:     # ------------------------------------------------------------------
  147:     def _write_audit(self, row: List[Any]) -> None:
  148:         for path in [self.audit_log, self.backup_log]:
@@ -167,7 +167,7 @@
  167:                     w.writerow(row)
  168:             except Exception as e:
  169:                 logger.error("Audit write failed (%s): %s", path, e)
- 170: 
+ 170:
  171:     # ------------------------------------------------------------------
  172:     def reset_day(self) -> Dict[str, Any]:
  173:         try:
@@ -177,14 +177,14 @@
  177:                     port_status = self.portfolio.reset_day()
  178:                 except Exception as e:
  179:                     return {"status": "error", "reason": f"portfolio_reset_failed:{e}"}
- 180: 
+ 180:
  181:             risk_status = {"status": "ok"}
  182:             if hasattr(self.risk_manager, "reset_day"):
  183:                 try:
  184:                     risk_status = self.risk_manager.reset_day()
  185:                 except Exception as e:
  186:                     return {"status": "error", "reason": f"risk_reset_failed:{e}"}
- 187: 
+ 187:
  188:             if (
  189:                 port_status.get("status") == "error"
  190:                 or risk_status.get("status") == "error"
@@ -196,7 +196,7 @@
  196:             return {"status": "ok", "reason": "Daily reset complete"}
  197:         except Exception as e:
  198:             return {"status": "error", "reason": str(e)}
- 199: 
+ 199:
  200:     def adaptive_fraction(self) -> float:
  201:         try:
  202:             if not self.portfolio or not getattr(self.portfolio, "history", []):
@@ -210,7 +210,7 @@
  210:             return max(0.0, min(self.base_fraction, frac))
  211:         except Exception:
  212:             return self.base_fraction
- 213: 
+ 213:
  214:     # ------------------------------------------------------------------
  215:     def process_signal(
  216:         self,
@@ -230,7 +230,7 @@
  230:             return {"status": "ignored", "reason": "hold_signal"}
  231:         if price is None or price <= 0:
  232:             return {"status": "rejected", "reason": "invalid_price"}
- 233: 
+ 233:
  234:         # --- Guardrails
  235:         if self.portfolio.equity <= 0:
  236:             return {"status": "blocked", "reason": "equity_depleted"}
@@ -246,7 +246,7 @@
  246:                     return {"status": "blocked", "reason": "drawdown_breach"}
  247:             except Exception:
  248:                 pass
- 249: 
+ 249:
  250:         # --- Kelly
  251:         if size is None:
  252:             try:
@@ -255,7 +255,7 @@
  255:                 size = max(1, size)
  256:             except Exception:
  257:                 size = 1
- 258: 
+ 258:
  259:         # --- Algo Routing
  260:         if algo:
  261:             try:
@@ -295,24 +295,24 @@
  295:                     "status": "blocked",
  296:                     "reason": f"router_error:{result.get('reason','unknown')}",
  297:                 }
- 298: 
+ 298:
  299:         # --- Regime OVERRIDE
  300:         if not self.regime_enabled:
  301:             return {"status": "filled", "reason": "regime_disabled"}
- 302: 
+ 302:
  303:         # --- Filters BEFORE performance
  304:         try:
  305:             if not self.sentiment_filter.allow_trade(symbol, signal, price):
  306:                 return {"status": "blocked", "reason": "sentiment_veto"}
  307:         except Exception:
  308:             return {"status": "blocked", "reason": "sentiment_error"}
- 309: 
+ 309:
  310:         try:
  311:             if not self.gatescore.allow_trade(symbol, signal, price):
  312:                 return {"status": "blocked", "reason": "gatescore_veto"}
  313:         except Exception:
  314:             return {"status": "blocked", "reason": "gatescore_error"}
- 315: 
+ 315:
  316:         # --- Performance AFTER filters
  317:         try:
  318:             if self.performance_tracker.sharpe_ratio() < self.config.get(
@@ -325,17 +325,17 @@
  325:                 return {"status": "blocked", "reason": "sortino_breach"}
  326:         except Exception:
  327:             pass
- 328: 
+ 328:
  329:         # --- Normalize
  330:         allowed = {"filled", "blocked", "ignored", "rejected", "ok", "pending", "error"}
  331:         if not isinstance(result, dict) or result.get("status") not in allowed:
  332:             return {"status": "rejected", "reason": "invalid_status"}
- 333: 
+ 333:
  334:         if result.get("status") == "ok":
  335:             result["status"] = "filled"
  336:         if result.get("reason") == "ok":
  337:             result["reason"] = "normalized_ok"
- 338: 
+ 338:
  339:         try:
  340:             row = [
  341:                 os.times().elapsed,
@@ -350,9 +350,9 @@
  350:             self._write_audit(row)
  351:         except Exception as e:
  352:             logger.error("Audit log capture failed: %s", e)
- 353: 
+ 353:
  354:         return result
- 355: 
+ 355:
  356:     # ------------------------------------------------------------------
  357:     def _sector_exposure_breach(self, symbol: str) -> bool:
  358:         cap = self.config.get("risk", {}).get("intraday_sector_exposure", 1.0)
@@ -363,21 +363,21 @@
  363:             if s in tech
  364:         )
  365:         return symbol in tech and exposure / max(self.portfolio.equity, 1) >= cap
- 366: 
+ 366:
  367:     def _hedge_trigger(self, symbol: str) -> bool:
  368:         return symbol in self.config.get("risk", {}).get("hedge_rules", {}).get(
  369:             "equities_vol_spike", []
  370:         )
- 371: 
+ 371:
  372:     def get_equity(self) -> float:
  373:         return float(self.portfolio.equity)
- 374: 
+ 374:
  375:     def get_positions(self) -> Dict[str, Any]:
  376:         return self.portfolio.get_positions()
- 377: 
+ 377:
  378:     def get_history(self) -> List[Any]:
  379:         return self.portfolio.history
- 380: 
+ 380:
  381:     # ------------------------------------------------------------------
  382:     def record_trade_outcome(self, pnl: float) -> None:
  383:         """Record trade outcome into performance tracker (for archive harness)."""

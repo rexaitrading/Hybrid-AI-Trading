@@ -28,9 +28,7 @@ class MACDSignal:
         self.slow = slow
         self.signal_window = signal_window
 
-    def generate(
-        self, symbol: str, bars: List[Dict[str, float]]
-    ) -> Dict[str, Union[str, float]]:
+    def generate(self, symbol: str, bars: List[Dict[str, float]]) -> Dict[str, Union[str, float]]:
         """Generate a MACD signal from bars with close 'c'."""
         if not bars:
             logger.info("No bars provided → HOLD")
@@ -65,16 +63,10 @@ class MACDSignal:
             return {"signal": "HOLD", "reason": "nan macd"}
 
         # --- Decision Logic ---
-        if (
-            macd.iloc[-2] < signal_line.iloc[-2]
-            and macd.iloc[-1] > signal_line.iloc[-1]
-        ):
+        if macd.iloc[-2] < signal_line.iloc[-2] and macd.iloc[-1] > signal_line.iloc[-1]:
             logger.info("MACD crossover up → BUY")
             sig = "BUY"
-        elif (
-            macd.iloc[-2] > signal_line.iloc[-2]
-            and macd.iloc[-1] < signal_line.iloc[-1]
-        ):
+        elif macd.iloc[-2] > signal_line.iloc[-2] and macd.iloc[-1] < signal_line.iloc[-1]:
             logger.info("MACD crossover down → SELL")
             sig = "SELL"
         elif macd.iloc[-1] > signal_line.iloc[-1]:
@@ -102,9 +94,7 @@ def macd_signal(
     signal_window: int = 9,
 ) -> str:
     """Wrapper around MACDSignal.generate. Returns only the decision string."""
-    out = MACDSignal(fast=fast, slow=slow, signal_window=signal_window).generate(
-        "SYMBOL", bars
-    )
+    out = MACDSignal(fast=fast, slow=slow, signal_window=signal_window).generate("SYMBOL", bars)
     return out.get("signal", "HOLD")
 
 

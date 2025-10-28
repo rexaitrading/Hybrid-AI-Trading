@@ -34,7 +34,7 @@ logs/
 .ipynb_checkpoints/
 
 # data temp (keep real datasets by path, ignore temp files)
-data/*~ 
+data/*~
 
 .venv/
 # local backups / experiments

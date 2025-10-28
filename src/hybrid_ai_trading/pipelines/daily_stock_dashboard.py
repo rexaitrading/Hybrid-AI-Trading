@@ -7,6 +7,7 @@ Fetch Polygon bars, grade breakouts, export CSV+JSON, optionally place IBKR brac
 import csv
 import json
 import logging
+
 logger = logging.getLogger(__name__)
 import os
 from datetime import datetime, timedelta
@@ -27,9 +28,7 @@ except ImportError:
     StopOrder = None
 
 logger = logging.getLogger("DailyDashboard")
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 
 load_dotenv()
 POLYGON_KEY = os.getenv("POLYGON_KEY", "")

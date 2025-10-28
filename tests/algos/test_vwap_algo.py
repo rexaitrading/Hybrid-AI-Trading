@@ -32,9 +32,7 @@ def test_guard_nan_values():
 
 
 def test_guard_total_volume_non_positive():
-    assert (
-        mod.vwap_signal([{"c": 100, "v": 0}, {"c": 101, "v": 0}]) == "HOLD"
-    )  # Guard 5
+    assert mod.vwap_signal([{"c": 100, "v": 0}, {"c": 101, "v": 0}]) == "HOLD"  # Guard 5
 
 
 # -------------------- Decision paths --------------------

@@ -17,13 +17,13 @@ Backtest pipeline (TWS Paper) – robust, self-contained
     15 unexpected exception
 """
 
-import os
-import sys
-import csv
-import socket
 import argparse
+import csv
 import datetime as dt
-from typing import List, Tuple, Optional
+import os
+import socket
+import sys
+from typing import List, Optional, Tuple
 
 try:
     from ib_insync import IB, Stock, util
@@ -31,8 +31,10 @@ except Exception as e:
     sys.stderr.write(f"[ERR] ib_insync import failed: {e}\n")
     sys.exit(11)
 
+
 def ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
+
 
 def api_handshake(host: str, port: int, timeout_ms: int = 2000) -> int:
     """Return bytes read after sending 'API\\0' or -1 on error."""
@@ -55,6 +57,7 @@ def api_handshake(host: str, port: int, timeout_ms: int = 2000) -> int:
     except Exception:
         return -1
 
+
 def choose_host(port: int, timeout_ms: int = 2000) -> Optional[str]:
     """Pick a host that responds to the API handshake."""
     for host in ("::1", "localhost", "127.0.0.1"):
@@ -63,6 +66,7 @@ def choose_host(port: int, timeout_ms: int = 2000) -> Optional[str]:
         if n > 0:
             return host
     return None
+
 
 def sma(series: List[float], period: int) -> List[Optional[float]]:
     out = [None] * len(series)
@@ -79,6 +83,7 @@ def sma(series: List[float], period: int) -> List[Optional[float]]:
             out[i] = acc / period
     return out
 
+
 def backtest_sma_close(bars: List[Tuple[dt.datetime, float]], fast: int, slow: int):
     """Return (pnl_pct, trades). bars: (datetime, close)."""
     closes = [c for _, c in bars]
@@ -94,14 +99,22 @@ def backtest_sma_close(bars: List[Tuple[dt.datetime, float]], fast: int, slow: i
             continue
         t, px = bars[i]
         if pos == 0:
-            if fast_sma[i] > slow_sma[i] and fast_sma[i-1] is not None and slow_sma[i-1] is not None \
-               and fast_sma[i-1] <= slow_sma[i-1]:
+            if (
+                fast_sma[i] > slow_sma[i]
+                and fast_sma[i - 1] is not None
+                and slow_sma[i - 1] is not None
+                and fast_sma[i - 1] <= slow_sma[i - 1]
+            ):
                 pos = 1
                 entry_price = px
                 trades.append((t, "BUY", px))
         else:
-            if fast_sma[i] < slow_sma[i] and fast_sma[i-1] is not None and slow_sma[i-1] is not None \
-               and fast_sma[i-1] >= slow_sma[i-1]:
+            if (
+                fast_sma[i] < slow_sma[i]
+                and fast_sma[i - 1] is not None
+                and slow_sma[i - 1] is not None
+                and fast_sma[i - 1] >= slow_sma[i - 1]
+            ):
                 pos = 0
                 pnl += (px - entry_price) / entry_price
                 trades.append((t, "SELL", px))
@@ -112,6 +125,7 @@ def backtest_sma_close(bars: List[Tuple[dt.datetime, float]], fast: int, slow: i
         trades.append((bars[-1][0], "SELL_EOD", last_px))
 
     return pnl * 100.0, trades
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Hybrid AI Trading - Backtest (TWS Paper)")
@@ -148,7 +162,9 @@ def main() -> int:
 
     ib = IB()
     try:
-        print(f"[ib] Connecting to {host}:{port} (clientId={client_id}, timeout={args.timeout}) ...")
+        print(
+            f"[ib] Connecting to {host}:{port} (clientId={client_id}, timeout={args.timeout}) ..."
+        )
         ok = ib.connect(host, port, clientId=client_id, timeout=args.timeout)
         if not ok or not ib.isConnected():
             sys.stderr.write("[ERR] ib.connect returned False / not connected\n")
@@ -164,7 +180,9 @@ def main() -> int:
         sys.stderr.write(f"[WARN] reqMarketDataType failed: {e}\n")
 
     contract = Stock(args.symbol, args.exchange, args.currency)
-    print(f"[ib] Requesting historical data: {args.symbol} {args.duration} {args.barSize} {args.whatToShow}")
+    print(
+        f"[ib] Requesting historical data: {args.symbol} {args.duration} {args.barSize} {args.whatToShow}"
+    )
     try:
         bars = ib.reqHistoricalData(
             contract,
@@ -174,7 +192,7 @@ def main() -> int:
             whatToShow=args.whatToShow,
             useRTH=False,
             formatDate=1,
-            keepUpToDate=False
+            keepUpToDate=False,
         )
     except Exception as e:
         sys.stderr.write(f"[ERR] reqHistoricalData failed: {e}\n")
@@ -182,13 +200,20 @@ def main() -> int:
         return 13
 
     if not bars:
-        sys.stderr.write("[ERR] No bars returned (check permissions / symbol / whatToShow / duration)\n")
+        sys.stderr.write(
+            "[ERR] No bars returned (check permissions / symbol / whatToShow / duration)\n"
+        )
         ib.disconnect()
         return 14
 
     series = []
     for b in bars:
-        series.append((b.date if isinstance(b.date, dt.datetime) else util.parseIBDatetime(b.date), float(b.close)))
+        series.append(
+            (
+                b.date if isinstance(b.date, dt.datetime) else util.parseIBDatetime(b.date),
+                float(b.close),
+            )
+        )
 
     pnl_pct, trades = backtest_sma_close(series, args.fast, args.slow)
 
@@ -218,6 +243,7 @@ def main() -> int:
         pass
     return 0
 
+
 if __name__ == "__main__":
     try:
         rc = main()
@@ -231,4 +257,3 @@ if __name__ == "__main__":
 
 
 from hybrid_ai_trading.common.market import fetch_bars
-

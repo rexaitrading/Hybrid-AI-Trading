@@ -7,9 +7,7 @@ from hybrid_ai_trading.strategies.eth1h_runner import ETH1HRunner, RunnerConfig
 
 def main():
     # Kraken data + Kraken broker; still virtual_fills=True (no keys needed)
-    cfg = RunnerConfig(
-        exchange="kraken", symbol="ETH/USD", broker="kraken", virtual_fills=True
-    )
+    cfg = RunnerConfig(exchange="kraken", symbol="ETH/USD", broker="kraken", virtual_fills=True)
     logger = TradeLogger()
     risk = RiskManager()
     kelly = KellySizer()

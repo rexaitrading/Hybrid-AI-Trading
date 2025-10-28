@@ -1,12 +1,19 @@
 import os
+
 import pytest
-from hybrid_ai_trading.data.clients.benzinga_client import BenzingaClient, BenzingaAPIError
+
+from hybrid_ai_trading.data.clients.benzinga_client import (
+    BenzingaAPIError,
+    BenzingaClient,
+)
+
 
 @pytest.fixture(autouse=True)
 def clear_benzinga_env(monkeypatch):
     # Make this module immune to suite-wide env or dotenv loaders
     for k in ("BENZINGA_KEY", "BENZINGA_API_KEY"):
         monkeypatch.delenv(k, raising=False)
+
 
 def test_init_with_env_and_missing(monkeypatch):
     """Init: picks up env key or raises if missing."""

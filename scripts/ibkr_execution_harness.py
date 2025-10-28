@@ -134,11 +134,7 @@ def main(
         contract = Stock(symbol, "SMART", "USD")
 
         # Market entry or limit entry
-        order = (
-            LimitOrder(side, qty, entry_price)
-            if entry_price
-            else MarketOrder(side, qty)
-        )
+        order = LimitOrder(side, qty, entry_price) if entry_price else MarketOrder(side, qty)
 
         # Risk check
         last_price = ib.reqMktData(contract, "", False, False).last or entry_price or 0
@@ -157,9 +153,7 @@ def main(
             )
             for o in bracket:
                 ib.placeOrder(contract, o)
-            logger.info(
-                "📊 Bracket placed: stop=%.2f target=%.2f", stop_price, target_price
-            )
+            logger.info("📊 Bracket placed: stop=%.2f target=%.2f", stop_price, target_price)
 
         # Wait for updates
         ib.sleep(5)

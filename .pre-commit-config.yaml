@@ -1,9 +1,18 @@
-﻿repos:
+exclude: |
+  (?x)(
+    ^archive/
+    |^archive_legacy_pkg_.*?/
+    |^archive_.*/        # any archive_ prefix
+    |^\.logs/
+    |^\.tmp_pytest_cache/
+    |^research-env/
+  )
+repos:
 - repo: https://github.com/psf/black
   rev: 24.8.0
   hooks: [{id: black, args: ["--line-length","100"]}]
 - repo: https://github.com/PyCQA/isort
-  rev: 5.13.2
+  rev: 7.0.0
   hooks: [{id: isort, args: ["--profile","black"]}]
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.6.0

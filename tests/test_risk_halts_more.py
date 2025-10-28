@@ -96,12 +96,8 @@ def test_cooldown_expires_and_clears_reason():
     tmp = tempfile.mkstemp(suffix=".json")[1]
     rm = make_rm(tmp, max_consecutive_losers=1, cooldown_bars=2)
     rm.record_close_pnl(-10.0, bar_ts_ms=1_000_000)  # start cooldown
-    ok, reason = rm.allow_trade(
-        notional=10.0, side="BUY", bar_ts=1_000_000 + 1 * 3600_000
-    )
+    ok, reason = rm.allow_trade(notional=10.0, side="BUY", bar_ts=1_000_000 + 1 * 3600_000)
     assert not ok
-    ok, reason = rm.allow_trade(
-        notional=10.0, side="BUY", bar_ts=1_000_000 + 3 * 3600_000
-    )
+    ok, reason = rm.allow_trade(notional=10.0, side="BUY", bar_ts=1_000_000 + 3 * 3600_000)
     assert ok
     assert rm._state["halted_reason"] is None

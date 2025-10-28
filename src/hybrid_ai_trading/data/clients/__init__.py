@@ -16,14 +16,14 @@ exception handling across all data client modules.
 from .alpaca_client import AlpacaClient
 from .benzinga_client import BenzingaClient
 from .coinapi_client import CoinAPIClient
-from .polygon_client import PolygonClient
 from .errors import (
-    DataClientError,
     AlpacaAPIError,
     BenzingaAPIError,
     CoinAPIError,
+    DataClientError,
     PolygonAPIError,
 )
+from .polygon_client import PolygonClient
 
 __all__ = [
     # Clients

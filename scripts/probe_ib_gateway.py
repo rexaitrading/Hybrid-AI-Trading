@@ -58,9 +58,7 @@ def try_connect(host, port, cid, label="primary"):
             contract = Stock("AAPL", "SMART", "USD")
             ticker = ib.reqMktData(contract, "", snapshot=True)
             ib.sleep(2.0)  # wait for snapshot
-            print(
-                f"AAPL snapshot -> last: {ticker.last} bid: {ticker.bid} ask: {ticker.ask}"
-            )
+            print(f"AAPL snapshot -> last: {ticker.last} bid: {ticker.bid} ask: {ticker.ask}")
 
             # --- What-If order (no real trade) ---
             order = MarketOrder("BUY", 1)

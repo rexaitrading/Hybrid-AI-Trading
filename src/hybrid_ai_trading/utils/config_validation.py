@@ -1,15 +1,18 @@
 from __future__ import annotations
+
 from typing import Any, Dict
 
 from hybrid_ai_trading.risk.sentiment_filter import SentimentFilter
 
 _ALLOWED_MODES = {"paper", "live"}
 
+
 def _as_float(x: Any, name: str) -> float:
     try:
         return float(x)
     except Exception:
         raise ValueError(f"Invalid {name}: {x!r}")
+
 
 def validate_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -49,7 +52,9 @@ def validate_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
     # sentiment block
     sent = dict(out.get("sentiment", {})) if isinstance(out.get("sentiment", {}), dict) else {}
     model = str(sent.get("model", "vader")).lower()
-    allowed = getattr(SentimentFilter, "_ALLOWED_MODELS", {"vader","hf","transformers","bert","distilbert"})
+    allowed = getattr(
+        SentimentFilter, "_ALLOWED_MODELS", {"vader", "hf", "transformers", "bert", "distilbert"}
+    )
     if model not in allowed:
         raise ValueError(f"Invalid sentiment.model={model!r}. Allowed: {sorted(list(allowed))}")
     sent["model"] = model

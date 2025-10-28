@@ -94,9 +94,7 @@ class RegimeDetector:
             avg_return = float(rets.mean())
             vol = float(rets.std())
         except Exception as e:
-            logger.error(
-                "Return stats failed for %s: %s â†’ returning neutral", symbol, e
-            )
+            logger.error("Return stats failed for %s: %s â†’ returning neutral", symbol, e)
             return "neutral"
 
         # --- Classification ---
@@ -173,9 +171,7 @@ class RegimeDetector:
         self.history.clear()
 
     # ------------------------------------------------------------------
-    def _get_prices(
-        self, symbol: str, prices: Optional[List[float]] = None
-    ) -> pd.Series:
+    def _get_prices(self, symbol: str, prices: Optional[List[float]] = None) -> pd.Series:
         """Return price series from list or DB, coerced to floats with guards."""
         if prices is not None:
             try:

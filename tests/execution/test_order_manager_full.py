@@ -99,9 +99,7 @@ def test_live_mode_success_and_failure(portfolio, risk_manager_allow):
         def submit_order(self, *a, **k):
             return {"_raw": {"id": "XYZ", "status": "ok"}}
 
-    om = OrderManager(
-        risk_manager_allow, portfolio, dry_run=False, live_client=FakeLive()
-    )
+    om = OrderManager(risk_manager_allow, portfolio, dry_run=False, live_client=FakeLive())
     res = om.place_order("AAPL", "BUY", 1, 100)
     assert res["status"] == "pending"
 
@@ -109,18 +107,14 @@ def test_live_mode_success_and_failure(portfolio, risk_manager_allow):
         def submit_order(self, *a, **k):
             raise RuntimeError("live fail")
 
-    om2 = OrderManager(
-        risk_manager_allow, portfolio, dry_run=False, live_client=BadLive()
-    )
+    om2 = OrderManager(risk_manager_allow, portfolio, dry_run=False, live_client=BadLive())
     res2 = om2.place_order("AAPL", "BUY", 1, 100)
     assert res2["status"] == "error"
     assert "live fail" in res2["reason"]
 
 
 def test_paper_simulator_fill_and_error(portfolio, risk_manager_allow):
-    om = OrderManager(
-        risk_manager_allow, portfolio, dry_run=True, use_paper_simulator=True
-    )
+    om = OrderManager(risk_manager_allow, portfolio, dry_run=True, use_paper_simulator=True)
 
     # Patch simulator to return filled
     om.simulator.simulate_fill = lambda *a, **k: {
@@ -142,9 +136,7 @@ def test_paper_simulator_fill_and_error(portfolio, risk_manager_allow):
 
 
 def test_paper_simulator_not_initialized(portfolio, risk_manager_allow):
-    om = OrderManager(
-        risk_manager_allow, portfolio, dry_run=True, use_paper_simulator=True
-    )
+    om = OrderManager(risk_manager_allow, portfolio, dry_run=True, use_paper_simulator=True)
     om.simulator = None
     res = om.place_order("AAPL", "BUY", 1, 10)
     assert res["status"] == "error"

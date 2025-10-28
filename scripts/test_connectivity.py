@@ -159,9 +159,7 @@ if __name__ == "__main__":
 
         pk, ps = os.getenv("PAPER_NEW_KEY"), os.getenv("PAPER_NEW_SECRET")
         if not pk or not ps:
-            raise RuntimeError(
-                "Paper keys missing: set PAPER_NEW_KEY and PAPER_NEW_SECRET in .env"
-            )
+            raise RuntimeError("Paper keys missing: set PAPER_NEW_KEY and PAPER_NEW_SECRET in .env")
         client = TradingClient(pk, ps, paper=True)
         acct = client.get_account()
         return f"paper=True equity={acct.equity} cash={acct.cash}"
@@ -204,17 +202,9 @@ if __name__ == "__main__":
         notes.append("IBKR market data fallback used")
     # More helpful notes for common errors:
     for r in results:
-        if (
-            r["provider"] == "Alpaca"
-            and r["error"]
-            and "unauthorized" in r["error"].lower()
-        ):
+        if r["provider"] == "Alpaca" and r["error"] and "unauthorized" in r["error"].lower():
             notes.append("Alpaca unauthorized (check PAPER_NEW_KEY/SECRET)")
-        if (
-            r["provider"] == "Kraken"
-            and r["error"]
-            and "permission" in r["error"].lower()
-        ):
+        if r["provider"] == "Kraken" and r["error"] and "permission" in r["error"].lower():
             notes.append("Kraken permission denied (enable Query Funds)")
 
     print(

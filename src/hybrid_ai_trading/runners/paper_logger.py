@@ -1,14 +1,38 @@
 ﻿from __future__ import annotations
-import json, os, time, threading
+
+import json
+import os
+import threading
+import time
 from typing import Any, Dict, Optional
 
-_RESERVED = {"msg","args","levelname","levelno","pathname","filename","module",
-             "exc_info","exc_text","stack_info","lineno","funcName","created",
-             "msecs","relativeCreated","thread","threadName","processName","process"}
+_RESERVED = {
+    "msg",
+    "args",
+    "levelname",
+    "levelno",
+    "pathname",
+    "filename",
+    "module",
+    "exc_info",
+    "exc_text",
+    "stack_info",
+    "lineno",
+    "funcName",
+    "created",
+    "msecs",
+    "relativeCreated",
+    "thread",
+    "threadName",
+    "processName",
+    "process",
+}
+
 
 def _ts() -> str:
     # ISO8601 with seconds; monotonic not needed for simple JSONL
     return time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
+
 
 class JsonlLogger:
     """
@@ -19,6 +43,7 @@ class JsonlLogger:
         log.error("route_error", error="...")
     Each call writes one compact JSON object per line.
     """
+
     def __init__(self, path: str, flush: bool = True) -> None:
         self.path = path
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)

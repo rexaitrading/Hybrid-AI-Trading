@@ -26,9 +26,7 @@ def today_count(logf):
 
 def once():
     env = os.environ.copy()
-    return subprocess.call(
-        [sys.executable, "scripts/gate_pick_and_trade_once.py"], env=env
-    )
+    return subprocess.call([sys.executable, "scripts/gate_pick_and_trade_once.py"], env=env)
 
 
 logf = f"logs/trades_{date.today():%Y%m%d}.csv"

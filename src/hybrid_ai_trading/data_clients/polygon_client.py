@@ -1,15 +1,19 @@
-import json, urllib.request, urllib.error
+import json
+import urllib.error
+import urllib.request
 from typing import Any, Dict
+
 
 class Client:
     """
     Minimal Polygon client for equities, some currencies, and CL1! best-effort.
     kwargs: key (api key), base (e.g., https://api.polygon.io)
     """
+
     def __init__(self, key: str, base: str = "https://api.polygon.io", **_):
         if not key or not base:
             raise ValueError("polygon_client.Client requires key and base")
-        self.key  = key
+        self.key = key
         self.base = base.rstrip("/")
 
     def _http_json(self, url: str, headers=None, timeout=6) -> Dict[str, Any]:

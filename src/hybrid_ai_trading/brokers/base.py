@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Protocol, Any, Dict, Optional, Tuple, List
+
+from typing import Any, Dict, List, Optional, Protocol, Tuple
+
 
 class Broker(Protocol):
     def connect(self) -> bool: ...

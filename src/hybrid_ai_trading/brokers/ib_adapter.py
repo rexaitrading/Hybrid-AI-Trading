@@ -1,17 +1,22 @@
 from __future__ import annotations
+
 from typing import Any, Dict, List, Optional, Tuple
+
 from .base import Broker
 
 try:
-    from ib_insync import IB, Stock, MarketOrder, LimitOrder
+    from ib_insync import IB, LimitOrder, MarketOrder, Stock
 except Exception as e:  # pragma: no cover
     IB = None
     _import_error = e
 else:
     _import_error = None
 
+
 class IBAdapter(Broker):
-    def __init__(self, host: str="127.0.0.1", port: int=4002, client_id: int=201, timeout: int=15):
+    def __init__(
+        self, host: str = "127.0.0.1", port: int = 4002, client_id: int = 201, timeout: int = 15
+    ):
         if _import_error:
             raise RuntimeError(f"ib_insync not available: {_import_error!r}")
         self.host = host
@@ -41,9 +46,9 @@ class IBAdapter(Broker):
         symbol: str,
         side: str,
         qty: float,
-        order_type: str="MARKET",
-        limit_price: Optional[float]=None,
-        meta: Optional[Dict[str, Any]]=None,
+        order_type: str = "MARKET",
+        limit_price: Optional[float] = None,
+        meta: Optional[Dict[str, Any]] = None,
     ) -> Tuple[int, Dict[str, Any]]:
         contract = Stock(symbol, "SMART", "USD")
         if order_type.upper() == "LIMIT":
@@ -68,21 +73,25 @@ class IBAdapter(Broker):
         out: List[Dict[str, Any]] = []
         for oo in self.ib.openTrades():
             st = oo.orderStatus
-            out.append({
-                "orderId": oo.order.orderId,
-                "symbol": getattr(oo.contract, "symbol", None),
-                "side": oo.order.action,
-                "qty": float(oo.order.totalQuantity or 0),
-                "status": st.status,
-            })
+            out.append(
+                {
+                    "orderId": oo.order.orderId,
+                    "symbol": getattr(oo.contract, "symbol", None),
+                    "side": oo.order.action,
+                    "qty": float(oo.order.totalQuantity or 0),
+                    "status": st.status,
+                }
+            )
         return out
 
     def positions(self) -> List[Dict[str, Any]]:
         pos = []
         for p in self.ib.positions():
-            pos.append({
-                "symbol": getattr(p.contract, "symbol", None),
-                "position": float(p.position or 0),
-                "avgCost": float(p.avgCost or 0.0),
-            })
+            pos.append(
+                {
+                    "symbol": getattr(p.contract, "symbol", None),
+                    "position": float(p.position or 0),
+                    "avgCost": float(p.avgCost or 0.0),
+                }
+            )
         return pos

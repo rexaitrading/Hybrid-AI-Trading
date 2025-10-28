@@ -23,14 +23,10 @@ def score_headlines_for_symbols(
     """Return {'date_from', 'total', 'per_symbol': {SYM: {...}}, 'stories': [...] }"""
     with open("config/config.yaml", "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
-    hours_back = (
-        int(cfg.get("sweep_hours_back", 24)) if hours_back is None else hours_back
-    )
+    hours_back = int(cfg.get("sweep_hours_back", 24)) if hours_back is None else hours_back
     limit = int(cfg.get("sweep_limit", 100)) if limit is None else limit
 
-    date_from = (datetime.now(timezone.utc) - timedelta(hours=hours_back)).strftime(
-        "%Y-%m-%d"
-    )
+    date_from = (datetime.now(timezone.utc) - timedelta(hours=hours_back)).strftime("%Y-%m-%d")
     stories = aggregate_news(symbols_csv, limit, date_from)
 
     filt = SentimentFilter()  # uses YAML defaults + lexicon
@@ -62,9 +58,7 @@ def score_headlines_for_symbols(
         }
         out_stories.append(rec)
         for sym in in_watch:
-            d = per_symbol.setdefault(
-                sym, {"seen": 0, "allowed": 0, "blocked": 0, "avgScore": 0.0}
-            )
+            d = per_symbol.setdefault(sym, {"seen": 0, "allowed": 0, "blocked": 0, "avgScore": 0.0})
             d["seen"] += 1
             if allow:
                 d["allowed"] += 1

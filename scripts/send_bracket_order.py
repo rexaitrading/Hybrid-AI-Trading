@@ -169,9 +169,7 @@ def main():
 
     # Parent first: LMT if ticks, else MARKET
     parent = (
-        LimitOrder("BUY", QTY, lmt, tif=TIF)
-        if mode == "LMT"
-        else MarketOrder("BUY", QTY, tif=TIF)
+        LimitOrder("BUY", QTY, lmt, tif=TIF) if mode == "LMT" else MarketOrder("BUY", QTY, tif=TIF)
     )
     parent.transmit = False
 

@@ -1,5 +1,7 @@
 # ==== BEGIN CONNECT PATCH (do not remove) ====
-import os, sys, time
+import os
+import sys
+import time
 
 IB_TIMEOUT = int(os.environ.get('IB_TIMEOUT', '10'))
 
@@ -28,22 +30,21 @@ def ib_connect_hardened(ib, host, port, client_id, timeout=None):
         print("[loop] connected on retry with cid+1"); return True
     print("[loop] connect failed after two attempts")
     return False
-# ==== END CONNECT PATCH ====
-import os, time, sys, datetime as dt
-import time
-import sys
-import time
-from typing import Dict, Any, List
+import datetime as dt
 
-from ib_insync import IB, util, Stock
-import yaml
-import time
+# ==== END CONNECT PATCH ====
+import os
 import sys
 import time
+from typing import Any, Dict, List
+
+import yaml
 
 from hybrid_ai_trading.common.market import fetch_bars
-from hybrid_ai_trading.strategies.equity_momo import momo_signal
 from hybrid_ai_trading.execution.route_ib import RiskConfig, place_entry
+from hybrid_ai_trading.strategies.equity_momo import momo_signal
+from ib_insync import IB, Stock, util
+
 
 def load_cfg(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
@@ -52,9 +53,10 @@ def load_cfg(path: str) -> Dict[str, Any]:
 def inside_window(tz_name: str, start_hhmm: str, end_hhmm: str) -> bool:
     try:
         import zoneinfo
-import time
+
 import sys
 import time
+
         tz = zoneinfo.ZoneInfo(tz_name)
         now = dt.datetime.now(tz)
     except Exception:
@@ -191,10 +193,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-
-
-
-
-

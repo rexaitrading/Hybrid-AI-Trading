@@ -249,18 +249,14 @@ btnConnect = ttk.Button(frm, text="Connect", command=connect)
 btnConnect.grid(row=row, column=0, pady=6, sticky="we")
 btnDisconnect = ttk.Button(frm, text="Disconnect", command=disconnect, state="disabled")
 btnDisconnect.grid(row=row, column=1, pady=6, sticky="we")
-ttk.Button(frm, text="Quote", command=quote_only).grid(
-    row=row, column=2, pady=6, sticky="we"
-)
+ttk.Button(frm, text="Quote", command=quote_only).grid(row=row, column=2, pady=6, sticky="we")
 ttk.Button(frm, text="BUY (IOC)", command=lambda: send("BUY")).grid(
     row=row, column=3, pady=6, sticky="we"
 )
 ttk.Button(frm, text="SELL (IOC)", command=lambda: send("SELL")).grid(
     row=row, column=4, pady=6, sticky="we"
 )
-ttk.Button(frm, text="Flatten", command=flatten_symbol).grid(
-    row=row, column=5, pady=6, sticky="we"
-)
+ttk.Button(frm, text="Flatten", command=flatten_symbol).grid(row=row, column=5, pady=6, sticky="we")
 
 row += 1
 out = scrolledtext.ScrolledText(frm, height=16, width=100, state="disabled")

@@ -49,9 +49,7 @@ def engine(base_config, monkeypatch):
 # Normalization paths
 # ----------------------------------------------------------------------
 def test_normalization_reason_ok(engine, monkeypatch):
-    monkeypatch.setattr(
-        engine.router, "route_order", lambda *_: {"status": "ok", "reason": "ok"}
-    )
+    monkeypatch.setattr(engine.router, "route_order", lambda *_: {"status": "ok", "reason": "ok"})
     res = engine.process_signal("AAPL", "BUY", 1, 100)
     assert res["status"] == "filled"
     assert res["reason"] == "normalized_ok"

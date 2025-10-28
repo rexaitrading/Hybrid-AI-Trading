@@ -60,9 +60,7 @@ def test_api_error_branch(mock_get, signal):
 @patch("hybrid_ai_trading.signals.breakout_polygon.requests.get")
 def test_unexpected_api_format(mock_get, signal):
     """Guard: Polygon returns unexpected JSON → returns empty list."""
-    mock_get.return_value = MagicMock(
-        status_code=200, json=lambda: {"results": {"oops": 123}}
-    )
+    mock_get.return_value = MagicMock(status_code=200, json=lambda: {"results": {"oops": 123}})
     result = signal._get_polygon_bars("AAPL")
     assert result == []
 

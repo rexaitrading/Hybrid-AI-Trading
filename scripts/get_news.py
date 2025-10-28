@@ -1,12 +1,21 @@
 # get_news.py — UTF-8 (no BOM)
-import sys, json, argparse, time, re
+import argparse
+import json
+import re
+import sys
+import time
 from datetime import datetime, timedelta, timezone
+
 from ib_insync import IB, Stock
 
-def iso_utc(dt=None): return (dt or datetime.now(timezone.utc)).isoformat()
+
+def iso_utc(dt=None):
+    return (dt or datetime.now(timezone.utc)).isoformat()
+
 
 class _ErrCatcher:
     """Capture IB error codes during a guarded call, optionally squelch 321 lines."""
+
     def __init__(self, ib: IB, squelch_codes=None):
         self.ib = ib
         self.codes = []
@@ -31,40 +40,53 @@ class _ErrCatcher:
         if code in self.squelch:
             return  # swallow this one silently
 
+
 def main():
     ap = argparse.ArgumentParser(description="Poll IBKR news for symbols")
-    ap.add_argument('symbols', nargs='*', help='Symbols (e.g. AAPL NVDA MSFT)')
-    ap.add_argument('--host', default='127.0.0.1')
-    ap.add_argument('--port', type=int, default=4002)
-    ap.add_argument('--clientId', type=int, default=106)
-    ap.add_argument('--providers', default='', help='Comma list like BRF,DJNL,FLY; empty=auto-prune by entitlements')
-    ap.add_argument('--lookbackMin', type=int, default=30, help='Initial history window (minutes)')
-    ap.add_argument('--poll', type=float, default=5.0, help='Poll interval seconds; 0=single run')
-    ap.add_argument('--maxResults', type=int, default=50, help='Max historical items per request')
-    ap.add_argument('--withBody', action='store_true', help='Fetch full article body (slower)')
-    ap.add_argument('--json', action='store_true', help='Emit JSON lines (one object per line)')
-    ap.add_argument('--mergeShape', action='store_true', help='Emit {"ts":..,"news":[...]}, one object then exit')
+    ap.add_argument("symbols", nargs="*", help="Symbols (e.g. AAPL NVDA MSFT)")
+    ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--port", type=int, default=4002)
+    ap.add_argument("--clientId", type=int, default=106)
+    ap.add_argument(
+        "--providers",
+        default="",
+        help="Comma list like BRF,DJNL,FLY; empty=auto-prune by entitlements",
+    )
+    ap.add_argument("--lookbackMin", type=int, default=30, help="Initial history window (minutes)")
+    ap.add_argument("--poll", type=float, default=5.0, help="Poll interval seconds; 0=single run")
+    ap.add_argument("--maxResults", type=int, default=50, help="Max historical items per request")
+    ap.add_argument("--withBody", action="store_true", help="Fetch full article body (slower)")
+    ap.add_argument("--json", action="store_true", help="Emit JSON lines (one object per line)")
+    ap.add_argument(
+        "--mergeShape",
+        action="store_true",
+        help='Emit {"ts":..,"news":[...]}, one object then exit',
+    )
     args = ap.parse_args()
 
-    syms = args.symbols or ['AAPL']
+    syms = args.symbols or ["AAPL"]
     ib = IB()
     try:
         ib.connect(args.host, args.port, clientId=args.clientId, timeout=30)
         if not ib.isConnected():
-            print("ERROR: cannot connect to IB API", file=sys.stderr); sys.exit(2)
+            print("ERROR: cannot connect to IB API", file=sys.stderr)
+            sys.exit(2)
 
         # Contracts (symbol -> conId)
         contracts = {}
         for s in syms:
             try:
-                cds = ib.reqContractDetails(Stock(s, 'SMART', 'USD')) or []
-                if cds: contracts[s] = cds[0].contract.conId
-                else:   print(f"WARN: no contract for {s}", file=sys.stderr)
+                cds = ib.reqContractDetails(Stock(s, "SMART", "USD")) or []
+                if cds:
+                    contracts[s] = cds[0].contract.conId
+                else:
+                    print(f"WARN: no contract for {s}", file=sys.stderr)
             except Exception as e:
                 print(f"WARN: contract lookup failed for {s}: {e}", file=sys.stderr)
 
         if not contracts:
-            print("ERROR: no valid contracts", file=sys.stderr); sys.exit(3)
+            print("ERROR: no valid contracts", file=sys.stderr)
+            sys.exit(3)
 
         # Providers offered by IB
         try:
@@ -76,7 +98,7 @@ def main():
 
         # Choose providers
         if args.providers:
-            want = {c.strip() for c in args.providers.split(',') if c.strip()}
+            want = {c.strip() for c in args.providers.split(",") if c.strip()}
             prov_codes = sorted(list(want & available_set))
         else:
             prov_codes = sorted(list(available_set))
@@ -84,8 +106,10 @@ def main():
         # Auto-prune (drop non-entitled providers; silence 321)
         if prov_codes:
             sample_conId = next(iter(contracts.values()))
-            start_probe = (datetime.now(timezone.utc) - timedelta(minutes=2)).strftime('%Y%m%d %H:%M:%S')
-            end_probe   = datetime.now(timezone.utc).strftime('%Y%m%d %H:%M:%S')
+            start_probe = (datetime.now(timezone.utc) - timedelta(minutes=2)).strftime(
+                "%Y%m%d %H:%M:%S"
+            )
+            end_probe = datetime.now(timezone.utc).strftime("%Y%m%d %H:%M:%S")
             keep = []
             for code in prov_codes:
                 try:
@@ -98,11 +122,16 @@ def main():
 
         # If none left, emit empty payload and exit cleanly
         if not prov_codes:
-            payload = {'ts': iso_utc(), 'connected': True, 'providers': [], 'news': []}
+            payload = {"ts": iso_utc(), "connected": True, "providers": [], "news": []}
             if args.mergeShape:
                 print(json.dumps(payload, ensure_ascii=False))
             elif args.json:
-                print(json.dumps({'ts': payload['ts'], 'note': 'no entitled news providers'}, ensure_ascii=False))
+                print(
+                    json.dumps(
+                        {"ts": payload["ts"], "note": "no entitled news providers"},
+                        ensure_ascii=False,
+                    )
+                )
             else:
                 print(f"[{payload['ts']}] no entitled news providers")
             return
@@ -114,35 +143,43 @@ def main():
             batch = []
             for sym, conId in contracts.items():
                 try:
-                    items = ib.reqHistoricalNews(conId,
-                                                 ','.join(prov_codes),
-                                                 window_start.strftime('%Y%m%d %H:%M:%S'),
-                                                 window_end.strftime('%Y%m%d %H:%M:%S'),
-                                                 args.maxResults) or []
+                    items = (
+                        ib.reqHistoricalNews(
+                            conId,
+                            ",".join(prov_codes),
+                            window_start.strftime("%Y%m%d %H:%M:%S"),
+                            window_end.strftime("%Y%m%d %H:%M:%S"),
+                            args.maxResults,
+                        )
+                        or []
+                    )
                 except Exception as e:
                     print(f"WARN: historical news failed for {sym}: {e}", file=sys.stderr)
                     continue
 
                 for n in items:
                     key = (sym, n.providerCode, n.articleId)
-                    if key in seen: continue
+                    if key in seen:
+                        continue
                     seen.add(key)
                     body = None
                     if args.withBody:
                         try:
                             art = ib.reqNewsArticle(n.providerCode, n.articleId)
-                            body = getattr(art, 'articleText', None)
+                            body = getattr(art, "articleText", None)
                         except Exception:
                             body = None
-                    batch.append({
-                        'ts': iso_utc(),
-                        'symbol': sym,
-                        'provider': n.providerCode,
-                        'articleId': n.articleId,
-                        'time': n.time,               # IBKR server time string
-                        'headline': n.headline,
-                        'body': body
-                    })
+                    batch.append(
+                        {
+                            "ts": iso_utc(),
+                            "symbol": sym,
+                            "provider": n.providerCode,
+                            "articleId": n.articleId,
+                            "time": n.time,  # IBKR server time string
+                            "headline": n.headline,
+                            "body": body,
+                        }
+                    )
             return batch
 
         # One pass
@@ -150,16 +187,19 @@ def main():
         batch = fetch_batch(start_ts, now)
 
         if args.mergeShape:
-            out = {'ts': iso_utc(), 'connected': True, 'providers': prov_codes, 'news': batch}
+            out = {"ts": iso_utc(), "connected": True, "providers": prov_codes, "news": batch}
             print(json.dumps(out, ensure_ascii=False))
             return
 
         def emit(blobs):
             if args.json:
-                for it in blobs: print(json.dumps(it, ensure_ascii=False))
+                for it in blobs:
+                    print(json.dumps(it, ensure_ascii=False))
             else:
                 for it in blobs:
-                    print(f"[{it['ts']}] {it['symbol']:>6} {it['provider']} {it['articleId']} :: {it['headline']}")
+                    print(
+                        f"[{it['ts']}] {it['symbol']:>6} {it['provider']} {it['articleId']} :: {it['headline']}"
+                    )
 
         emit(batch)
 
@@ -177,5 +217,6 @@ def main():
         if ib.isConnected():
             ib.disconnect()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

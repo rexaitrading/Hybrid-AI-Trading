@@ -1,6 +1,10 @@
-import time, threading, sys
+import sys
+import threading
+import time
+
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
+
 
 class App(EWrapper, EClient):
     def __init__(self):
@@ -29,10 +33,11 @@ class App(EWrapper, EClient):
     def connectionClosed(self):
         print("callback: connectionClosed", flush=True)
 
+
 def main():
     app = App()
     cid = int(time.time()) % 7000 + 1000
-    print("connect_try", {"host":"127.0.0.1", "port":7497, "clientId":cid}, flush=True)
+    print("connect_try", {"host": "127.0.0.1", "port": 7497, "clientId": cid}, flush=True)
     try:
         app.connect("127.0.0.1", 7497, clientId=cid)
     except Exception as e:
@@ -47,6 +52,7 @@ def main():
     if app.isConnected():
         app.disconnect()
     time.sleep(0.5)
+
 
 if __name__ == "__main__":
     main()

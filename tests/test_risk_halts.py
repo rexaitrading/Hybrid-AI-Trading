@@ -45,13 +45,9 @@ def test_cooldown_after_loser():
     rm.record_close_pnl(-10.0, bar_ts_ms=1_000_000)
     ok, reason = rm.allow_trade(notional=10.0, side="BUY", bar_ts=1_000_000)
     assert not ok  # cooldown starts at this bar
-    ok, reason = rm.allow_trade(
-        notional=10.0, side="BUY", bar_ts=1_000_000 + 2 * 3600_000
-    )
+    ok, reason = rm.allow_trade(notional=10.0, side="BUY", bar_ts=1_000_000 + 2 * 3600_000)
     assert not ok  # still within 2 bars
-    ok, reason = rm.allow_trade(
-        notional=10.0, side="BUY", bar_ts=1_000_000 + 3 * 3600_000
-    )
+    ok, reason = rm.allow_trade(notional=10.0, side="BUY", bar_ts=1_000_000 + 3 * 3600_000)
     assert ok
 
 

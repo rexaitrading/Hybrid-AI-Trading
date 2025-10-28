@@ -100,8 +100,6 @@ def test_final_paths_last_error_and_default(monkeypatch):
 
     # default path: no last_error ever set -> all_brokers_failed
     r2 = R({"a": object(), "b": object()}, {"execution": {"max_order_retries": 1}})
-    monkeypatch.setattr(
-        r2.latency_monitor, "measure", lambda f: {"latency": 0.001, "result": None}
-    )
+    monkeypatch.setattr(r2.latency_monitor, "measure", lambda f: {"latency": 0.001, "result": None})
     out2 = r2.route_order("SYM", "BUY", 1, 1.0)
     assert out2 == {"status": "blocked", "reason": "all_brokers_failed"}

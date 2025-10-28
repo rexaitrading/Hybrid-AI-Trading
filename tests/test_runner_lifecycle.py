@@ -35,16 +35,10 @@ def isolate_tmp_logs(tmp_path, monkeypatch):
 
 def test_open_then_close_with_alerts(monkeypatch):
     calls = []
-    monkeypatch.setattr(
-        Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False
-    )
+    monkeypatch.setattr(Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False)
 
-    cfg = RunnerConfig(
-        exchange="binance", symbol="ETH/USDT", broker="binance", virtual_fills=True
-    )
-    tl = TradeLogger(
-        jsonl_path="logs/trades.jsonl", csv_path=None, text_log_path="logs/trades.log"
-    )
+    cfg = RunnerConfig(exchange="binance", symbol="ETH/USDT", broker="binance", virtual_fills=True)
+    tl = TradeLogger(jsonl_path="logs/trades.jsonl", csv_path=None, text_log_path="logs/trades.log")
     r = ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
 
     ts1 = 1_700_000_000_000
@@ -67,13 +61,9 @@ def test_open_then_close_with_alerts(monkeypatch):
 
 def test_risk_halt_alert(monkeypatch):
     calls = []
-    monkeypatch.setattr(
-        Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False
-    )
+    monkeypatch.setattr(Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False)
 
-    cfg = RunnerConfig(
-        exchange="binance", symbol="ETH/USDT", broker="binance", virtual_fills=True
-    )
+    cfg = RunnerConfig(exchange="binance", symbol="ETH/USDT", broker="binance", virtual_fills=True)
     tl = TradeLogger(
         jsonl_path="logs/trades2.jsonl", csv_path=None, text_log_path="logs/trades2.log"
     )

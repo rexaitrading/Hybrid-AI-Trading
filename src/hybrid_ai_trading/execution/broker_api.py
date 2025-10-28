@@ -1,5 +1,3 @@
-
-
 def place_limit(symbol: str, side: str, qty: int, limit_price: float):
     """
     Places a limit order via router (IBKR primary -> Alpaca fallback).

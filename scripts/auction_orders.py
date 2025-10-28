@@ -69,9 +69,7 @@ def place(symbol: str, side: str, qty: int, kind: str, limit: float = None):
             if limit is None:
                 print("[ABORT] LOC requires limit")
                 return
-            o = Order(
-                action=side, orderType="LOC", lmtPrice=float(limit), totalQuantity=qty
-            )
+            o = Order(action=side, orderType="LOC", lmtPrice=float(limit), totalQuantity=qty)
         else:
             print(f"[ABORT] unknown kind={kind}")
             return

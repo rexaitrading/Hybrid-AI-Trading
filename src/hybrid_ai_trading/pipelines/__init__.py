@@ -17,5 +17,6 @@ except Exception as e:  # noqa: BLE001
 
 __all__ = ["daily_close"]
 
+
 def note_fill_failure_phrase():
     logger.error("fill simulation failed")

@@ -108,8 +108,7 @@ def dedupe_open_orders(
     same = [
         t
         for t in ib.reqOpenOrders()
-        if getattr(t.contract, "symbol", None) == symbol
-        and t.order.action.upper() == side
+        if getattr(t.contract, "symbol", None) == symbol and t.order.action.upper() == side
     ]
     if not same:
         return [], []
@@ -129,9 +128,7 @@ def dedupe_open_orders(
     return kept, cancelled
 
 
-def whatif_validate(
-    ib: IB, contract: Contract, order: LimitOrder
-) -> Tuple[bool, Optional[str]]:
+def whatif_validate(ib: IB, contract: Contract, order: LimitOrder) -> Tuple[bool, Optional[str]]:
     trial = LimitOrder(order.action, order.totalQuantity, order.lmtPrice)
     trial.tif = order.tif
     trial.outsideRth = getattr(order, "outsideRth", None)
@@ -145,10 +142,7 @@ def whatif_validate(
         if getattr(log, "errorCode", 0):
             err = f"{log.errorCode}: {log.message}"
             break
-    ok = (
-        tr.orderStatus.status in ("PreSubmitted", "ApiPending", "Submitted")
-        and err is None
-    )
+    ok = tr.orderStatus.status in ("PreSubmitted", "ApiPending", "Submitted") and err is None
     return ok, err
 
 
@@ -201,9 +195,7 @@ def place_bracket(
     take.outsideRth = bool(outside_rth)
     take.orderRef = order_ref
 
-    sl_lmt = (
-        round(sl_price - off, 2) if child_action == "SELL" else round(sl_price + off, 2)
-    )
+    sl_lmt = round(sl_price - off, 2) if child_action == "SELL" else round(sl_price + off, 2)
     stop = StopLimitOrder(child_action, qty, sl_price, sl_lmt)
     stop.tif = tif
     stop.parentId = parent_id
@@ -400,9 +392,7 @@ def run(
                 **placed,
                 "event": "replaced",
                 "lmt": lmt2,
-                "permId": int(
-                    tr_parent2.orderStatus.permId or tr_parent2.order.orderId or 0
-                ),
+                "permId": int(tr_parent2.orderStatus.permId or tr_parent2.order.orderId or 0),
             }
             print("Replaced:", placed2)
             _jsonl(placed2)
@@ -431,9 +421,7 @@ def run(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
-        description="Protective LIMIT + Adaptive + Bracket OCO with guards"
-    )
+    p = argparse.ArgumentParser(description="Protective LIMIT + Adaptive + Bracket OCO with guards")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=7497)
     p.add_argument("--client-id", type=int, default=2001)

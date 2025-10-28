@@ -79,10 +79,7 @@ class IBKRClient(BrokerClient):
         t = self.ib.placeOrder(c, o)
         self.ib.sleep(0.5)
         order_id = str(t.order.orderId)
-        fills = [
-            {"px": f.execution.avgPrice, "qty": f.execution.shares}
-            for f in (t.fills() or [])
-        ]
+        fills = [{"px": f.execution.avgPrice, "qty": f.execution.shares} for f in (t.fills() or [])]
         return order_id, {"status": t.orderStatus.status, "fills": fills}
 
     def disconnect(self):
@@ -122,19 +119,12 @@ class BinanceClient(BrokerClient):
         side = side.upper()
         params = meta or {}
         if order_type.upper() == "MARKET":
-            resp = self.ex.create_order(
-                symbol, "market", side.lower(), qty, params=params
-            )
+            resp = self.ex.create_order(symbol, "market", side.lower(), qty, params=params)
         else:
             resp = self.ex.create_order(
                 symbol, "limit", side.lower(), qty, price=limit_px, params=params
             )
-        oid = str(
-            resp.get("id")
-            or resp.get("orderId")
-            or resp.get("clientOrderId")
-            or "unknown"
-        )
+        oid = str(resp.get("id") or resp.get("orderId") or resp.get("clientOrderId") or "unknown")
         return oid, {"raw": resp}
 
 
@@ -169,14 +159,10 @@ class KrakenClient(BrokerClient):
         side = side.upper()
         params = meta or {}
         if order_type.upper() == "MARKET":
-            resp = self.ex.create_order(
-                symbol, "market", side.lower(), qty, params=params
-            )
+            resp = self.ex.create_order(symbol, "market", side.lower(), qty, params=params)
         else:
             resp = self.ex.create_order(
                 symbol, "limit", side.lower(), qty, price=limit_px, params=params
             )
-        oid = str(
-            resp.get("id") or resp.get("txid") or resp.get("clientOrderId") or "unknown"
-        )
+        oid = str(resp.get("id") or resp.get("txid") or resp.get("clientOrderId") or "unknown")
         return oid, {"raw": resp}

@@ -43,6 +43,4 @@ if __name__ == "__main__":
     print("âœ… Saved:", out_path, "items:", len(data.get("earnings", [])))
 
     # æ›´æ–° checkpoint
-    save_checkpoint(
-        "earnings_day_ckpt", dt.date.fromisoformat(end).strftime("%Y-%m-%d")
-    )
+    save_checkpoint("earnings_day_ckpt", dt.date.fromisoformat(end).strftime("%Y-%m-%d"))

@@ -148,8 +148,12 @@ def test_export_failures(monkeypatch, tmp_path, caplog):
     with caplog.at_level("ERROR"):
         daily_close.main()
     assert "json" in caplog.text.lower()
+
+
 def test_main_entrypoint_runs(tmp_path):
-    import os, sys, subprocess
+    import os
+    import subprocess
+    import sys
 
     env = os.environ.copy()
     env["COINAPI_STUB"] = "1"
@@ -174,4 +178,8 @@ def test_main_entrypoint_runs(tmp_path):
     if combined_output.strip() == "":
         assert result.returncode == 0
     else:
-        assert ("Exported" in combined_output) or ("📂" in combined_output) or ("ðŸ“‚" in combined_output)
+        assert (
+            ("Exported" in combined_output)
+            or ("📂" in combined_output)
+            or ("ðŸ“‚" in combined_output)
+        )

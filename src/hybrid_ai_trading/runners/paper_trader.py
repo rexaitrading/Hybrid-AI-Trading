@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import sys
+
 """
 Provider-only fast path (before preflight)
 """
@@ -8,17 +10,17 @@ Provider-only fast path (before preflight)
 import os
 import time
 import types
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from ib_insync import Stock
+import hybrid_ai_trading.runners.paper_quantcore as qc
+from hybrid_ai_trading.execution.route_exec import place_entry as route_place_entry
+from hybrid_ai_trading.runners.paper_config import load_config
+from hybrid_ai_trading.runners.paper_logger import JsonlLogger
+from hybrid_ai_trading.runners.paper_utils import apply_mdt
 from hybrid_ai_trading.utils.ib_conn import ib_session
 from hybrid_ai_trading.utils.preflight import sanity_probe
-from hybrid_ai_trading.runners.paper_utils import apply_mdt
-from hybrid_ai_trading.runners.paper_logger import JsonlLogger
-from hybrid_ai_trading.runners.paper_config import load_config
-import hybrid_ai_trading.runners.paper_quantcore as qc
+from ib_insync import Stock
 
-from hybrid_ai_trading.execution.route_exec import place_entry as route_place_entry
 ALLOW_TRADE_WHEN_CLOSED = os.environ.get("ALLOW_TRADE_WHEN_CLOSED", "0") == "1"
 contracts = {}
 
@@ -68,8 +70,9 @@ def _qc_run_once(symbols, snapshots, cfg, logger):
     price_map = {}
     try:
         price_map = {
-            (s.get("symbol") if isinstance(s, dict) else None):
-            (s.get("price") if isinstance(s, dict) else None)
+            (s.get("symbol") if isinstance(s, dict) else None): (
+                s.get("price") if isinstance(s, dict) else None
+            )
             for s in (snapshots or [])
             if isinstance(s, dict) and s.get("symbol")
         }
@@ -97,8 +100,11 @@ def _qc_run_once(symbols, snapshots, cfg, logger):
 def build_universe(cfg: Dict[str, Any], override: str = "") -> list[str]:
     symbols: List[str] = []
     try:
-        base = (cfg.get("universe") if isinstance(cfg, dict) else None) or \
-               (cfg.get("equities") if isinstance(cfg, dict) else None) or []
+        base = (
+            (cfg.get("universe") if isinstance(cfg, dict) else None)
+            or (cfg.get("equities") if isinstance(cfg, dict) else None)
+            or []
+        )
         if isinstance(base, str):
             base = [x.strip() for x in base.split(",") if x.strip()]
         if isinstance(base, list):
@@ -111,22 +117,27 @@ def build_universe(cfg: Dict[str, Any], override: str = "") -> list[str]:
             if x and x not in symbols:
                 symbols.append(x)
     return symbols
+
+
 def _norm_approval(a):
     try:
         if isinstance(a, dict):
-            return {"approved": bool(a.get("approved")), "reason": str(a.get("reason",""))}
+            return {"approved": bool(a.get("approved")), "reason": str(a.get("reason", ""))}
         if isinstance(a, (tuple, list)) and a:
-            ok = bool(a[0]); rs = "" if len(a)<2 else str(a[1])
+            ok = bool(a[0])
+            rs = "" if len(a) < 2 else str(a[1])
             return {"approved": ok, "reason": rs}
         if isinstance(a, bool):
             return {"approved": a, "reason": ""}
     except Exception:
         pass
     return {"approved": False, "reason": "normalize_error"}
+
+
 def _riskhub_checks(snapshots, result, logger):
     """Call RiskHub for each decision; log-only (no order placement)."""
     try:
-        from hybrid_ai_trading.utils.risk_client import check_decision, RISK_HUB_URL
+        from hybrid_ai_trading.utils.risk_client import RISK_HUB_URL, check_decision
     except Exception as e:
         logger.info("risk_checks", items=[], note=f"risk_client_unavailable: {e}")
         return
@@ -135,8 +146,9 @@ def _riskhub_checks(snapshots, result, logger):
     price_map = {}
     try:
         price_map = {
-            (s.get("symbol") if isinstance(s, dict) else None):
-            (s.get("price") if isinstance(s, dict) else None)
+            (s.get("symbol") if isinstance(s, dict) else None): (
+                s.get("price") if isinstance(s, dict) else None
+            )
             for s in (snapshots or [])
             if isinstance(s, dict) and s.get("symbol")
         }
@@ -153,7 +165,7 @@ def _riskhub_checks(snapshots, result, logger):
         else:
             sym = d.get("symbol") if isinstance(d, dict) else None
             dec = d if isinstance(d, dict) else {}
-        ks  = dec.get("kelly_size") or {}
+        ks = dec.get("kelly_size") or {}
         try:
             qty = float(ks.get("qty") or dec.get("qty") or 0.0)
         except Exception:
@@ -164,8 +176,11 @@ def _riskhub_checks(snapshots, result, logger):
             px = 0.0
         notion = qty * px
         resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, "BUY")
-        checks.append({"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp})
+        checks.append(
+            {"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp}
+        )
     logger.info("risk_checks", items=checks)
+
 
 def _provider_price_map(symbols):
     """Minimal provider map stub: returns empty prices (None)."""
@@ -173,6 +188,7 @@ def _provider_price_map(symbols):
         return {s: None for s in (symbols or [])}
     except Exception:
         return {}
+
 
 def _apply_provider_prices(snapshots, prov_map, *, override=False):
     """If override, fill snapshot['price'] from prov_map when available."""
@@ -190,6 +206,8 @@ def _apply_provider_prices(snapshots, prov_map, *, override=False):
     except Exception:
         return list(snapshots or [])
     return out
+
+
 def _provider_only_run(args, cfg, symbols, logger):
     """Run once using providers only (no IB session)."""
     prov_map = _provider_price_map(symbols)
@@ -208,6 +226,8 @@ def _provider_only_run(args, cfg, symbols, logger):
     logger.info("once_done", note="provider-only run", result=result)
     print("provider-only run")
     return 0
+
+
 def _inject_provider_cli(args):
     """
     Ensure CLI flags work even if the main parser didn't define them.
@@ -229,6 +249,8 @@ def _inject_provider_cli(args):
         except Exception:
             pass
     return args
+
+
 def _merge_provider_flags(args, cfg, rm=None):
     """Merge provider-only/prefer-providers flags from cfg + CLI (CLI wins)."""
     cfg = dict(cfg or {})
@@ -238,7 +260,7 @@ def _merge_provider_flags(args, cfg, rm=None):
         except Exception:
             pass
     cfg_provider_only = bool(cfg.get("provider_only", False))
-    cfg_prefer_prov   = bool(cfg.get("prefer_providers", False))
+    cfg_prefer_prov = bool(cfg.get("prefer_providers", False))
     if getattr(args, "provider_only", None) is True:
         cfg_provider_only = True
     if getattr(args, "prefer_providers", None) is True:
@@ -247,22 +269,29 @@ def _merge_provider_flags(args, cfg, rm=None):
     cfg["prefer_providers"] = cfg_prefer_prov
     return cfg
 
+
 # --- appended clean overrides: paper_trader runtime-safe definitions ---
 def _snap(ib, sym: str):
     c = contracts[sym]
     t = ib.ticker(c)
-    price = t.last or t.marketPrice() or getattr(t, "close", None) or getattr(t, "vwap", None) or None
+    price = (
+        t.last or t.marketPrice() or getattr(t, "close", None) or getattr(t, "vwap", None) or None
+    )
     return {
         "symbol": sym,
         "price": float(price) if price is not None else None,
         "bid": float(t.bid) if getattr(t, "bid", None) is not None else None,
         "ask": float(t.ask) if getattr(t, "ask", None) is not None else None,
         "last": float(t.last) if getattr(t, "last", None) is not None else None,
-        "close": float(getattr(t, "close", None)) if getattr(t, "close", None) is not None else None,
+        "close": (
+            float(getattr(t, "close", None)) if getattr(t, "close", None) is not None else None
+        ),
         "vwap": float(getattr(t, "vwap", None)) if getattr(t, "vwap", None) is not None else None,
         "volume": float(getattr(t, "volume", 0.0) or 0.0),
         "ts": ib.serverTime().isoformat() if hasattr(ib, "serverTime") else None,
     }
+
+
 def _merge_provider_flags(args, cfg, rm=None):
     """Merge provider-only/prefer-providers flags from cfg + CLI (CLI wins)."""
     cfg = dict(cfg or {})
@@ -272,14 +301,15 @@ def _merge_provider_flags(args, cfg, rm=None):
         except Exception:
             pass
     cfg_provider_only = bool(cfg.get("provider_only", False))
-    cfg_prefer_prov   = bool(cfg.get("prefer_providers", False))
+    cfg_prefer_prov = bool(cfg.get("prefer_providers", False))
     if getattr(args, "provider_only", None) is True:
         cfg_provider_only = True
     if getattr(args, "prefer_providers", None) is True:
         cfg_prefer_prov = True
-    cfg["provider_only"]    = cfg_provider_only
+    cfg["provider_only"] = cfg_provider_only
     cfg["prefer_providers"] = cfg_prefer_prov
     return cfg
+
 
 def _provider_only_run(args, cfg, symbols, logger):
     """Run once using providers only (no IB session)."""
@@ -295,6 +325,8 @@ def _provider_only_run(args, cfg, symbols, logger):
     _riskhub_checks(snapshots, result, logger)
     logger.info("once_done", note="provider-only run", result=result)
     return 0
+
+
 def run_paper_session(args) -> int:
     """
     Clean runtime-safe implementation that passes smoke tests.
@@ -319,7 +351,9 @@ def run_paper_session(args) -> int:
 
     # ---- Preflight ----
     force = bool(ALLOW_TRADE_WHEN_CLOSED or getattr(args, "dry_drill", False))
-    probe = sanity_probe(symbol="AAPL", qty=1, cushion=0.10, allow_ext=True, force_when_closed=force)
+    probe = sanity_probe(
+        symbol="AAPL", qty=1, cushion=0.10, allow_ext=True, force_when_closed=force
+    )
     if not probe.get("ok"):
         raise RuntimeError(f"Preflight failed: {probe}")
 
@@ -328,7 +362,11 @@ def run_paper_session(args) -> int:
         return 0
     logger.info("preflight", probe=probe, universe=symbols)
 
-    if not probe["session"]["ok_time"] and force and not getattr(args, "snapshots_when_closed", False):
+    if (
+        not probe["session"]["ok_time"]
+        and force
+        and not getattr(args, "snapshots_when_closed", False)
+    ):
         logger.info("drill_only", note="market closed; forced preflight ran; skipping trading")
         return 0
     with ib_session() as ib:
@@ -365,6 +403,7 @@ def run_paper_session(args) -> int:
             logger.info("decision_snapshot", result=result)
             time.sleep(sleep_sec)
 
+
 # --- end appended clean overrides ---
 
 
@@ -387,12 +426,21 @@ def _route_decisions_via_exec(result, risk_mgr, logger, limit_pad_bps: int = 5):
                 dec = d if isinstance(d, dict) else {}
 
             side = str(dec.get("side") or "BUY").upper()
-            ks   = dec.get("kelly_size") or {}
-            qty  = int(ks.get("qty") or dec.get("qty") or 0)
+            ks = dec.get("kelly_size") or {}
+            qty = int(ks.get("qty") or dec.get("qty") or 0)
             limit_px = float(dec.get("limit") or dec.get("price") or 0.0)
 
-            if not sym or qty <= 0 or side not in ("BUY","SELL") or limit_px <= 0.0:
-                routed.append({"symbol": sym, "status": "skip", "reason": "bad_inputs", "side": side, "qty": qty, "limit": limit_px})
+            if not sym or qty <= 0 or side not in ("BUY", "SELL") or limit_px <= 0.0:
+                routed.append(
+                    {
+                        "symbol": sym,
+                        "status": "skip",
+                        "reason": "bad_inputs",
+                        "side": side,
+                        "qty": qty,
+                        "limit": limit_px,
+                    }
+                )
                 continue
 
             # risk gate
@@ -400,25 +448,52 @@ def _route_decisions_via_exec(result, risk_mgr, logger, limit_pad_bps: int = 5):
                 ok, reason = True, ""
                 gate = getattr(risk_mgr, "approve_trade", None)
                 if callable(gate):
-                    g = gate(sym, side, qty, float(qty)*limit_px)
+                    g = gate(sym, side, qty, float(qty) * limit_px)
                     if isinstance(g, dict):
-                        ok, reason = bool(g.get("approved")), str(g.get("reason",""))
+                        ok, reason = bool(g.get("approved")), str(g.get("reason", ""))
                     elif isinstance(g, (tuple, list)) and g:
-                        ok, reason = bool(g[0]), ("" if len(g)<2 else str(g[1]))
+                        ok, reason = bool(g[0]), ("" if len(g) < 2 else str(g[1]))
                     else:
                         ok, reason = bool(g), ""
                 if not ok:
-                    routed.append({"symbol": sym, "status": "veto", "reason": reason, "side": side, "qty": qty, "limit": limit_px})
+                    routed.append(
+                        {
+                            "symbol": sym,
+                            "status": "veto",
+                            "reason": reason,
+                            "side": side,
+                            "qty": qty,
+                            "limit": limit_px,
+                        }
+                    )
                     continue
             except Exception as e:
-                routed.append({"symbol": sym, "status": "error", "reason": f"risk:{e}", "side": side, "qty": qty, "limit": limit_px})
+                routed.append(
+                    {
+                        "symbol": sym,
+                        "status": "error",
+                        "reason": f"risk:{e}",
+                        "side": side,
+                        "qty": qty,
+                        "limit": limit_px,
+                    }
+                )
                 continue
 
             try:
                 resp = route_place_entry(sym, side, qty, limit_px, risk_manager=risk_mgr)
                 routed.append({"symbol": sym, **(resp or {})})
             except Exception as e:
-                routed.append({"symbol": sym, "status": "error", "reason": f"route:{e}", "side": side, "qty": qty, "limit": limit_px})
+                routed.append(
+                    {
+                        "symbol": sym,
+                        "status": "error",
+                        "reason": f"route:{e}",
+                        "side": side,
+                        "qty": qty,
+                        "limit": limit_px,
+                    }
+                )
 
         logger.info("route_result", items=routed)
         return routed
