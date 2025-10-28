@@ -1,8 +1,10 @@
-# === HAT-GLOBAL LOGGER SAFETY via sitecustomize (idempotent) ===
+# === HAT GLOBAL SAFETY via sitecustomize (idempotent) ===
+# Auto-loaded because PYTHONPATH includes ./src in CI.
 from __future__ import annotations
 import importlib, os, sys, types
 
-_MARKER = "__hat_safe_logger_patched__"
+_MARKER_LOGGER = "__hat_safe_logger_patched__"
+_MARKER_DIRNAME = "__hat_safe_dirname_patched__"
 
 def _ensure_report_dir(base: str | None = None) -> str:
     base = base or os.environ.get("HAT_REPORT_DIR") or os.environ.get("GITHUB_WORKSPACE") or ""
@@ -31,18 +33,18 @@ def _patch_paper_logger():
                 import json
                 try: s = json.dumps(obj, ensure_ascii=False)
                 except Exception: s = '{"log_error":"non-serializable object","repr":%r}' % (obj,)
-                self._fh.write(s + "\n")
+                self._fh.write(s + "\\n")
             def close(self):
                 try: self._fh.close()
                 except Exception: pass
         sys.modules["hybrid_ai_trading.runners.paper_logger"] = types.SimpleNamespace(
             JsonlLogger=_FallbackJsonlLogger,
-            __dict__={_MARKER: True}
+            __dict__={_MARKER_LOGGER: True}
         )
         print("[sitecustomize] HAT: paper_logger fallback active", file=sys.stderr)
         return
 
-    if getattr(m, _MARKER, False):
+    if getattr(m, _MARKER_LOGGER, False):
         return  # idempotent
 
     base_cls = getattr(m, "JsonlLogger", None)
@@ -53,10 +55,36 @@ def _patch_paper_logger():
                 super().__init__(path, *a, **kw)
         m.JsonlLogger = _SafeJsonlLogger  # type: ignore[misc]
 
-    setattr(m, _MARKER, True)
-    print("[sitecustomize] HAT: paper_logger patched (global-safe)", file=sys.stderr)
+    setattr(m, _MARKER_LOGGER, True)
+    print("[sitecustomize] HAT: paper_logger patched", file=sys.stderr)
 
+def _patch_os_path_dirname():
+    # Guard only once
+    if getattr(os.path, _MARKER_DIRNAME, False):
+        return
+    _orig_dirname = os.path.dirname
+    def _safe_dirname(value):
+        # Accept None / invalid -> return '' instead of raising TypeError
+        try:
+            if value is None:
+                return ""
+            return _orig_dirname(os.fspath(value))
+        except Exception:
+            return ""
+    os.path.dirname = _safe_dirname  # type: ignore[assignment]
+    setattr(os.path, _MARKER_DIRNAME, True)
+    print("[sitecustomize] HAT: os.path.dirname patched globally", file=sys.stderr)
+
+# Execute patches; never block interpreter startup
 try:
+    _patch_os_path_dirname()
     _patch_paper_logger()
+    # Drop a sentinel proving we ran
+    try:
+      sentinel = os.path.join(_ensure_report_dir(), "sitecustomize_loaded.txt")
+      with open(sentinel, "a", encoding="utf-8") as fh:
+          fh.write("loaded\\n")
+    except Exception:
+      pass
 except Exception as e:
     print("[sitecustomize] HAT: patch failed:", repr(e), file=sys.stderr)
