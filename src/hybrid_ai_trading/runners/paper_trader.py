@@ -3,6 +3,19 @@ from __future__ import annotations
 # Light-weight import layer to keep test import safe (no hard deps at import time)
 import os, sys, time, types
 from typing import List, Dict, Any
+contracts = {}  # module-level cache for qualified contracts
+def _resolve_log_path(args):
+    import os
+    lp = getattr(args, "log_file", None) or os.getenv("HAT_LOG_FILE") or "logs/runner_paper.jsonl"
+    if not isinstance(lp, str) or not lp.strip():
+        lp = "logs/runner_paper.jsonl"
+    try:
+        os.makedirs(os.path.dirname(lp) or ".", exist_ok=True)
+    except Exception:
+        pass
+    return lp
+contracts = {}  # module-level cache for qualified contracts (no annotation)
+contracts = {}  # module-level cache for qualified contracts (no annotation)
 
 # ib_insync is optional during tests; provide a stub if missing
 try:
@@ -65,8 +78,7 @@ except Exception:
     def route_place_entry(*a, **k): return {"status": "simulated"}
 
 ALLOW_TRADE_WHEN_CLOSED = os.environ.get("ALLOW_TRADE_WHEN_CLOSED", "0") == "1"
-contracts: Dict[str, Any] = {}
-
+# NOTE: removed function-scoped contracts annotation; using module-level 'contracts'
 def _normalize_result(result):
     """Return a canonical dict: {'summary': {...}, 'items': [...]}."""
     try:
@@ -362,13 +374,7 @@ def run_paper_session(args) -> int:
         try: print("[CONFIG] Universe empty -> nothing to trade.")
         except Exception: pass
         return 0
-log_path = getattr(args, "log_file", None) or os.getenv("HAT_LOG_FILE") or "logs/runner_paper.jsonl"
-if not isinstance(log_path, str) or not log_path.strip():
-    log_path = "logs/runner_paper.jsonl"
-try:
-    os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
-except Exception:
-    pass
+log_path = _resolve_log_path(args)
     try: os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
     except Exception: pass
     logger = JsonlLogger(log_path)
@@ -398,8 +404,6 @@ except Exception:
         apply_mdt(ib, getattr(args, "mdt", 3))
         try: logger.info("ib_connected", account=probe.get("account"), symbols=symbols)
         except Exception: pass
-
-        global contracts
         contracts = {sym: Stock(sym, "SMART", "USD") for sym in symbols}
         for c in contracts.values():
             try: ib.reqMktData(c, "", False, False)
@@ -450,12 +454,7 @@ def _cli_main():
     else:
         args = parse_args()
 
-    try:
-        import os
-        if not getattr(args, "log_file", None):
-            setattr(args, "log_file", os.getenv("HAT_LOG_FILE") or "logs/runner_paper.jsonl")
-    except Exception:
-        pass
+
     try: args = _inject_provider_cli(args)
     except Exception: pass
 
