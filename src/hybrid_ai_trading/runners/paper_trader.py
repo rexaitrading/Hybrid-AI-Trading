@@ -288,7 +288,14 @@ def run_paper_session(args) -> int:
         os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
     except Exception:
         pass
-    logger = JsonlLogger(log_path)
+    # CI-NULL-PATH-GUARD: normalize log_path for CI and local runs
+    log_path = log_path or os.getenv("HAT_LOG_FILE")
+    if not log_path:
+        # fallback into CI report dir or workspace
+        report_dir = os.getenv("HAT_REPORT_DIR") or os.getenv("GITHUB_WORKSPACE") or "."
+        log_path = os.path.join(report_dir, "paper_runner.log")
+    os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
+    logger = JsonlLogger(log_path)  # CI-NULL-PATH-GUARD
     logger.info("run_start", cfg=cfg, symbols=symbols)
 
     # Provider-only fast path
