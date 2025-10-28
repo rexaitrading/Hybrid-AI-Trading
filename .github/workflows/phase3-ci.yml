@@ -3,142 +3,154 @@ name: Phase3 CI
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - src/main
+      - feature/phase1-bar-replay
+
+permissions:
+  contents: read
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
-  gate:
-    name: Resolve gates
-    runs-on: ubuntu-latest
-    outputs:
-      phase3: ${{ steps.out.outputs.phase3 }}
-      ibg:    ${{ steps.out.outputs.ibg }}
-    steps:
-      - id: out
-        shell: bash
-        run: |
-          echo "phase3=${{ vars.RUN_PHASE3_ENABLED }}" >> "$GITHUB_OUTPUT"
-          echo "ibg=${{ vars.RUN_IBG_INT }}" >> "$GITHUB_OUTPUT"
-
   micro-tests:
-    needs: gate
-    if: ${{ needs.gate.outputs.phase3 == 'true' || github.event_name == 'workflow_dispatch' }}
+    name: Micro tests (isolated, fast)
     runs-on: windows-latest
+    timeout-minutes: 10
+    env:
+      HAT_REPORT_DIR: ${{ github.workspace }}
+      PYTHONPATH: ${{ github.workspace }}\src
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Ensure CI dirs
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force .ci | Out-Null      - name: Prepare Git on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          git config --global user.email "ci@example.invalid"
-          git config --global user.name  "CI"
-          git config --global --add safe.directory "$PWD"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip uninstall -y hybrid-ai-trading 2> || echo not-installed
-          pip install -e .
-          python -m pip install -r requirements.txt pytest
-      - name: Micro tests (isolated, fast)
-        shell: pwsh
-        run: |
-          powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode Isolated
 
-  full-repo-cov:
-    needs: gate
-    if: ${{ needs.gate.outputs.phase3 == 'true' || github.event_name == 'workflow_dispatch' }}
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Ensure CI dirs
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force .ci | Out-Null      - name: Prepare Git on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          git config --global user.email "ci@example.invalid"
-          git config --global user.name  "CI"
-          git config --global --add safe.directory "$PWD"
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip uninstall -y hybrid-ai-trading 2> || echo not-installed
-          pip install -e .
-          python -m pip install -r requirements.txt pytest pytest-cov coverage
-      - name: Full repo tests with coverage
-        shell: pwsh
-        run: |
-          powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -WithCoverage -FailUnder 70 -JUnit
-      - name: Upload coverage html
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-html
-          path: htmlcov/**
-      - name: Upload junit
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: junit
-          path: junit.xml
 
-  ibg-integration:
-    needs: gate
-    if: ${{ (needs.gate.outputs.phase3 == 'true' || github.event_name == 'workflow_dispatch') && needs.gate.outputs.ibg == 'true' }}
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
+      - name: Cache pip
+        uses: actions/cache@v4
         with:
-          fetch-depth: 0
+          path: ~\AppData\Local\pip\Cache
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
+
       - name: Ensure CI dirs
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force .ci | Out-Null      - name: Prepare Git on Windows
-        if: runner.os == 'Windows'
+        run: New-Item -ItemType Directory -Force .ci | Out-Null
+
+      - name: Install test deps (no package install)
         shell: pwsh
         run: |
-          git config --global user.email "ci@example.invalid"
-          git config --global user.name  "CI"
-          git config --global --add safe.directory "$PWD"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip uninstall -y hybrid-ai-trading 2> || echo not-installed
-          pip install -e .
-          python -m pip install -r requirements.txt pytest ib_insync
-      - name: Gated IBG integration (requires secret toggle)
-        shell: pwsh
-        run: |
-      - name: Sanity import
+          python -m pip install -U pip wheel
+          pip install pytest pytest-cov
+
+      - name: Verify import path and source of paper_logger (micro)
         shell: pwsh
         run: |
           python - << 'PY'
-          import sys, pkgutil
-          print('PY:', sys.version)
-          print('PKG present?', pkgutil.find_loader('hybrid_ai_trading') is not None)
-          import hybrid_ai_trading as hat
-          print('PKG path:', getattr(hat, '__file__', 'n/a'))
+          import sys, importlib, inspect
+          print("sys.path[0..5]:", sys.path[:6])
+          m = importlib.import_module("hybrid_ai_trading.runners.paper_logger")
+          print("IMPORTED_FROM:", m.__file__)
+          src = inspect.getsource(m)
+          print("HAS_NORMALIZE:", "_normalize_log_path(" in src)
+          print("\\n".join(src.splitlines()[:40]))
+          if "_normalize_log_path(" not in src:
+              raise SystemExit(2)
           PY
-          powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode IBG
+
+      - name: Run micro tests
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode Isolated
+
+      - name: Upload .ci artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-micro
+          path: .ci
+          if-no-files-found: ignore
+
+  full-repo-cov:
+    name: Full repo tests with coverage
+    runs-on: windows-latest
+    needs: micro-tests
+    timeout-minutes: 20
+    env:
+      HAT_REPORT_DIR: ${{ github.workspace }}
+      PYTHONPATH: ${{ github.workspace }}\src
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
+
+      - name: Ensure CI dirs
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force .ci | Out-Null
+
+      - name: Install test deps (no package install)
+        shell: pwsh
+        run: |
+          python -m pip install -U pip wheel
+          pip install pytest pytest-cov
+
+      - name: Verify import path and source of paper_logger (coverage)
+        shell: pwsh
+        run: |
+          python - << 'PY'
+          import sys, importlib, inspect
+          print("sys.path[0..5]:", sys.path[:6])
+          m = importlib.import_module("hybrid_ai_trading.runners.paper_logger")
+          print("IMPORTED_FROM:", m.__file__)
+          src = inspect.getsource(m)
+          print("HAS_NORMALIZE:", "_normalize_log_path(" in src)
+          print("\\n".join(src.splitlines()[:40]))
+          if "_normalize_log_path(" not in src:
+              raise SystemExit(2)
+          PY
+
+      - name: Run tests + coverage
+        shell: pwsh
+        run: python -m pytest -q --cov=src --cov-report=term-missing --cov-report=xml
+
+      - name: Enforce coverage >= 70%
+        shell: pwsh
+        run: |
+          [xml]$xml = Get-Content .\coverage.xml
+          $rate = [double]$xml.coverage.'line-rate'
+          Write-Host "line-rate: $rate"
+          if ($rate -lt 0.70) { Write-Error "Coverage under 70% ($rate)"; exit 1 }
+
+      - name: Upload coverage + .ci artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-and-ci-logs
+          path: |
+            coverage.xml
+            .ci
+          if-no-files-found: ignore
