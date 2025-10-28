@@ -58,8 +58,7 @@ jobs:
               Start-Sleep -Seconds (5 * $i)
             }
           }
-
-            - name: Verify ORB hook present
+      - name: Verify ORB hook present
         run: |
           @'
 import io, sys
@@ -68,6 +67,6 @@ try:
     t = io.open(p, encoding="utf-8").read()
 except FileNotFoundError:
     raise SystemExit(f"Missing file: {p}")
-assert 'setup=""ORB""' in t, "ORB hook missing"
+assert 'setup="ORB"' in t, "ORB hook missing"
 print("OK: ORB present")
 '@ | python -
