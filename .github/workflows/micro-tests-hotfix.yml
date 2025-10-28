@@ -1,7 +1,9 @@
 name: Micro Tests Hotfix
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
+  push:
+    branches: [ "main" ]
 
 jobs:
   micro-tests-hotfix:
