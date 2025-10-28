@@ -11,6 +11,7 @@ jobs:
   micro-tests:
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +27,7 @@ jobs:
           powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode Isolated
 
   full-repo-cov:
+    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
@@ -58,6 +60,7 @@ jobs:
           path: junit.xml
 
   ibg-integration:
+    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
