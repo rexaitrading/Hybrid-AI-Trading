@@ -131,7 +131,7 @@ def main() -> int:
     # Detector shim: generate micro decisions and merge (detector overrides stub by symbol)
     if HAVE_DETECTORS:
         try:
-            bars_1m_by_symbol: Dict[str, Any] = {}  # Phase 3 will provide replay/live cache
+            bars_1m_by_symbol: Dict[str, Any] = _load_replay_bars(symbols)
             det_items = build_micro_decisions(symbols, snapshots, bars_1m_by_symbol, g)
             if det_items:
                 existing = {
