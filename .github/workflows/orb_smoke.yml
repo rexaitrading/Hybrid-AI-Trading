@@ -1,24 +1,18 @@
-on:
-  workflow_dispatch:
-
 name: ORB Smoke
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: ["**"]
   pull_request:
-    branches: [ main ]
-    types: [opened, synchronize, reopened, ready_for_review]
-  schedule:
-    - cron: "20 2 * * *"   # daily @ 02:20 UTC
+    branches: ["**"]
 
 permissions:
   contents: read
 
 concurrency:
-  group: orb-smoke-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   orb:
     runs-on: windows-latest
