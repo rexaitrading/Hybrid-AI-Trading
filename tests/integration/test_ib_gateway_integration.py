@@ -2,9 +2,9 @@ import os
 import socket
 
 import pytest
+from ib_insync import Stock
 
 from hybrid_ai_trading.utils.ib_conn import ib_session
-from ib_insync import Stock
 
 pytestmark = pytest.mark.integration
 ENVAR = "IB_TEST_ENABLE"

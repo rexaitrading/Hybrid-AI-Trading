@@ -12,9 +12,10 @@ _ROOT = _THIS_DIR.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from ib_insync import IB, Stock
+
 import hybrid_ai_trading.runners.paper_trader as M
 from hybrid_ai_trading.runners.paper_logger import JsonlLogger
-from ib_insync import IB, Stock
 
 # guardrails (package absolute import)
 try:

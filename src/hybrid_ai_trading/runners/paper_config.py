@@ -22,7 +22,7 @@ def build_parser():
     ap.add_argument(
         "--dry-drill",
         action="store_true",
-        help="DonÃ¢â‚¬â„¢t place/route orders; dry run signals only.",
+        help="DonÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢t place/route orders; dry run signals only.",
     )
     ap.add_argument(
         "--snapshots-when-closed",

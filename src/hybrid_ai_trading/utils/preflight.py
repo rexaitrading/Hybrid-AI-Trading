@@ -9,8 +9,9 @@ try:
 except Exception:
     ZoneInfo = None
 
-from hybrid_ai_trading.utils.ib_conn import ib_session
 from ib_insync import Forex, LimitOrder, Stock
+
+from hybrid_ai_trading.utils.ib_conn import ib_session
 
 
 def _managed_accounts(ib):
