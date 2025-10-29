@@ -24,6 +24,14 @@ except ModuleNotFoundError:
         sys.path.insert(0, str(_ROOT))
     from scripts.guardrails import clamp_universe, load_guardrails, vet_and_adjust
 
+# optional detectors (Phase 2 shim)
+try:
+    from hybrid_ai_trading.setups.micro_setups import build_micro_decisions
+
+    HAVE_DETECTORS = True
+except Exception:
+    HAVE_DETECTORS = False
+
 MICRO_KEYS = ("price", "bid", "ask", "bidSize", "askSize", "volume")
 
 
@@ -120,6 +128,23 @@ def main() -> int:
     # QuantCore adapter
     result: Dict[str, Any] = M._qc_run_once(symbols, snapshots, cfg, logger) or {}
 
+    # Detector shim: generate micro decisions and merge (detector overrides stub by symbol)
+    if HAVE_DETECTORS:
+        try:
+            bars_1m_by_symbol: Dict[str, Any] = {}  # Phase 3 will provide replay/live cache
+            det_items = build_micro_decisions(symbols, snapshots, bars_1m_by_symbol, g)
+            if det_items:
+                existing = {
+                    (it.get("symbol") if isinstance(it, dict) else None): it
+                    for it in (result.get("items") or [])
+                }
+                for dit in det_items:
+                    sym = dit.get("symbol")
+                    existing[sym] = dit
+                result["items"] = list(existing.values())
+        except Exception as _e:
+            logger.info("detector_error", error=str(_e))
+
     # ---- Ensure 1:1 coverage: backfill any missing symbols with explicit stubs ----
     got_syms = {
         (it.get("symbol") if isinstance(it, dict) else None) for it in (result.get("items") or [])
@@ -168,10 +193,7 @@ def main() -> int:
             sym = it.get("symbol")
             dec = dict(it.get("decision") or {})
             ok, rsn, dec2 = vet_and_adjust(sym, dec, g)
-            if ok:
-                dec2["risk_approved"] = {"approved": True, "reason": rsn}
-            else:
-                dec2["risk_approved"] = {"approved": False, "reason": rsn}
+            dec2["risk_approved"] = {"approved": bool(ok), "reason": rsn}
             it["decision"] = dec2
             patched.append(it)
         if patched:
