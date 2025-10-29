@@ -2,42 +2,51 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
+# --------- helpers for DB schema ---------
+def _get_title_prop() -> str:
+    # default to Notion's usual title column name
+    return os.getenv("NOTION_TITLE_PROP", "Name")
+
+
+def _get_ts_prop() -> Optional[str]:
+    # set NOTION_TS_PROP to your Date property name to write a timestamp; default "ts"
+    return os.getenv("NOTION_TS_PROP", "ts")
+
+
+# --------- decision flattening & status ---------
 def _flatten(d: Dict[str, Any]) -> Dict[str, Any]:
-    # handle nested structures coming from decisions
     out = dict(d or {})
-    # regime
     reg = out.get("regime")
     if isinstance(reg, dict):
-        out["regime_name"] = reg.get("regime")
-        out["regime_conf"] = reg.get("confidence")
+        out["regime_name"], out["regime_conf"] = reg.get("regime"), reg.get("confidence")
     else:
         out["regime_name"] = reg if isinstance(reg, str) else None
         out["regime_conf"] = out.get("regime_conf")
-    # sentiment
+
     sen = out.get("sentiment")
     if isinstance(sen, dict):
-        out["sentiment_val"] = sen.get("sentiment")
-        out["sent_conf"] = sen.get("confidence")
+        out["sentiment_val"], out["sent_conf"] = sen.get("sentiment"), sen.get("confidence")
     else:
         out["sentiment_val"] = sen if isinstance(sen, (int, float)) else None
         out["sent_conf"] = out.get("sent_conf")
-    # kelly
+
     ks = out.get("kelly_size") or {}
     if out.get("kelly_f") is None:
         out["kelly_f"] = ks.get("f")
+    # Only backfill qty when it's missing, not when guardrails set it to 0
     if out.get("qty") is None:
-        out["qty"] = ks.get("qty", out.get("qty", 0))
-    # reason code
+        out["qty"] = ks.get("qty")
+
     ra = out.get("risk_approved") or {}
     out["reason_code"] = ra.get("reason")
     return out
 
 
 def _is_trade_ready(d: Dict[str, Any]) -> bool:
-    # a "ready" trade has side, entry/stop/target and positive qty
     side = d.get("side")
     qty = int(d.get("qty") or 0)
     return (
@@ -52,17 +61,20 @@ def _is_trade_ready(d: Dict[str, Any]) -> bool:
 def _status_of(d: Dict[str, Any]) -> str:
     if _is_trade_ready(d):
         return "ready"
-    # blocked if qty=0 and reason_code looks like a filter
     if int(d.get("qty") or 0) == 0 and d.get("reason_code"):
         return "blocked"
     return "stub"
 
 
+# --------- Notion mapping ---------
 def _map_item_to_properties(item: Dict[str, Any]) -> Dict[str, Any]:
     sym = item.get("symbol", "")
     d = _flatten(item.get("decision", {}) or {})
-    props = {
-        "symbol": {"title": [{"text": {"content": str(sym)}}]},
+    title_prop = _get_title_prop()
+    ts_prop = _get_ts_prop()
+
+    props: Dict[str, Any] = {
+        title_prop: {"title": [{"text": {"content": str(sym or d.get("setup") or "trade")}}]},
         "setup_tag": {"multi_select": ([{"name": str(d.get("setup"))}] if d.get("setup") else [])},
         "side": {"select": ({"name": str(d.get("side"))} if d.get("side") else None)},
         "entry_px": {"number": d.get("entry_px")},
@@ -75,12 +87,13 @@ def _map_item_to_properties(item: Dict[str, Any]) -> Dict[str, Any]:
         "sentiment": {"number": d.get("sentiment_val")},
         "sent_conf": {"number": d.get("sent_conf")},
         "reason_code": {"rich_text": [{"text": {"content": str(d.get("reason_code") or "")}}]},
-        # optional extras (create these Number/Select props in Notion if you want them)
         "price": {"number": d.get("price")},
         "bid": {"number": d.get("bid")},
         "ask": {"number": d.get("ask")},
         "status": {"select": {"name": _status_of(d)}},
     }
+    if ts_prop:
+        props[ts_prop] = {"date": {"start": datetime.now(timezone.utc).isoformat()}}
     return props
 
 
@@ -93,6 +106,7 @@ def _dry_write(payload: List[Dict[str, Any]], path: str = "logs/notion_last_payl
         pass
 
 
+# --------- Public entry ---------
 def journal_batch(
     items: List[Dict[str, Any]], db_id: Optional[str], notion_token: Optional[str]
 ) -> None:
@@ -101,12 +115,10 @@ def journal_batch(
         return
 
     include_stubs = os.getenv("NOTION_INCLUDE_STUBS") == "1"
-
-    # transform + (optionally) filter to only trade-ready
     mapped = []
     for it in items:
         props = _map_item_to_properties(it)
-        status = props.get("status", {}).get("select", {}).get("name")
+        status = (props.get("status") or {}).get("select", {}).get("name")
         if include_stubs or status == "ready":
             mapped.append({"parent": {"database_id": db_id or "<missing>"}, "properties": props})
 
@@ -114,7 +126,6 @@ def journal_batch(
         _dry_write([{"note": "nothing to write (no ready items and NOTION_INCLUDE_STUBS!=1)"}])
         return
 
-    # DRY RUN if missing creds or user asked for it
     if not db_id or not notion_token or os.getenv("NOTION_DRY_RUN") == "1":
         _dry_write(mapped)
         return
