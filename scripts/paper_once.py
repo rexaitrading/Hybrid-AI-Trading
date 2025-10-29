@@ -131,7 +131,7 @@ def main() -> int:
     # Detector shim: generate micro decisions and merge (detector overrides stub by symbol)
     if HAVE_DETECTORS:
         try:
-            bars_1m_by_symbol: Dict[str, Any] = _load_replay_bars(symbols)
+            bars_1m_by_symbol: Dict[str, Any] = {}  # Phase 3 will provide replay/live cache
             det_items = build_micro_decisions(symbols, snapshots, bars_1m_by_symbol, g)
             if det_items:
                 existing = {
@@ -183,7 +183,7 @@ def main() -> int:
     snap_map = {d["symbol"]: d for d in snapshots if isinstance(d, dict) and "symbol" in d}
     result["items"] = _enrich_with_snapshots(result.get("items") or [], snap_map)
 
-    # Guardrails patch per item (force risk_approved True on OK)
+    # Guardrails patch per item (force risk_approved True/False)
     try:
         items = result.get("items") or []
         patched = []
@@ -201,8 +201,20 @@ def main() -> int:
     except Exception as _e:
         logger.info("guardrails_error", error=str(_e))
 
-    # Log finish + stdout summary
+    # Log finish
     logger.info("once_done", result=result)
+
+    # Optional Notion journaling (env-gated; dry-run supported)
+    try:
+        db_id = os.getenv("NOTION_JOURNAL_DB")
+        tok = os.getenv("NOTION_TOKEN")
+        from scripts.notion_journal import journal_batch
+
+        journal_batch(result.get("items") or [], db_id, tok)
+    except Exception as _e:
+        logger.info("notion_journal_error", error=str(_e))
+
+    # stdout summary
     print(f"{mode}: items:", len(result.get("items", [])))
     return 0
 
