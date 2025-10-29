@@ -1,9 +1,7 @@
-on:
-  workflow_dispatch:
-
 name: TradeEngine Dev Tests
 
 on:
+  workflow_dispatch:
   push:
     branches: ["**"]
   pull_request:
