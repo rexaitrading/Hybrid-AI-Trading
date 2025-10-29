@@ -1,4 +1,4 @@
-﻿name: Phase3 CI
+name: Phase3 CI
 
 on:
   workflow_dispatch:
@@ -9,7 +9,6 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   micro-tests:
     name: micro-tests (py3.12)

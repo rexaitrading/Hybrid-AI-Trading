@@ -6,6 +6,13 @@ on:
     branches: ["**"]
   pull_request:
     branches: ["**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   orb:
     runs-on: windows-latest
