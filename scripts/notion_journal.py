@@ -6,15 +6,24 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
-# --------- helpers for DB schema ---------
+# --------- env-configurable prop names ---------
 def _get_title_prop() -> str:
-    # default to Notion's usual title column name
     return os.getenv("NOTION_TITLE_PROP", "Name")
 
 
 def _get_ts_prop() -> Optional[str]:
-    # set NOTION_TS_PROP to your Date property name to write a timestamp; default "ts"
-    return os.getenv("NOTION_TS_PROP", "ts")
+    # leave blank '' to skip writing a date; your DB uses created_time for ts
+    v = os.getenv("NOTION_TS_PROP", "")
+    return v if v else None
+
+
+def _get_bid_prop() -> str:
+    # your DB shows "Bid" (capital B)
+    return os.getenv("NOTION_BID_PROP", "Bid")
+
+
+def _get_ask_prop() -> str:
+    return os.getenv("NOTION_ASK_PROP", "ask")
 
 
 # --------- decision flattening & status ---------
@@ -31,13 +40,12 @@ def _flatten(d: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(sen, dict):
         out["sentiment_val"], out["sent_conf"] = sen.get("sentiment"), sen.get("confidence")
     else:
-        out["sentiment_val"] = sen if isinstance(sen, (int, float)) else None
+        out["sentiment_val"] = sen if isinstance(sen, (int, float, str)) else None
         out["sent_conf"] = out.get("sent_conf")
 
     ks = out.get("kelly_size") or {}
     if out.get("kelly_f") is None:
         out["kelly_f"] = ks.get("f")
-    # Only backfill qty when it's missing, not when guardrails set it to 0
     if out.get("qty") is None:
         out["qty"] = ks.get("qty")
 
@@ -66,12 +74,111 @@ def _status_of(d: Dict[str, Any]) -> str:
     return "stub"
 
 
+def _sentiment_to_select_name(v: Any) -> Optional[str]:
+    # If text, pass through; if number, bucketize; else None
+    if isinstance(v, str):
+        return v
+    try:
+        f = float(v)
+        if f > 0.15:
+            return "positive"
+        if f < -0.15:
+            return "negative"
+        return "neutral"
+    except Exception:
+        return None
+
+
+# --------- DB schema helpers (for safety) ---------
+def _fetch_db_schema(token: str, db_id: str) -> dict:
+    try:
+        import requests  # type: ignore
+
+        hdr = {"Authorization": f"Bearer {token}", "Notion-Version": "2022-06-28"}
+        r = requests.get(f"https://api.notion.com/v1/databases/{db_id}", headers=hdr, timeout=10)
+        if getattr(r, "ok", False):
+            return r.json().get("properties", {}) or {}
+    except Exception:
+        pass
+    return {}
+
+
+def _coerce_prop_value(name: str, value: dict, target_type: str) -> dict | None:
+    if target_type == "title":
+        return value if "title" in value else None
+    if target_type == "rich_text":
+        if "rich_text" in value:
+            return value
+        if "select" in value:
+            nm = (value["select"] or {}).get("name")
+            return {"rich_text": [{"text": {"content": str(nm or "")}}]}
+        if "number" in value:
+            return {"rich_text": [{"text": {"content": str(value.get("number"))}}]}
+        return None
+    if target_type == "select":
+        if "select" in value:
+            return value
+        if "rich_text" in value:
+            txt = "".join([t.get("text", {}).get("content", "") for t in value["rich_text"]])
+            return {"select": {"name": txt}} if txt else None
+        if "number" in value:
+            return {"select": {"name": str(value.get("number"))}}
+        return None
+    if target_type == "multi_select":
+        if "multi_select" in value:
+            return value
+        if "rich_text" in value:
+            txt = "".join([t.get("text", {}).get("content", "") for t in value["rich_text"]])
+            return {"multi_select": [{"name": txt}]} if txt else {"multi_select": []}
+        return {"multi_select": []}
+    if target_type == "number":
+        if "number" in value:
+            return value
+        if "select" in value:
+            nm = (value["select"] or {}).get("name")
+            try:
+                return {"number": float(nm)}
+            except Exception:
+                return None
+        if "rich_text" in value:
+            txt = "".join([t.get("text", {}).get("content", "") for t in value["rich_text"]])
+            try:
+                return {"number": float(txt)}
+            except Exception:
+                return None
+        return None
+    if target_type == "date":
+        if "date" in value:
+            return value
+        return None
+    key = target_type
+    return value if key in value else None
+
+
+def _filter_to_db_schema(mapped_props: dict, db_props: dict) -> dict:
+    out = {}
+    for name, val in (mapped_props or {}).items():
+        sch = db_props.get(name)
+        if not sch:
+            continue
+        target_type = sch.get("type")
+        coerced = _coerce_prop_value(name, val, target_type)
+        if coerced is not None:
+            out[name] = coerced
+    return out
+
+
 # --------- Notion mapping ---------
 def _map_item_to_properties(item: Dict[str, Any]) -> Dict[str, Any]:
     sym = item.get("symbol", "")
     d = _flatten(item.get("decision", {}) or {})
     title_prop = _get_title_prop()
     ts_prop = _get_ts_prop()
+    bid_prop = _get_bid_prop()
+    ask_prop = _get_ask_prop()
+
+    reg_name = d.get("regime_name") or d.get("regime")
+    sen_name = _sentiment_to_select_name(d.get("sentiment_val"))
 
     props: Dict[str, Any] = {
         title_prop: {"title": [{"text": {"content": str(sym or d.get("setup") or "trade")}}]},
@@ -82,31 +189,24 @@ def _map_item_to_properties(item: Dict[str, Any]) -> Dict[str, Any]:
         "target_px": {"number": d.get("target_px")},
         "qty": {"number": d.get("qty")},
         "kelly_f": {"number": d.get("kelly_f")},
-        "regime": {"rich_text": [{"text": {"content": str(d.get("regime_name") or "")}}]},
+        # your DB expects select for regime & sentiment
+        "regime": {"select": ({"name": str(reg_name)} if reg_name else None)},
         "regime_conf": {"number": d.get("regime_conf")},
-        "sentiment": {"number": d.get("sentiment_val")},
+        "sentiment": {"select": ({"name": str(sen_name)} if sen_name else None)},
         "sent_conf": {"number": d.get("sent_conf")},
         "reason_code": {"rich_text": [{"text": {"content": str(d.get("reason_code") or "")}}]},
         "price": {"number": d.get("price")},
-        "bid": {"number": d.get("bid")},
-        "ask": {"number": d.get("ask")},
+        bid_prop: {"number": d.get("bid")},
+        ask_prop: {"number": d.get("ask")},
         "status": {"select": {"name": _status_of(d)}},
     }
     if ts_prop:
         props[ts_prop] = {"date": {"start": datetime.now(timezone.utc).isoformat()}}
+
     return props
 
 
-def _dry_write(payload: List[Dict[str, Any]], path: str = "logs/notion_last_payload.json") -> None:
-    try:
-        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"items": payload}, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
-
-
-# --------- Public entry ---------
+# --------- Public entry (schema-aware, with HTTP error logging) ---------
 def journal_batch(
     items: List[Dict[str, Any]], db_id: Optional[str], notion_token: Optional[str]
 ) -> None:
@@ -143,11 +243,14 @@ def journal_batch(
     }
     url = "https://api.notion.com/v1/pages"
 
+    db_props = _fetch_db_schema(notion_token, db_id) if (db_id and notion_token) else {}
+
     for body in mapped:
         try:
+            if db_props:
+                body["properties"] = _filter_to_db_schema(body.get("properties", {}), db_props)
             r = requests.post(url, headers=headers, data=json.dumps(body), timeout=10)
             if not getattr(r, "ok", False):
-                # log HTTP error with body for inspection
                 try:
                     os.makedirs("logs", exist_ok=True)
                     with open("logs/notion_http_errors.jsonl", "a", encoding="utf-8") as f:
@@ -160,11 +263,19 @@ def journal_batch(
                                 },
                                 ensure_ascii=False,
                             )
-                            + "\n"
+                            + "\\n"
                         )
                 except Exception:
                     pass
-                # also save last payload snapshot
                 _dry_write([body])
         except Exception:
             _dry_write([body])
+
+
+def _dry_write(payload: List[Dict[str, Any]], path: str = "logs/notion_last_payload.json") -> None:
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"items": payload}, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
