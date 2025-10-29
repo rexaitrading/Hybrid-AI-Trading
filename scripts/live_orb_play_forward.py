@@ -6,9 +6,9 @@ from collections import deque
 from datetime import timedelta
 
 import pandas as pd
+from ib_insync import *
 
 from hybrid_ai_trading.tools.bar_replay import run_replay
-from ib_insync import *
 
 # ---- Env / config ----
 HOST = os.getenv("IB_HOST", "127.0.0.1")

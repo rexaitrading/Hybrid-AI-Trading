@@ -13,12 +13,12 @@ if sys.platform.startswith("win"):
         pass
 
 import yaml
+from ib_insync import IB, Stock
 
 from hybrid_ai_trading.utils.edges import decide_signal
 from hybrid_ai_trading.utils.exec import gc_stale_orders
 from hybrid_ai_trading.utils.feature_store import FeatureStore
 from hybrid_ai_trading.utils.risk import intraday_risk_checks
-from ib_insync import IB, Stock
 
 UNIVERSE_FILE = "config/universe_equities.yaml"
 POLL_SEC = 0.5

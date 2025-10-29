@@ -1,5 +1,6 @@
-from hybrid_ai_trading.utils.ib_conn import ib_session
 from ib_insync import *
+
+from hybrid_ai_trading.utils.ib_conn import ib_session
 
 with ib_session(timeout=30, market_data_type=3) as ib:
     c = Stock("AAPL", "SMART", "USD")

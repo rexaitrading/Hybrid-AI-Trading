@@ -14,6 +14,8 @@ Notes:
 import argparse
 import json
 
+from ib_insync import IB
+
 from hybrid_ai_trading.data.clients.ibkr_client import (
     account_summary,
     cancel_all,
@@ -21,7 +23,6 @@ from hybrid_ai_trading.data.clients.ibkr_client import (
     open_orders,
     positions,
 )
-from ib_insync import IB
 
 
 def _print(obj):

@@ -12,13 +12,14 @@ import json
 import os
 import sys
 
+from ib_insync import IB
+
 from hybrid_ai_trading.data.clients.ibkr_client import (
     cancel_all,
     connect_ib,
     place_limit_stock,
     place_market_stock,
 )
-from ib_insync import IB
 
 
 def _require_live(args: argparse.Namespace) -> bool:

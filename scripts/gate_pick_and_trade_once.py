@@ -6,9 +6,9 @@ import time
 from datetime import datetime
 
 import yaml
+from ib_insync import IB, LimitOrder, MarketOrder, Stock, StopOrder
 
 from hybrid_ai_trading.risk.sentiment_gate import score_headlines_for_symbols
-from ib_insync import IB, LimitOrder, MarketOrder, Stock, StopOrder
 
 # ---- quiet logs ----
 if os.getenv("QUIET_LOGS", "true").lower() in ("1", "true", "yes"):

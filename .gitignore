@@ -67,3 +67,12 @@ logs/
 archive/
 backups*/
 .backup/
+
+# local backups
+_backup_notion_journal_*.py
+
+# local backups
+_backup_notion_journal_*.py
+
+# local artifacts
+.artifacts/
