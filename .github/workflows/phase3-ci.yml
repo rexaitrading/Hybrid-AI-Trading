@@ -1,6 +1,9 @@
 on:
   workflow_dispatch:
 
+on:
+  workflow_dispatch:
+
 alpaca-py==0.42.2
 anyio==4.11.0
 ccxt==4.5.2
