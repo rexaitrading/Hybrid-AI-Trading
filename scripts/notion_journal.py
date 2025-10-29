@@ -145,6 +145,26 @@ def journal_batch(
 
     for body in mapped:
         try:
-            requests.post(url, headers=headers, data=json.dumps(body), timeout=10)
+            r = requests.post(url, headers=headers, data=json.dumps(body), timeout=10)
+            if not getattr(r, "ok", False):
+                # log HTTP error with body for inspection
+                try:
+                    os.makedirs("logs", exist_ok=True)
+                    with open("logs/notion_http_errors.jsonl", "a", encoding="utf-8") as f:
+                        f.write(
+                            json.dumps(
+                                {
+                                    "status": getattr(r, "status_code", None),
+                                    "text": getattr(r, "text", None),
+                                    "body": body,
+                                },
+                                ensure_ascii=False,
+                            )
+                            + "\n"
+                        )
+                except Exception:
+                    pass
+                # also save last payload snapshot
+                _dry_write([body])
         except Exception:
             _dry_write([body])
