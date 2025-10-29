@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import os
@@ -28,7 +28,7 @@ def _flatten(d: Dict[str, Any]) -> Dict[str, Any]:
     ks = out.get("kelly_size") or {}
     if out.get("kelly_f") is None:
         out["kelly_f"] = ks.get("f")
-    if out.get("qty") in (None, 0):
+    if out.get("qty") is None:
         out["qty"] = ks.get("qty", out.get("qty", 0))
     # reason code
     ra = out.get("risk_approved") or {}
