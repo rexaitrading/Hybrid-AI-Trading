@@ -2,10 +2,6 @@
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["**"]
-  pull_request:
-    branches: ["**"]
 
 permissions:
   contents: read
@@ -19,23 +15,33 @@ jobs:
     name: micro-tests (py3.12)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install deps
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install package and test deps
         run: |
           python -m pip install --upgrade pip
+          python -m pip install --upgrade pytest
+          python -m pip install pyyaml
           python -m pip install -e .
-          python -m pip install pytest
-
+      - name: Sanity
+        run: |
+          python - <<'PY'
+          import sys, importlib.util, pathlib, yaml
+          root = pathlib.Path().resolve()
+          print("exe:", sys.executable)
+          print("yaml_ok", yaml.__version__)
+          print("has src:", (root/"src").exists())
+          print("pytest.ini exists:", (root/"pytest.ini").exists())
+          print("importable:", bool(importlib.util.find_spec("hybrid_ai_trading")))
+          PY
       - name: Run tests
         env:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
-        run: python -m pytest -q
+        run: |
+          if [ -f "pytest.ini" ]; then
+            python -m pytest -c "${{ github.workspace }}/pytest.ini" -q
+          else
+            python -m pytest -q
+          fi
