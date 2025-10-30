@@ -72,7 +72,7 @@ def run_replay(
     max_qty: int = 200,
     force_exit: bool = False,
 ) -> ReplayResult:
-    assert mode in ("step", "auto")
+    assert mode in ("step", "auto", "fast")
     if "timestamp" in df.columns:
         df["timestamp"] = _to_datetime_col(df["timestamp"])
         df = df.set_index("timestamp")
@@ -252,4 +252,10 @@ if __name__ == "__main__":
         max_qty=args.max_qty,
         force_exit=args.force_exit,
     )
-    print("Replay done.")
+    print(
+        f"Summary | symbol={args.symbol} "
+        f"bars={res.bars} trades={res.trades} pnl={res.pnl:.2f} "
+        f"final_qty={getattr(res.final_pos,'qty',0)} "
+        f"entry_px={res.entry_px} exit_px={res.exit_px} "
+        f"fees_ps={args.fees_per_share} slippage_ps={args.slippage_ps}"
+    )
