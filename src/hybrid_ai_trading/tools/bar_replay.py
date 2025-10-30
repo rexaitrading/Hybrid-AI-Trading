@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import math
 import time
 from dataclasses import dataclass
@@ -41,19 +42,21 @@ def orb_strategy_step(
     risk_cents: float,
     max_qty: int,
 ) -> Tuple[Position, Optional[str]]:
+    """Risk-first sizing: qty = floor(risk_$ / (entry - stop)); stop = orb_low."""
     act = None
     close = float(row["close"])
+    stop_px = float(orb_low)
+
     if pos.side is None:
-        if close > orb_high:
-            denom = max(0.01, (orb_high - orb_low))
-            qty = max(
-                1, min(max_qty, int(max(1, math.floor((risk_cents / 100.0) / denom))))
-            )
+        if close > float(orb_high):
+            risk_usd = float(risk_cents) / 100.0
+            stop_dist = max(1e-6, close - stop_px)
+            qty = int(max(1, min(max_qty, math.floor(risk_usd / stop_dist))))
             pos = Position(side="long", entry_px=close, qty=qty)
-            act = f"enter_long qty={qty} px={close:.4f}"
+            act = f"enter_long qty={qty} px={close:.4f} stop={stop_px:.4f}"
     else:
-        if close < orb_low:
-            act = f"exit_long qty={pos.qty} px={close:.4f}"
+        if close < stop_px:
+            act = f"exit_long qty={pos.qty} px={close:.4f} stop_hit={stop_px:.4f}"
     return pos, act
 
 
@@ -63,6 +66,7 @@ def run_replay(
     mode: str = "step",
     speed: float = 5.0,
     fees_per_share: float = 0.003,
+    slippage_ps: float = 0.000,
     orb_minutes: int = 5,
     risk_cents: float = 20.0,
     max_qty: int = 200,
@@ -115,7 +119,7 @@ def run_replay(
                 else (pos.qty if pos.qty else 1)
             )
             if entry_px is not None:
-                pnl += (exit_px - entry_px) * q_used
+                pnl += (exit_px - entry_px - slippage_ps * 2) * q_used
                 pnl -= (fees_per_share * q_used) * 2
 
             try:
@@ -162,7 +166,7 @@ def run_replay(
     if pos.side == "long" and entry_px is not None:
         q_used = pos.qty if pos.qty else max_qty
         if force_exit:
-            pnl += (last_close - entry_px) * q_used
+            pnl += (last_close - entry_px - slippage_ps * 2) * q_used
             pnl -= fees_per_share * q_used
             try:
                 lt = (
@@ -209,3 +213,43 @@ def load_bars(path: str) -> pd.DataFrame:
         df = pd.read_csv(path)
     df.columns = [c.strip().lower() for c in df.columns]
     return df
+
+
+if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser(description="ORB bar replay")
+    ap.add_argument("--csv", type=str, required=False, help="CSV with OHLCV")
+    ap.add_argument("--symbol", type=str, default="TEST")
+    ap.add_argument("--mode", type=str, default="step", choices=["step", "fast"])
+    ap.add_argument("--speed", type=float, default=5.0)
+    ap.add_argument("--fees-per-share", type=float, default=0.003)
+    ap.add_argument(
+        "--slippage-ps", type=float, default=0.000, help="Slippage per share each side"
+    )
+    ap.add_argument("--orb-minutes", type=int, default=5)
+    ap.add_argument("--risk-cents", type=float, default=20.0)
+    ap.add_argument("--max-qty", type=int, default=200)
+    ap.add_argument("--force-exit", action="store_true")
+    args = ap.parse_args()
+
+    import pandas as pd
+
+    if args.csv:
+        df = pd.read_csv(args.csv)
+    else:
+        raise SystemExit("Provide --csv path to minute bars")
+
+    res = run_replay(
+        df,
+        symbol=args.symbol,
+        mode=args.mode,
+        speed=args.speed,
+        fees_per_share=args.fees_per_share,
+        slippage_ps=args.slippage_ps,
+        orb_minutes=args.orb_minutes,
+        risk_cents=args.risk_cents,
+        max_qty=args.max_qty,
+        force_exit=args.force_exit,
+    )
+    print("Replay done.")
