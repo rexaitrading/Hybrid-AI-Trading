@@ -39,7 +39,9 @@ def test_alerts_success_and_exceptions(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setitem(sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom))
+    monkeypatch.setitem(
+        sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom)
+    )
 
     class SMTPBAD:
         def __enter__(self):
@@ -134,7 +136,9 @@ def test_sector_algo_success_and_fail_router_error(monkeypatch):
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name, _orig=orig_import: fake if name.endswith((".twap", ".vwap")) else _orig(name),
+        lambda name, _orig=orig_import: (
+            fake if name.endswith((".twap", ".vwap")) else _orig(name)
+        ),
     )
 
     te2 = make_engine()
@@ -165,7 +169,9 @@ def test_sector_algo_success_and_fail_router_error(monkeypatch):
     # router error 286–288 + neighbors
     te3 = make_engine()
     if hasattr(te3, "order_manager"):
-        te3.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("router"))
+        te3.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("router")
+        )
     g = find(te3, ["_route_direct", "route_direct", "direct_route"])
     if g:
         try:
@@ -222,7 +228,9 @@ def test_reset_day_branches(monkeypatch):
     for attr in ("risk_manager", "risk", "rm"):
         if hasattr(te, attr):
             setattr(
-                getattr(te, attr), "reset_day", lambda: (_ for _ in ()).throw(RuntimeError("RFAIL"))
+                getattr(te, attr),
+                "reset_day",
+                lambda: (_ for _ in ()).throw(RuntimeError("RFAIL")),
             )
             break
     if hasattr(te, "daily_reset"):

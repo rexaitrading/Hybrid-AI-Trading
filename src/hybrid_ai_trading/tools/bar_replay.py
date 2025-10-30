@@ -46,7 +46,9 @@ def orb_strategy_step(
     if pos.side is None:
         if close > orb_high:
             denom = max(0.01, (orb_high - orb_low))
-            qty = max(1, min(max_qty, int(max(1, math.floor((risk_cents / 100.0) / denom)))))
+            qty = max(
+                1, min(max_qty, int(max(1, math.floor((risk_cents / 100.0) / denom))))
+            )
             pos = Position(side="long", entry_px=close, qty=qty)
             act = f"enter_long qty={qty} px={close:.4f}"
     else:
@@ -77,7 +79,9 @@ def run_replay(
             "Data must have columns: open, high, low, close, volume (+ timestamp or dt index)"
         )
     if len(df) < (orb_minutes + 2):
-        raise ValueError(f"Not enough bars for ORB; need >= {orb_minutes+2}, have {len(df)}")
+        raise ValueError(
+            f"Not enough bars for ORB; need >= {orb_minutes+2}, have {len(df)}"
+        )
 
     orb_df = df.iloc[:orb_minutes]
     orb_high = float(orb_df["high"].max())
@@ -92,7 +96,9 @@ def run_replay(
 
     for i, (ts, row) in enumerate(df.iloc[orb_minutes:].iterrows(), start=orb_minutes):
         prev_qty = pos.qty
-        pos, action = orb_strategy_step(i, row, pos, orb_high, orb_low, risk_cents, max_qty)
+        pos, action = orb_strategy_step(
+            i, row, pos, orb_high, orb_low, risk_cents, max_qty
+        )
         close_px = float(row["close"])
 
         if action and action.startswith("enter_long"):
@@ -113,13 +119,17 @@ def run_replay(
                 pnl -= (fees_per_share * q_used) * 2
 
             try:
-                et = entry_dt or (ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else ts)
+                et = entry_dt or (
+                    ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else ts
+                )
                 log_closed_trade(
                     symbol=symbol,
                     setup="ORB",
                     context_tags=[],
                     entry_time=et,
-                    exit_time=(ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else ts),
+                    exit_time=(
+                        ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else ts
+                    ),
                     entry=(entry_px if entry_px is not None else close_px),
                     exit=exit_px,
                     qty=int(q_used),
@@ -138,7 +148,9 @@ def run_replay(
 
         try:
             if mode == "step":
-                input(f"[{ts}] {symbol} close={row['close']:.4f} (Enter=next, Ctrl+C=stop)")
+                input(
+                    f"[{ts}] {symbol} close={row['close']:.4f} (Enter=next, Ctrl+C=stop)"
+                )
             else:
                 time.sleep(max(0.0, 1.0 / float(speed if speed > 0 else 1.0)))
         except KeyboardInterrupt:
@@ -153,7 +165,11 @@ def run_replay(
             pnl += (last_close - entry_px) * q_used
             pnl -= fees_per_share * q_used
             try:
-                lt = last_ts.to_pydatetime() if hasattr(last_ts, "to_pydatetime") else last_ts
+                lt = (
+                    last_ts.to_pydatetime()
+                    if hasattr(last_ts, "to_pydatetime")
+                    else last_ts
+                )
                 et = entry_dt or lt
                 log_closed_trade(
                     symbol=symbol,

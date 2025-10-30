@@ -11,7 +11,10 @@ def test_reset_day_both_absent_and_postmerge_path():
     te.risk_manager = SimpleNamespace()
     r = te.reset_day()
     assert isinstance(r, dict)
-    assert r.get("status") in {"ok", "error"}  # we mainly need execution through 175–188
+    assert r.get("status") in {
+        "ok",
+        "error",
+    }  # we mainly need execution through 175–188
 
 
 # ---------- adaptive_fraction (205, 211–212) ----------
@@ -22,7 +25,9 @@ def test_adaptive_fraction_equity_le_zero_hits_205_and_exception_hits_211_212():
     bf = getattr(te, "base_fraction", 0.5)
     assert te.adaptive_fraction() == bf
     # exception in try block -> 211–212
-    te.portfolio = SimpleNamespace(equity=100.0, history=[("t0", "bad")])  # max() will explode
+    te.portfolio = SimpleNamespace(
+        equity=100.0, history=[("t0", "bad")]
+    )  # max() will explode
     assert te.adaptive_fraction() == bf
 
 
@@ -113,7 +118,11 @@ def test_ps_tail_normalization_ok_to_filled_and_reason_normalized_ok():
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     # Submit returns ok/ok so the tail post-processing can normalize
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 13}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "ok",
+            "reason": "ok",
+            "order_id": 13,
+        }
     # Ensure any waiter returns benign 'ok' so flow reaches tail
     for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):

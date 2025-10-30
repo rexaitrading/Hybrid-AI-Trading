@@ -11,7 +11,9 @@ def index_folder(folder: str, exts={".txt", ".md", ".yaml", ".yml", ".json"}):
         if f.suffix.lower() in exts and f.is_file():
             try:
                 text = f.read_text(encoding="utf-8", errors="ignore")
-                out.append({"path": str(f), "size": f.stat().st_size, "preview": text[:400]})
+                out.append(
+                    {"path": str(f), "size": f.stat().st_size, "preview": text[:400]}
+                )
             except Exception:
                 pass
     return out

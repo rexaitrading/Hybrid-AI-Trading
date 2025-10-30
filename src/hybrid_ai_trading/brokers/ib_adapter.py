@@ -15,7 +15,11 @@ else:
 
 class IBAdapter(Broker):
     def __init__(
-        self, host: str = "127.0.0.1", port: int = 4002, client_id: int = 201, timeout: int = 15
+        self,
+        host: str = "127.0.0.1",
+        port: int = 4002,
+        client_id: int = 201,
+        timeout: int = 15,
     ):
         if _import_error:
             raise RuntimeError(f"ib_insync not available: {_import_error!r}")
@@ -26,7 +30,9 @@ class IBAdapter(Broker):
         self.ib = IB()
 
     def connect(self) -> bool:
-        ok = self.ib.connect(self.host, self.port, clientId=self.client_id, timeout=self.timeout)
+        ok = self.ib.connect(
+            self.host, self.port, clientId=self.client_id, timeout=self.timeout
+        )
         return bool(ok)
 
     def disconnect(self) -> None:

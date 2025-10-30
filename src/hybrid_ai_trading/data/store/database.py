@@ -62,7 +62,9 @@ class Price(Base):
     close = Column(Float)
     volume = Column(Float)
 
-    __table_args__ = (UniqueConstraint("timestamp", "symbol", name="uix_timestamp_symbol"),)
+    __table_args__ = (
+        UniqueConstraint("timestamp", "symbol", name="uix_timestamp_symbol"),
+    )
 
 
 class News(Base):

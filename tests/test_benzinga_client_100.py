@@ -44,7 +44,9 @@ def test_json_header_but_nonjson_body(monkeypatch):
     monkeypatch.setattr(
         _requests,
         "get",
-        lambda *a, **k: R({"content-type": "application/json"}, data=ValueError("badjson")),
+        lambda *a, **k: R(
+            {"content-type": "application/json"}, data=ValueError("badjson")
+        ),
     )
     with pytest.raises(BenzingaAPIError):
         BenzingaClient().get_news("AAPL", 1)

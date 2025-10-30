@@ -17,7 +17,14 @@ for i in range(n):
     l = round(min(o, c) - abs(delta) * 0.5 - 0.03, 2)
     v = random.randint(100, 500)
     rows.append(
-        [t.strftime("%Y-%m-%d %H:%M:%S"), f"{o:.2f}", f"{h:.2f}", f"{l:.2f}", f"{c:.2f}", v]
+        [
+            t.strftime("%Y-%m-%d %H:%M:%S"),
+            f"{o:.2f}",
+            f"{h:.2f}",
+            f"{l:.2f}",
+            f"{c:.2f}",
+            v,
+        ]
     )
     price = c
 os.makedirs("data", exist_ok=True)

@@ -35,7 +35,9 @@ from hybrid_ai_trading.risk.price_gate import latest_price
 class LivePriceRiskManager(RiskManager):
     def _get_symbol(self, trade: Any) -> str:
         if isinstance(trade, dict):
-            return str(trade.get("symbol") or trade.get("ticker") or trade.get("sym") or "")
+            return str(
+                trade.get("symbol") or trade.get("ticker") or trade.get("sym") or ""
+            )
         return str(getattr(trade, "symbol", getattr(trade, "ticker", "")) or "")
 
     def _get_price(self, trade: Any) -> float | None:
@@ -78,10 +80,14 @@ def size_for_signal(
     notional_cap: optional hard cap on dollars per position.
     """
     k_base = (
-        max(0.0, float(signal_strength)) if signal_strength is not None else float(risk_per_trade)
+        max(0.0, float(signal_strength))
+        if signal_strength is not None
+        else float(risk_per_trade)
     )
     k = _kelly_clamp(k_base, kelly_min, kelly_max)
-    s = _drawdown_scale(equity_peak=equity_peak, equity_now=equity_now, dd_max=dd_max, gamma=gamma)
+    s = _drawdown_scale(
+        equity_peak=equity_peak, equity_now=equity_now, dd_max=dd_max, gamma=gamma
+    )
     k_eff = k * s
 
     if price <= 0 or equity_now <= 0:

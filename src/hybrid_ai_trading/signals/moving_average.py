@@ -94,9 +94,9 @@ def moving_average_signal(
     Wrapper around MovingAverageSignal.generate.
     Returns only the decision string.
     """
-    out = MovingAverageSignal(short_window=short_window, long_window=long_window).generate(
-        "SYMBOL", bars
-    )
+    out = MovingAverageSignal(
+        short_window=short_window, long_window=long_window
+    ).generate("SYMBOL", bars)
     return out.get("signal", "HOLD")
 
 

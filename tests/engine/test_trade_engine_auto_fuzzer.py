@@ -16,10 +16,14 @@ class _Stub:
     def server_time(self):
         return "2025-10-11 00:00:00"
 
-    def place_order(self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None):
+    def place_order(
+        self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None
+    ):
         oid = random.randint(1000, 9999)
         return oid, {
-            "status": "Filled" if (order_type or "").upper() == "MARKET" else "Submitted",
+            "status": (
+                "Filled" if (order_type or "").upper() == "MARKET" else "Submitted"
+            ),
             "filled": float(qty or 0),
             "avgPrice": float(limit_price or 0.0),
             "meta": meta or {},
@@ -42,7 +46,13 @@ def _eng(monkeypatch):
 
     e = te.TradeEngine(config={})
     # try flipping common feature toggles if they exist
-    for flag in ("adaptive", "adaptive_mode", "adaptive_enabled", "audit_mode", "strict_missing"):
+    for flag in (
+        "adaptive",
+        "adaptive_mode",
+        "adaptive_enabled",
+        "audit_mode",
+        "strict_missing",
+    ):
         if hasattr(e, flag):
             try:
                 setattr(e, flag, True)
@@ -121,7 +131,11 @@ def test_auto_fuzz(monkeypatch):
         _safe_call(eng.run, [])  # empty
         _safe_call(eng.run, [event_bad])  # malformed
         _safe_call(
-            eng.run, [event_good, {"symbol": "AAPL", "signal": "SELL", "price": 101.3, "size": 2}]
+            eng.run,
+            [
+                event_good,
+                {"symbol": "AAPL", "signal": "SELL", "price": 101.3, "size": 2},
+            ],
         )  # valid
         _safe_call(eng.run)  # zero-arg variant
 

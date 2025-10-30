@@ -11,7 +11,12 @@ __all__ = ["load_providers", "get_price", "get_price_retry", "get_prices"]
 # tiny in-process cache to reduce API traffic during loops
 _CACHE: dict = {}
 _CACHE_TTL_SEC = float(os.getenv("HAT_CACHE_TTL_SEC", "3.0") or 0)
-HAT_NO_CACHE = os.getenv("HAT_NO_CACHE", "").strip().lower() in ("1", "true", "yes", "on")
+HAT_NO_CACHE = os.getenv("HAT_NO_CACHE", "").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
 
 
 def _expand_env(s: str) -> str:
@@ -70,7 +75,19 @@ def _is_crypto_symbol(symbol: str) -> bool:
     if re.match(r"^[A-Z0-9]{2,12}(USDT|USDC|USD|EUR|CAD)$", s):
         return True
     # common crypto bases
-    if s in ("BTC", "XBT", "ETH", "SOL", "ADA", "XRP", "DOGE", "LTC", "BNB", "DOT", "MATIC"):
+    if s in (
+        "BTC",
+        "XBT",
+        "ETH",
+        "SOL",
+        "ADA",
+        "XRP",
+        "DOGE",
+        "LTC",
+        "BNB",
+        "DOT",
+        "MATIC",
+    ):
         return True
     return False
 
@@ -241,7 +258,12 @@ def get_price(symbol: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
                     "reason": q.get("reason", "no_price"),
                 }
             else:
-                last = {"symbol": symbol, "price": None, "source": name, "reason": "bad_response"}
+                last = {
+                    "symbol": symbol,
+                    "price": None,
+                    "source": name,
+                    "reason": "bad_response",
+                }
         except Exception as e:
             last = {
                 "symbol": symbol,
@@ -264,7 +286,12 @@ def get_price_retry(symbol, cfg, attempts=3, delay=0.4):
         if last.get("price") is not None:
             return last
         time.sleep(delay * (1 + i))
-    return last or {"symbol": symbol, "price": None, "source": "none", "reason": "retry_exhausted"}
+    return last or {
+        "symbol": symbol,
+        "price": None,
+        "source": "none",
+        "reason": "retry_exhausted",
+    }
 
 
 def get_prices(symbols, cfg):

@@ -12,8 +12,12 @@ def _mk():
     params = [p for p in list(sig.parameters)[1:]]  # skip self
 
     # minimal doubles
-    OM = type("OM", (object,), {"route": lambda *a, **k: {"status": "ok", "reason": "ok"}})
-    PT = type("PT", (object,), {"sharpe_ratio": lambda s: 0.0, "sortino_ratio": lambda s: 0.0})
+    OM = type(
+        "OM", (object,), {"route": lambda *a, **k: {"status": "ok", "reason": "ok"}}
+    )
+    PT = type(
+        "PT", (object,), {"sharpe_ratio": lambda s: 0.0, "sortino_ratio": lambda s: 0.0}
+    )
 
     class PF:
         def __init__(self):
@@ -71,7 +75,9 @@ def test_algo_fail_then_router_error(monkeypatch):
 
     # 1) dynamic algo import failure (261–282)
     monkeypatch.setattr(
-        importlib, "import_module", lambda name: (_ for _ in ()).throw(ImportError("fail"))
+        importlib,
+        "import_module",
+        lambda name: (_ for _ in ()).throw(ImportError("fail")),
     )
     for n in ("_route_with_algo", "route_with_algo", "route_algo"):
         f = getattr(te, n, None)
@@ -84,7 +90,9 @@ def test_algo_fail_then_router_error(monkeypatch):
 
     # 2) router direct error (286–288, neighbors)
     if hasattr(te, "order_manager"):
-        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("router"))
+        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("router")
+        )
     for n in ("_route_direct", "route_direct", "direct_route"):
         f = getattr(te, n, None)
         if callable(f):

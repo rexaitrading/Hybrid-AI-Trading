@@ -14,7 +14,9 @@ class _Stub:
     def server_time(self):
         return "2025-10-11 00:00:00"
 
-    def place_order(self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None):
+    def place_order(
+        self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None
+    ):
         return 42, {
             "status": "Filled",
             "filled": float(qty or 0),
@@ -64,7 +66,13 @@ def eng(monkeypatch):
 
     e = te.TradeEngine(config={})
     # enable common feature flags if present
-    for f in ("adaptive", "adaptive_mode", "adaptive_enabled", "audit_mode", "strict_missing"):
+    for f in (
+        "adaptive",
+        "adaptive_mode",
+        "adaptive_enabled",
+        "audit_mode",
+        "strict_missing",
+    ):
         if hasattr(e, f):
             try:
                 setattr(e, f, True)
@@ -180,7 +188,11 @@ def test_late_helpers_mixed_batches(eng):
                 pass
 
     # single-event hooks with None/malformed/valid
-    events = [None, {"foo": "bar"}, {"symbol": "AAPL", "signal": "BUY", "price": 100.5, "size": 1}]
+    events = [
+        None,
+        {"foo": "bar"},
+        {"symbol": "AAPL", "signal": "BUY", "price": 100.5, "size": 1},
+    ]
     for hook in ("run_once", "tick"):
         if hasattr(eng, hook):
             fn = getattr(eng, hook)

@@ -124,7 +124,9 @@ class App(EWrapper, EClient):
             print(f"🛑 cancelling orderId={self.order_id}", flush=True)
             self.cancelOrder(self.order_id)
         else:
-            print("ℹ️ No acknowledged open order to cancel; exiting cleanly.", flush=True)
+            print(
+                "ℹ️ No acknowledged open order to cancel; exiting cleanly.", flush=True
+            )
             self._disconnect_later(0.5)
 
 

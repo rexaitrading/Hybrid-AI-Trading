@@ -8,7 +8,14 @@ t0 = datetime(2025, 10, 24, 9, 30)
 rows = []
 # ORB (2 bars)
 rows += [
-    {"timestamp": t0, "open": 100, "high": 101, "low": 99, "close": 100.5, "volume": 1000},
+    {
+        "timestamp": t0,
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100.5,
+        "volume": 1000,
+    },
     {
         "timestamp": t0 + timedelta(minutes=1),
         "open": 100.5,

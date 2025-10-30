@@ -111,7 +111,9 @@ class PolygonClient:
             raise PolygonAPIError("Polygon API key not set")
         return {"apiKey": self.api_key}
 
-    def _request(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _request(
+        self, path: str, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         GET wrapper that:
         - attaches ?apiKey=... (query param auth)

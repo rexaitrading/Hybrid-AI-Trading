@@ -14,7 +14,9 @@ from hybrid_ai_trading.strategies.eth1h_runner import ETH1HRunner, RunnerConfig
 
 def mk_runner(virtual=True, **cfgkw):
     cfg = RunnerConfig(virtual_fills=virtual, **cfgkw)
-    tl = TradeLogger(jsonl_path="logs/t.jsonl", csv_path=None, text_log_path="logs/t.log")
+    tl = TradeLogger(
+        jsonl_path="logs/t.jsonl", csv_path=None, text_log_path="logs/t.log"
+    )
     return ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
 
 
@@ -64,7 +66,9 @@ def test_fetch_paths_for_binance_and_kraken(monkeypatch):
     # binance symbol unchanged
     r1 = mk_runner(exchange="binance", symbol="ETH/USDT")
     r1._fetch_ohlcv()
-    assert fake.binance().calls == []  # not the same instance; check by invoking directly
+    assert (
+        fake.binance().calls == []
+    )  # not the same instance; check by invoking directly
     # call again with explicit object to validate signature
     ex = fake.binance()
     ex.load_markets()
@@ -113,7 +117,9 @@ def test_pos_io_exception_guards(monkeypatch):
 
 def test_trailing_stop_sell_branch_and_alerts(monkeypatch):
     calls = []
-    monkeypatch.setattr(Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False)
+    monkeypatch.setattr(
+        Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False
+    )
     r = mk_runner()
     # Create SELL position so trough logic is exercised
     ts = 1_700_000_000_000

@@ -28,7 +28,9 @@ except ImportError:
     StopOrder = None
 
 logger = logging.getLogger("DailyDashboard")
-logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
+)
 
 load_dotenv()
 POLYGON_KEY = os.getenv("POLYGON_KEY", "")

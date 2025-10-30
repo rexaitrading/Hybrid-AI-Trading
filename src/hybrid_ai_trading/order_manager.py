@@ -36,7 +36,11 @@ class OrderManager:
 
     # NEW: buy limit
     def buy_limit(
-        self, symbol: str, qty: float, limit_price: float, meta: Optional[Dict[str, Any]] = None
+        self,
+        symbol: str,
+        qty: float,
+        limit_price: float,
+        meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         oid, info = self.broker.place_order(
             symbol, "BUY", qty, "LIMIT", limit_price=limit_price, meta=meta
@@ -47,7 +51,11 @@ class OrderManager:
 
     # NEW: sell limit
     def sell_limit(
-        self, symbol: str, qty: float, limit_price: float, meta: Optional[Dict[str, Any]] = None
+        self,
+        symbol: str,
+        qty: float,
+        limit_price: float,
+        meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         oid, info = self.broker.place_order(
             symbol, "SELL", qty, "LIMIT", limit_price=limit_price, meta=meta

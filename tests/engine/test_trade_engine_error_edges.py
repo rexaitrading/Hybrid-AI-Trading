@@ -31,10 +31,16 @@ def _mk_engine(monkeypatch, *, boom=False):
     from hybrid_ai_trading.brokers import factory as broker_factory
 
     monkeypatch.setattr(
-        broker_factory, "make_broker", lambda: (_StubBoom() if boom else _StubOK()), raising=True
+        broker_factory,
+        "make_broker",
+        lambda: (_StubBoom() if boom else _StubOK()),
+        raising=True,
     )
     monkeypatch.setattr(
-        om_mod, "make_broker", lambda: (_StubBoom() if boom else _StubOK()), raising=True
+        om_mod,
+        "make_broker",
+        lambda: (_StubBoom() if boom else _StubOK()),
+        raising=True,
     )
     import hybrid_ai_trading.trade_engine as te
 

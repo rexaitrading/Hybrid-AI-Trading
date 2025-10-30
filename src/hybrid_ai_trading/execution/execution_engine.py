@@ -63,10 +63,14 @@ class ExecutionEngine:
         except Exception:
             _cfg_start_eq = None
         starting_equity_source = (
-            _cfg_start_eq if _cfg_start_eq is not None else (50000.0 if dry_run else 100000.0)
+            _cfg_start_eq
+            if _cfg_start_eq is not None
+            else (50000.0 if dry_run else 100000.0)
         )
         # === Portfolio Tracker ===
-        self.portfolio_tracker = PortfolioTracker(starting_equity=starting_equity_source)
+        self.portfolio_tracker = PortfolioTracker(
+            starting_equity=starting_equity_source
+        )
 
         # === Risk Manager (avoid duplicate equity kwarg) ===
         risk_cfg = dict(self.config.get("risk", {}))  # shallow copy

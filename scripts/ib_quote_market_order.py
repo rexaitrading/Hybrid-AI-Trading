@@ -30,7 +30,9 @@ def notify(msg: str):
         return
     try:
         data = json.dumps({"text": msg}).encode("utf-8")
-        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        req = urllib.request.Request(
+            url, data=data, headers={"Content-Type": "application/json"}
+        )
         urllib.request.urlopen(req, timeout=3)
     except Exception:
         pass
@@ -145,7 +147,10 @@ def last_loss_within_minutes(minutes: int) -> bool:
     with p.open("r", encoding="utf-8", errors="ignore") as f:
         rd = csv.DictReader(f)
         for r in rd:
-            if r.get("ts", "").startswith(today) and r.get("status", "").upper() == "FILLED":
+            if (
+                r.get("ts", "").startswith(today)
+                and r.get("status", "").upper() == "FILLED"
+            ):
                 rows.append(r)
     rows.sort(key=lambda r: r["ts"])
     bysym = {}
@@ -408,7 +413,9 @@ def main():
         print(
             f"[PLAN] {side} {qty} {symbol} @ ~{limit} (TIF={tif}) notional≈${notional:,.2f}  [eff_bps={eff_bps}]"
         )
-        tr = ib.placeOrder(c, LimitOrder(side, qty, limit, tif=tif, outsideRth=outside_rth))
+        tr = ib.placeOrder(
+            c, LimitOrder(side, qty, limit, tif=tif, outsideRth=outside_rth)
+        )
         print("[SUBMIT] sent, waiting...")
         for _ in range(30):
             ib.sleep(0.2)

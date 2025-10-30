@@ -79,7 +79,9 @@ while time.time() < deadline and final_state is None:
 if final_state:
     im = pick_num(final_state, "initMargin", "initMarginAfter", "initMarginChange")
     mm = pick_num(final_state, "maintMargin", "maintMarginAfter", "maintMarginChange")
-    ewl = pick_num(final_state, "equityWithLoan", "equityWithLoanAfter", "equityWithLoanChange")
+    ewl = pick_num(
+        final_state, "equityWithLoan", "equityWithLoanAfter", "equityWithLoanChange"
+    )
     com = to_float(getattr(final_state, "commission", None))
     ccy = getattr(final_state, "commissionCurrency", "") or ""
     print("account:", acct, "limit:", px)

@@ -26,17 +26,23 @@ def _candidate_keyfiles(explicit: Optional[str]) -> List[str]:
         cands.append(os.path.abspath(env))
 
     # cwd/config/cdp_api_key.json
-    cands.append(os.path.abspath(os.path.join(os.getcwd(), "config", "cdp_api_key.json")))
+    cands.append(
+        os.path.abspath(os.path.join(os.getcwd(), "config", "cdp_api_key.json"))
+    )
 
     # repo/config: go up from this file to repo root
     here = os.path.dirname(__file__)
     # .../src/hybrid_ai_trading/data/clients -> repo root is four levels up
     cands.append(
-        os.path.abspath(os.path.join(here, "..", "..", "..", "..", "config", "cdp_api_key.json"))
+        os.path.abspath(
+            os.path.join(here, "..", "..", "..", "..", "config", "cdp_api_key.json")
+        )
     )
     # also try src/config (in case user stored under src/)
     cands.append(
-        os.path.abspath(os.path.join(here, "..", "..", "..", "config", "cdp_api_key.json"))
+        os.path.abspath(
+            os.path.join(here, "..", "..", "..", "config", "cdp_api_key.json")
+        )
     )
     return cands
 
@@ -57,9 +63,13 @@ def create_client(key_file: Optional[str] = None) -> RESTClient:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Coinbase Advanced Trade client quick tests")
+    ap = argparse.ArgumentParser(
+        description="Coinbase Advanced Trade client quick tests"
+    )
     ap.add_argument("--key-file", help="Path to cdp_api_key.json")
-    ap.add_argument("--list-accounts", action="store_true", help="List accounts/balances")
+    ap.add_argument(
+        "--list-accounts", action="store_true", help="List accounts/balances"
+    )
     ap.add_argument("--ticker", type=str, help='Product ID, e.g. "BTC-USD"')
     args = ap.parse_args()
 

@@ -102,7 +102,10 @@ class RiskManager:
     ) -> Tuple[bool, str]:
         # disable knob
         try:
-            if self.daily_loss_limit is not None and float(self.daily_loss_limit) <= 0.0:
+            if (
+                self.daily_loss_limit is not None
+                and float(self.daily_loss_limit) <= 0.0
+            ):
                 return False, "daily_loss_limit<=0 disables trading"
         except Exception:
             return False, "invalid_daily_loss_limit"
@@ -205,7 +208,12 @@ class RiskManager:
 
     # -------- events --------
     def on_fill(
-        self, side: str, qty: float, px: float, bar_ts: int | None = None, pnl: float | None = None
+        self,
+        side: str,
+        qty: float,
+        px: float,
+        bar_ts: int | None = None,
+        pnl: float | None = None,
     ) -> None:
         self._trades_today += 1
 
@@ -243,7 +251,10 @@ class RiskManager:
         self, notional: float, side: str = "BUY", bar_ts: int | None = None
     ) -> Tuple[bool, str]:
         try:
-            if getattr(self, "_cooldown_until_ms", None) is not None and bar_ts is not None:
+            if (
+                getattr(self, "_cooldown_until_ms", None) is not None
+                and bar_ts is not None
+            ):
                 if int(bar_ts) < int(self._cooldown_until_ms):
                     return False, "COOLDOWN"
         except Exception:
@@ -293,7 +304,11 @@ class RiskManager:
             except Exception:
                 pass
         try:
-            if cap is not None and notional is not None and float(notional) > float(cap):
+            if (
+                cap is not None
+                and notional is not None
+                and float(notional) > float(cap)
+            ):
                 return False, "NOTIONAL_CAP"
         except Exception:
             if getattr(getattr(self, "config", None), "fail_closed", False):
@@ -303,7 +318,11 @@ class RiskManager:
 
     # legacy shim
     def check_trade(
-        self, pnl: float = 0.0, trade_notional: float | None = None, *args: Any, **kwargs: Any
+        self,
+        pnl: float = 0.0,
+        trade_notional: float | None = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> bool:
         fn = getattr(self, "approve_trade", None)
         if callable(fn):

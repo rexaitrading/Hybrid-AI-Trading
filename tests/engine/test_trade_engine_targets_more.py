@@ -12,10 +12,14 @@ class _Stub:
     def server_time(self):
         return "2025-10-11 00:00:00"
 
-    def place_order(self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None):
+    def place_order(
+        self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None
+    ):
         oid = 777
         return oid, {
-            "status": "Filled" if (order_type or "").upper() == "MARKET" else "Submitted",
+            "status": (
+                "Filled" if (order_type or "").upper() == "MARKET" else "Submitted"
+            ),
             "filled": float(qty or 0),
             "avgPrice": float(limit_price or 0.0),
             "meta": meta or {},

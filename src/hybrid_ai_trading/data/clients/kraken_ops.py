@@ -78,7 +78,9 @@ def value_snapshot(ex: "ccxt.kraken", quote: str) -> None:
 
         if asset.upper() == quote:
             total_quote += amount
-            details.append({"asset": asset, "amount": amount, "px": 1.0, "value": amount})
+            details.append(
+                {"asset": asset, "amount": amount, "px": 1.0, "value": amount}
+            )
             continue
 
         pair1 = f"{asset}/{quote}"
@@ -93,7 +95,13 @@ def value_snapshot(ex: "ccxt.kraken", quote: str) -> None:
             val = amount * px
             total_quote += val
             details.append(
-                {"asset": asset, "amount": amount, "px": px, "value": val, "pair": pair1}
+                {
+                    "asset": asset,
+                    "amount": amount,
+                    "px": px,
+                    "value": val,
+                    "pair": pair1,
+                }
             )
             continue
         # Try inverse QUOTE/ASSET (convert)
@@ -118,7 +126,13 @@ def value_snapshot(ex: "ccxt.kraken", quote: str) -> None:
             continue
 
         details.append(
-            {"asset": asset, "amount": amount, "px": None, "value": None, "note": "no market"}
+            {
+                "asset": asset,
+                "amount": amount,
+                "px": None,
+                "value": None,
+                "note": "no market",
+            }
         )
 
     _print_json({"quote": quote, "total_value_quote": total_quote, "details": details})

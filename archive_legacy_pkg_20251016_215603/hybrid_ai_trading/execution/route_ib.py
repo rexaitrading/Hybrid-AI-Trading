@@ -35,7 +35,9 @@ def place_entry(ib, symbol, side, last_px, rc):
     # ... existing order build + ib.placeOrder(...) logic ...
 
 
-def place_entry(ib: IB, symbol: str, side: str, px: float, rc: RiskConfig, limit_pad_bps: int = 5):
+def place_entry(
+    ib: IB, symbol: str, side: str, px: float, rc: RiskConfig, limit_pad_bps: int = 5
+):
     """
     Simple risk-aware entry as padded limit order.
     """

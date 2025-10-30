@@ -18,9 +18,9 @@ def _ema(x: pd.Series, n: int) -> pd.Series:
 
 def _atr(df: pd.DataFrame, n: int = 14) -> pd.Series:
     h, l, c = df["high"], df["low"], df["close"]
-    tr = pd.concat([(h - l).abs(), (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1).max(
-        axis=1
-    )
+    tr = pd.concat(
+        [(h - l).abs(), (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1
+    ).max(axis=1)
     return tr.rolling(n).mean()
 
 
@@ -32,7 +32,10 @@ def momo_signal(
       - MACD histogram for direction
       - ATR-based activity floor to avoid dead tape
     """
-    if len(df) < max(slow, 50) or df[["open", "high", "low", "close"]].isna().any().any():
+    if (
+        len(df) < max(slow, 50)
+        or df[["open", "high", "low", "close"]].isna().any().any()
+    ):
         return Signal("FLAT", 0.0)
 
     close = df["close"]

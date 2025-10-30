@@ -44,7 +44,9 @@ def _normalize_article(article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return {
             "article_id": str(article.get("id") or article.get("article_id")),
             "created": (
-                datetime.fromisoformat(article.get("published_utc").replace("Z", "+00:00"))
+                datetime.fromisoformat(
+                    article.get("published_utc").replace("Z", "+00:00")
+                )
                 if article.get("published_utc")
                 else utc_now()
             ),
@@ -60,7 +62,9 @@ def _normalize_article(article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 # ---------------------------------------------------------------------
 # Fetchers
 # ---------------------------------------------------------------------
-def fetch_polygon_news(limit: int = 10, ticker: Optional[str] = None) -> List[Dict[str, Any]]:
+def fetch_polygon_news(
+    limit: int = 10, ticker: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """
     Fetch latest news from Polygon.io.
 
@@ -73,7 +77,9 @@ def fetch_polygon_news(limit: int = 10, ticker: Optional[str] = None) -> List[Di
     """
     polygon_key = os.getenv("POLYGON_KEY")  # dynamic lookup
     if not polygon_key:
-        logger.warning("Ã¢Å¡Â Ã¯Â¸Â POLYGON_KEY not set Ã¢â€ â€™ skipping Polygon news fetch")
+        logger.warning(
+            "Ã¢Å¡Â Ã¯Â¸Â POLYGON_KEY not set Ã¢â€ â€™ skipping Polygon news fetch"
+        )
         return []
 
     url = "https://api.polygon.io/v2/reference/news"
@@ -106,7 +112,9 @@ def fetch_benzinga_news(symbol: str, limit: int = 10) -> List[Dict[str, Any]]:
     """
     benzinga_key = os.getenv("BENZINGA_KEY")  # dynamic lookup
     if not benzinga_key:
-        logger.warning("Ã¢Å¡Â Ã¯Â¸Â BENZINGA_KEY not set Ã¢â€ â€™ skipping Benzinga news fetch")
+        logger.warning(
+            "Ã¢Å¡Â Ã¯Â¸Â BENZINGA_KEY not set Ã¢â€ â€™ skipping Benzinga news fetch"
+        )
         return []
 
     url = "https://api.benzinga.com/api/v2/news"
@@ -117,7 +125,9 @@ def fetch_benzinga_news(symbol: str, limit: int = 10) -> List[Dict[str, Any]]:
         resp.raise_for_status()
         data = resp.json()
         if isinstance(data, dict):
-            logger.info("Ã¢Å“â€¦ Benzinga news fetched | symbol=%s count=%s", symbol, len(data))
+            logger.info(
+                "Ã¢Å“â€¦ Benzinga news fetched | symbol=%s count=%s", symbol, len(data)
+            )
             return data.get("articles", [])
         logger.error("Ã¢ÂÅ’ Benzinga response invalid format: %s", type(data))
         return []
@@ -163,7 +173,9 @@ def save_articles(articles: List[Dict[str, Any]]) -> int:
         session.close()
 
 
-def get_latest_headlines(limit: int = 10, symbol: Optional[str] = None) -> List[Dict[str, Any]]:
+def get_latest_headlines(
+    limit: int = 10, symbol: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """
     Query latest headlines from DB for sentiment filter.
 

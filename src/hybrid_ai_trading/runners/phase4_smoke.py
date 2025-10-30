@@ -41,7 +41,9 @@ def qc_like_run(symbols, snapshots, cfg, logger):
     try:
         import hybrid_ai_trading.runners.paper_quantcore as qc
     except Exception as e:
-        logger_info(logger, "once_done", note=f"quantcore missing: {e}", result={"items": []})
+        logger_info(
+            logger, "once_done", note=f"quantcore missing: {e}", result={"items": []}
+        )
         return {"items": []}
     # 1) (cfg, logger, snapshots=...)
     try:
@@ -72,7 +74,10 @@ def qc_like_run(symbols, snapshots, cfg, logger):
         return _norm(qc.run_once(list(symbols or []), dict(price_map or {}), risk_mgr))
     except Exception as e:
         logger_info(
-            logger, "once_done", note=f"quantcore run_once failed: {e}", result={"items": []}
+            logger,
+            "once_done",
+            note=f"quantcore run_once failed: {e}",
+            result={"items": []},
         )
         return {"items": []}
 
@@ -99,7 +104,9 @@ def riskhub_checks(snapshots, result, logger):
     try:
         from hybrid_ai_trading.utils.risk_client import RISK_HUB_URL, check_decision
     except Exception as e:
-        logger_info(logger, "risk_checks", items=[], note=f"risk_client_unavailable: {e}")
+        logger_info(
+            logger, "risk_checks", items=[], note=f"risk_client_unavailable: {e}"
+        )
         return
     price_map = {}
     try:
@@ -127,11 +134,19 @@ def riskhub_checks(snapshots, result, logger):
         px = float(price_map.get(sym) or 0.0)
         notion = qty * px
         try:
-            resp = check_decision(RISK_HUB_URL, sym or "", qty, notion, str(dec.get("side", "BUY")))
+            resp = check_decision(
+                RISK_HUB_URL, sym or "", qty, notion, str(dec.get("side", "BUY"))
+            )
         except Exception as e:
             resp = {"error": str(e)}
         checks.append(
-            {"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp}
+            {
+                "symbol": sym,
+                "qty": qty,
+                "price": px,
+                "notional": notion,
+                "response": resp,
+            }
         )
     logger_info(logger, "risk_checks", items=checks)
 

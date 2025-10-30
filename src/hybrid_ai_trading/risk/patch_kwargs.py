@@ -35,7 +35,11 @@ def _patch_init():
         orig_kwargs = dict(kwargs)
         # pass only supported kwargs to original __init__
         try:
-            allowed = {k: v for k, v in kwargs.items() if k in inspect.signature(_orig).parameters}
+            allowed = {
+                k: v
+                for k, v in kwargs.items()
+                if k in inspect.signature(_orig).parameters
+            }
         except Exception:
             allowed = kwargs
         ret = _orig(self, *args, **allowed)

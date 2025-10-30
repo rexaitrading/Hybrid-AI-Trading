@@ -86,7 +86,11 @@ def test_precision_finish_all_remaining():
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     # benign submit
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 9001}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "ok",
+            "reason": "ok",
+            "order_id": 9001,
+        }
     for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
             try:
@@ -137,7 +141,11 @@ def test_precision_finish_all_remaining():
     if hasattr(te, "risk_manager"):
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 9004}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "ok",
+            "reason": "ok",
+            "order_id": 9004,
+        }
     for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
             try:

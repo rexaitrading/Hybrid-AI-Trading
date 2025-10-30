@@ -54,7 +54,9 @@ def main() -> None:
     daily_not = float(os.getenv("HG_DAILY_NOTIONAL", "0") or 0)
     daily_tr = int(os.getenv("HG_DAILY_TRADES", "0") or 0)
     pairs = (
-        env_list("TC_CRYPTO", "BTC/USDC,ETH/USDC") if crypto_signal else ["BTC/USDC", "ETH/USDC"]
+        env_list("TC_CRYPTO", "BTC/USDC,ETH/USDC")
+        if crypto_signal
+        else ["BTC/USDC", "ETH/USDC"]
     )
 
     print("\nPRE-FLIGHT\n----------")
@@ -77,7 +79,9 @@ def main() -> None:
     used_tr = int(today.get("trades", 0))
     room_not = "∞" if daily_not <= 0 else f"{max(0.0,daily_not - used_not):.2f}"
     room_tr = "∞" if daily_tr <= 0 else f"{max(0,daily_tr - used_tr)}"
-    print(f"LiveGuard caps: per-trade={cap_q}  daily_notional={daily_not}  daily_trades={daily_tr}")
+    print(
+        f"LiveGuard caps: per-trade={cap_q}  daily_notional={daily_not}  daily_trades={daily_tr}"
+    )
     print(
         f"  used today: notional={used_not:.2f} trades={used_tr}  room: notional={room_not} trades={room_tr}"
     )
@@ -91,7 +95,11 @@ def main() -> None:
             sig = crypto_signal(p)
             if not sig or not sig.get("buy"):
                 continue
-            eff = min(float(sig["size_quote"]), cap) if cap > 0 else float(sig["size_quote"])
+            eff = (
+                min(float(sig["size_quote"]), cap)
+                if cap > 0
+                else float(sig["size_quote"])
+            )
             print(
                 f"{p} ({sig['tf']}): entry≈{sig['last']:.2f} size≈{eff:.2f} stop≈{(sig['stop'] or float('nan')):.2f}"
             )

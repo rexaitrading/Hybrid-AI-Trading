@@ -24,7 +24,9 @@ def test_init_db_success(caplog):
 
 def test_init_db_failure(caplog):
     caplog.set_level(logging.ERROR)
-    with patch.object(database.Base.metadata, "create_all", side_effect=RuntimeError("fail")):
+    with patch.object(
+        database.Base.metadata, "create_all", side_effect=RuntimeError("fail")
+    ):
         with pytest.raises(RuntimeError):
             database.init_db()
     assert "Database initialization failed" in caplog.text

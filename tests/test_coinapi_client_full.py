@@ -109,7 +109,9 @@ def test_iso_formats_with_timezone():
 # ----------------------------------------------------------------------
 def test_retry_get_stub_when_headers_empty(monkeypatch):
     monkeypatch.setenv("COINAPI_ALLOW_STUB", "1")
-    with patch("hybrid_ai_trading.data.clients.coinapi_client._get_headers", return_value={}):
+    with patch(
+        "hybrid_ai_trading.data.clients.coinapi_client._get_headers", return_value={}
+    ):
         resp = coinapi_client._retry_get("http://fake")
         assert isinstance(resp.json(), dict)
     monkeypatch.delenv("COINAPI_ALLOW_STUB", raising=False)

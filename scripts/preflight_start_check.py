@@ -74,7 +74,9 @@ hours_back = int(cfg.get("sweep_hours_back", 6))
 limit = int(cfg.get("sweep_limit", 100))
 symbols = (cfg.get("sweep_symbols") or "AAPL,MSFT,GOOGL,AMZN,TSLA").upper()
 if hours_back > 0 and limit > 0 and "," in symbols:
-    _pass(f"YAML: sweep params ok (hours_back={hours_back}, limit={limit}, symbols={symbols})")
+    _pass(
+        f"YAML: sweep params ok (hours_back={hours_back}, limit={limit}, symbols={symbols})"
+    )
 else:
     _fail("YAML: sweep params invalid")
 
@@ -90,7 +92,9 @@ else:
 try:
     from hybrid_ai_trading.risk.sentiment_gate import score_headlines_for_symbols
 
-    res = score_headlines_for_symbols(symbols, hours_back=hours_back, limit=limit, side="BUY")
+    res = score_headlines_for_symbols(
+        symbols, hours_back=hours_back, limit=limit, side="BUY"
+    )
     total = int(res.get("total", 0))
     allows = sum(1 for s in res.get("stories", []) if s.get("allow"))
     if total > 0:
@@ -98,7 +102,9 @@ try:
         if allows == 0:
             _warn("Gate: no ALLOW yet (may be quiet tape or threshold high)")
     else:
-        _fail("Gate: zero stories returned (increase sweep_hours_back/limit or check providers)")
+        _fail(
+            "Gate: zero stories returned (increase sweep_hours_back/limit or check providers)"
+        )
 except Exception as e:
     _fail(f"Gate error: {e}")
 
@@ -130,7 +136,9 @@ try:
             if item.tag in tags:
                 tags[item.tag] = item.value
         if all(tags.values()):
-            _pass(f"IBKR: balances ok (NLV={tags['NetLiquidation']}, AF={tags['AvailableFunds']})")
+            _pass(
+                f"IBKR: balances ok (NLV={tags['NetLiquidation']}, AF={tags['AvailableFunds']})"
+            )
         else:
             _fail(f"IBKR: missing balance fields -> {tags}")
 
@@ -149,7 +157,9 @@ try:
             if has_px:
                 _pass("IBKR: market data tick received for AAPL (bid/ask/last present)")
             else:
-                _warn("IBKR: no market tick observed (may lack realtime perms or need longer wait)")
+                _warn(
+                    "IBKR: no market tick observed (may lack realtime perms or need longer wait)"
+                )
             ib.cancelMktData(contract)
         except Exception as e:
             _warn(f"IBKR: market data check skipped ({e})")
@@ -189,6 +199,8 @@ except Exception as e:
 
 # ---- Summary ----
 print("\n--------- SUMMARY ---------")
-print(f"{GREEN}PASS{RESET}: {passed}   {YELLOW}WARN{RESET}: {warned}   {RED}FAIL{RESET}: {failed}")
+print(
+    f"{GREEN}PASS{RESET}: {passed}   {YELLOW}WARN{RESET}: {warned}   {RED}FAIL{RESET}: {failed}"
+)
 print("---------------------------")
 sys.exit(1 if failed else 0)

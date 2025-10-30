@@ -122,7 +122,9 @@ def bollinger_bands_signal(
     audit: bool = False,
 ) -> Union[str, tuple[str, float, float, float]]:
     """Module-level wrapper for Bollinger Bands signal."""
-    signal = BollingerBandsSignal(period=period, std_dev=std_dev).generate("SYMBOL", bars)
+    signal = BollingerBandsSignal(period=period, std_dev=std_dev).generate(
+        "SYMBOL", bars
+    )
 
     decision = signal.get("signal", "HOLD")
     close = float(signal.get("close", 0.0))

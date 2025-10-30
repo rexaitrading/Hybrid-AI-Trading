@@ -182,7 +182,13 @@ def cli_run_once_smoke(universe: str, log_file: str, provider_only: bool = True)
             except Exception as e:
                 resp = {"error": str(e)}
             items.append(
-                {"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp}
+                {
+                    "symbol": sym,
+                    "qty": qty,
+                    "price": px,
+                    "notional": notion,
+                    "response": resp,
+                }
             )
         logger.info("risk_checks", items=items)
     except Exception:
@@ -297,7 +303,13 @@ def cli_run_once_safe(universe: str, log_file: str, provider_only: bool = True):
             except Exception as e:
                 resp = {"error": str(e)}
             items.append(
-                {"symbol": sym, "qty": qty, "price": px, "notional": notion, "response": resp}
+                {
+                    "symbol": sym,
+                    "qty": qty,
+                    "price": px,
+                    "notional": notion,
+                    "response": resp,
+                }
             )
         logger.info("risk_checks", items=items)
     except Exception:
@@ -341,7 +353,11 @@ def _phase4_enrich_decisions(result: dict, symbols, snapshots, cfg, logger):
     except Exception:
         price_map = {}
 
-    key = "items" if "items" in result else ("decisions" if "decisions" in result else None)
+    key = (
+        "items"
+        if "items" in result
+        else ("decisions" if "decisions" in result else None)
+    )
     if not key:
         return result
 
@@ -387,7 +403,9 @@ def _phase4_enrich_decisions(result: dict, symbols, snapshots, cfg, logger):
             conf = 0.5
             if hasattr(rm, "sent") and hasattr(rm.sent, "score"):
                 try:
-                    sent = float(rm.sent.score(""))  # no text: returns 0.0/0.5 per model behavior
+                    sent = float(
+                        rm.sent.score("")
+                    )  # no text: returns 0.0/0.5 per model behavior
                     conf = 0.5
                 except Exception:
                     sent, conf = 0.0, 0.5
@@ -424,7 +442,9 @@ def _phase4_enrich_decisions(result: dict, symbols, snapshots, cfg, logger):
                 ):
                     f = float(rm.kelly.kelly_fraction(risk_veto=False))
                     size = float(
-                        rm.kelly.size_position(float(rm.equity), float(px or 0.0), risk_veto=False)
+                        rm.kelly.size_position(
+                            float(rm.equity), float(px or 0.0), risk_veto=False
+                        )
                     )
                     qty = int(size) if size > 0 else 0
                 else:
@@ -440,7 +460,9 @@ def _phase4_enrich_decisions(result: dict, symbols, snapshots, cfg, logger):
                 if callable(gate):
                     g = gate(sym or "NA", side, float(qty), float(notional))
                     if isinstance(g, dict):
-                        ok, why = bool(g.get("approved", True)), str(g.get("reason", ""))
+                        ok, why = bool(g.get("approved", True)), str(
+                            g.get("reason", "")
+                        )
                     elif isinstance(g, (tuple, list)) and g:
                         ok, why = bool(g[0]), ("" if len(g) < 2 else str(g[1]))
                     else:

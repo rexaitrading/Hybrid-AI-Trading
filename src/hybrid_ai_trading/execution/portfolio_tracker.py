@@ -28,7 +28,9 @@ class PortfolioTracker:
         self.cash = float(starting_equity)
         self.equity = float(starting_equity)
         self.positions: Dict[str, Dict[str, float | str]] = {}
-        self.history: List[Tuple[datetime, float]] = [(datetime.now(timezone.utc), self.equity)]
+        self.history: List[Tuple[datetime, float]] = [
+            (datetime.now(timezone.utc), self.equity)
+        ]
         self.realized_pnl = 0.0
         self.unrealized_pnl = 0.0
         self.daily_pnl = 0.0
@@ -79,7 +81,9 @@ class PortfolioTracker:
                 logger.debug("BRANCH-85 COVER HIT | cover=%s, leftover=%s", cover, size)
             if size > 0:  # open/add long
                 new_total = max(pos["size"], 0) + size
-                pos["avg_price"] = (old_avg * max(pos["size"], 0) + price * size) / new_total
+                pos["avg_price"] = (
+                    old_avg * max(pos["size"], 0) + price * size
+                ) / new_total
                 pos["size"] = max(pos["size"], 0) + size
                 self.cash -= price * size + commission
                 logger.debug("BRANCH-100 OPEN LONG HIT | size=%s", size)
@@ -92,10 +96,14 @@ class PortfolioTracker:
                 self.cash += price * close - commission
                 pos["size"] -= close
                 size -= close
-                logger.debug("BRANCH-122 CLOSE LONG HIT | close=%s, leftover=%s", close, size)
+                logger.debug(
+                    "BRANCH-122 CLOSE LONG HIT | close=%s, leftover=%s", close, size
+                )
             if size > 0:  # open/add short
                 new_total = abs(min(pos["size"], 0)) + size
-                pos["avg_price"] = (old_avg * abs(min(pos["size"], 0)) + price * size) / new_total
+                pos["avg_price"] = (
+                    old_avg * abs(min(pos["size"], 0)) + price * size
+                ) / new_total
                 pos["size"] = min(pos["size"], 0) - size
                 self.cash += price * size - commission
                 logger.debug("BRANCH-114 OPEN SHORT HIT | size=%s", size)
@@ -127,7 +135,9 @@ class PortfolioTracker:
                 elif pos["size"] < 0:
                     unrealized += (pos["avg_price"] - price) * abs(pos["size"])
         to_delete = [
-            s for s, p in self.positions.items() if math.isclose(p["size"], 0.0, abs_tol=1e-8)
+            s
+            for s, p in self.positions.items()
+            if math.isclose(p["size"], 0.0, abs_tol=1e-8)
         ]
         for sym in to_delete:
             del self.positions[sym]
@@ -141,7 +151,8 @@ class PortfolioTracker:
         if len(self.history) < 2:
             return []
         return [
-            (self.history[i][1] - self.history[i - 1][1]) / max(self.history[i - 1][1], 1e-9)
+            (self.history[i][1] - self.history[i - 1][1])
+            / max(self.history[i - 1][1], 1e-9)
             for i in range(1, len(self.history))
         ]
 

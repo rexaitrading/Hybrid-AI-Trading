@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 
 
 class OrderManager:
-    def __init__(self, risk_mgr=None, portfolio=None, dry_run: bool = True, **kwargs) -> None:
+    def __init__(
+        self, risk_mgr=None, portfolio=None, dry_run: bool = True, **kwargs
+    ) -> None:
         self.risk_mgr = risk_mgr
         self.portfolio = portfolio
         self.dry_run = dry_run
@@ -42,7 +44,9 @@ class OrderManager:
                 simulate_fill=lambda *a, **k: {"status": "filled", "_sim": True}
             )
 
-    def _risk_veto(self, symbol: str, side: str, qf: float, nf: float) -> Dict[str, Any] | None:
+    def _risk_veto(
+        self, symbol: str, side: str, qf: float, nf: float
+    ) -> Dict[str, Any] | None:
         rm = getattr(self, "risk_mgr", None)
         if rm is None:
             return None
@@ -80,7 +84,14 @@ class OrderManager:
                         return None
                     if isinstance(lr, dict):
                         st = str(lr.get("status", "")).lower()
-                        if st not in ("ok", "filled", "allow", "approved", "pass", "true"):
+                        if st not in (
+                            "ok",
+                            "filled",
+                            "allow",
+                            "approved",
+                            "pass",
+                            "true",
+                        ):
                             return {
                                 "status": "blocked",
                                 "reason": lr.get("reason", "Risk veto"),
@@ -269,7 +280,9 @@ class OrderManager:
         # Default: no explicit veto and no explicit approval ⇒ allow
         return None
 
-    def place_order(self, symbol: str, side: str, qty: float, notional: float) -> Dict[str, Any]:
+    def place_order(
+        self, symbol: str, side: str, qty: float, notional: float
+    ) -> Dict[str, Any]:
         # VALIDATION
         if not symbol or not isinstance(symbol, str):
             return {
@@ -322,7 +335,11 @@ class OrderManager:
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
-                    oid = raw.get("id") or raw.get("order_id") or (raw.get("_raw") or {}).get("id")
+                    oid = (
+                        raw.get("id")
+                        or raw.get("order_id")
+                        or (raw.get("_raw") or {}).get("id")
+                    )
                 if oid:
                     self._open_ids.add(oid)
                     self.active_orders.append(
@@ -368,7 +385,12 @@ class OrderManager:
                 }
             try:
                 res = self.simulator.simulate_fill(symbol, side, qf, nf)
-                base = {"symbol": symbol, "side": side, "qty": qty, "notional": notional}
+                base = {
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qty,
+                    "notional": notional,
+                }
                 if isinstance(res, dict):
                     oid = res.get("order_id")
                     if not oid:

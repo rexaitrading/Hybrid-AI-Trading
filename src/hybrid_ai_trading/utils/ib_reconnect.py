@@ -68,7 +68,9 @@ def with_ib_reconnect(
                         break
             if _ib is None:
                 if IB is None:
-                    raise RuntimeError("ib_insync.IB not available and no 'ib' instance provided")
+                    raise RuntimeError(
+                        "ib_insync.IB not available and no 'ib' instance provided"
+                    )
                 _ib = IB()
 
             # allow per-call overrides but default to decorator values

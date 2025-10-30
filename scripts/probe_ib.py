@@ -62,7 +62,9 @@ cid = int(os.getenv("IB_CLIENT_ID", "101"))
 app = App()
 print(f"Connecting to {host}:{port} clientId={cid} ...", flush=True)
 
-threading.Thread(target=connect_and_run, args=(app, host, port, cid), daemon=True).start()
+threading.Thread(
+    target=connect_and_run, args=(app, host, port, cid), daemon=True
+).start()
 threading.Thread(target=pokes, args=(app,), daemon=True).start()
 
 deadline = time.time() + 15

@@ -12,7 +12,9 @@ class _Stub:
     def server_time(self):
         return "2025-10-11 00:00:00"
 
-    def place_order(self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None):
+    def place_order(
+        self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None
+    ):
         oid = 1
         return oid, {
             "status": "Filled" if order_type == "MARKET" else "Submitted",
@@ -109,7 +111,15 @@ def test_trade_engine_method_sweep(monkeypatch):
         _maybe(lambda: eng.positions())
 
     # Try any obvious utility hooks if present
-    for name in ("reset_day", "update_equity", "flush", "sync", "tick", "run_once", "run"):
+    for name in (
+        "reset_day",
+        "update_equity",
+        "flush",
+        "sync",
+        "tick",
+        "run_once",
+        "run",
+    ):
         if hasattr(eng, name):
             _maybe(lambda n=name: getattr(eng, n)())
 

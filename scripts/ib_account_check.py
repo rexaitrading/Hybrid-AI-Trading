@@ -58,7 +58,9 @@ def main():
     print(f"Connecting to {host}:{port} clientId={cid} ...", flush=True)
 
     # start IB loop on background thread (prevents blocking hangs)
-    t = threading.Thread(target=connect_and_run, args=(app, host, port, cid), daemon=True)
+    t = threading.Thread(
+        target=connect_and_run, args=(app, host, port, cid), daemon=True
+    )
     t.start()
 
     # hard deadline so we never hang

@@ -61,7 +61,9 @@ class RegimeDetector:
             self.min_samples,
         )
 
-    def _get_prices(self, symbol: str, prices: Optional[List[float]] = None) -> pd.Series:
+    def _get_prices(
+        self, symbol: str, prices: Optional[List[float]] = None
+    ) -> pd.Series:
         if prices is not None:
             try:
                 return pd.Series([float(p) for p in prices], dtype="float64").dropna()
@@ -79,7 +81,9 @@ class RegimeDetector:
                 .order_by(Price.timestamp.asc())
                 .all()
             )
-            closes = [float(r.close) for r in rows if getattr(r, "close", None) is not None]
+            closes = [
+                float(r.close) for r in rows if getattr(r, "close", None) is not None
+            ]
             return pd.Series(closes, dtype="float64").dropna()
         except Exception as e:
             logger.error("DB fetch failed for %s: %s", symbol, e)
@@ -162,7 +166,13 @@ class RegimeDetector:
     def confidence(self, symbol: str, prices: Optional[List[float]] = None) -> float:
         if not self.enabled:
             return 0.0
-        mapping = {"bull": 0.9, "bear": 0.1, "crisis": 0.3, "transition": 0.5, "sideways": 0.5}
+        mapping = {
+            "bull": 0.9,
+            "bear": 0.1,
+            "crisis": 0.3,
+            "transition": 0.5,
+            "sideways": 0.5,
+        }
         return mapping.get(self.detect(symbol, prices), 0.5)
 
     def reset(self) -> None:

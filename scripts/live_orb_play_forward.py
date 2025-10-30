@@ -123,10 +123,23 @@ def qualify(symbol, primary):
 def seed_history(contract):
     attempts = [
         dict(
-            durationStr=f"{DUR_SEC} S", barSizeSetting="1 min", whatToShow="TRADES", useRTH=USE_RTH
+            durationStr=f"{DUR_SEC} S",
+            barSizeSetting="1 min",
+            whatToShow="TRADES",
+            useRTH=USE_RTH,
         ),
-        dict(durationStr=f"{DUR_SEC} S", barSizeSetting="1 min", whatToShow="TRADES", useRTH=False),
-        dict(durationStr="1 D", barSizeSetting="1 min", whatToShow="TRADES", useRTH=USE_RTH),
+        dict(
+            durationStr=f"{DUR_SEC} S",
+            barSizeSetting="1 min",
+            whatToShow="TRADES",
+            useRTH=False,
+        ),
+        dict(
+            durationStr="1 D",
+            barSizeSetting="1 min",
+            whatToShow="TRADES",
+            useRTH=USE_RTH,
+        ),
     ]
     for i, kw in enumerate(attempts, 1):
         try:
@@ -220,7 +233,14 @@ def _simulate_from_seed(seed_df, *, state, pace_sec=0.10):
         # pure datetime math -> no .to_pydatetime() needed
         t = (t0 + timedelta(minutes=i)).replace(second=0, microsecond=0)
         b = _RT(
-            t, r["open"], r["high"], r["low"], r["close"], int(r["volume"]), w=r["close"], count=1
+            t,
+            r["open"],
+            r["high"],
+            r["low"],
+            r["close"],
+            int(r["volume"]),
+            w=r["close"],
+            count=1,
         )
         on_rt_bar(b, state=state)
         time.sleep(pace_sec)
@@ -382,22 +402,35 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(
         description="Live ORB play-forward runner (with optional SIM & CSV)"
     )
-    p.add_argument("--sim", action="store_true", help="Enable SIM mode (no RT subscription)")
     p.add_argument(
-        "--from-csv", type=str, default=None, help="Path to minute-bar CSV to drive SIM without IB"
+        "--sim", action="store_true", help="Enable SIM mode (no RT subscription)"
+    )
+    p.add_argument(
+        "--from-csv",
+        type=str,
+        default=None,
+        help="Path to minute-bar CSV to drive SIM without IB",
     )
     p.add_argument("--symbol", type=str, default=os.getenv("LIVE_SYMBOL", "AAPL"))
     p.add_argument("--primary", type=str, default=os.getenv("LIVE_PRIMARY", "NASDAQ"))
-    p.add_argument("--mdt", type=int, choices=[1, 2, 3, 4], default=int(os.getenv("LIVE_MDT", "3")))
+    p.add_argument(
+        "--mdt", type=int, choices=[1, 2, 3, 4], default=int(os.getenv("LIVE_MDT", "3"))
+    )
     p.add_argument(
         "--rth",
         type=int,
         choices=[0, 1],
-        default=1 if os.getenv("LIVE_USE_RTH", "1") in ("1", "true", "True", "YES", "yes") else 0,
+        default=(
+            1
+            if os.getenv("LIVE_USE_RTH", "1") in ("1", "true", "True", "YES", "yes")
+            else 0
+        ),
     )
     p.add_argument("--qty", type=int, default=int(os.getenv("LIVE_QTY", "100")))
     p.add_argument("--fees", type=float, default=float(os.getenv("LIVE_FEES", "0")))
-    p.add_argument("--orb-minutes", type=int, default=int(os.getenv("LIVE_ORB_MINUTES", "15")))
+    p.add_argument(
+        "--orb-minutes", type=int, default=int(os.getenv("LIVE_ORB_MINUTES", "15"))
+    )
     args = p.parse_args()
 
     # push into env so existing code paths keep working

@@ -117,7 +117,17 @@ def _find(te, names):
 
 
 def _call_signal(te, **kw):
-    f = _find(te, ["process_signal", "_on_signal", "on_signal", "handle_signal", "submit", "trade"])
+    f = _find(
+        te,
+        [
+            "process_signal",
+            "_on_signal",
+            "on_signal",
+            "handle_signal",
+            "submit",
+            "trade",
+        ],
+    )
     if f:
         try:
             return f(**kw)
@@ -182,7 +192,9 @@ def test_alert_matrix_103_144(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setitem(sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom))
+    monkeypatch.setitem(
+        sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom)
+    )
 
     class SMTPBAD:
         def __enter__(self):
@@ -241,14 +253,18 @@ def test_router_error_and_algo_imports_263_288(monkeypatch):
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name: fake if name.endswith((".twap", ".vwap")) else importlib.import_module(name),
+        lambda name: (
+            fake if name.endswith((".twap", ".vwap")) else importlib.import_module(name)
+        ),
     )
     if hasattr(te, "_route_with_algo"):
         assert te._route_with_algo("AAPL", "BUY", 1, 1.0, algo="twap")["status"] == "ok"
         assert te._route_with_algo("AAPL", "BUY", 1, 1.0, algo="vwap")["status"] == "ok"
     # router error
     if hasattr(te, "order_manager"):
-        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("router"))
+        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("router")
+        )
     if hasattr(te, "_route_direct"):
         r = te._route_direct("AAPL", "BUY", 1, 1.0)
         assert r["status"] == "blocked"

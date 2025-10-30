@@ -71,7 +71,9 @@ def main():
         "Breakdown?    ",
         (last is not None and prev_low_24 is not None and last < prev_low_24),
     )
-    print("ATR14:", atr14, "ATR%:", (None if atr_pct is None else round(100 * atr_pct, 3)))
+    print(
+        "ATR14:", atr14, "ATR%:", (None if atr_pct is None else round(100 * atr_pct, 3))
+    )
     print("ATR clamp OK? ", (atr_pct is not None and 0.003 <= atr_pct <= 0.03))
     # quick decision echo (same as alpha logic)
     decision = None

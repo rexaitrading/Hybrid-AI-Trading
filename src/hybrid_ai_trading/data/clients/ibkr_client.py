@@ -85,11 +85,15 @@ def cancel_all(ib: IB, symbol: Optional[str] = None) -> Dict[str, Any]:
         if symbol is not None and getattr(cont, "symbol", None) != symbol:
             continue
         ib.cancelOrder(trade.order)
-        canceled.append({"orderId": trade.order.orderId, "symbol": getattr(cont, "symbol", None)})
+        canceled.append(
+            {"orderId": trade.order.orderId, "symbol": getattr(cont, "symbol", None)}
+        )
     return {"canceled": canceled}
 
 
-def place_market_stock(ib: IB, symbol: str, shares: float, action: str = "BUY") -> Dict[str, Any]:
+def place_market_stock(
+    ib: IB, symbol: str, shares: float, action: str = "BUY"
+) -> Dict[str, Any]:
     contract = Stock(symbol, "SMART", "USD")
     order = MarketOrder(action.upper(), abs(shares))
     trade = ib.placeOrder(contract, order)

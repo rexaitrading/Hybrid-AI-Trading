@@ -75,7 +75,12 @@ class Client:
                     "source": "coinapi",
                     "reason": j.get("error"),
                 }
-            return {"symbol": symbol, "price": None, "source": "coinapi", "reason": "no_rate"}
+            return {
+                "symbol": symbol,
+                "price": None,
+                "source": "coinapi",
+                "reason": "no_rate",
+            }
         return {
             "symbol": symbol,
             "price": None,

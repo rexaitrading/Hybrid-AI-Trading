@@ -52,11 +52,21 @@ def main():
         default="",
         help="Comma list like BRF,DJNL,FLY; empty=auto-prune by entitlements",
     )
-    ap.add_argument("--lookbackMin", type=int, default=30, help="Initial history window (minutes)")
-    ap.add_argument("--poll", type=float, default=5.0, help="Poll interval seconds; 0=single run")
-    ap.add_argument("--maxResults", type=int, default=50, help="Max historical items per request")
-    ap.add_argument("--withBody", action="store_true", help="Fetch full article body (slower)")
-    ap.add_argument("--json", action="store_true", help="Emit JSON lines (one object per line)")
+    ap.add_argument(
+        "--lookbackMin", type=int, default=30, help="Initial history window (minutes)"
+    )
+    ap.add_argument(
+        "--poll", type=float, default=5.0, help="Poll interval seconds; 0=single run"
+    )
+    ap.add_argument(
+        "--maxResults", type=int, default=50, help="Max historical items per request"
+    )
+    ap.add_argument(
+        "--withBody", action="store_true", help="Fetch full article body (slower)"
+    )
+    ap.add_argument(
+        "--json", action="store_true", help="Emit JSON lines (one object per line)"
+    )
     ap.add_argument(
         "--mergeShape",
         action="store_true",
@@ -114,7 +124,9 @@ def main():
             for code in prov_codes:
                 try:
                     with _ErrCatcher(ib, squelch_codes={321}):
-                        _ = ib.reqHistoricalNews(sample_conId, code, start_probe, end_probe, 1)
+                        _ = ib.reqHistoricalNews(
+                            sample_conId, code, start_probe, end_probe, 1
+                        )
                     keep.append(code)  # keep it if no exception was raised
                 except Exception:
                     pass
@@ -154,7 +166,9 @@ def main():
                         or []
                     )
                 except Exception as e:
-                    print(f"WARN: historical news failed for {sym}: {e}", file=sys.stderr)
+                    print(
+                        f"WARN: historical news failed for {sym}: {e}", file=sys.stderr
+                    )
                     continue
 
                 for n in items:
@@ -187,7 +201,12 @@ def main():
         batch = fetch_batch(start_ts, now)
 
         if args.mergeShape:
-            out = {"ts": iso_utc(), "connected": True, "providers": prov_codes, "news": batch}
+            out = {
+                "ts": iso_utc(),
+                "connected": True,
+                "providers": prov_codes,
+                "news": batch,
+            }
             print(json.dumps(out, ensure_ascii=False))
             return
 

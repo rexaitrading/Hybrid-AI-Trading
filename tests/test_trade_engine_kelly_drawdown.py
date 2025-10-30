@@ -18,8 +18,12 @@ def _mk(hist):
             return self._pos
 
     # Minimal doubles
-    OM = type("OM", (object,), {"route": lambda *a, **k: {"status": "ok", "reason": "ok"}})
-    PT = type("PT", (object,), {"sharpe_ratio": lambda s: 0.0, "sortino_ratio": lambda s: 0.0})
+    OM = type(
+        "OM", (object,), {"route": lambda *a, **k: {"status": "ok", "reason": "ok"}}
+    )
+    PT = type(
+        "PT", (object,), {"sharpe_ratio": lambda s: 0.0, "sortino_ratio": lambda s: 0.0}
+    )
     cfg = {"risk": {"max_drawdown": 0.5}}
 
     # Signature-aware ctor:
@@ -69,7 +73,14 @@ def _mk(hist):
 
 
 def _find_signal(te):
-    for n in ("process_signal", "_on_signal", "on_signal", "handle_signal", "submit", "trade"):
+    for n in (
+        "process_signal",
+        "_on_signal",
+        "on_signal",
+        "handle_signal",
+        "submit",
+        "trade",
+    ):
         f = getattr(te, n, None)
         if callable(f):
             return f

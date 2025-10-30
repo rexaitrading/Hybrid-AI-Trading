@@ -60,7 +60,9 @@ def main() -> None:
         # Market BUY
         if args.market_buy_shares is not None:
             if _require_live(args):
-                _print(place_market_stock(ib, args.symbol, args.market_buy_shares, "BUY"))
+                _print(
+                    place_market_stock(ib, args.symbol, args.market_buy_shares, "BUY")
+                )
             else:
                 _print(
                     {
@@ -75,7 +77,9 @@ def main() -> None:
         # Market SELL
         if args.market_sell_shares is not None:
             if _require_live(args):
-                _print(place_market_stock(ib, args.symbol, args.market_sell_shares, "SELL"))
+                _print(
+                    place_market_stock(ib, args.symbol, args.market_sell_shares, "SELL")
+                )
             else:
                 _print(
                     {
@@ -94,7 +98,11 @@ def main() -> None:
                 _print({"error": "limit_price required for limit-buy"})
                 return
             if _require_live(args):
-                _print(place_limit_stock(ib, args.symbol, args.limit_buy_shares, price, "BUY"))
+                _print(
+                    place_limit_stock(
+                        ib, args.symbol, args.limit_buy_shares, price, "BUY"
+                    )
+                )
             else:
                 _print(
                     {
@@ -114,7 +122,11 @@ def main() -> None:
                 _print({"error": "limit_price required for limit-sell"})
                 return
             if _require_live(args):
-                _print(place_limit_stock(ib, args.symbol, args.limit_sell_shares, price, "SELL"))
+                _print(
+                    place_limit_stock(
+                        ib, args.symbol, args.limit_sell_shares, price, "SELL"
+                    )
+                )
             else:
                 _print(
                     {

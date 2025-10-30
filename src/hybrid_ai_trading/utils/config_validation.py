@@ -50,13 +50,21 @@ def validate_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
         out["costs"] = costs
 
     # sentiment block
-    sent = dict(out.get("sentiment", {})) if isinstance(out.get("sentiment", {}), dict) else {}
+    sent = (
+        dict(out.get("sentiment", {}))
+        if isinstance(out.get("sentiment", {}), dict)
+        else {}
+    )
     model = str(sent.get("model", "vader")).lower()
     allowed = getattr(
-        SentimentFilter, "_ALLOWED_MODELS", {"vader", "hf", "transformers", "bert", "distilbert"}
+        SentimentFilter,
+        "_ALLOWED_MODELS",
+        {"vader", "hf", "transformers", "bert", "distilbert"},
     )
     if model not in allowed:
-        raise ValueError(f"Invalid sentiment.model={model!r}. Allowed: {sorted(list(allowed))}")
+        raise ValueError(
+            f"Invalid sentiment.model={model!r}. Allowed: {sorted(list(allowed))}"
+        )
     sent["model"] = model
 
     # thresholds [0,1]

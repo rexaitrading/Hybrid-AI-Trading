@@ -65,7 +65,9 @@ def run_polygon_ingestor(
     if not os.path.exists(outfile):
         with open(outfile, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["timestamp", "symbol", "open", "high", "low", "close", "volume"])
+            writer.writerow(
+                ["timestamp", "symbol", "open", "high", "low", "close", "volume"]
+            )
 
     logger.info("✅ Database initialized at data/hybrid_ai_trading.db")
     logger.info("🔎 Starting Polygon price ingestor for %s", symbol)
@@ -116,7 +118,9 @@ def run_polygon_ingestor(
                         logger.debug("Duplicate skipped: %s %s", symbol, ts)
                     except Exception as inner_e:
                         session.rollback()
-                        logger.error("⚠️ Error inserting bar for %s: %s", symbol, inner_e)
+                        logger.error(
+                            "⚠️ Error inserting bar for %s: %s", symbol, inner_e
+                        )
 
                 if new_rows:
                     with open(outfile, "a", newline="", encoding="utf-8") as f:

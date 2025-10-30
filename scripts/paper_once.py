@@ -46,7 +46,12 @@ def ib_snapshots(symbols: List[str]) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     for s in symbols:
         t = ib.ticker(contracts[s])
-        px = t.last or t.marketPrice() or getattr(t, "close", None) or getattr(t, "vwap", None)
+        px = (
+            t.last
+            or t.marketPrice()
+            or getattr(t, "close", None)
+            or getattr(t, "vwap", None)
+        )
         bid = getattr(t, "bid", None)
         ask = getattr(t, "ask", None)
         bsize = getattr(t, "bidSize", None)
@@ -132,7 +137,9 @@ def main() -> int:
     # Detector shim: generate micro decisions and merge (detector overrides stub by symbol)
     if HAVE_DETECTORS:
         try:
-            bars_1m_by_symbol: Dict[str, Any] = {}  # Phase 3 will provide replay/live cache
+            bars_1m_by_symbol: Dict[str, Any] = (
+                {}
+            )  # Phase 3 will provide replay/live cache
             det_items = build_micro_decisions(symbols, snapshots, bars_1m_by_symbol, g)
             if det_items:
                 existing = {
@@ -148,7 +155,8 @@ def main() -> int:
 
     # ---- Ensure 1:1 coverage: backfill any missing symbols with explicit stubs ----
     got_syms = {
-        (it.get("symbol") if isinstance(it, dict) else None) for it in (result.get("items") or [])
+        (it.get("symbol") if isinstance(it, dict) else None)
+        for it in (result.get("items") or [])
     }
     missing = [s for s in symbols if s not in got_syms]
     if missing:
@@ -170,18 +178,27 @@ def main() -> int:
                             "reason": "missing_from_qc",
                         },
                         "kelly_size": {"f": 0.0, "qty": 0, "reason": "missing_from_qc"},
-                        "risk_approved": {"approved": False, "reason": "missing_from_qc"},
+                        "risk_approved": {
+                            "approved": False,
+                            "reason": "missing_from_qc",
+                        },
                     },
                 }
             )
         result["items"] = (result.get("items") or []) + stubs
-        logger.info("qc_backfill", missing=missing, note="added stub decisions for dropped symbols")
+        logger.info(
+            "qc_backfill",
+            missing=missing,
+            note="added stub decisions for dropped symbols",
+        )
 
     # hard invariant: 1:1 coverage
     assert len(result.get("items", [])) == len(symbols), "coverage_invariant_failed"
 
     # ---- Enrich each decision with microstructure BEFORE vetting ----
-    snap_map = {d["symbol"]: d for d in snapshots if isinstance(d, dict) and "symbol" in d}
+    snap_map = {
+        d["symbol"]: d for d in snapshots if isinstance(d, dict) and "symbol" in d
+    }
     result["items"] = _enrich_with_snapshots(result.get("items") or [], snap_map)
 
     # Guardrails patch per item (force risk_approved True/False)

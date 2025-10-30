@@ -54,7 +54,11 @@ def test_alert_errors(monkeypatch, alert_eng):
 
     monkeypatch.setattr("smtplib.SMTP", BadSMTP, raising=False)
     r = alert_eng.alert("hi")
-    assert r.get("slack") == "error" and r.get("telegram") == "error" and r.get("email") == "error"
+    assert (
+        r.get("slack") == "error"
+        and r.get("telegram") == "error"
+        and r.get("email") == "error"
+    )
 
 
 def test_alert_success(monkeypatch, alert_eng):

@@ -89,14 +89,25 @@ async def main():
     ib = IB()
     ok = await connect_with_retry(ib, host, port, cid, timeout=40, attempts=8)
     if not ok:
-        print("[FATAL] could not establish API session; check TWS API settings", flush=True)
+        print(
+            "[FATAL] could not establish API session; check TWS API settings",
+            flush=True,
+        )
         return
 
     # 1=REALTIME, 3=DELAYED
-    mdt = int(os.getenv("HAT_MARKET_DATA") or os.getenv("HAT_MDT") or os.getenv("IB_MDT") or "3")
+    mdt = int(
+        os.getenv("HAT_MARKET_DATA")
+        or os.getenv("HAT_MDT")
+        or os.getenv("IB_MDT")
+        or "3"
+    )
     try:
         ib.reqMarketDataType(mdt)
-        print("[runner] marketDataType=" + ("REALTIME" if mdt == 1 else "DELAYED"), flush=True)
+        print(
+            "[runner] marketDataType=" + ("REALTIME" if mdt == 1 else "DELAYED"),
+            flush=True,
+        )
     except Exception:
         pass
 
@@ -107,7 +118,9 @@ async def main():
     )
 
     # Contracts
-    contracts = [Stock(sym, "SMART", "USD", primaryExchange="NASDAQ") for sym in symbols]
+    contracts = [
+        Stock(sym, "SMART", "USD", primaryExchange="NASDAQ") for sym in symbols
+    ]
 
     # Qualify with fallback
     try:
@@ -124,7 +137,9 @@ async def main():
         ib.reqMktData(c, "", True, False)
 
     store = FeatureStore(root="data/feature_store")
-    can_trade = mdt == 1 and not os.getenv("HAT_READONLY")  # never place orders when delayed
+    can_trade = mdt == 1 and not os.getenv(
+        "HAT_READONLY"
+    )  # never place orders when delayed
 
     def on_tick(tkr):
         try:

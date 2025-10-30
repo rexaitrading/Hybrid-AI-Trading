@@ -40,7 +40,11 @@ def test_reset_day_risk_error_dict_and_both_error_dicts():
     te2.portfolio.reset_day = lambda: {"status": "error", "reason": "p"}
     te2.risk_manager.reset_day = lambda: {"status": "error", "reason": "r"}
     r2 = te2.reset_day()
-    assert r2["status"] == "error" and "Portfolio=" in r2["reason"] and "Risk=" in r2["reason"]
+    assert (
+        r2["status"] == "error"
+        and "Portfolio=" in r2["reason"]
+        and "Risk=" in r2["reason"]
+    )
 
 
 def test_reset_day_generic_guard_outer():
@@ -79,7 +83,14 @@ def test_drawdown_non_breach_path():
     te.performance_tracker.sharpe_ratio = lambda: 1.0
     te.performance_tracker.sortino_ratio = lambda: 1.0
     r = te.process_signal("AAPL", "BUY", price=1.0, size=1)
-    assert r["status"] in {"filled", "blocked", "ignored", "rejected", "error", "pending"}
+    assert r["status"] in {
+        "filled",
+        "blocked",
+        "ignored",
+        "rejected",
+        "error",
+        "pending",
+    }
 
 
 # ---- performance try/except exception + normalization mapping lines (325â€“327, 334â€“339) ----
@@ -90,8 +101,12 @@ def test_performance_exception_and_normalize_lines():
     te.gatescore.allow_trade = lambda *a, **k: True
 
     # force exception in performance section to hit except: pass
-    te.performance_tracker.sharpe_ratio = lambda: (_ for _ in ()).throw(RuntimeError("s"))
-    te.performance_tracker.sortino_ratio = lambda: (_ for _ in ()).throw(RuntimeError("t"))
+    te.performance_tracker.sharpe_ratio = lambda: (_ for _ in ()).throw(
+        RuntimeError("s")
+    )
+    te.performance_tracker.sortino_ratio = lambda: (_ for _ in ()).throw(
+        RuntimeError("t")
+    )
 
     r = te.process_signal("AAPL", "BUY", price=1.0, size=1)
     # With perf try/except swallowed, we still normalize ok->filled & reason->normalized_ok

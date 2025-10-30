@@ -79,7 +79,11 @@ def main():
             print("[BLOCK] No usable price (bid/ask/last invalid).")
             return
 
-        raw = d2(base * (1 + (bps / 10_000.0)) if side == "BUY" else base * (1 - (bps / 10_000.0)))
+        raw = d2(
+            base * (1 + (bps / 10_000.0))
+            if side == "BUY"
+            else base * (1 - (bps / 10_000.0))
+        )
         ref = (
             ask
             if (side == "BUY" and valid(ask))

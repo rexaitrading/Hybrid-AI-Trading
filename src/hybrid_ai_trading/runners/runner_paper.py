@@ -20,7 +20,11 @@ def main():
     os.environ.setdefault(
         "PYTHONPATH", f"{pathlib.Path.cwd()/'src'};{os.environ.get('PYTHONPATH','')}"
     )
-    cmd = [sys.executable, "src/hybrid_ai_trading/runners/paper_trader.py", *sys.argv[1:]]
+    cmd = [
+        sys.executable,
+        "src/hybrid_ai_trading/runners/paper_trader.py",
+        *sys.argv[1:],
+    ]
     raise SystemExit(subprocess.call(cmd))
 
 

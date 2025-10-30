@@ -16,7 +16,9 @@ def _invoke(fn, pool):
     sig = _sig(fn)
     if not sig:
         return
-    kwargs = {p.name: pool.get(p.name) for p in sig.parameters.values() if p.name in pool}
+    kwargs = {
+        p.name: pool.get(p.name) for p in sig.parameters.values() if p.name in pool
+    }
     try:
         return fn(**kwargs)
     except TypeError:

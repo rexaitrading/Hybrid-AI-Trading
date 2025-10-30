@@ -10,8 +10,12 @@ def eng():
 
 def test_reset_ok_then_error(monkeypatch, eng):
     # Force OK
-    monkeypatch.setattr(eng.portfolio, "reset_day", lambda: {"status": "ok"}, raising=True)
-    monkeypatch.setattr(eng.risk_manager, "reset_day", lambda: {"status": "ok"}, raising=True)
+    monkeypatch.setattr(
+        eng.portfolio, "reset_day", lambda: {"status": "ok"}, raising=True
+    )
+    monkeypatch.setattr(
+        eng.risk_manager, "reset_day", lambda: {"status": "ok"}, raising=True
+    )
     ok1 = eng.reset_day()
     assert ok1["status"] == "ok"
     # Force risk to fail

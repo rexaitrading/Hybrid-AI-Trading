@@ -51,7 +51,9 @@ def test_alerts_success_and_exceptions(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setitem(sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom))
+    monkeypatch.setitem(
+        sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom)
+    )
 
     class SMTPBAD:
         def __enter__(self):

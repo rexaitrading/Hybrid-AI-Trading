@@ -175,12 +175,16 @@ def wait_status(trade, ib, timeout=4.0):
 with open("config/config.yaml", "r", encoding="utf-8") as f:
     cfg = yaml.safe_load(f) or {}
 symbols_str = (cfg.get("sweep_symbols") or "AAPL,MSFT,GOOGL,AMZN,TSLA").upper()
-res = score_headlines_for_symbols(symbols_str, hours_back=HOURS_BACK, limit=LIMIT, side=SIDE)
+res = score_headlines_for_symbols(
+    symbols_str, hours_back=HOURS_BACK, limit=LIMIT, side=SIDE
+)
 cands = []
 for s in res.get("stories", []):
     syms = [x.upper() for x in s.get("symbols", [])]
     if s.get("allow") and any(w in syms for w in WATCH):
-        cands.append((s.get("score", 0.0), syms[0], s.get("title", ""), s.get("url", "")))
+        cands.append(
+            (s.get("score", 0.0), syms[0], s.get("title", ""), s.get("url", ""))
+        )
 if not cands:
     print("GATE: no ALLOW in watch set -> nothing to do.")
     raise SystemExit(0)
@@ -234,7 +238,11 @@ tp = round2(lmt * (1 + float(TP_PCT)))
 sl = round2(lmt * (1 - float(SL_PCT)))
 
 # ---- place parent then children ----
-parent = LimitOrder("BUY", QTY, lmt, tif=TIF) if mode == "LMT" else MarketOrder("BUY", QTY, tif=TIF)
+parent = (
+    LimitOrder("BUY", QTY, lmt, tif=TIF)
+    if mode == "LMT"
+    else MarketOrder("BUY", QTY, tif=TIF)
+)
 parent.transmit = False
 tradeParent = ib.placeOrder(contract, parent)
 pstat = wait_status(tradeParent, ib, timeout=4.0)

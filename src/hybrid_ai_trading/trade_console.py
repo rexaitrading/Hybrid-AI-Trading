@@ -74,7 +74,9 @@ def print_line(line: str) -> None:
 
 
 # ---------------- crypto data & signals ----------------
-def fetch_ohlcv_kraken(symbol: str, timeframe: str = "1h", limit: int = 200) -> List[List[float]]:
+def fetch_ohlcv_kraken(
+    symbol: str, timeframe: str = "1h", limit: int = 200
+) -> List[List[float]]:
     if ccxt is None:
         return []
     ex = ccxt.kraken()
@@ -379,7 +381,11 @@ def _snapshot() -> Dict[str, Any]:
         if not sig:
             continue
         if sig.get("buy"):
-            eff = min(float(sig["size_quote"]), cap) if cap > 0 else float(sig["size_quote"])
+            eff = (
+                min(float(sig["size_quote"]), cap)
+                if cap > 0
+                else float(sig["size_quote"])
+            )
             out["buys"].append(
                 {
                     "p": p,
@@ -404,7 +410,9 @@ def run_loop():
                     print_section("ALERTS")
                     if cur["buys"]:
                         for b in cur["buys"]:
-                            print_line(f"BUY {b['p']} sizeâ‰ˆ{b['size']} stopâ‰ˆ{b['stop']}")
+                            print_line(
+                                f"BUY {b['p']} sizeâ‰ˆ{b['size']} stopâ‰ˆ{b['stop']}"
+                            )
                     else:
                         print_line("(no buys)")
                     if cur["sells"]:

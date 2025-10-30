@@ -21,7 +21,9 @@ def compute_size(
     init = pv.get("initMargin")
     maint = pv.get("maintMargin")
 
-    margin_per_unit = (init if use == "init" else maint) or (maint if use == "init" else init)
+    margin_per_unit = (init if use == "init" else maint) or (
+        maint if use == "init" else init
+    )
     if not margin_per_unit or margin_per_unit <= 0:
         raise RuntimeError(f"Bad margin preview for {symbol}: {pv}")
 

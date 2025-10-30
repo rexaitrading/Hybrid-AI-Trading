@@ -29,7 +29,11 @@ def simulate_trades(engine, n_trades=50, seed=42):
 
     for i in range(n_trades):
         # Random PnL outcome
-        pnl = random.uniform(100, 600) if random.random() < 0.55 else -random.uniform(50, 300)
+        pnl = (
+            random.uniform(100, 600)
+            if random.random() < 0.55
+            else -random.uniform(50, 300)
+        )
 
         # Execute trade
         result = engine.process_signal("BTC/USDT", "BUY", size=1, price=60000)
@@ -40,7 +44,9 @@ def simulate_trades(engine, n_trades=50, seed=42):
 
         equity_history.append(engine.get_equity())
         pnl_history.append(pnl)
-        kelly_frac_history.append(engine.kelly_sizer.fraction if engine.kelly_sizer else 0)
+        kelly_frac_history.append(
+            engine.kelly_sizer.fraction if engine.kelly_sizer else 0
+        )
 
         print(
             f"Trade {i+1:02d}: PnL={pnl:+.2f} | Equity={equity_history[-1]:.2f} | "
@@ -55,7 +61,9 @@ def performance_summary(engine, equity_history, pnl_history, kelly_frac_history)
     pt = engine.performance_tracker
     start_eq, end_eq = equity_history[0], equity_history[-1]
     total_return = (end_eq - start_eq) / start_eq
-    cagr = (1 + total_return) ** (252 / len(equity_history)) - 1 if equity_history else 0
+    cagr = (
+        (1 + total_return) ** (252 / len(equity_history)) - 1 if equity_history else 0
+    )
 
     return {
         "Start Equity": start_eq,
@@ -105,7 +113,9 @@ def save_report(equity_history, pnl_history, kelly_frac_history, summary):
     with open(text_path, "w") as f:
         f.write("=== Quant Performance Report ===\n")
         for k, v in summary.items():
-            f.write(f"{k:<18}: {v:.2f}\n" if isinstance(v, float) else f"{k:<18}: {v}\n")
+            f.write(
+                f"{k:<18}: {v:.2f}\n" if isinstance(v, float) else f"{k:<18}: {v}\n"
+            )
         f.write("===============================\n")
 
     print(f"\n✅ Quant report saved to:\n  {chart_path}\n  {text_path}")
@@ -116,8 +126,12 @@ def main():
         cfg = yaml.safe_load(f)
 
     engine = TradeEngine(cfg)
-    equity_history, pnl_history, kelly_frac_history = simulate_trades(engine, n_trades=50)
-    summary = performance_summary(engine, equity_history, pnl_history, kelly_frac_history)
+    equity_history, pnl_history, kelly_frac_history = simulate_trades(
+        engine, n_trades=50
+    )
+    summary = performance_summary(
+        engine, equity_history, pnl_history, kelly_frac_history
+    )
     save_report(equity_history, pnl_history, kelly_frac_history, summary)
 
 

@@ -76,7 +76,11 @@ class BreakoutV1Signal:
         if any(math.isnan(x) for x in closes + highs + lows):
             logger.error("❌ NaN detected in bars for %s", symbol)
             self._log_decision(symbol, "HOLD", "nan_detected")
-            return "HOLD" if not audit else ("HOLD", closes[-1], max(highs[:-1]), min(lows[:-1]))
+            return (
+                "HOLD"
+                if not audit
+                else ("HOLD", closes[-1], max(highs[:-1]), min(lows[:-1]))
+            )
 
         last_close = closes[-1]
         prev_high = max(highs[:-1])
@@ -112,7 +116,9 @@ def breakout_v1(
     audit: bool = False,
 ) -> Union[str, Tuple[str, float, float, float]]:
     """Functional wrapper for injected bars (unit tests, backtests)."""
-    return BreakoutV1Signal(window=window).generate(symbol="TEST", bars=bars, audit=audit)
+    return BreakoutV1Signal(window=window).generate(
+        symbol="TEST", bars=bars, audit=audit
+    )
 
 
 def breakout_signal(symbol: str, window: int = 3) -> str:

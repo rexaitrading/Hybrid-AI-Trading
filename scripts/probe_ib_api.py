@@ -21,7 +21,10 @@ def main():
             for o in ib.openOrders()
         ],
     )
-    print("Positions:", [(p.contract.symbol, p.position, p.avgCost) for p in ib.positions()])
+    print(
+        "Positions:",
+        [(p.contract.symbol, p.position, p.avgCost) for p in ib.positions()],
+    )
     ib.disconnect()
     return 0
 

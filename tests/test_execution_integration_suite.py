@@ -88,7 +88,9 @@ def test_order_manager_multi_broker_mock(portfolio):
         _raw = {"id": "ok123", "status": "accepted"}
 
     # Alpaca mock
-    om.live_client = type("AlpacaClient", (), {"submit_order": lambda *a, **k: DummyOrder()})()
+    om.live_client = type(
+        "AlpacaClient", (), {"submit_order": lambda *a, **k: DummyOrder()}
+    )()
     res = om.place_order("AAPL", "BUY", 1, 150)
     assert res["status"] == "pending"
 
@@ -96,13 +98,19 @@ def test_order_manager_multi_broker_mock(portfolio):
     om.live_client = type(
         "BinanceClient",
         (),
-        {"submit_order": lambda *a, **k: (_ for _ in ()).throw(Exception("binance error"))},
+        {
+            "submit_order": lambda *a, **k: (_ for _ in ()).throw(
+                Exception("binance error")
+            )
+        },
     )()
     err = om.place_order("BTCUSD", "BUY", 1, 25000)
     assert err["status"] == "error"
 
     # Polygon mock
-    om.live_client = type("PolygonClient", (), {"submit_order": lambda *a, **k: DummyOrder()})()
+    om.live_client = type(
+        "PolygonClient", (), {"submit_order": lambda *a, **k: DummyOrder()}
+    )()
     ok = om.place_order("SPY", "SELL", 1, 400)
     assert ok["status"] == "pending"
 
@@ -213,7 +221,9 @@ def test_profitability_guardrails(trade_engine):
 # ----------------------------------------------------------------------
 def test_trade_engine_stress_with_audit(tmp_path, trade_engine):
     symbols = ["AAPL", "TSLA", "MSFT", "AMZN", "META", "BTCUSD", "ETHUSD", "SPY", "GLD"]
-    blotter_file = tmp_path / f"trade_blotter_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    blotter_file = (
+        tmp_path / f"trade_blotter_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    )
 
     with open(blotter_file, "w", newline="") as f:
         writer = csv.writer(f)

@@ -47,7 +47,9 @@ def test_live_client_error(portfolio):
         def submit_order(self, *a, **k):
             raise RuntimeError("boom")
 
-    om = OrderManager(risk_manager=None, portfolio=portfolio, dry_run=False, live_client=BadLive())
+    om = OrderManager(
+        risk_manager=None, portfolio=portfolio, dry_run=False, live_client=BadLive()
+    )
     res = om.place_order("AAPL", "BUY", 1, 100)
     assert res["status"] == "error"
     assert "boom" in res["reason"]

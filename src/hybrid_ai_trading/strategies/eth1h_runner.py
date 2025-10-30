@@ -164,8 +164,12 @@ class ETH1HRunner:
             trs.append(tr)
         return sum(trs) / float(period)
 
-    def _realized_pnl(self, side: str, qty: float, entry_px: float, exit_px: float) -> float:
-        raw = (exit_px - entry_px) * qty if side == "BUY" else (entry_px - exit_px) * qty
+    def _realized_pnl(
+        self, side: str, qty: float, entry_px: float, exit_px: float
+    ) -> float:
+        raw = (
+            (exit_px - entry_px) * qty if side == "BUY" else (entry_px - exit_px) * qty
+        )
         fee_rate = max(0.0, self.cfg.fee_bps) / 10_000.0
         avg_px = 0.5 * (entry_px + exit_px)
         fees = fee_rate * qty * avg_px
@@ -207,7 +211,9 @@ class ETH1HRunner:
         if pos:
             if pos["side"] == "BUY":
                 pos["peak"] = float(max(pos.get("peak", last_px), last_px))
-                if atr14 is not None and last_px < (pos["peak"] - self.cfg.trailing_k_atr * atr14):
+                if atr14 is not None and last_px < (
+                    pos["peak"] - self.cfg.trailing_k_atr * atr14
+                ):
                     exit_reason = "TRAIL"
             else:
                 pos["trough"] = float(min(pos.get("trough", last_px), last_px))
@@ -216,7 +222,10 @@ class ETH1HRunner:
                 ):
                     exit_reason = "TRAIL"
             if exit_reason is None and isinstance(pos.get("opened_bar_ts"), int):
-                if last_ts - int(pos["opened_bar_ts"]) >= self.cfg.time_stop_bars * 3600_000:
+                if (
+                    last_ts - int(pos["opened_bar_ts"])
+                    >= self.cfg.time_stop_bars * 3600_000
+                ):
                     exit_reason = "TIME"
 
         side = force if force in ("BUY", "SELL") else self._signal_from_bars(bars)
@@ -253,7 +262,9 @@ class ETH1HRunner:
                 },
                 risk=self.risk.snapshot(),
             )
-            closed = self.logger.close_event(prev, realized_pnl=realized, meta=prev.meta)
+            closed = self.logger.close_event(
+                prev, realized_pnl=realized, meta=prev.meta
+            )
             self.risk.record_close_pnl(realized, bar_ts_ms=last_ts)
             self.alerts.notify(
                 "closed",
@@ -345,7 +356,11 @@ class ETH1HRunner:
             oid, meta = self.broker.submit_order(
                 self._norm_symbol(self.cfg.symbol), side, qty, "MARKET", meta=meta_extra
             )
-            filled_px = meta.get("fills", [{}])[-1].get("px", px) if isinstance(meta, dict) else px
+            filled_px = (
+                meta.get("fills", [{}])[-1].get("px", px)
+                if isinstance(meta, dict)
+                else px
+            )
 
         fill = self.logger.fill_event(sub, px_fill=filled_px, order_id=oid, meta=meta)
         self.risk.on_fill(side=side, qty=qty, px=filled_px, bar_ts=last_ts)

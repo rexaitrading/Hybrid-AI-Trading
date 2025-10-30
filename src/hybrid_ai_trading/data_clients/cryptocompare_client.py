@@ -13,7 +13,9 @@ class Client:
       base default https://min-api.cryptocompare.com
     """
 
-    def __init__(self, key: str = "", base: str = "https://min-api.cryptocompare.com", **_):
+    def __init__(
+        self, key: str = "", base: str = "https://min-api.cryptocompare.com", **_
+    ):
         self.key = key or ""
         self.base = base.rstrip("/")
 
@@ -56,8 +58,17 @@ class Client:
                     "reason": j.get("Message") or "error",
                 }
             if quote in j and isinstance(j[quote], (int, float)):
-                return {"symbol": symbol, "price": float(j[quote]), "source": "cryptocompare"}
-            return {"symbol": symbol, "price": None, "source": "cryptocompare", "reason": "no_rate"}
+                return {
+                    "symbol": symbol,
+                    "price": float(j[quote]),
+                    "source": "cryptocompare",
+                }
+            return {
+                "symbol": symbol,
+                "price": None,
+                "source": "cryptocompare",
+                "reason": "no_rate",
+            }
         return {
             "symbol": symbol,
             "price": None,

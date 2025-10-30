@@ -35,7 +35,9 @@ def iso(tmp_path, monkeypatch):
 
 def mk(virtual=True, **cfgkw):
     cfg = RunnerConfig(virtual_fills=virtual, **cfgkw)
-    tl = TradeLogger(jsonl_path="logs/t.jsonl", csv_path=None, text_log_path="logs/t.log")
+    tl = TradeLogger(
+        jsonl_path="logs/t.jsonl", csv_path=None, text_log_path="logs/t.log"
+    )
     return ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
 
 
@@ -106,7 +108,9 @@ def test_pos_io_exception_guards(monkeypatch):
 
 def test_trailing_stop_sell_branch_and_alerts(monkeypatch):
     calls = []
-    monkeypatch.setattr(Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False)
+    monkeypatch.setattr(
+        Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False
+    )
     r = mk()
     ts = 1_700_000_000_000
     pos = {

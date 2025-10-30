@@ -128,7 +128,9 @@ def backtest_sma_close(bars: List[Tuple[dt.datetime, float]], fast: int, slow: i
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Hybrid AI Trading - Backtest (TWS Paper)")
+    parser = argparse.ArgumentParser(
+        description="Hybrid AI Trading - Backtest (TWS Paper)"
+    )
     parser.add_argument("--symbol", default="AAPL")
     parser.add_argument("--exchange", default="SMART")
     parser.add_argument("--currency", default="USD")
@@ -153,10 +155,14 @@ def main() -> int:
         host = host_env
         print(f"[cfg] Using IB_HOST from env: {host}:{port}")
     else:
-        print("[cfg] IB_HOST not set; probing ::1/localhost/127.0.0.1 via API handshake...")
+        print(
+            "[cfg] IB_HOST not set; probing ::1/localhost/127.0.0.1 via API handshake..."
+        )
         host = choose_host(port, timeout_ms=2000)
         if not host:
-            sys.stderr.write("[ERR] Could not arm API handshake on ::1/localhost/127.0.0.1\n")
+            sys.stderr.write(
+                "[ERR] Could not arm API handshake on ::1/localhost/127.0.0.1\n"
+            )
             return 10
         print(f"[cfg] Chosen host via handshake: {host}:{port}")
 
@@ -210,7 +216,11 @@ def main() -> int:
     for b in bars:
         series.append(
             (
-                b.date if isinstance(b.date, dt.datetime) else util.parseIBDatetime(b.date),
+                (
+                    b.date
+                    if isinstance(b.date, dt.datetime)
+                    else util.parseIBDatetime(b.date)
+                ),
                 float(b.close),
             )
         )
@@ -219,7 +229,9 @@ def main() -> int:
 
     ensure_dir("./outputs")
     ts = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d_%H%M%S")
-    outpath = args.outfile or os.path.join("outputs", f"backtest_{args.symbol}_{ts}.csv")
+    outpath = args.outfile or os.path.join(
+        "outputs", f"backtest_{args.symbol}_{ts}.csv"
+    )
     with open(outpath, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["time", "price"])

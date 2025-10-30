@@ -44,7 +44,9 @@ def show_diff(target_file: str):
     # find matching file
     match = None
     for fname, meta in files.items():
-        if fname.endswith(target_file) or str(fname).endswith(target_file.replace("\\", "/")):
+        if fname.endswith(target_file) or str(fname).endswith(
+            target_file.replace("\\", "/")
+        ):
             match = (fname, meta)
             break
 

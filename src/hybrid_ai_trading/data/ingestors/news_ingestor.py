@@ -25,7 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 def ingest_news(
-    symbols="AAPL,TSLA,BTCUSD", outfile="data/news_feed.csv", date_from=None, date_to=None, limit=50
+    symbols="AAPL,TSLA,BTCUSD",
+    outfile="data/news_feed.csv",
+    date_from=None,
+    date_to=None,
+    limit=50,
 ):
     """
     Fetch Benzinga headlines and log into CSV + DB.
@@ -59,7 +63,9 @@ def ingest_news(
     logger.info(f"Date range: {date_from} â†’ {date_to or utc_now().date()}")
 
     # Fetch headlines (API client must support date params)
-    articles = client.get_news(symbols=symbols, limit=limit, date_from=date_from, date_to=date_to)
+    articles = client.get_news(
+        symbols=symbols, limit=limit, date_from=date_from, date_to=date_to
+    )
 
     if not articles:
         logger.warning("âš ï¸ No articles fetched")
@@ -70,7 +76,9 @@ def ingest_news(
         writer = csv.writer(f)
         for a in articles:
             try:
-                created_dt = datetime.strptime(a.get("created"), "%a, %d %b %Y %H:%M:%S %z")
+                created_dt = datetime.strptime(
+                    a.get("created"), "%a, %d %b %Y %H:%M:%S %z"
+                )
                 headline = News(
                     article_id=a.get("id"),
                     created=created_dt,

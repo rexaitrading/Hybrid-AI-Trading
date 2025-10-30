@@ -22,13 +22,17 @@ class TWAPExecutor:
     Splits an order into equal slices across fixed time intervals.
     """
 
-    def __init__(self, order_manager: Any, slices: int = 10, delay: float = 0.1) -> None:
+    def __init__(
+        self, order_manager: Any, slices: int = 10, delay: float = 0.1
+    ) -> None:
         self.order_manager = order_manager
         # normalize: always at least 1 slice
         self.slices = max(1, int(slices))
         self.delay = float(delay)
 
-    def execute(self, symbol: str, side: str, size: int, price: float) -> Dict[str, Any]:
+    def execute(
+        self, symbol: str, side: str, size: int, price: float
+    ) -> Dict[str, Any]:
         """
         Execute a TWAP order.
 

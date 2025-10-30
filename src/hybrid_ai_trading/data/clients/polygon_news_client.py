@@ -18,8 +18,12 @@ class PolygonAPIError(Exception): ...
 
 
 class PolygonNewsClient:
-    def __init__(self, api_key: Optional[str] = None, base_url: str = "https://api.polygon.io"):
-        self.api_key = api_key or os.getenv("POLYGON_KEY") or os.getenv("POLYGON_API_KEY")
+    def __init__(
+        self, api_key: Optional[str] = None, base_url: str = "https://api.polygon.io"
+    ):
+        self.api_key = (
+            api_key or os.getenv("POLYGON_KEY") or os.getenv("POLYGON_API_KEY")
+        )
         self.base_url = base_url.rstrip("/")
         if not self.api_key:
             logger.error(" POLYGON_KEY missing")
@@ -27,7 +31,10 @@ class PolygonNewsClient:
         logger.info(" PolygonNewsClient initialized")
 
     def get_news(
-        self, symbol: Optional[str] = None, limit: int = 10, date_from: Optional[str] = None
+        self,
+        symbol: Optional[str] = None,
+        limit: int = 10,
+        date_from: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         url = f"{self.base_url}/v2/reference/news"
         params: Dict[str, Any] = {"limit": int(limit), "apiKey": self.api_key}
@@ -51,8 +58,15 @@ class PolygonNewsClient:
 
         items: List[Dict[str, Any]] = []
         for it in results:
-            story_id = it.get("id") or it.get("news_id") or it.get("guid") or it.get("url")
-            created = it.get("published_utc") or it.get("timestamp") or it.get("created_at") or ""
+            story_id = (
+                it.get("id") or it.get("news_id") or it.get("guid") or it.get("url")
+            )
+            created = (
+                it.get("published_utc")
+                or it.get("timestamp")
+                or it.get("created_at")
+                or ""
+            )
             title = it.get("title") or it.get("headline") or ""
             url_out = it.get("article_url") or it.get("url") or ""
             author = it.get("author") or ""

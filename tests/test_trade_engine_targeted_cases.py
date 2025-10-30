@@ -20,7 +20,9 @@ def _invoke(fn, pool):
     sig = _sig(fn)
     if not sig:
         return
-    kwargs = {p.name: pool.get(p.name) for p in sig.parameters.values() if p.name in pool}
+    kwargs = {
+        p.name: pool.get(p.name) for p in sig.parameters.values() if p.name in pool
+    }
     try:
         return fn(**kwargs)
     except TypeError:
@@ -83,7 +85,9 @@ def test_targeted_clusters(monkeypatch, tmp_path):
     def boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setitem(sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom))
+    monkeypatch.setitem(
+        sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom)
+    )
 
     class SMTPBAD:
         def __enter__(self):
@@ -167,7 +171,9 @@ def test_targeted_clusters(monkeypatch, tmp_path):
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name, _orig=orig_import: fake if name.endswith((".twap", ".vwap")) else _orig(name),
+        lambda name, _orig=orig_import: (
+            fake if name.endswith((".twap", ".vwap")) else _orig(name)
+        ),
     )
     te4 = make_engine()
     f = find(te4, ["_route_with_algo", "route_with_algo", "route_algo"])
@@ -193,7 +199,9 @@ def test_targeted_clusters(monkeypatch, tmp_path):
     # -------- router error (286–288)
     te5 = make_engine()
     if hasattr(te5, "order_manager"):
-        te5.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("router"))
+        te5.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("router")
+        )
     g = find(te5, ["_route_direct", "route_direct", "direct_route"])
     if g:
         try:
@@ -234,6 +242,8 @@ def test_targeted_clusters(monkeypatch, tmp_path):
         te6.get_positions()
     if hasattr(te6, "get_history"):
         te6.get_history()
-    te6.performance_tracker.record_trade = lambda pnl: (_ for _ in ()).throw(RuntimeError("x"))
+    te6.performance_tracker.record_trade = lambda pnl: (_ for _ in ()).throw(
+        RuntimeError("x")
+    )
     if hasattr(te6, "record_trade_outcome"):
         te6.record_trade_outcome(1.23)

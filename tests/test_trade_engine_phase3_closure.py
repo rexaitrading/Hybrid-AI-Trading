@@ -124,7 +124,11 @@ def test_close_remaining_regions_precisely():
     if hasattr(te, "risk_manager"):
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 9101}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "ok",
+            "reason": "ok",
+            "order_id": 9101,
+        }
     for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
             try:

@@ -198,7 +198,9 @@ def test_alpha_beta_zero_variance_benchmark():
     res = pt.alpha_beta()
     assert res == {
         "alpha": pt.trades
-        and pytest.approx((sum(pt.trades) / len(pt.trades)) - (0.0 + 0.0 * 1.0), rel=1e-6)
+        and pytest.approx(
+            (sum(pt.trades) / len(pt.trades)) - (0.0 + 0.0 * 1.0), rel=1e-6
+        )
         or 0.0,
         "beta": 0.0,
     }

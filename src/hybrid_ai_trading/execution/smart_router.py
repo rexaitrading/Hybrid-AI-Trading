@@ -46,7 +46,9 @@ class SmartOrderRouter:
 
         # latency breach tracking
         self.latency_breaches = 0
-        self.max_latency_breaches = self.config.get("execution", {}).get("max_latency_breaches", 5)
+        self.max_latency_breaches = self.config.get("execution", {}).get(
+            "max_latency_breaches", 5
+        )
 
         # detect pytest mode
         self.test_mode = "pytest" in os.environ.get("PYTEST_CURRENT_TEST", "").lower()

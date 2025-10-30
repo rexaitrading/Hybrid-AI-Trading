@@ -25,7 +25,9 @@ def main():
     out_md = rep_dir / f"{today}_report.md"
 
     if not orders_path.exists():
-        out_md.write_text(f"# Daily Report {today}\n\nNo orders.csv yet.\n", encoding="utf-8")
+        out_md.write_text(
+            f"# Daily Report {today}\n\nNo orders.csv yet.\n", encoding="utf-8"
+        )
         print(f"[REPORT] {out_md} (no data)")
         return
 
@@ -37,7 +39,9 @@ def main():
                 rows.append(r)
 
     if not rows:
-        out_md.write_text(f"# Daily Report {today}\n\nNo rows for today.\n", encoding="utf-8")
+        out_md.write_text(
+            f"# Daily Report {today}\n\nNo rows for today.\n", encoding="utf-8"
+        )
         print(f"[REPORT] {out_md} (empty day)")
         return
 
@@ -65,8 +69,14 @@ def main():
         side = (r.get("side") or "").upper()
         qty = float(r.get("qty") or 0)
         status = (r.get("status") or "").upper()
-        limit = float(r.get("limit") or 0) if (r.get("limit") or "").strip() != "" else None
-        avg = float(r.get("avgFill") or 0) if (r.get("avgFill") or "").strip() != "" else None
+        limit = (
+            float(r.get("limit") or 0) if (r.get("limit") or "").strip() != "" else None
+        )
+        avg = (
+            float(r.get("avgFill") or 0)
+            if (r.get("avgFill") or "").strip() != ""
+            else None
+        )
 
         by_status[status] += 1
         S = by_symbol[sym]
@@ -92,7 +102,12 @@ def main():
     # compute naive realized PnL (if net flat for symbol)
     for sym, S in by_symbol.items():
         q_buy, q_sell = S["buy_qty"], S["sell_qty"]
-        if abs(q_buy - q_sell) < 1e-9 and q_buy > 0 and S["buy_notional"] and S["sell_notional"]:
+        if (
+            abs(q_buy - q_sell) < 1e-9
+            and q_buy > 0
+            and S["buy_notional"]
+            and S["sell_notional"]
+        ):
             S["realized_pnl"] = d(S["sell_notional"] - S["buy_notional"])
         else:
             S["realized_pnl"] = 0.0  # keep simple; open PnL ignored

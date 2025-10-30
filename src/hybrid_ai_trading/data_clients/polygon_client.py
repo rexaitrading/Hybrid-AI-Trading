@@ -104,12 +104,23 @@ class Client:
                 reason = reason or j.get("_error") or j.get("status")
         # If CL1! not available on this plan, try USO ETF as a proxy (prev close)
         if sym == "CL1!":
-            urlu = f"{self.base}/v2/aggs/ticker/USO/prev?adjusted=true&apiKey={self.key}"
+            urlu = (
+                f"{self.base}/v2/aggs/ticker/USO/prev?adjusted=true&apiKey={self.key}"
+            )
             ju = self._http_json(urlu)
             if isinstance(ju, dict):
                 resu = ju.get("results")
                 if isinstance(resu, list) and resu:
                     cu = resu[0].get("c")
                     if isinstance(cu, (int, float)):
-                        return {"symbol": sym, "price": float(cu), "source": "polygon(USO-proxy)"}
-        return {"symbol": sym, "price": None, "source": "polygon", "reason": reason or "no_price"}
+                        return {
+                            "symbol": sym,
+                            "price": float(cu),
+                            "source": "polygon(USO-proxy)",
+                        }
+        return {
+            "symbol": sym,
+            "price": None,
+            "source": "polygon",
+            "reason": reason or "no_price",
+        }

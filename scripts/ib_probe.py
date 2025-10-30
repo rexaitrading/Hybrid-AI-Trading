@@ -37,7 +37,9 @@ class App(EWrapper, EClient):
 def main():
     app = App()
     cid = int(time.time()) % 7000 + 1000
-    print("connect_try", {"host": "127.0.0.1", "port": 7497, "clientId": cid}, flush=True)
+    print(
+        "connect_try", {"host": "127.0.0.1", "port": 7497, "clientId": cid}, flush=True
+    )
     try:
         app.connect("127.0.0.1", 7497, clientId=cid)
     except Exception as e:
@@ -48,7 +50,11 @@ def main():
     deadline = time.time() + 45
     while time.time() < deadline and app.isConnected() and not app.got_next_id:
         time.sleep(0.25)
-    print("status", {"got_next_id": app.got_next_id, "isConnected": app.isConnected()}, flush=True)
+    print(
+        "status",
+        {"got_next_id": app.got_next_id, "isConnected": app.isConnected()},
+        flush=True,
+    )
     if app.isConnected():
         app.disconnect()
     time.sleep(0.5)

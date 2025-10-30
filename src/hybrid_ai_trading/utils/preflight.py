@@ -74,13 +74,17 @@ def _cancel_if_active(ib, trade_or_order):
         st = getattr(getattr(trade_or_order, "orderStatus", None), "status", None)
         if st not in ("Cancelled", "Filled", "ApiCancelled"):
             ib.cancelOrder(
-                trade_or_order if hasattr(trade_or_order, "orderType") else trade_or_order.order
+                trade_or_order
+                if hasattr(trade_or_order, "orderType")
+                else trade_or_order.order
             )
     except Exception:
         pass
 
 
-def sanity_probe(symbol="AAPL", qty=1, cushion=0.10, allow_ext=True, force_when_closed=False):
+def sanity_probe(
+    symbol="AAPL", qty=1, cushion=0.10, allow_ext=True, force_when_closed=False
+):
     # Env override: ALLOW_TRADE_WHEN_CLOSED=1
     if os.environ.get("ALLOW_TRADE_WHEN_CLOSED", "0") == "1":
         force_when_closed = True
@@ -98,7 +102,9 @@ def sanity_probe(symbol="AAPL", qty=1, cushion=0.10, allow_ext=True, force_when_
         now_et = _now_et()
         ok_time, sess = in_trading_window(now_et, allow_ext)
         out["session"] = {
-            "now_et": now_et.isoformat() if hasattr(now_et, "isoformat") else str(now_et),
+            "now_et": (
+                now_et.isoformat() if hasattr(now_et, "isoformat") else str(now_et)
+            ),
             "session": sess,
             "allow_ext": bool(allow_ext),
             "ok_time": bool(ok_time),

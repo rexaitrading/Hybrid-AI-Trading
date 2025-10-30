@@ -77,8 +77,12 @@ def test_alert_success_and_fail_and_noenv(engine, monkeypatch, caplog):
     os.environ["EMAIL_ENV"] = "me@example.com"
 
     # Success path
-    monkeypatch.setattr("requests.post", lambda *a, **k: type("R", (), {"status_code": 200})())
-    monkeypatch.setattr("requests.get", lambda *a, **k: type("R", (), {"status_code": 200})())
+    monkeypatch.setattr(
+        "requests.post", lambda *a, **k: type("R", (), {"status_code": 200})()
+    )
+    monkeypatch.setattr(
+        "requests.get", lambda *a, **k: type("R", (), {"status_code": 200})()
+    )
     monkeypatch.setattr(
         smtplib,
         "SMTP",
@@ -100,12 +104,18 @@ def test_alert_success_and_fail_and_noenv(engine, monkeypatch, caplog):
     monkeypatch.setattr(
         "requests.post", lambda *a, **k: (_ for _ in ()).throw(Exception("slack fail"))
     )
-    monkeypatch.setattr("requests.get", lambda *a, **k: (_ for _ in ()).throw(Exception("tg fail")))
+    monkeypatch.setattr(
+        "requests.get", lambda *a, **k: (_ for _ in ()).throw(Exception("tg fail"))
+    )
     monkeypatch.setattr(
         smtplib, "SMTP", lambda *a, **k: (_ for _ in ()).throw(Exception("email fail"))
     )
     res2 = engine.alert("fail")
-    assert res2["slack"] == "error" and res2["telegram"] == "error" and res2["email"] == "error"
+    assert (
+        res2["slack"] == "error"
+        and res2["telegram"] == "error"
+        and res2["email"] == "error"
+    )
     assert "slack" in caplog.text.lower()
     assert "telegram" in caplog.text.lower()
     assert "email" in caplog.text.lower()

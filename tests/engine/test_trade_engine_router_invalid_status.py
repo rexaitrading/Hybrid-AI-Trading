@@ -17,7 +17,13 @@ def eng():
 
 def test_router_invalid_status(eng, monkeypatch):
     # allow filters/perf so router normalization is reached
-    monkeypatch.setattr(eng.sentiment_filter, "allow_trade", lambda *a, **k: True, raising=True)
-    monkeypatch.setattr(eng.gatescore, "allow_trade", lambda *a, **k: True, raising=True)
-    r = eng.process_signal("AAPL", "BUY", price=100, size=1)  # algo=None → router branch
+    monkeypatch.setattr(
+        eng.sentiment_filter, "allow_trade", lambda *a, **k: True, raising=True
+    )
+    monkeypatch.setattr(
+        eng.gatescore, "allow_trade", lambda *a, **k: True, raising=True
+    )
+    r = eng.process_signal(
+        "AAPL", "BUY", price=100, size=1
+    )  # algo=None → router branch
     assert r == {"status": "rejected", "reason": "invalid_status"}

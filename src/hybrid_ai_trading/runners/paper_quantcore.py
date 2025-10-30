@@ -2,7 +2,10 @@ def _norm_approval(a):
     # Accept dict / tuple / list / bool, normalize to {"approved": bool, "reason": str}
     try:
         if isinstance(a, dict):
-            return {"approved": bool(a.get("approved")), "reason": str(a.get("reason", ""))}
+            return {
+                "approved": bool(a.get("approved")),
+                "reason": str(a.get("reason", "")),
+            }
         if isinstance(a, (tuple, list)) and a:
             ok = bool(a[0])
             rs = "" if len(a) < 2 else str(a[1])
@@ -40,7 +43,13 @@ def evaluate(symbol, price_map, risk_mgr):
     try:
         if hasattr(risk_mgr, "approve_trade"):
             sig = inspect.signature(risk_mgr.approve_trade)
-            kw = {"symbol": symbol, "side": side, "qty": qty, "notional": notional, "price": px}
+            kw = {
+                "symbol": symbol,
+                "side": side,
+                "qty": qty,
+                "notional": notional,
+                "price": px,
+            }
             fkw = {k: v for k, v in kw.items() if k in sig.parameters}
             if fkw:
                 approval = risk_mgr.approve_trade(**fkw)

@@ -32,7 +32,9 @@ def mask_key(key: Optional[str]) -> str:
     return f"{key[:4]}{'*' * (n - 8)}{key[-4:]}"
 
 
-def _coerce_date_str(d: Optional[Union[str, _dt.date, _dt.datetime, int, float]]) -> Optional[str]:
+def _coerce_date_str(
+    d: Optional[Union[str, _dt.date, _dt.datetime, int, float]]
+) -> Optional[str]:
     """
     Permissive coercion for query params:
     - None -> None
@@ -187,7 +189,9 @@ class BenzingaClient:
                         return data
                     if isinstance(data, dict):
                         return [data]
-                    raise BenzingaAPIError(f"Unexpected 'data' type: {type(data).__name__}")
+                    raise BenzingaAPIError(
+                        f"Unexpected 'data' type: {type(data).__name__}"
+                    )
                 # single-item dict -> wrap to list
                 return [payload]
 

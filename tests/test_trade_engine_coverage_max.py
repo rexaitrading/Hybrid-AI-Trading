@@ -124,7 +124,17 @@ def _find(te, names):
 
 
 def _call_signal(te, **kw):
-    f = _find(te, ["process_signal", "_on_signal", "on_signal", "handle_signal", "submit", "trade"])
+    f = _find(
+        te,
+        [
+            "process_signal",
+            "_on_signal",
+            "on_signal",
+            "handle_signal",
+            "submit",
+            "trade",
+        ],
+    )
     if f:
         try:
             return f(**kw)
@@ -185,7 +195,9 @@ def test_alerts_success_and_exceptions(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setitem(sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom))
+    monkeypatch.setitem(
+        sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom)
+    )
 
     class SMTPBAD:
         def __enter__(self):
@@ -233,11 +245,17 @@ def test_audit_header_then_exception(monkeypatch, tmp_path):
 def test_invalid_signal_and_price_and_equity_depleted():
     te = _mk()
     _call_signal(te, symbol="AAPL", size=1.0, price=None, signal="BUY")  # invalid price
-    _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal=123)  # invalid signal type
-    _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="HOLD?")  # invalid signal string
+    _call_signal(
+        te, symbol="AAPL", size=1.0, price=1.0, signal=123
+    )  # invalid signal type
+    _call_signal(
+        te, symbol="AAPL", size=1.0, price=1.0, signal="HOLD?"
+    )  # invalid signal string
     te2 = _mk()
     te2.portfolio.equity = 0.0
-    _call_signal(te2, symbol="AAPL", size=1.0, price=1.0, signal="BUY")  # equity depleted
+    _call_signal(
+        te2, symbol="AAPL", size=1.0, price=1.0, signal="BUY"
+    )  # equity depleted
 
 
 # ---------- 5) SECTOR EXPOSURE (239–354) ----------
@@ -264,13 +282,17 @@ def test_algo_and_router_error(monkeypatch):
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name: fake if name.endswith((".twap", ".vwap")) else importlib.import_module(name),
+        lambda name: (
+            fake if name.endswith((".twap", ".vwap")) else importlib.import_module(name)
+        ),
     )
     if hasattr(te, "_route_with_algo"):
         te._route_with_algo("AAPL", "BUY", 1, 1.0, algo="twap")
         te._route_with_algo("AAPL", "BUY", 1, 1.0, algo="vwap")
     if hasattr(te, "order_manager"):
-        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("router"))
+        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("router")
+        )
     if hasattr(te, "_route_direct"):
         te._route_direct("AAPL", "BUY", 1, 1.0)
 
@@ -324,7 +346,9 @@ def test_reset_day_branches(monkeypatch):
     for attr in ("risk_manager", "risk", "rm"):
         if hasattr(te, attr):
             setattr(
-                getattr(te, attr), "reset_day", lambda: (_ for _ in ()).throw(RuntimeError("RFAIL"))
+                getattr(te, attr),
+                "reset_day",
+                lambda: (_ for _ in ()).throw(RuntimeError("RFAIL")),
             )
             break
     if hasattr(te, "daily_reset"):

@@ -181,9 +181,13 @@ def call_signal(te, *, symbol, size, price, signal):
 
 def test_reject_invalid_signal_and_price_paths():
     te = make_engine()
-    assert call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal=123)["status"] == "rejected"
     assert (
-        call_signal(te, symbol="AAPL", size=1.0, price=None, signal="BUY")["status"] == "rejected"
+        call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal=123)["status"]
+        == "rejected"
+    )
+    assert (
+        call_signal(te, symbol="AAPL", size=1.0, price=None, signal="BUY")["status"]
+        == "rejected"
     )
 
 
@@ -219,7 +223,8 @@ def test_alert_channels_success_and_fail(monkeypatch):
             self.status_code = code
 
     fake = types.SimpleNamespace(
-        post=lambda url, json=None: DummyResp(200), get=lambda url, params=None: DummyResp(200)
+        post=lambda url, json=None: DummyResp(200),
+        get=lambda url, params=None: DummyResp(200),
     )
     monkeypatch.setitem(
         sys.modules, "requests", types.SimpleNamespace(post=fake.post, get=fake.get)
@@ -338,7 +343,9 @@ def test_reset_day_error_paths():
     for attr in ("risk_manager", "risk", "rm"):
         if hasattr(te, attr):
             setattr(
-                getattr(te, attr), "reset_day", lambda: (_ for _ in ()).throw(RuntimeError("RFAIL"))
+                getattr(te, attr),
+                "reset_day",
+                lambda: (_ for _ in ()).throw(RuntimeError("RFAIL")),
             )
             break
     if hasattr(te, "daily_reset"):
