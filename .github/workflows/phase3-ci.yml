@@ -9,8 +9,44 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
+  # BEGIN replay-json-smoke (auto-injected)
+  replay-json-smoke:
+    if: ${{ vars.RUN_PHASE3_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Prepare sample CSV
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force C:\Data\minute | Out-Null
+          $csv = 'C:\Data\minute\AAPL_2025-10-01.csv'
+          $base = Get-Date '2025-10-01T09:30:00'
+          $rows = @()
+          $prices = @(10.00,10.10,10.20,10.35,10.40,10.48,10.65,10.72,10.68,10.74,10.70,10.76)
+          for ($i=0; $i -lt $prices.Count; $i++) {
+            $t=$base.AddMinutes($i); $o=if($i -eq 0){$prices[$i]}else{$prices[$i]-0.02}
+            $c=$prices[$i]; $h=[Math]::Max($o,$c)+0.05; $l=[Math]::Min($o,$c)-0.05; $v=1000+($i*50)
+            $rows += [pscustomobject]@{timestamp=$t.ToString("yyyy-MM-dd HH:mm:ss");open=("{0:F2}"-f $o);high=("{0:F2}"-f $h);low=("{0:F2}"-f $l);close=("{0:F2}"-f $c);volume=$v}
+          }
+          $tmp = Join-Path $env:TEMP aapl_minute_tmp.csv
+          $rows | Export-Csv -Path $tmp -NoTypeInformation -Encoding utf8
+          Copy-Item $tmp $csv -Force
+          echo "REPLAY_CSV=$csv" >> $env:GITHUB_ENV
+      - name: Wrapper JSON smoke
+        run: |
+          python scripts/replay_cli.py --csv "$env:REPLAY_CSV" --symbol AAPL --mode fast --speed 10 --fees-per-share 0.003 --slippage-ps 0.002 --orb-minutes 5 --risk-cents 20 --max-qty 200 --force-exit --summary json
+  # END replay-json-smoke
   micro-tests:
     name: micro-tests (py3.12)
     runs-on: ubuntu-latest
