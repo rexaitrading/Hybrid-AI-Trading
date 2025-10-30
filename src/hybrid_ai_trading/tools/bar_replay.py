@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import time
 from dataclasses import dataclass
@@ -213,49 +214,3 @@ def load_bars(path: str) -> pd.DataFrame:
         df = pd.read_csv(path)
     df.columns = [c.strip().lower() for c in df.columns]
     return df
-
-
-if __name__ == "__main__":
-    import argparse
-
-    ap = argparse.ArgumentParser(description="ORB bar replay")
-    ap.add_argument("--csv", type=str, required=False, help="CSV with OHLCV")
-    ap.add_argument("--symbol", type=str, default="TEST")
-    ap.add_argument("--mode", type=str, default="step", choices=["step", "fast"])
-    ap.add_argument("--speed", type=float, default=5.0)
-    ap.add_argument("--fees-per-share", type=float, default=0.003)
-    ap.add_argument(
-        "--slippage-ps", type=float, default=0.000, help="Slippage per share each side"
-    )
-    ap.add_argument("--orb-minutes", type=int, default=5)
-    ap.add_argument("--risk-cents", type=float, default=20.0)
-    ap.add_argument("--max-qty", type=int, default=200)
-    ap.add_argument("--force-exit", action="store_true")
-    args = ap.parse_args()
-
-    import pandas as pd
-
-    if args.csv:
-        df = pd.read_csv(args.csv)
-    else:
-        raise SystemExit("Provide --csv path to minute bars")
-
-    res = run_replay(
-        df,
-        symbol=args.symbol,
-        mode=args.mode,
-        speed=args.speed,
-        fees_per_share=args.fees_per_share,
-        slippage_ps=args.slippage_ps,
-        orb_minutes=args.orb_minutes,
-        risk_cents=args.risk_cents,
-        max_qty=args.max_qty,
-        force_exit=args.force_exit,
-    )
-    print(
-        f"Summary | symbol={args.symbol} "
-        f"bars={res.bars} trades={res.trades} pnl={res.pnl:.2f} "
-        f"final_qty={getattr(res.final_pos,'qty',0)} "
-        f"entry_px={res.entry_px} exit_px={res.exit_px} "
-        f"fees_ps={args.fees_per_share} slippage_ps={args.slippage_ps}"
-    )
