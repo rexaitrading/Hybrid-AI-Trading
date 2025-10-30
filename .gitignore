@@ -78,3 +78,5 @@ _backup_notion_journal_*.py
 .artifacts/
 
 src/hybrid-ai-trading/
+
+protection.backup.json
