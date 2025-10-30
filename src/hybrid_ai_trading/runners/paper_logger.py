@@ -60,7 +60,12 @@ class JsonlLogger:
                 data[f"data_{k}"] = v
             else:
                 data[k] = v
-        rec = {"ts": _ts(), "level": level, "event": event, **({"data": data} if data else {})}
+        rec = {
+            "ts": _ts(),
+            "level": level,
+            "event": event,
+            **({"data": data} if data else {}),
+        }
         line = json.dumps(rec, ensure_ascii=False, separators=(",", ":"))
         with self._lock:
             self._fh.write(line + "\n")

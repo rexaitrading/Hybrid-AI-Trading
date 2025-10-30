@@ -9,7 +9,12 @@ RISK_HUB_URL = os.getenv("RISK_HUB_URL", "http://127.0.0.1:8787")
 
 
 def check_decision(
-    base_url: str, symbol: str, qty: float, notional: float, side: str = "BUY", timeout: float = 2.5
+    base_url: str,
+    symbol: str,
+    qty: float,
+    notional: float,
+    side: str = "BUY",
+    timeout: float = 2.5,
 ):
     """POST to /decision_check; return dict with ok/reason or unreachable."""
     url = f"{base_url.rstrip('/')}/decision_check"

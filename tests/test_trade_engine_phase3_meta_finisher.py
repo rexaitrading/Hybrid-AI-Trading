@@ -70,7 +70,10 @@ def test_ps_drawdown_block_executes_without_breach_then_sizing():
     )
     # harmless submit in case engine proceeds
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "submitted", "order_id": 6001}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "submitted",
+            "order_id": 6001,
+        }
     kw = build_call_kwargs(te.process_signal)
     try:
         te.process_signal(**kw)
@@ -123,7 +126,11 @@ def test_ps_tail_normalization_ok_to_filled():
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     if hasattr(te, "order_manager"):
         # status "ok" + reason "ok" so tail can rewrite to filled/normalized_ok
-        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 6004}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "ok",
+            "reason": "ok",
+            "order_id": 6004,
+        }
     # ensure any waiter returns benign ok so flow reaches tail
     for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):

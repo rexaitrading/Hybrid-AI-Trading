@@ -27,5 +27,16 @@ def test_audit_write_failure_is_logged(monkeypatch, eng_ok, caplog):
         raising=True,
     )
     r = eng_ok.process_signal("AAPL", "BUY", price=100, size=1)
-    assert r["status"] in {"filled", "rejected", "blocked", "ok", "error", "pending", "ignored"}
-    assert any("Audit log capture failed" in msg for msg in [rec.message for rec in caplog.records])
+    assert r["status"] in {
+        "filled",
+        "rejected",
+        "blocked",
+        "ok",
+        "error",
+        "pending",
+        "ignored",
+    }
+    assert any(
+        "Audit log capture failed" in msg
+        for msg in [rec.message for rec in caplog.records]
+    )

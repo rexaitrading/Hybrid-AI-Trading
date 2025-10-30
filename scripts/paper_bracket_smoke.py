@@ -58,7 +58,11 @@ print("Trades (pre-cancel):", [ts(t) for t in trades])
 
 # Cancel only if still active (avoid 10148 noise)
 for t in trades:
-    if t.isActive() and t.orderStatus.status not in ("Cancelled", "ApiCancelled", "Filled"):
+    if t.isActive() and t.orderStatus.status not in (
+        "Cancelled",
+        "ApiCancelled",
+        "Filled",
+    ):
         try:
             ib.cancelOrder(t.order)
         except Exception as e:

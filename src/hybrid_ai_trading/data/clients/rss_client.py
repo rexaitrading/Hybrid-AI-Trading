@@ -27,7 +27,11 @@ class RSSClient:
         self.per_feed_max = per_feed_max
 
     def _parse(
-        self, feed_url: str, sym: Optional[str], source_tag: str, date_from: Optional[str]
+        self,
+        feed_url: str,
+        sym: Optional[str],
+        source_tag: str,
+        date_from: Optional[str],
     ) -> List[Dict[str, Any]]:
         d = feedparser.parse(feed_url)
         out: List[Dict[str, Any]] = []
@@ -56,7 +60,9 @@ class RSSClient:
             )
         return out
 
-    def get_news(self, symbols_csv: str, date_from: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_news(
+        self, symbols_csv: str, date_from: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         items: List[Dict[str, Any]] = []
         symbols = [s.strip().upper() for s in symbols_csv.split(",") if s.strip()]
         # per-symbol feeds

@@ -46,7 +46,9 @@ def get_increments(product: dict) -> tuple[str, str]:
     return product["base_increment"], product["quote_increment"]
 
 
-def market_buy_quote(client: RESTClient, product_id: str, quote_size: float, live: bool) -> dict:
+def market_buy_quote(
+    client: RESTClient, product_id: str, quote_size: float, live: bool
+) -> dict:
     # Round the quote_size to quote_increment
     product = client.get_product(product_id)
     _, q_inc = get_increments(product)
@@ -66,7 +68,11 @@ def market_buy_quote(client: RESTClient, product_id: str, quote_size: float, liv
 
 
 def limit_buy_gtc(
-    client: RESTClient, product_id: str, base_size: float, limit_price: float, live: bool
+    client: RESTClient,
+    product_id: str,
+    base_size: float,
+    limit_price: float,
+    live: bool,
 ) -> dict:
     product = client.get_product(product_id)
     b_inc, p_inc = get_increments(product)
@@ -98,11 +104,17 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description="Coinbase Advanced Trade executor (DRY-RUN by default)"
     )
-    ap.add_argument("--pair", default="BTC-USD", help='Product pair like "BTC-USD" or "BTC-USDC"')
     ap.add_argument(
-        "--market-buy-quote", type=float, help="Spend this much quote currency (e.g., 5 USD)"
+        "--pair", default="BTC-USD", help='Product pair like "BTC-USD" or "BTC-USDC"'
     )
-    ap.add_argument("--limit-buy-base", type=float, help="Buy this base amount (e.g., 0.0002 BTC)")
+    ap.add_argument(
+        "--market-buy-quote",
+        type=float,
+        help="Spend this much quote currency (e.g., 5 USD)",
+    )
+    ap.add_argument(
+        "--limit-buy-base", type=float, help="Buy this base amount (e.g., 0.0002 BTC)"
+    )
     ap.add_argument(
         "--below-percent",
         type=float,
@@ -132,7 +144,9 @@ def main() -> None:
             px = float(prod["price"])
             target = px * (1 - (args.below_percent / 100.0))
             args.limit_price = target
-        out = limit_buy_gtc(client, args.pair, args.limit_buy_base, args.limit_price, args.live)
+        out = limit_buy_gtc(
+            client, args.pair, args.limit_buy_base, args.limit_price, args.live
+        )
         print(json.dumps(out, indent=2))
         return
 

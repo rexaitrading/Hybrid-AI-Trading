@@ -159,7 +159,9 @@ def test_daily_dashboard_ibkr_connection_fail_and_disconnect(
 
 @patch("hybrid_ai_trading.pipelines.daily_stock_dashboard.get_bars")
 @patch("hybrid_ai_trading.pipelines.daily_stock_dashboard.grade_stock")
-def test_daily_dashboard_with_executed_summary(mock_grade, mock_get, monkeypatch, caplog):
+def test_daily_dashboard_with_executed_summary(
+    mock_grade, mock_get, monkeypatch, caplog
+):
     mock_get.return_value = [{"c": 1, "h": 2, "l": 0}] * 30
     mock_grade.return_value = {
         "symbol": "AAPL",

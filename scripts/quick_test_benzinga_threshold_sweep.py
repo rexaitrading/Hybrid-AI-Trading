@@ -32,7 +32,9 @@ if not sweep_cfg:
         {"threshold": 0.70, "neutral_zone": 0.20, "smoothing": 3},
     ]
 
-date_from = (datetime.now(timezone.utc) - timedelta(hours=hours_back)).strftime("%Y-%m-%d")
+date_from = (datetime.now(timezone.utc) - timedelta(hours=hours_back)).strftime(
+    "%Y-%m-%d"
+)
 
 # Per-symbol fetch & dedupe
 c = BenzingaClient()
@@ -105,7 +107,9 @@ for params in sweep_cfg:
             blocked_count += 1
             status = "BLOCK "
 
-        print(f"[{s.get('created')}] {title} ({','.join(in_watch)}) | Score={sc:.2f} | {status}")
+        print(
+            f"[{s.get('created')}] {title} ({','.join(in_watch)}) | Score={sc:.2f} | {status}"
+        )
 
     total = allowed_count + blocked_count
     pct_allowed = (allowed_count / total * 100) if total > 0 else 0

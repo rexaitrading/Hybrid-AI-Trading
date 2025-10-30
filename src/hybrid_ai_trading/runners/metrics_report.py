@@ -19,7 +19,9 @@ def main():
     print(json.dumps(report, indent=2))
     if args.slack_webhook:
         try:
-            requests.post(args.slack_webhook, json={"text": f"[Metrics] {report}"}, timeout=5)
+            requests.post(
+                args.slack_webhook, json={"text": f"[Metrics] {report}"}, timeout=5
+            )
             print("Slack: ok")
         except Exception as e:
             print("Slack: failed:", e)

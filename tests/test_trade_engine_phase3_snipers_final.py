@@ -32,7 +32,10 @@ def test_ps_drawdown_nonbreach_then_kelly_path():
     )
     # harmless submit in case engine proceeds to submit
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "submitted", "order_id": 101}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "submitted",
+            "order_id": 101,
+        }
     try:
         te.process_signal("AAPL", "BUY", None)
     except Exception:
@@ -81,7 +84,11 @@ def test_ps_tail_normalization_334_339():
     if hasattr(te, "risk_manager"):
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 401}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "ok",
+            "reason": "ok",
+            "order_id": 401,
+        }
     # any waiter should return ok to allow tail post-processing to run
     for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):

@@ -70,10 +70,14 @@ class PaperSimulator:
 
         # --- Order type guards ---
         if order_type == "limit" and limit_price:
-            if (side == "BUY" and price > limit_price) or (side == "SELL" and price < limit_price):
+            if (side == "BUY" and price > limit_price) or (
+                side == "SELL" and price < limit_price
+            ):
                 return {"status": "rejected", "reason": "limit_not_triggered"}
         elif order_type in ("stop", "stop-limit") and stop_price:
-            if (side == "BUY" and price < stop_price) or (side == "SELL" and price > stop_price):
+            if (side == "BUY" and price < stop_price) or (
+                side == "SELL" and price > stop_price
+            ):
                 return {"status": "pending", "reason": "stop_not_triggered"}
 
         # --- Slippage & market impact ---

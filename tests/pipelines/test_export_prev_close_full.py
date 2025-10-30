@@ -84,7 +84,9 @@ def test_core_crypto_success_and_error(mock_exit, mock_batch, tmp_path, monkeypa
     export_prev_close.main()  # Should log error, not crash
 
 
-@patch("hybrid_ai_trading.pipelines.export_prev_close.batch_prev_close", return_value={})
+@patch(
+    "hybrid_ai_trading.pipelines.export_prev_close.batch_prev_close", return_value={}
+)
 @patch("sys.exit")
 def test_polygon_branch_success_no_data_and_error(mock_exit, _, tmp_path, monkeypatch):
     mock_exit.side_effect = lambda code=0: None  # no-op

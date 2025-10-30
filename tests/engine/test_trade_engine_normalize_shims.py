@@ -19,4 +19,7 @@ def e_norm():
 
 def test_normalize_reason_only(e_norm):
     r = e_norm.process_signal("AAPL", "BUY", price=100, size=1)
-    assert r["status"] in {"pending", "filled"} and r.get("reason") in {"normalized_ok", "ok"}
+    assert r["status"] in {"pending", "filled"} and r.get("reason") in {
+        "normalized_ok",
+        "ok",
+    }

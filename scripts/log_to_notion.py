@@ -72,7 +72,10 @@ def notion_create_page(title: str, details_text: str):
     # Try putting details into a rich_text property named DETAILS_PROP.
     # If it doesn't exist, well attach it as page content (children).
     props = {
-        TITLE_PROP: {"type": "title", "title": [{"type": "text", "text": {"content": title[:200]}}]}
+        TITLE_PROP: {
+            "type": "title",
+            "title": [{"type": "text", "text": {"content": title[:200]}}],
+        }
     }
     body = {
         "parent": {"database_id": NOTION_DB},
@@ -85,7 +88,9 @@ def notion_create_page(title: str, details_text: str):
                     "rich_text": [
                         {
                             "type": "text",
-                            "text": {"content": details_text[:1900]},  # keep it short-ish
+                            "text": {
+                                "content": details_text[:1900]
+                            },  # keep it short-ish
                         }
                     ]
                 },
@@ -103,7 +108,9 @@ def notion_create_page(title: str, details_text: str):
     body_try_prop = dict(body)
     body_try_prop["properties"] = props_with_details
 
-    r = session.post("https://api.notion.com/v1/pages", data=json.dumps(body_try_prop).encode())
+    r = session.post(
+        "https://api.notion.com/v1/pages", data=json.dumps(body_try_prop).encode()
+    )
     if r.status_code == 200:
         return True
 
@@ -131,7 +138,9 @@ def main():
         # Build a concise one-line title
         items = od.get("data", {}).get("result", {}).get("items", [])
         sym_list = [d.get("symbol") for d in items if isinstance(d, dict)]
-        title = f"[once_done] {','.join(sym_list) or 'N/A'}  ({len(items)} items)  @ {ts}"
+        title = (
+            f"[once_done] {','.join(sym_list) or 'N/A'}  ({len(items)} items)  @ {ts}"
+        )
         details = json.dumps({"run_start": rs, "once_done": od}, ensure_ascii=False)
     else:
         title = f"[log] {rs.get('event') if rs else 'record'}  @ {ts}"

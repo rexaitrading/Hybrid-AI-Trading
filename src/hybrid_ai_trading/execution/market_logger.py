@@ -32,7 +32,8 @@ class MarketLogger:
     def __init__(self, symbols: List[str], outdir: str = "market_logs") -> None:
         if IB is None or Stock is None:
             raise ImportError(
-                "ib_insync is required for MarketLogger. " "Install with `pip install ib-insync`."
+                "ib_insync is required for MarketLogger. "
+                "Install with `pip install ib-insync`."
             )
 
         self.symbols = symbols

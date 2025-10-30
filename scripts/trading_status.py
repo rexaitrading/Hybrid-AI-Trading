@@ -19,7 +19,9 @@ def main():
     opens = []
     for t in ib.reqOpenOrders():
         c, o, s = t.contract, t.order, t.orderStatus
-        opens.append((getattr(c, "symbol", "?"), o.action, int(o.totalQuantity), s.status))
+        opens.append(
+            (getattr(c, "symbol", "?"), o.action, int(o.totalQuantity), s.status)
+        )
 
     ib.disconnect()
 

@@ -70,7 +70,12 @@ def vwap_signal(
 
         try:
             last_close, last_vol = float(bars[-1]["c"]), float(bars[-1]["v"])
-            if last_close <= 0 or last_vol <= 0 or math.isnan(last_close) or math.isnan(last_vol):
+            if (
+                last_close <= 0
+                or last_vol <= 0
+                or math.isnan(last_close)
+                or math.isnan(last_vol)
+            ):
                 logger.warning("❌ VWAP invalid: last bar contains NaN or bad values")
                 return "HOLD"
         except Exception:
@@ -82,12 +87,19 @@ def vwap_signal(
             return "HOLD"
 
         # --- Symmetry safeguard ---
-        if cfg.enable_symmetry and len(bars) == 2 and bars[0].get("v") == bars[1].get("v"):
+        if (
+            cfg.enable_symmetry
+            and len(bars) == 2
+            and bars[0].get("v") == bars[1].get("v")
+        ):
             try:
                 c0, c1 = float(bars[0]["c"]), float(bars[1]["c"])
                 midpoint = (c0 + c1) / 2
                 vwap_two = _compute_vwap(bars)
-                if not math.isnan(vwap_two) and abs(vwap_two - midpoint) <= cfg.tolerance:
+                if (
+                    not math.isnan(vwap_two)
+                    and abs(vwap_two - midpoint) <= cfg.tolerance
+                ):
                     if cfg.tie_policy == "SELL":
                         logger.info("✅ VWAP symmetric safeguard → SELL (policy=SELL)")
                         return "SELL"
@@ -110,10 +122,14 @@ def vwap_signal(
             return "HOLD"
 
         if last_close > vwap_val:
-            logger.info("VWAP decision → BUY (last=%.2f, vwap=%.2f)", last_close, vwap_val)
+            logger.info(
+                "VWAP decision → BUY (last=%.2f, vwap=%.2f)", last_close, vwap_val
+            )
             return "BUY"
         if last_close < vwap_val:
-            logger.info("VWAP decision → SELL (last=%.2f, vwap=%.2f)", last_close, vwap_val)
+            logger.info(
+                "VWAP decision → SELL (last=%.2f, vwap=%.2f)", last_close, vwap_val
+            )
             return "SELL"
 
         logger.info("VWAP tie fallback → %s", cfg.tie_policy)
@@ -144,7 +160,10 @@ class VWAPSignal:
                 c0, c1 = float(bars[0]["c"]), float(bars[1]["c"])
                 midpoint = (c0 + c1) / 2
                 vwap_two = _compute_vwap(bars)
-                if not math.isnan(vwap_two) and abs(vwap_two - midpoint) <= self.config.tolerance:
+                if (
+                    not math.isnan(vwap_two)
+                    and abs(vwap_two - midpoint) <= self.config.tolerance
+                ):
                     symmetry_triggered = True
             except Exception:
                 symmetry_triggered = False

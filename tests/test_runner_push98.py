@@ -35,7 +35,9 @@ def iso(tmp_path, monkeypatch):
 
 def mk(virtual=True, **cfgkw):
     cfg = RunnerConfig(virtual_fills=virtual, **cfgkw)
-    tl = TradeLogger(jsonl_path="logs/t.jsonl", csv_path=None, text_log_path="logs/t.log")
+    tl = TradeLogger(
+        jsonl_path="logs/t.jsonl", csv_path=None, text_log_path="logs/t.log"
+    )
     return ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
 
 
@@ -99,7 +101,9 @@ def test_shorts_disabled_sell_early_return(monkeypatch):
 
 def test_risk_halt_callsite(monkeypatch):
     calls = []
-    monkeypatch.setattr(Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False)
+    monkeypatch.setattr(
+        Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False
+    )
     r = mk()
     ts = 1_700_000_000_000
     monkeypatch.setattr(ETH1HRunner, "_fetch_ohlcv", lambda self: bars(ts, 100))
@@ -122,6 +126,8 @@ def test_virtual_fill_final_return_line(monkeypatch):
     monkeypatch.setattr(ETH1HRunner, "_fetch_ohlcv", lambda self: bars(ts, 100))
     monkeypatch.setattr(ETH1HRunner, "_signal_from_bars", lambda self, b: "BUY")
     # ensure risk gate passes for a clean fill
-    monkeypatch.setattr(RiskManager, "allow_trade", lambda self, **kw: (True, None), raising=False)
+    monkeypatch.setattr(
+        RiskManager, "allow_trade", lambda self, **kw: (True, None), raising=False
+    )
     ev = r.step()
     assert ev is not None

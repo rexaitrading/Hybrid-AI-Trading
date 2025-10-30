@@ -19,7 +19,11 @@ def _call(fn, defaults):
     sig = _safe_signature(fn)
     if not sig:
         return
-    kwargs = {p.name: defaults.get(p.name) for p in sig.parameters.values() if p.name in defaults}
+    kwargs = {
+        p.name: defaults.get(p.name)
+        for p in sig.parameters.values()
+        if p.name in defaults
+    }
     try:
         return fn(**kwargs)
     except TypeError:
@@ -84,7 +88,9 @@ def test_reflection_sweeper_alerts_audit_reset_signal_algo(monkeypatch, tmp_path
     def boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setitem(sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom))
+    monkeypatch.setitem(
+        sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom)
+    )
 
     class SMTPBAD:
         def __enter__(self):
@@ -148,14 +154,25 @@ def test_reflection_sweeper_alerts_audit_reset_signal_algo(monkeypatch, tmp_path
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name, _orig=orig_import: fake if name.endswith((".twap", ".vwap")) else _orig(name),
+        lambda name, _orig=orig_import: (
+            fake if name.endswith((".twap", ".vwap")) else _orig(name)
+        ),
     )
 
     # try any algo/route-ish method
     for name in dir(te):
         if any(k in name.lower() for k in ("algo", "route")):
             f = getattr(te, name)
-            _call(f, {"symbol": "AAPL", "side": "BUY", "size": 1.0, "price": 1.0, "algo": "twap"})
+            _call(
+                f,
+                {
+                    "symbol": "AAPL",
+                    "side": "BUY",
+                    "size": 1.0,
+                    "price": 1.0,
+                    "algo": "twap",
+                },
+            )
 
     # import failure only for twap/vwap
     monkeypatch.setattr(
@@ -172,19 +189,30 @@ def test_reflection_sweeper_alerts_audit_reset_signal_algo(monkeypatch, tmp_path
             try:
                 _call(
                     getattr(te, name),
-                    {"symbol": "AAPL", "side": "BUY", "size": 1.0, "price": 1.0, "algo": "twap"},
+                    {
+                        "symbol": "AAPL",
+                        "side": "BUY",
+                        "size": 1.0,
+                        "price": 1.0,
+                        "algo": "twap",
+                    },
                 )
             except Exception:
                 pass
 
     # router direct error
     if hasattr(te, "order_manager"):
-        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("router"))
+        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("router")
+        )
     for name in dir(te):
-        if "direct" in name.lower() or ("route" in name.lower() and "algo" not in name.lower()):
+        if "direct" in name.lower() or (
+            "route" in name.lower() and "algo" not in name.lower()
+        ):
             try:
                 _call(
-                    getattr(te, name), {"symbol": "AAPL", "side": "BUY", "size": 1.0, "price": 1.0}
+                    getattr(te, name),
+                    {"symbol": "AAPL", "side": "BUY", "size": 1.0, "price": 1.0},
                 )
             except Exception:
                 pass
@@ -196,11 +224,17 @@ def test_reflection_sweeper_alerts_audit_reset_signal_algo(monkeypatch, tmp_path
     te.gatescore = types.SimpleNamespace(allow=lambda *a, **k: False)
     for name in dir(te):
         if "filter" in name.lower():
-            _call(getattr(te, name), {"symbol": "AAPL", "side": "BUY", "size": 1.0, "price": 1.0})
+            _call(
+                getattr(te, name),
+                {"symbol": "AAPL", "side": "BUY", "size": 1.0, "price": 1.0},
+            )
     te.sentiment_filter.allow = lambda *a, **k: True
     for name in dir(te):
         if "gate" in name.lower():
-            _call(getattr(te, name), {"symbol": "AAPL", "side": "BUY", "size": 1.0, "price": 1.0})
+            _call(
+                getattr(te, name),
+                {"symbol": "AAPL", "side": "BUY", "size": 1.0, "price": 1.0},
+            )
 
     # drive ratio guards via low metrics
     te2 = make_engine(ratios=(-2.0, -2.0))
@@ -226,7 +260,9 @@ def test_reflection_sweeper_alerts_audit_reset_signal_algo(monkeypatch, tmp_path
     for attr in ("risk_manager", "risk", "rm"):
         if hasattr(te, attr):
             setattr(
-                getattr(te, attr), "reset_day", lambda: (_ for _ in ()).throw(RuntimeError("RFAIL"))
+                getattr(te, attr),
+                "reset_day",
+                lambda: (_ for _ in ()).throw(RuntimeError("RFAIL")),
             )
             break
     for name in dir(te):
@@ -240,7 +276,9 @@ def test_reflection_sweeper_alerts_audit_reset_signal_algo(monkeypatch, tmp_path
         if "daily_reset" in name or name == "daily_reset":
             try:
                 _orig = getattr(te, name)
-                setattr(te, name, lambda: (_ for _ in ()).throw(RuntimeError("GENERIC")))
+                setattr(
+                    te, name, lambda: (_ for _ in ()).throw(RuntimeError("GENERIC"))
+                )
                 getattr(te, name)()
             except Exception:
                 pass

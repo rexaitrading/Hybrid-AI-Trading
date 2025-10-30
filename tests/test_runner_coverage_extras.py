@@ -34,7 +34,9 @@ def iso(tmp_path, monkeypatch):
 
 def test_fetch_ohlcv_raises_without_ccxt(monkeypatch):
     cfg = RunnerConfig()
-    tl = TradeLogger(jsonl_path="logs/t.jsonl", csv_path=None, text_log_path="logs/t.log")
+    tl = TradeLogger(
+        jsonl_path="logs/t.jsonl", csv_path=None, text_log_path="logs/t.log"
+    )
     r = ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
     monkeypatch.setattr(mod_runner, "ccxt", None, raising=False)
     with pytest.raises(RuntimeError):
@@ -48,8 +50,12 @@ def test_norm_symbol_kraken_map_and_broker_factory(monkeypatch):
             self.ok = True
 
     monkeypatch.setattr(mod_runner, "KrakenClient", DummyK, raising=False)
-    cfg = RunnerConfig(exchange="kraken", symbol="ETH/USDT", broker="kraken", virtual_fills=False)
-    tl = TradeLogger(jsonl_path="logs/t2.jsonl", csv_path=None, text_log_path="logs/t2.log")
+    cfg = RunnerConfig(
+        exchange="kraken", symbol="ETH/USDT", broker="kraken", virtual_fills=False
+    )
+    tl = TradeLogger(
+        jsonl_path="logs/t2.jsonl", csv_path=None, text_log_path="logs/t2.log"
+    )
     r = ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
     assert r._norm_symbol("ETH/USDT") == "ETH/USD"
     assert isinstance(r.broker, DummyK)
@@ -57,7 +63,9 @@ def test_norm_symbol_kraken_map_and_broker_factory(monkeypatch):
 
 def test_step_empty_bars_returns_none(monkeypatch):
     cfg = RunnerConfig()
-    tl = TradeLogger(jsonl_path="logs/t3.jsonl", csv_path=None, text_log_path="logs/t3.log")
+    tl = TradeLogger(
+        jsonl_path="logs/t3.jsonl", csv_path=None, text_log_path="logs/t3.log"
+    )
     r = ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
     monkeypatch.setattr(ETH1HRunner, "_fetch_ohlcv", lambda self: [])
     assert r.step() is None
@@ -65,9 +73,13 @@ def test_step_empty_bars_returns_none(monkeypatch):
 
 def test_step_qty_zero_and_shorts_disabled_and_same_side_hold(monkeypatch):
     calls = []
-    monkeypatch.setattr(Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False)
+    monkeypatch.setattr(
+        Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False
+    )
     cfg = RunnerConfig(allow_shorts=False)
-    tl = TradeLogger(jsonl_path="logs/t4.jsonl", csv_path=None, text_log_path="logs/t4.log")
+    tl = TradeLogger(
+        jsonl_path="logs/t4.jsonl", csv_path=None, text_log_path="logs/t4.log"
+    )
     r = ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
     ts = 1_700_000_000_000
     # shorts disabled path
@@ -87,9 +99,13 @@ def test_step_qty_zero_and_shorts_disabled_and_same_side_hold(monkeypatch):
 
 def test_step_time_stop_exit_and_alert(monkeypatch):
     calls = []
-    monkeypatch.setattr(Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False)
+    monkeypatch.setattr(
+        Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False
+    )
     cfg = RunnerConfig(time_stop_bars=1)
-    tl = TradeLogger(jsonl_path="logs/t5.jsonl", csv_path=None, text_log_path="logs/t5.log")
+    tl = TradeLogger(
+        jsonl_path="logs/t5.jsonl", csv_path=None, text_log_path="logs/t5.log"
+    )
     r = ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
     ts = 1_700_000_000_000
     # create old position (older than 1 bar)
@@ -112,7 +128,9 @@ def test_step_time_stop_exit_and_alert(monkeypatch):
 
 def test_per_market_state_files_created(monkeypatch):
     cfg = RunnerConfig()
-    tl = TradeLogger(jsonl_path="logs/t6.jsonl", csv_path=None, text_log_path="logs/t6.log")
+    tl = TradeLogger(
+        jsonl_path="logs/t6.jsonl", csv_path=None, text_log_path="logs/t6.log"
+    )
     r = ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
     ts = 1_700_000_000_000
     monkeypatch.setattr(ETH1HRunner, "_fetch_ohlcv", lambda self: bars(ts, 100))

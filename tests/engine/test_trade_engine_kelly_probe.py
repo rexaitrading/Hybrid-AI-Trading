@@ -19,6 +19,14 @@ def test_kelly_size_none_probe(monkeypatch, eng):
         r = eng.process_signal(
             "AAPL", "BUY", price=100, size=None
         )  # triggers Kelly sizing if present
-        assert r["status"] in {"filled", "blocked", "rejected", "ok", "error", "pending", "ignored"}
+        assert r["status"] in {
+            "filled",
+            "blocked",
+            "rejected",
+            "ok",
+            "error",
+            "pending",
+            "ignored",
+        }
     except Exception:
         pytest.skip("kelly flow not active in this build")

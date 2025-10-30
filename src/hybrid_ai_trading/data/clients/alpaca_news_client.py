@@ -39,7 +39,10 @@ class AlpacaNewsClient:
         params: Dict[str, Any] = {"symbols": symbols_csv, "limit": int(limit)}
         if date_from:
             params["start"] = f"{date_from}T00:00:00Z"
-        headers = {"APCA-API-KEY-ID": self.key_id, "APCA-API-SECRET-KEY": self.secret_key}
+        headers = {
+            "APCA-API-KEY-ID": self.key_id,
+            "APCA-API-SECRET-KEY": self.secret_key,
+        }
         try:
             r = requests.get(url, params=params, headers=headers, timeout=15)
             r.raise_for_status()

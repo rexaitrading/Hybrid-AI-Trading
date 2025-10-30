@@ -26,5 +26,7 @@ ib.disconnect()
     with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
         f.write(code)
         path = f.name
-    r = subprocess.run([sys.executable, path], capture_output=True, text=True, timeout=15)
+    r = subprocess.run(
+        [sys.executable, path], capture_output=True, text=True, timeout=15
+    )
     assert r.returncode == 0 and "ok: True" in (r.stdout or "")

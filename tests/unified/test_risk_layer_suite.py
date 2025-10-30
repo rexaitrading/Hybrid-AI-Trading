@@ -37,7 +37,9 @@ def make_bars(prices, vols=None):
 
 
 class DummyPortfolio:
-    def __init__(self, leverage=1.0, exposure=1000, fail_leverage=False, fail_exposure=False):
+    def __init__(
+        self, leverage=1.0, exposure=1000, fail_leverage=False, fail_exposure=False
+    ):
         self._lev = leverage
         self._exp = exposure
         self.fail_leverage = fail_leverage
@@ -140,7 +142,9 @@ def make_bars(prices, vols=None):
 
 
 class DummyPortfolio:
-    def __init__(self, leverage=1.0, exposure=1000, fail_leverage=False, fail_exposure=False):
+    def __init__(
+        self, leverage=1.0, exposure=1000, fail_leverage=False, fail_exposure=False
+    ):
         self._lev = leverage
         self._exp = exposure
         self.fail_leverage = fail_leverage
@@ -249,7 +253,9 @@ def test_legacy_kwargs_and_trade_loss_guard(caplog):
 
 
 def test_daily_loss_and_roi_sharpe_sortino_guards(caplog):
-    rm = RiskManager(daily_loss_limit=-0.01, roi_min=0.1, sharpe_min=1.0, sortino_min=1.0)
+    rm = RiskManager(
+        daily_loss_limit=-0.01, roi_min=0.1, sharpe_min=1.0, sortino_min=1.0
+    )
     rm.daily_pnl = -0.02
     caplog.set_level(logging.WARNING)
     result = rm.check_trade("AAPL", "BUY", 1, 1000)
@@ -259,7 +265,9 @@ def test_daily_loss_and_roi_sharpe_sortino_guards(caplog):
 
 def test_portfolio_checks_and_exceptions(caplog):
     p = DummyPortfolio(leverage=10, exposure=60000)
-    rm = RiskManager(portfolio=p, max_leverage=5, equity=100000, max_portfolio_exposure=0.3)
+    rm = RiskManager(
+        portfolio=p, max_leverage=5, equity=100000, max_portfolio_exposure=0.3
+    )
     caplog.set_level(logging.WARNING)
     assert not rm.check_trade("AAPL", "BUY", 1, 1000)
 
@@ -416,8 +424,12 @@ def test_vwap_executor_flows(dummy_order_manager):
     assert vwap.execute("META", "SELL", 10, 0)["status"] == "error"
 
 
-def test_vwap_executor_unexpected_and_exception(monkeypatch, dummy_order_manager, caplog):
-    monkeypatch.setattr("hybrid_ai_trading.algos.vwap_executor.vwap_signal", lambda *_: "JUNK")
+def test_vwap_executor_unexpected_and_exception(
+    monkeypatch, dummy_order_manager, caplog
+):
+    monkeypatch.setattr(
+        "hybrid_ai_trading.algos.vwap_executor.vwap_signal", lambda *_: "JUNK"
+    )
     vwap = VWAPExecutor(dummy_order_manager)
     assert vwap.execute("NFLX", "BUY", 10, 100)["status"] == "error"
 

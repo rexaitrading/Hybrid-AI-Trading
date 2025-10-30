@@ -25,7 +25,12 @@ def row_to_snapshot(row: Dict[str, Any]) -> Dict[str, Any]:
         except:
             return None
 
-    price = f(row.get("price")) or f(row.get("last")) or f(row.get("close")) or f(row.get("vwap"))
+    price = (
+        f(row.get("price"))
+        or f(row.get("last"))
+        or f(row.get("close"))
+        or f(row.get("vwap"))
+    )
     return {
         "symbol": sym,
         "price": price,

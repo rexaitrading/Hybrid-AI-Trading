@@ -114,7 +114,17 @@ def _find(te, names):
 
 
 def _call_signal(te, **kw):
-    f = _find(te, ["process_signal", "_on_signal", "on_signal", "handle_signal", "submit", "trade"])
+    f = _find(
+        te,
+        [
+            "process_signal",
+            "_on_signal",
+            "on_signal",
+            "handle_signal",
+            "submit",
+            "trade",
+        ],
+    )
     if f:
         try:
             return f(**kw)
@@ -144,7 +154,9 @@ def test_algo_import_failure(monkeypatch):
     te = _mk()
     # make any algo import blow up -> engine should handle/fallback
     monkeypatch.setattr(
-        importlib, "import_module", lambda name: (_ for _ in ()).throw(ImportError("nope"))
+        importlib,
+        "import_module",
+        lambda name: (_ for _ in ()).throw(ImportError("nope")),
     )
     # try common caller if present
     f = _find(te, ["_route_with_algo", "route_with_algo", "route_algo"])
@@ -180,7 +192,9 @@ def test_base_fraction_fallbacks(monkeypatch):
 def test_router_direct_error(monkeypatch):
     te = _mk()
     if hasattr(te, "order_manager"):
-        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom-router"))
+        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("boom-router")
+        )
     f = _find(te, ["_route_direct", "route_direct", "direct_route"])
     if f:
         try:
@@ -224,7 +238,9 @@ def test_sector_and_midblocks(monkeypatch):
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name: fake if name.endswith((".twap", ".vwap")) else importlib.import_module(name),
+        lambda name: (
+            fake if name.endswith((".twap", ".vwap")) else importlib.import_module(name)
+        ),
     )
     _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
 
@@ -251,7 +267,9 @@ def test_daily_reset_full(monkeypatch):
     for attr in ("risk_manager", "risk", "rm"):
         if hasattr(te, attr):
             setattr(
-                getattr(te, attr), "reset_day", lambda: (_ for _ in ()).throw(RuntimeError("RFAIL"))
+                getattr(te, attr),
+                "reset_day",
+                lambda: (_ for _ in ()).throw(RuntimeError("RFAIL")),
             )
             break
     if hasattr(te, "daily_reset"):
@@ -289,7 +307,9 @@ def test_helpers_reflective_sweep():
             continue
         # prefer kwargs; fallback positional
         kwargs = {
-            p.name: defaults.get(p.name) for p in sig.parameters.values() if p.name in defaults
+            p.name: defaults.get(p.name)
+            for p in sig.parameters.values()
+            if p.name in defaults
         }
         try:
             fn(**kwargs)

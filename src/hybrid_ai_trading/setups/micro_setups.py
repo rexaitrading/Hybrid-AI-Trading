@@ -69,7 +69,9 @@ def build_micro_decisions(
     g: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
-    snap_map = {s["symbol"]: s for s in snapshots if isinstance(s, dict) and "symbol" in s}
+    snap_map = {
+        s["symbol"]: s for s in snapshots if isinstance(s, dict) and "symbol" in s
+    }
     for s in symbols:
         snap = snap_map.get(s, {})
         price = snap.get("price")

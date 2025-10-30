@@ -63,7 +63,9 @@ def test_multi_slice_with_remainder(monkeypatch, mgr):
     )
     out = tw.execute("TSLA", "SELL", 10, 200.0)
     assert out["status"] in ("filled", "error")
-    assert len(out.get("details", [])) == 3  # implementation slices equally by floor division
+    assert (
+        len(out.get("details", [])) == 3
+    )  # implementation slices equally by floor division
 
 
 def test_single_slice_normalization(mgr):

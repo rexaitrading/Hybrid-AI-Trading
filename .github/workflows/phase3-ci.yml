@@ -1,4 +1,4 @@
-﻿name: Phase3 CI
+name: Phase3 CI
 
 on:
   workflow_dispatch:
@@ -16,7 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+    - name: Repo sanity guard
+      shell: pwsh
+      run: |
+        \Stop='Stop'
+        powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ci/repo_sanity.ps1        with: { fetch-depth: 0 }
 
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }

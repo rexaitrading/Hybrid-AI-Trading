@@ -19,7 +19,9 @@ class VWAPExecutor:
         self.slices = slices
         self.delay = delay
 
-    def execute(self, symbol: str, side: str, size: int, price: float) -> Dict[str, Any]:
+    def execute(
+        self, symbol: str, side: str, size: int, price: float
+    ) -> Dict[str, Any]:
         try:
             if size <= 0 or price <= 0:
                 return {

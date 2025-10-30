@@ -87,7 +87,10 @@ def test_ps_drawdown_nonbreach_then_kelly_sizing_positional():
         size_position=lambda *a, **k: (_ for _ in ()).throw(RuntimeError("kelly boom"))
     )
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "submitted", "order_id": 7001}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "submitted",
+            "order_id": 7001,
+        }
     args = _pos_args_for(te.process_signal)
     try:
         te.process_signal(*args)
@@ -156,7 +159,11 @@ def test_ps_tail_normalization_334_339_positional():
     if hasattr(te, "risk_manager"):
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 7004}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "ok",
+            "reason": "ok",
+            "order_id": 7004,
+        }
     for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
             try:

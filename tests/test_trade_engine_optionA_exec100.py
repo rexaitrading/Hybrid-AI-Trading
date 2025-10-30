@@ -49,7 +49,9 @@ def _invoke(fn, pool):
     sig = _sig(fn)
     if not sig:
         return
-    kwargs = {p.name: pool.get(p.name) for p in sig.parameters.values() if p.name in pool}
+    kwargs = {
+        p.name: pool.get(p.name) for p in sig.parameters.values() if p.name in pool
+    }
     try:
         return fn(**kwargs)
     except TypeError:
@@ -112,7 +114,9 @@ def test_alerts_and_fire_alert_branches(monkeypatch):
     assert isinstance(res2, dict)
 
     # _fire_alert except branch: make router._send_alert raise
-    te.router._send_alert = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("router send error"))
+    te.router._send_alert = lambda *a, **k: (_ for _ in ()).throw(
+        RuntimeError("router send error")
+    )
     te._fire_alert("router issue")  # should hit logger.error path without raising
 
 
@@ -164,7 +168,9 @@ def test_reset_day_ok_and_errors(monkeypatch):
     # risk error
     if hasattr(te.risk_manager, "reset_day"):
         te.portfolio.reset_day = lambda: {"status": "ok"}
-        te.risk_manager.reset_day = lambda: (_ for _ in ()).throw(RuntimeError("r-fail"))
+        te.risk_manager.reset_day = lambda: (_ for _ in ()).throw(
+            RuntimeError("r-fail")
+        )
         r3 = te.reset_day()
         assert r3["status"] == "error" and "risk_reset_failed" in r3["reason"]
 
@@ -194,10 +200,14 @@ def test_process_signal_validation_and_equity_depleted(monkeypatch):
     assert (
         te.process_signal("AAPL", "unknown", price=1.0)["status"] == "rejected"
     )  # 228 invalid_signal
-    assert te.process_signal("AAPL", "BUY", price=None)["status"] == "rejected"  # 232 invalid_price
+    assert (
+        te.process_signal("AAPL", "BUY", price=None)["status"] == "rejected"
+    )  # 232 invalid_price
 
     te.portfolio.equity = 0
-    assert te.process_signal("AAPL", "BUY", price=1.0)["status"] == "blocked"  # 236 equity_depleted
+    assert (
+        te.process_signal("AAPL", "BUY", price=1.0)["status"] == "blocked"
+    )  # 236 equity_depleted
 
 
 def test_process_signal_drawdown_and_kelly(monkeypatch):
@@ -219,12 +229,22 @@ def test_process_signal_drawdown_and_kelly(monkeypatch):
     te2 = make_engine()
     te2.kelly_sizer.size_position = lambda eq, px: {"size": 2}
     r2 = te2.process_signal("AAPL", "BUY", price=1.0, size=None)
-    assert r2["status"] in {"blocked", "filled", "ignored", "rejected", "error", "pending"}
+    assert r2["status"] in {
+        "blocked",
+        "filled",
+        "ignored",
+        "rejected",
+        "error",
+        "pending",
+    }
 
 
 def test_sector_and_hedge_guards(monkeypatch):
     te = make_engine(
-        risk={"intraday_sector_exposure": 0.001, "hedge_rules": {"equities_vol_spike": ["AAPL"]}}
+        risk={
+            "intraday_sector_exposure": 0.001,
+            "hedge_rules": {"equities_vol_spike": ["AAPL"]},
+        }
     )
     # positions in tech so breach trips
     te.portfolio.get_positions = lambda: {"AAPL": {"size": 10, "avg_price": 100.0}}
@@ -249,10 +269,19 @@ def test_algo_and_router_branches(monkeypatch):
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name, _orig=orig_import: fake if name.endswith((".twap", ".vwap")) else _orig(name),
+        lambda name, _orig=orig_import: (
+            fake if name.endswith((".twap", ".vwap")) else _orig(name)
+        ),
     )
     r1 = te.process_signal("AAPL", "BUY", price=1.0, size=1, algo="twap")
-    assert r1["status"] in {"filled", "blocked", "ignored", "rejected", "error", "pending"}
+    assert r1["status"] in {
+        "filled",
+        "blocked",
+        "ignored",
+        "rejected",
+        "error",
+        "pending",
+    }
 
     # unknown algo → early reject (no normalization override)
     r2 = te.process_signal("AAPL", "BUY", price=1.0, size=1, algo="unknown")
@@ -297,7 +326,9 @@ def test_filters_and_performance_blocks(monkeypatch):
     assert r1["status"] == "blocked" and r1["reason"] == "sentiment_veto"
 
     # Sentiment error
-    te.sentiment_filter.allow_trade = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("sent"))
+    te.sentiment_filter.allow_trade = lambda *a, **k: (_ for _ in ()).throw(
+        RuntimeError("sent")
+    )
     r2 = te.process_signal("AAPL", "BUY", price=1.0, size=1)
     assert r2["status"] == "blocked" and r2["reason"] == "sentiment_error"
 
@@ -307,7 +338,9 @@ def test_filters_and_performance_blocks(monkeypatch):
     r3 = te.process_signal("AAPL", "BUY", price=1.0, size=1)
     assert r3["status"] == "blocked" and r3["reason"] == "gatescore_veto"
 
-    te.gatescore.allow_trade = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("gate"))
+    te.gatescore.allow_trade = lambda *a, **k: (_ for _ in ()).throw(
+        RuntimeError("gate")
+    )
     r4 = te.process_signal("AAPL", "BUY", price=1.0, size=1)
     assert r4["status"] == "blocked" and r4["reason"] == "gatescore_error"
 
@@ -316,7 +349,10 @@ def test_filters_and_performance_blocks(monkeypatch):
     te.performance_tracker.sharpe_ratio = lambda: -2.0
     te.performance_tracker.sortino_ratio = lambda: -2.0
     r5 = te.process_signal("AAPL", "BUY", price=1.0, size=1)
-    assert r5["status"] == "blocked" and r5["reason"] in {"sharpe_breach", "sortino_breach"}
+    assert r5["status"] == "blocked" and r5["reason"] in {
+        "sharpe_breach",
+        "sortino_breach",
+    }
 
 
 # ---------- positions/history/outcome ----------
@@ -325,5 +361,7 @@ def test_positions_history_and_outcome_logging(monkeypatch):
     assert isinstance(te.get_positions(), dict)
     assert isinstance(te.get_history(), list)
     # record_trade_outcome logging
-    te.performance_tracker.record_trade = lambda pnl: (_ for _ in ()).throw(RuntimeError("x"))
+    te.performance_tracker.record_trade = lambda pnl: (_ for _ in ()).throw(
+        RuntimeError("x")
+    )
     te.record_trade_outcome(1.23)

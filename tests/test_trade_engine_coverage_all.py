@@ -126,7 +126,17 @@ def _find(te, names):
 
 
 def _call_signal(te, **kw):
-    f = _find(te, ["process_signal", "_on_signal", "on_signal", "handle_signal", "submit", "trade"])
+    f = _find(
+        te,
+        [
+            "process_signal",
+            "_on_signal",
+            "on_signal",
+            "handle_signal",
+            "submit",
+            "trade",
+        ],
+    )
     if f:
         try:
             return f(**kw)
@@ -176,7 +186,9 @@ def test_alerts_matrix_success_and_exceptions(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setitem(sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom))
+    monkeypatch.setitem(
+        sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom)
+    )
 
     class SMTPBAD:
         def __enter__(self):
@@ -197,7 +209,9 @@ def test_audit_header_then_exception(monkeypatch, tmp_path):
     te.audit_log = str(tmp_path / "audit.csv")
     te.backup_log = str(tmp_path / "backup.csv")
     if hasattr(te, "_write_audit"):
-        te._write_audit(["t", "AAPL", "BUY", 1, 1.0, "ok", 100.0, ""])  # header path 154–167
+        te._write_audit(
+            ["t", "AAPL", "BUY", 1, 1.0, "ok", 100.0, ""]
+        )  # header path 154–167
     # now force exception path 168–169 (caught/logged)
     te.audit_log = str(tmp_path / "no_dir" / "audit.csv")
     te.backup_log = str(tmp_path / "no_dir" / "backup.csv")
@@ -256,14 +270,18 @@ def test_algo_dynamic_imports_and_router_error(monkeypatch):
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name: fake if name.endswith((".twap", ".vwap")) else importlib.import_module(name),
+        lambda name: (
+            fake if name.endswith((".twap", ".vwap")) else importlib.import_module(name)
+        ),
     )
     if hasattr(te, "_route_with_algo"):
         assert te._route_with_algo("AAPL", "BUY", 1, 1.0, algo="twap")["status"] == "ok"
         assert te._route_with_algo("AAPL", "BUY", 1, 1.0, algo="vwap")["status"] == "ok"
     # router error 286–288
     if hasattr(te, "order_manager"):
-        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("router"))
+        te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("router")
+        )
     if hasattr(te, "_route_direct"):
         r = te._route_direct("AAPL", "BUY", 1, 1.0)
         assert r["status"] in {"blocked", "error"}
@@ -327,7 +345,9 @@ def test_daily_reset_specific_and_generic(monkeypatch):
     for attr in ("risk_manager", "risk", "rm"):
         if hasattr(te, attr):
             setattr(
-                getattr(te, attr), "reset_day", lambda: (_ for _ in ()).throw(RuntimeError("RFAIL"))
+                getattr(te, attr),
+                "reset_day",
+                lambda: (_ for _ in ()).throw(RuntimeError("RFAIL")),
             )
             break
     if hasattr(te, "daily_reset"):

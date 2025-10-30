@@ -62,7 +62,9 @@ def test_timeout_wrapper_success_and_exception(monkeypatch):
     r = make_router("ok")
     assert r._timeout_wrapper(lambda: {"status": "ok"}, timeout=0.01)
     assert (
-        r._timeout_wrapper(lambda: (_ for _ in ()).throw(Exception("fail")), timeout=0.01)["status"]
+        r._timeout_wrapper(
+            lambda: (_ for _ in ()).throw(Exception("fail")), timeout=0.01
+        )["status"]
         == "error"
     )
 

@@ -14,7 +14,9 @@ from hybrid_ai_trading.data.clients.polygon_news_client import PolygonNewsClient
 from hybrid_ai_trading.data.clients.rss_client import RSSClient
 
 
-def aggregate_news(symbols_csv: str, limit: int, date_from: str) -> List[Dict[str, Any]]:
+def aggregate_news(
+    symbols_csv: str, limit: int, date_from: str
+) -> List[Dict[str, Any]]:
     with open("config/config.yaml", "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
     np = cfg.get("news_providers") or {}
@@ -40,7 +42,9 @@ def aggregate_news(symbols_csv: str, limit: int, date_from: str) -> List[Dict[st
     if bool((np.get("benzinga") or {}).get("enabled", True)):
         try:
             bz = BenzingaClient()
-            add_batch("benzinga", bz.get_news(symbols_csv, limit=limit, date_from=date_from))
+            add_batch(
+                "benzinga", bz.get_news(symbols_csv, limit=limit, date_from=date_from)
+            )
         except Exception:
             pass
 
@@ -59,7 +63,9 @@ def aggregate_news(symbols_csv: str, limit: int, date_from: str) -> List[Dict[st
     if bool((np.get("alpaca") or {}).get("enabled", False)):
         try:
             ap = AlpacaNewsClient()
-            add_batch("alpaca", ap.get_news(symbols_csv, limit=limit, date_from=date_from))
+            add_batch(
+                "alpaca", ap.get_news(symbols_csv, limit=limit, date_from=date_from)
+            )
         except Exception:
             pass
 

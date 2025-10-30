@@ -11,7 +11,9 @@ def notify(text: str, blocks=None) -> bool:
     if blocks:
         payload["blocks"] = blocks
     data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data, headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(
+        url, data, headers={"Content-Type": "application/json"}
+    )
     try:
         with urllib.request.urlopen(req, timeout=5) as r:
             r.read()

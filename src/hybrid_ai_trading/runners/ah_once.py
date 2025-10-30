@@ -10,13 +10,17 @@ def parse_args():
     p = argparse.ArgumentParser("ah_once: place a single stock order (paper/live)")
     p.add_argument("--symbol", required=True)
     p.add_argument("--force", choices=["BUY", "SELL"], required=True)
-    p.add_argument("--client-id", type=int, default=int(os.getenv("IB_CLIENT_ID", "5007")))
+    p.add_argument(
+        "--client-id", type=int, default=int(os.getenv("IB_CLIENT_ID", "5007"))
+    )
     p.add_argument("--host", default=os.getenv("IB_HOST", "127.0.0.1"))
     p.add_argument("--port", type=int, default=int(os.getenv("IB_PORT", "4002")))
     p.add_argument("--outside-rth", action="store_true")
     p.add_argument("--order-type", choices=["LMT", "MKT"], default="LMT")
     p.add_argument("--limit-offset", type=float, default=0.30)
-    p.add_argument("--dest", choices=["SMART", "ISLAND", "ARCA", "NASDAQ"], default="SMART")
+    p.add_argument(
+        "--dest", choices=["SMART", "ISLAND", "ARCA", "NASDAQ"], default="SMART"
+    )
     p.add_argument("--tif", choices=["DAY", "GTC"], default="DAY")
     p.add_argument("--qty", type=float, default=1.0)
     p.add_argument("--wait-sec", type=int, default=12)
@@ -24,7 +28,9 @@ def parse_args():
     return p.parse_args()
 
 
-def compute_marketable_limit(ib: IB, contract: Stock, side: str, offset: float) -> float:
+def compute_marketable_limit(
+    ib: IB, contract: Stock, side: str, offset: float
+) -> float:
     tk = ib.reqMktData(contract, "", False, False)
     ib.sleep(1.5)
     bid = float(tk.bid or 0.0)
@@ -56,7 +62,9 @@ def main():
         order = MarketOrder(side, args.qty, outsideRth=args.outside_rth, tif=args.tif)
     else:
         lmt = compute_marketable_limit(ib, contract, side, args.limit_offset)
-        order = LimitOrder(side, args.qty, lmtPrice=lmt, outsideRth=args.outside_rth, tif=args.tif)
+        order = LimitOrder(
+            side, args.qty, lmtPrice=lmt, outsideRth=args.outside_rth, tif=args.tif
+        )
 
     tr = ib.placeOrder(contract, order)
     for _ in range(max(1, int(args.wait_sec))):

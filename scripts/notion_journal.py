@@ -86,7 +86,9 @@ def _fetch_db_schema(token: str, db_id: str) -> Dict[str, Any]:
         import requests  # type: ignore
 
         hdr = {"Authorization": f"Bearer {token}", "Notion-Version": "2022-06-28"}
-        r = requests.get(f"https://api.notion.com/v1/databases/{db_id}", headers=hdr, timeout=10)
+        r = requests.get(
+            f"https://api.notion.com/v1/databases/{db_id}", headers=hdr, timeout=10
+        )
         if getattr(r, "ok", False):
             return r.json().get("properties", {}) or {}
     except Exception:
@@ -111,7 +113,9 @@ def _coerce(value: Dict[str, Any], target_type: str) -> Optional[Dict[str, Any]]
         if "select" in value:
             return value
         if "rich_text" in value:
-            txt = "".join([t.get("text", {}).get("content", "") for t in value["rich_text"]])
+            txt = "".join(
+                [t.get("text", {}).get("content", "") for t in value["rich_text"]]
+            )
             return {"select": {"name": txt}} if txt else None
         if "number" in value:
             return {"select": {"name": str(value.get("number"))}}
@@ -120,7 +124,9 @@ def _coerce(value: Dict[str, Any], target_type: str) -> Optional[Dict[str, Any]]
         if "multi_select" in value:
             return value
         if "rich_text" in value:
-            txt = "".join([t.get("text", {}).get("content", "") for t in value["rich_text"]])
+            txt = "".join(
+                [t.get("text", {}).get("content", "") for t in value["rich_text"]]
+            )
             return {"multi_select": [{"name": txt}]} if txt else {"multi_select": []}
         return {"multi_select": []}
     if target_type == "number":
@@ -134,7 +140,9 @@ def _coerce(value: Dict[str, Any], target_type: str) -> Optional[Dict[str, Any]]
                 return None
         if "rich_text" in value:
             txt = (
-                "".join([t.get("text", {}).get("content", "") for t in value["rich_text"]])
+                "".join(
+                    [t.get("text", {}).get("content", "") for t in value["rich_text"]]
+                )
                 if isinstance(value["rich_text"], list)
                 else ""
             )
@@ -179,8 +187,12 @@ def _map_item_to_properties(item: Dict[str, Any]) -> Dict[str, Any]:
     sen_name = _sentiment_to_select_name(d.get("sentiment_val"))
 
     props: Dict[str, Dict[str, Any]] = {
-        title_prop: {"title": [{"text": {"content": str(sym or d.get("setup") or "trade")}}]},
-        "setup_tag": {"multi_select": ([{"name": str(d.get("setup"))}] if d.get("setup") else [])},
+        title_prop: {
+            "title": [{"text": {"content": str(sym or d.get("setup") or "trade")}}]
+        },
+        "setup_tag": {
+            "multi_select": ([{"name": str(d.get("setup"))}] if d.get("setup") else [])
+        },
         "side": {"select": ({"name": str(d.get("side"))} if d.get("side") else None)},
         "entry_px": {"number": _num(d.get("entry_px"))},
         "stop_px": {"number": _num(d.get("stop_px"))},
@@ -191,7 +203,9 @@ def _map_item_to_properties(item: Dict[str, Any]) -> Dict[str, Any]:
         "regime_conf": {"number": _num(d.get("regime_conf"))},
         "sentiment": {"select": ({"name": str(sen_name)} if sen_name else None)},
         "sent_conf": {"number": _num(d.get("sent_conf"))},
-        "reason_code": {"rich_text": [{"text": {"content": str(d.get("reason_code") or "")}}]},
+        "reason_code": {
+            "rich_text": [{"text": {"content": str(d.get("reason_code") or "")}}]
+        },
         "price": {"number": _num(d.get("price"))},
         "__BID__": {"number": _num(d.get("bid"))},
         "__ASK__": {"number": _num(d.get("ask"))},
@@ -233,7 +247,13 @@ def journal_batch(
     if not items:
         return
 
-    include_stubs = os.getenv("NOTION_INCLUDE_STUBS") in ("1", "true", "True", "YES", "yes")
+    include_stubs = os.getenv("NOTION_INCLUDE_STUBS") in (
+        "1",
+        "true",
+        "True",
+        "YES",
+        "yes",
+    )
     mapped: List[Dict[str, Any]] = []
     for it in items:
         props = _map_item_to_properties(it)
@@ -250,7 +270,9 @@ def journal_batch(
     try:
         import requests  # type: ignore
 
-        db_props = _fetch_db_schema(notion_token, db_id) if (db_id and notion_token) else {}
+        db_props = (
+            _fetch_db_schema(notion_token, db_id) if (db_id and notion_token) else {}
+        )
         hdr = {
             "Authorization": f"Bearer {notion_token}",
             "Notion-Version": "2022-06-28",
@@ -287,7 +309,9 @@ def _log_http_error(r, body):
         pass
 
 
-def _dry_write(payload: List[Dict[str, Any]], path: str = "logs/notion_last_payload.json") -> None:
+def _dry_write(
+    payload: List[Dict[str, Any]], path: str = "logs/notion_last_payload.json"
+) -> None:
     try:
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:

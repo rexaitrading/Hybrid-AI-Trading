@@ -21,10 +21,14 @@ def main():
         help="Market data type: 1=live,2=frozen,3=delayed,4=delayed_frozen (default 3)",
     )
     ap.add_argument(
-        "--snapshot", action="store_true", help="Request snapshot quotes (permissions required)"
+        "--snapshot",
+        action="store_true",
+        help="Request snapshot quotes (permissions required)",
     )
     ap.add_argument(
-        "--primary", default="NASDAQ", help="Primary exchange hint for US stocks (default NASDAQ)"
+        "--primary",
+        default="NASDAQ",
+        help="Primary exchange hint for US stocks (default NASDAQ)",
     )
     ap.add_argument("--json", action="store_true", help="Emit JSON (machine-readable)")
     args = ap.parse_args()
@@ -43,7 +47,9 @@ def main():
         ib.reqMarketDataType(args.mdType)
 
         # Build contracts
-        contracts = [Stock(s, "SMART", "USD", primaryExchange=args.primary) for s in syms]
+        contracts = [
+            Stock(s, "SMART", "USD", primaryExchange=args.primary) for s in syms
+        ]
 
         # Request quotes
         ticks = []
@@ -110,7 +116,8 @@ def main():
                 )
             if acct:
                 print(
-                    "Account:", ", ".join(f"{k}={v['value']} {v['ccy']}" for k, v in acct.items())
+                    "Account:",
+                    ", ".join(f"{k}={v['value']} {v['ccy']}" for k, v in acct.items()),
                 )
     finally:
         if ib.isConnected():

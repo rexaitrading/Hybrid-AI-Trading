@@ -18,7 +18,9 @@ def _port_open(host, port, timeout=1.0):
         return False
 
 
-@pytest.mark.skipif(os.getenv(ENVAR) != "1", reason=f"Set {ENVAR}=1 to enable IB integration tests")
+@pytest.mark.skipif(
+    os.getenv(ENVAR) != "1", reason=f"Set {ENVAR}=1 to enable IB integration tests"
+)
 def test_ib_gateway_handshake_and_quote():
     host = os.getenv("IB_HOST", "127.0.0.1")
     port = int(os.getenv("IB_PORT", "4003"))

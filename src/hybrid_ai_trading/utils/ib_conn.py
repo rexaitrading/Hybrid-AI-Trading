@@ -33,9 +33,9 @@ def _attach_default_listeners(ib: IB):
         }
         try:
             if contract:
-                payload["ib_contract"] = getattr(contract, "localSymbol", None) or getattr(
-                    contract, "conId", None
-                )
+                payload["ib_contract"] = getattr(
+                    contract, "localSymbol", None
+                ) or getattr(contract, "conId", None)
         except Exception:
             pass
         logger.warning("ib_error | %s", payload)
@@ -107,7 +107,9 @@ def connect_ib(
                 continue
             raise
 
-    logger.error("ib_connect_failed", extra={"error": str(last_err) if last_err else "unknown"})
+    logger.error(
+        "ib_connect_failed", extra={"error": str(last_err) if last_err else "unknown"}
+    )
     raise last_err if last_err else RuntimeError("IB connect failed")
 
 

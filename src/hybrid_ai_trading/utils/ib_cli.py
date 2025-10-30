@@ -17,9 +17,15 @@ def _add_common(p):
     p.add_argument("--port", type=int, default=DEFAULT_PORT)
     p.add_argument("--client-id", type=int, default=DEFAULT_CLIENT_ID)
     p.add_argument("--timeout", type=int, default=30)
-    p.add_argument("--mdt", type=int, default=3, help="1=live,2=frozen,3=delayed,4=delayed-frozen")
-    p.add_argument("--log", action="store_true", help="Enable ib_insync wire logs to console")
-    p.add_argument("--log-file", default=None, help="Path to structured log file (JSON lines).")
+    p.add_argument(
+        "--mdt", type=int, default=3, help="1=live,2=frozen,3=delayed,4=delayed-frozen"
+    )
+    p.add_argument(
+        "--log", action="store_true", help="Enable ib_insync wire logs to console"
+    )
+    p.add_argument(
+        "--log-file", default=None, help="Path to structured log file (JSON lines)."
+    )
     p.add_argument("--log-level", default="INFO", help="DEBUG/INFO/WARN/ERROR")
     p.add_argument(
         "--json",
@@ -154,7 +160,9 @@ def cmd_health(args):
 
 
 def main(argv: Optional[list[str]] = None):
-    parser = argparse.ArgumentParser(prog="ib", description="Hybrid AI Quant Pro — IBKR CLI")
+    parser = argparse.ArgumentParser(
+        prog="ib", description="Hybrid AI Quant Pro — IBKR CLI"
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_ping = sub.add_parser("ping", help="Test handshake and print server/account info")

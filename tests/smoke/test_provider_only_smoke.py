@@ -28,13 +28,17 @@ def test_provider_only_smoke():
     out = (p.stdout or "") + (p.stderr or "")
 
     assert p.returncode == 0, (
-        f"non-zero exit: {p.returncode}\n" f"STDOUT:\n{p.stdout}\n" f"STDERR:\n{p.stderr}\n"
+        f"non-zero exit: {p.returncode}\n"
+        f"STDOUT:\n{p.stdout}\n"
+        f"STDERR:\n{p.stderr}\n"
     )
 
     # Accept any of:
     # 1) explicit stdout marker (we injected it),
     # 2) structured log token (if stdout/stderr is redirected),
     # 3) completely silent success (some runners suppress stdout).
-    assert ("provider-only run" in out) or ("once_done" in out) or (out.strip() == ""), (
+    assert (
+        ("provider-only run" in out) or ("once_done" in out) or (out.strip() == "")
+    ), (
         "Unexpected output pattern.\n" f"STDOUT:\n{p.stdout}\n" f"STDERR:\n{p.stderr}\n"
     )

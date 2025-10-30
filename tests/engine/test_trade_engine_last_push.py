@@ -38,4 +38,6 @@ def test_record_trade_outcome_logs_failure(monkeypatch, caplog):
         raising=True,
     )
     e.record_trade_outcome(1.23)
-    assert any("Failed to record trade outcome:" in rec.message for rec in caplog.records)
+    assert any(
+        "Failed to record trade outcome:" in rec.message for rec in caplog.records
+    )

@@ -57,7 +57,12 @@ class Client:
         url = f"{self.base}/0/public/Ticker?pair={pair}"
         j = self._http_json(url)
         if not isinstance(j, dict):
-            return {"symbol": symbol, "price": None, "source": "kraken", "reason": "bad_json"}
+            return {
+                "symbol": symbol,
+                "price": None,
+                "source": "kraken",
+                "reason": "bad_json",
+            }
         if j.get("error"):
             return {
                 "symbol": symbol,
@@ -77,4 +82,9 @@ class Client:
                             return {"symbol": symbol, "price": p, "source": "kraken"}
                         except Exception:
                             pass
-        return {"symbol": symbol, "price": None, "source": "kraken", "reason": "no_price"}
+        return {
+            "symbol": symbol,
+            "price": None,
+            "source": "kraken",
+            "reason": "no_price",
+        }

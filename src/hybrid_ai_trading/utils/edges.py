@@ -16,8 +16,12 @@ def decide_signal(ticker):
     spread = max(ticker.ask - ticker.bid, 0.01)
     if getattr(ticker, "last", None) and ticker.last > mid + 0.3 * spread:
         return Signal(
-            "SELL", LimitOrder("SELL", 1, round(ticker.ask, 2), tif="GTC", outsideRth=True)
+            "SELL",
+            LimitOrder("SELL", 1, round(ticker.ask, 2), tif="GTC", outsideRth=True),
         )
     if getattr(ticker, "last", None) and ticker.last < mid - 0.3 * spread:
-        return Signal("BUY", LimitOrder("BUY", 1, round(ticker.bid, 2), tif="GTC", outsideRth=True))
+        return Signal(
+            "BUY",
+            LimitOrder("BUY", 1, round(ticker.bid, 2), tif="GTC", outsideRth=True),
+        )
     return Signal()

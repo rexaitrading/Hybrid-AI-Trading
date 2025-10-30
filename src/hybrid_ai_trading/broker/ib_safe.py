@@ -45,7 +45,9 @@ def retry(
                     last = e
                     if i == attempts - 1:
                         raise
-                    sleep_s = min(max_backoff, backoff * (2**i)) + (random.random() * jitter)
+                    sleep_s = min(max_backoff, backoff * (2**i)) + (
+                        random.random() * jitter
+                    )
                     if sleep_s > 0:
                         time.sleep(sleep_s)
             raise last  # not reached
@@ -115,7 +117,9 @@ def account_snapshot(
     vals = getattr(ib, "accountValues", lambda: [])() or []
     ib.client.reqAccountUpdates(False, acct)  # type: ignore[attr-defined]
     wanted = {"NetLiquidation", "TotalCashValue", "BuyingPower", "AvailableFunds"}
-    return [(v.tag, v.value, v.currency) for v in vals if getattr(v, "tag", "") in wanted]
+    return [
+        (v.tag, v.value, v.currency) for v in vals if getattr(v, "tag", "") in wanted
+    ]
 
 
 # ----------------------------- Cancel / Positions -------------------------- #
@@ -192,7 +196,9 @@ def flatten_symbol_limit(
         ib.waitOnUpdate(timeout=1.0)
 
     if tr.isActive():
-        new_ref = (getattr(t, "ask", None) if s == "BUY" else getattr(t, "bid", None)) or ref
+        new_ref = (
+            getattr(t, "ask", None) if s == "BUY" else getattr(t, "bid", None)
+        ) or ref
         o.lmtPrice = round(
             new_ref * (1 + reprice_pct) if s == "BUY" else new_ref * (1 - reprice_pct),
             2,

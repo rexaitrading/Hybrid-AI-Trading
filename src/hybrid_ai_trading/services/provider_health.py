@@ -48,7 +48,13 @@ def health_providers(providers: List[str] = None) -> Dict[str, Any]:
             lat = (perf_counter() - t0) * 1000.0
             ok = isinstance(r, dict) and isinstance(r.get("price"), (int, float))
             out.append(
-                {"provider": prov, "symbol": sym, "lat_ms": round(lat, 2), "ok": ok, "resp": r}
+                {
+                    "provider": prov,
+                    "symbol": sym,
+                    "lat_ms": round(lat, 2),
+                    "ok": ok,
+                    "resp": r,
+                }
             )
         except Exception as e:
             lat = (perf_counter() - t0) * 1000.0

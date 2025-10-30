@@ -55,7 +55,11 @@ class BreakoutIntradaySignal:
             logger.error("❌ Failed to parse bar data: %s", e)
             return {"symbol": symbol, "signal": "HOLD", "reason": "parse_error"}
 
-        if len(closes) < self.lookback or len(highs) < self.lookback or len(lows) < self.lookback:
+        if (
+            len(closes) < self.lookback
+            or len(highs) < self.lookback
+            or len(lows) < self.lookback
+        ):
             logger.warning("Missing c/h/l fields → HOLD")
             return {"symbol": symbol, "signal": "HOLD", "reason": "invalid_data"}
 
@@ -110,10 +114,14 @@ def breakout_intraday(
     decision = signal.get("signal", "HOLD")
     last_close = float(bars[-1].get("c", 0.0)) if bars else 0.0
     high = (
-        float(max([b.get("h", 0.0) for b in bars[-window:-1]], default=last_close)) if bars else 0.0
+        float(max([b.get("h", 0.0) for b in bars[-window:-1]], default=last_close))
+        if bars
+        else 0.0
     )
     low = (
-        float(min([b.get("l", 0.0) for b in bars[-window:-1]], default=last_close)) if bars else 0.0
+        float(min([b.get("l", 0.0) for b in bars[-window:-1]], default=last_close))
+        if bars
+        else 0.0
     )
 
     if audit:

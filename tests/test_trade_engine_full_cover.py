@@ -114,7 +114,17 @@ def _find(te, names):
 
 
 def _call_signal(te, **kw):
-    f = _find(te, ["process_signal", "_on_signal", "on_signal", "handle_signal", "submit", "trade"])
+    f = _find(
+        te,
+        [
+            "process_signal",
+            "_on_signal",
+            "on_signal",
+            "handle_signal",
+            "submit",
+            "trade",
+        ],
+    )
     if f:
         try:
             return f(**kw)
@@ -162,7 +172,9 @@ def test_alerts_success_and_exceptions(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setitem(sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom))
+    monkeypatch.setitem(
+        sys.modules, "requests", types.SimpleNamespace(post=boom, get=boom)
+    )
 
     class SMTPBAD:
         def __enter__(self):
@@ -250,7 +262,9 @@ def test_sector_algo_router(monkeypatch):
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name: fake if name.endswith((".twap", ".vwap")) else importlib.import_module(name),
+        lambda name: (
+            fake if name.endswith((".twap", ".vwap")) else importlib.import_module(name)
+        ),
     )
     f = _find(te2, ["_route_with_algo", "route_with_algo", "route_algo"])
     if f:
@@ -258,7 +272,9 @@ def test_sector_algo_router(monkeypatch):
         f("AAPL", "BUY", 1, 1.0, algo="vwap")
     # algo import failure 261â€“282
     monkeypatch.setattr(
-        importlib, "import_module", lambda name: (_ for _ in ()).throw(ImportError("fail"))
+        importlib,
+        "import_module",
+        lambda name: (_ for _ in ()).throw(ImportError("fail")),
     )
     if f:
         try:
@@ -268,7 +284,9 @@ def test_sector_algo_router(monkeypatch):
     # router direct error 286â€“288 (+ neighbors)
     te3 = _mk()
     if hasattr(te3, "order_manager"):
-        te3.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("router"))
+        te3.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("router")
+        )
     g = _find(te3, ["_route_direct", "route_direct", "direct_route"])
     if g:
         try:
@@ -333,7 +351,9 @@ def test_daily_reset_matrix(monkeypatch):
     for attr in ("risk_manager", "risk", "rm"):
         if hasattr(te, attr):
             setattr(
-                getattr(te, attr), "reset_day", lambda: (_ for _ in ()).throw(RuntimeError("RFAIL"))
+                getattr(te, attr),
+                "reset_day",
+                lambda: (_ for _ in ()).throw(RuntimeError("RFAIL")),
             )
             break
     if hasattr(te, "daily_reset"):
@@ -396,7 +416,9 @@ def test_base_fraction_and_helpers_reflective():
         try:
             sig = inspect.signature(fn)
             params = list(sig.parameters.values())
-            kwargs = {p.name: defaults.get(p.name) for p in params if p.name in defaults}
+            kwargs = {
+                p.name: defaults.get(p.name) for p in params if p.name in defaults
+            }
             try:
                 fn(**kwargs)
             except TypeError:

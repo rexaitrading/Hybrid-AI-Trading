@@ -187,7 +187,9 @@ def _patch():
     _RM.__init__ = _wrapped_init
 
     # Wrapped check_trade: loss limits + robust leverage + AND with original + db_logger emit
-    def __compat_check_trade(self, symbol: str, side: str, qty: float, price: float) -> bool:
+    def __compat_check_trade(
+        self, symbol: str, side: str, qty: float, price: float
+    ) -> bool:
         ok = True
 
         # per-trade & daily loss
@@ -200,7 +202,9 @@ def _patch():
 
         try:
             if trade_lim is not None and ret < float(trade_lim):
-                _pkg_log.warning("trade_loss breach: %.4f < %.4f", ret, float(trade_lim))
+                _pkg_log.warning(
+                    "trade_loss breach: %.4f < %.4f", ret, float(trade_lim)
+                )
                 logging.warning("trade_loss breach: %.4f < %.4f", ret, float(trade_lim))
                 ok = False
         except Exception:
@@ -210,8 +214,12 @@ def _patch():
             cum = getattr(self, "daily_pnl", getattr(self, "cum_loss", 0.0))
             cum = float(cum)
             if daily_lim is not None and (cum + ret) < float(daily_lim):
-                _pkg_log.warning("daily_loss breach: %.4f < %.4f", (cum + ret), float(daily_lim))
-                logging.warning("daily_loss breach: %.4f < %.4f", (cum + ret), float(daily_lim))
+                _pkg_log.warning(
+                    "daily_loss breach: %.4f < %.4f", (cum + ret), float(daily_lim)
+                )
+                logging.warning(
+                    "daily_loss breach: %.4f < %.4f", (cum + ret), float(daily_lim)
+                )
                 ok = False
         except Exception:
             pass
@@ -221,8 +229,12 @@ def _patch():
             roi_val = getattr(self, "roi", None)
             if roi_min is not None and roi_val is not None:
                 if float(roi_val) < float(roi_min):
-                    _pkg_log.warning("ROI breach: %.4f < %.4f", float(roi_val), float(roi_min))
-                    logging.warning("ROI breach: %.4f < %.4f", float(roi_val), float(roi_min))
+                    _pkg_log.warning(
+                        "ROI breach: %.4f < %.4f", float(roi_val), float(roi_min)
+                    )
+                    logging.warning(
+                        "ROI breach: %.4f < %.4f", float(roi_val), float(roi_min)
+                    )
                     ok = False
         except Exception:
             pass
@@ -242,7 +254,11 @@ def _patch():
 
         # explicit portfolio error flag -> ERROR and reject
         try:
-            if p is not None and hasattr(p, "fail_leverage") and bool(getattr(p, "fail_leverage")):
+            if (
+                p is not None
+                and hasattr(p, "fail_leverage")
+                and bool(getattr(p, "fail_leverage"))
+            ):
                 _pkg_log.error("portfolio leverage error: fail flag")
                 logging.error("portfolio leverage error: fail flag")
                 ok = False
@@ -258,7 +274,11 @@ def _patch():
             except Exception:
                 lev = None
             # 2) method leverage() -> ERROR on failure
-            if lev is None and hasattr(p, "leverage") and callable(getattr(p, "leverage")):
+            if (
+                lev is None
+                and hasattr(p, "leverage")
+                and callable(getattr(p, "leverage"))
+            ):
                 try:
                     val = getattr(p, "leverage")()
                     lev = float(val)
@@ -287,15 +307,21 @@ def _patch():
                 try:
                     exp = getattr(p, "exposure", getattr(p, "exp", None))
                     if exp is not None:
-                        eq = getattr(self, "equity", getattr(self, "starting_equity", 100_000.0))
+                        eq = getattr(
+                            self, "equity", getattr(self, "starting_equity", 100_000.0)
+                        )
                         lev = float(exp) / max(float(eq), 1e-9)
                 except Exception:
                     lev = None
 
             try:
                 if lev is not None and lev >= float(max_lev):
-                    _pkg_log.warning("leverage breach: %.4f >= %.4f", lev, float(max_lev))
-                    logging.warning("leverage breach: %.4f >= %.4f", lev, float(max_lev))
+                    _pkg_log.warning(
+                        "leverage breach: %.4f >= %.4f", lev, float(max_lev)
+                    )
+                    logging.warning(
+                        "leverage breach: %.4f >= %.4f", lev, float(max_lev)
+                    )
                     dblog = getattr(self, "db_logger", None)
                     if dblog and hasattr(dblog, "log"):
                         try:

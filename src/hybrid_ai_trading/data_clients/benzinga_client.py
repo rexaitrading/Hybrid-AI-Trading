@@ -11,6 +11,16 @@ class Client:
 
     def last_quote(self, symbol: str):
         if not self.key or not self.base:
-            return {"symbol": symbol, "price": None, "source": "stub", "reason": "no_key_or_base"}
+            return {
+                "symbol": symbol,
+                "price": None,
+                "source": "stub",
+                "reason": "no_key_or_base",
+            }
         # real HTTP call would go here; keep stub-safe
-        return {"symbol": symbol, "price": None, "source": "stub", "reason": "not_implemented"}
+        return {
+            "symbol": symbol,
+            "price": None,
+            "source": "stub",
+            "reason": "not_implemented",
+        }

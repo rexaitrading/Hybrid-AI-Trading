@@ -82,7 +82,9 @@ def test_buy_crossover(monkeypatch):
     ema_fast = pd.Series([1.0, 4.0])  # macd = [-1, 3]
     ema_slow = pd.Series([2.0, 1.0])
     signal_line = pd.Series([2.0, 1.0])  # -1<2 and 3>1 → BUY
-    monkeypatch.setattr(pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line]))
+    monkeypatch.setattr(
+        pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line])
+    )
     out = MACDSignal().generate("AAPL", make_bars(range(50)))
     assert out["signal"] == "BUY"
 
@@ -91,7 +93,9 @@ def test_sell_crossover(monkeypatch):
     ema_fast = pd.Series([5.0, 1.0])  # macd = [3, -1]
     ema_slow = pd.Series([2.0, 2.0])
     signal_line = pd.Series([1.0, 2.0])  # 3>1 and -1<2 → SELL
-    monkeypatch.setattr(pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line]))
+    monkeypatch.setattr(
+        pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line])
+    )
     out = MACDSignal().generate("AAPL", make_bars(range(50)))
     assert out["signal"] == "SELL"
 
@@ -115,7 +119,9 @@ def test_macd_hold_explicit(monkeypatch):
     ema_fast = pd.Series([1.0, 2.0])
     ema_slow = pd.Series([0.5, 1.5])
     signal_line = pd.Series([0.5, 0.5])  # final macd == signal
-    monkeypatch.setattr(pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line]))
+    monkeypatch.setattr(
+        pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line])
+    )
     out = MACDSignal().generate("AAPL", make_bars(range(50)))
     assert out["signal"] == "HOLD"
 
@@ -127,7 +133,9 @@ def test_nan_in_macd_or_signal(monkeypatch):
     ema_fast = pd.Series([1.0, 2.0])
     ema_slow = pd.Series([0.5, 1.0])
     signal_line = pd.Series([float("nan"), float("nan")])
-    monkeypatch.setattr(pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line]))
+    monkeypatch.setattr(
+        pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line])
+    )
     out = MACDSignal().generate("AAPL", make_bars(range(50)))
     assert out["signal"] == "HOLD"
     assert "nan macd" in out["reason"]

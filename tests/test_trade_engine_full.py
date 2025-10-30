@@ -126,21 +126,36 @@ def test_algo_routing_success_and_fail(engine, monkeypatch):
     sys.modules["hybrid_ai_trading.algos.twap"] = type(
         "M",
         (),
-        {"TWAPExecutor": lambda *_: type("X", (), {"execute": lambda *_: {"status": "ok"}})()},
+        {
+            "TWAPExecutor": lambda *_: type(
+                "X", (), {"execute": lambda *_: {"status": "ok"}}
+            )()
+        },
     )
-    assert engine.process_signal("AAPL", "BUY", 1, 100, algo="twap")["status"] == "filled"
+    assert (
+        engine.process_signal("AAPL", "BUY", 1, 100, algo="twap")["status"] == "filled"
+    )
 
     sys.modules["hybrid_ai_trading.algos.vwap"] = type(
         "M", (), {"VWAPExecutor": lambda *_: (_ for _ in ()).throw(Exception("bad"))}
     )
-    assert engine.process_signal("AAPL", "BUY", 1, 100, algo="vwap")["status"] == "error"
+    assert (
+        engine.process_signal("AAPL", "BUY", 1, 100, algo="vwap")["status"] == "error"
+    )
 
     sys.modules["hybrid_ai_trading.algos.iceberg"] = type(
         "M",
         (),
-        {"IcebergExecutor": lambda *_: type("X", (), {"execute": lambda *_: {"status": "ok"}})()},
+        {
+            "IcebergExecutor": lambda *_: type(
+                "X", (), {"execute": lambda *_: {"status": "ok"}}
+            )()
+        },
     )
-    assert engine.process_signal("AAPL", "BUY", 1, 100, algo="iceberg")["status"] == "filled"
+    assert (
+        engine.process_signal("AAPL", "BUY", 1, 100, algo="iceberg")["status"]
+        == "filled"
+    )
 
     res = engine.process_signal("AAPL", "BUY", 1, 100, algo="unknown")
     assert res["status"] == "rejected"
@@ -237,8 +252,12 @@ def test_alert_success_and_fail_and_noenv(engine, monkeypatch):
         os.environ["EMAIL_ENV"],
     ) = ("http://fake", "bot", "chat", "me@example.com")
 
-    monkeypatch.setattr("requests.post", lambda *_: type("R", (), {"status_code": 200})())
-    monkeypatch.setattr("requests.get", lambda *_: type("R", (), {"status_code": 200})())
+    monkeypatch.setattr(
+        "requests.post", lambda *_: type("R", (), {"status_code": 200})()
+    )
+    monkeypatch.setattr(
+        "requests.get", lambda *_: type("R", (), {"status_code": 200})()
+    )
     monkeypatch.setattr(
         smtplib,
         "SMTP",
@@ -255,9 +274,15 @@ def test_alert_success_and_fail_and_noenv(engine, monkeypatch):
     r1 = engine.alert("msg")
     assert "slack" in r1 and "telegram" in r1 and "email" in r1
 
-    monkeypatch.setattr("requests.post", lambda *_: (_ for _ in ()).throw(Exception("fail")))
-    monkeypatch.setattr("requests.get", lambda *_: (_ for _ in ()).throw(Exception("fail")))
-    monkeypatch.setattr("smtplib.SMTP", lambda *_: (_ for _ in ()).throw(Exception("fail")))
+    monkeypatch.setattr(
+        "requests.post", lambda *_: (_ for _ in ()).throw(Exception("fail"))
+    )
+    monkeypatch.setattr(
+        "requests.get", lambda *_: (_ for _ in ()).throw(Exception("fail"))
+    )
+    monkeypatch.setattr(
+        "smtplib.SMTP", lambda *_: (_ for _ in ()).throw(Exception("fail"))
+    )
     r2 = engine.alert("msg")
     assert any(v == "error" for v in r2.values())
 
@@ -286,7 +311,9 @@ def test_fire_alert_failure(engine, monkeypatch, caplog):
 def test_reset_day_ok_and_errors(engine, monkeypatch):
     assert engine.reset_day()["status"] == "ok"
 
-    monkeypatch.setattr(engine.portfolio, "reset_day", lambda: {"status": "error"}, raising=False)
+    monkeypatch.setattr(
+        engine.portfolio, "reset_day", lambda: {"status": "error"}, raising=False
+    )
     assert engine.reset_day()["status"] == "error"
 
     monkeypatch.setattr(engine.risk_manager, "reset_day", lambda: {"status": "error"})

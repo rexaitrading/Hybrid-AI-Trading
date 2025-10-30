@@ -35,7 +35,9 @@ def iso(tmp_path, monkeypatch):
 
 def mk(virtual=True, **cfgkw):
     cfg = RunnerConfig(virtual_fills=virtual, **cfgkw)
-    tl = TradeLogger(jsonl_path="logs/t.jsonl", csv_path=None, text_log_path="logs/t.log")
+    tl = TradeLogger(
+        jsonl_path="logs/t.jsonl", csv_path=None, text_log_path="logs/t.log"
+    )
     return ETH1HRunner(cfg, RiskManager(), KellySizer(), BlackSwanGuard(), tl)
 
 
@@ -72,7 +74,9 @@ def test_alert_ctx_and_pos_load_missing():
 
 def test_force_close_branch(monkeypatch):
     calls = []
-    monkeypatch.setattr(Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False)
+    monkeypatch.setattr(
+        Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False
+    )
     r = mk()
     ts = 1_700_000_000_000
     # create BUY pos
@@ -97,7 +101,9 @@ def test_force_close_branch(monkeypatch):
 
 def test_opposite_exit_for_sell(monkeypatch):
     calls = []
-    monkeypatch.setattr(Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False)
+    monkeypatch.setattr(
+        Alerts, "notify", lambda self, k, p: calls.append((k, p)), raising=False
+    )
     r = mk()
     ts = 1_700_000_000_000
     # create SELL pos; opposite BUY signal should close

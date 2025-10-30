@@ -39,11 +39,11 @@ import time
 from typing import Any, Dict, List
 
 import yaml
+from ib_insync import IB, Stock, util
 
 from hybrid_ai_trading.common.market import fetch_bars
 from hybrid_ai_trading.execution.route_ib import RiskConfig, place_entry
 from hybrid_ai_trading.strategies.equity_momo import momo_signal
-from ib_insync import IB, Stock, util
 
 
 def load_cfg(path: str) -> Dict[str, Any]:

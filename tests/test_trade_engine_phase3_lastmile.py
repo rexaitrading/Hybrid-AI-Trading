@@ -58,12 +58,18 @@ def test_ps_drawdown_enter_continue_and_tail():
     _prep(te)
     # Non-breach: equity close to peak so code inside the block executes then continues
     te.portfolio = SimpleNamespace(equity=99.0, history=[("t0", 100.0)])
-    te.config["risk"]["max_drawdown"] = 0.50  # 1% < 50% => no breach, but block executes
+    te.config["risk"][
+        "max_drawdown"
+    ] = 0.50  # 1% < 50% => no breach, but block executes
     # Provide size directly so we skip Kelly and ensure tail runs
     if hasattr(te, "risk_manager"):
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 8001}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "ok",
+            "reason": "ok",
+            "order_id": 8001,
+        }
     for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
             try:

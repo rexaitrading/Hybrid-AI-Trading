@@ -6,8 +6,12 @@ from hybrid_ai_trading.data.clients.rss_client import RSSClient
 
 
 def test_google_template_and_extra(monkeypatch):
-    e_google = types.SimpleNamespace(link="g1", title="TSLA gains", author="", published="p")
-    e_extra = types.SimpleNamespace(link="e1", title="Vendor note", author="", published="p")
+    e_google = types.SimpleNamespace(
+        link="g1", title="TSLA gains", author="", published="p"
+    )
+    e_extra = types.SimpleNamespace(
+        link="e1", title="Vendor note", author="", published="p"
+    )
     parsed_g = types.SimpleNamespace(entries=[e_google])
     parsed_e = types.SimpleNamespace(entries=[e_extra])
     calls = {"n": 0}

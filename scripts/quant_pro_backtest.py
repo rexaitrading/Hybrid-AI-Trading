@@ -59,12 +59,16 @@ def load_data_polygon(symbol: str, start: str, end: str, api_key: str) -> pd.Dat
     return df[["timestamp", "close"]]
 
 
-def load_data_ccxt(symbol: str, start: str, end: str, exchange: str = "binance") -> pd.DataFrame:
+def load_data_ccxt(
+    symbol: str, start: str, end: str, exchange: str = "binance"
+) -> pd.DataFrame:
     """Fetch OHLCV bars from CCXT exchange."""
     ex = getattr(ccxt, exchange)()
     since = int(pd.Timestamp(start).timestamp() * 1000)
     ohlcv = ex.fetch_ohlcv(symbol, timeframe="1d", since=since, limit=500)
-    df = pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])
+    df = pd.DataFrame(
+        ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"]
+    )
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
     df = df[df["timestamp"] <= pd.Timestamp(end)]
     return df[["timestamp", "close"]]

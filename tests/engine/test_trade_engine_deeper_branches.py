@@ -12,10 +12,14 @@ class _Stub:
     def server_time(self):
         return "2025-10-11 00:00:00"
 
-    def place_order(self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None):
+    def place_order(
+        self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None
+    ):
         oid = 123
         return oid, {
-            "status": "Filled" if (order_type or "").upper() == "MARKET" else "Submitted",
+            "status": (
+                "Filled" if (order_type or "").upper() == "MARKET" else "Submitted"
+            ),
             "filled": float(qty or 0),
             "avgPrice": float(limit_price or 0.0),
             "meta": meta or {},
@@ -66,7 +70,11 @@ def test_getters_repeat_after_activity(monkeypatch):
     eq0 = eng.get_equity()
     hist0 = eng.get_history()
     pos0 = eng.get_positions()
-    assert isinstance(eq0, (int, float)) and isinstance(hist0, list) and isinstance(pos0, dict)
+    assert (
+        isinstance(eq0, (int, float))
+        and isinstance(hist0, list)
+        and isinstance(pos0, dict)
+    )
 
     # activity
     for sig in ("BUY", "SELL", "HOLD"):
@@ -79,7 +87,11 @@ def test_getters_repeat_after_activity(monkeypatch):
     eq1 = eng.get_equity()
     hist1 = eng.get_history()
     pos1 = eng.get_positions()
-    assert isinstance(eq1, (int, float)) and isinstance(hist1, list) and isinstance(pos1, dict)
+    assert (
+        isinstance(eq1, (int, float))
+        and isinstance(hist1, list)
+        and isinstance(pos1, dict)
+    )
 
 
 def test_run_like_hooks_with_event(monkeypatch):

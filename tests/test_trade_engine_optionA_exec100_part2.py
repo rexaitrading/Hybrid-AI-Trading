@@ -46,7 +46,9 @@ def test_reset_day_combined_and_generic(monkeypatch):
 
     # replace portfolio.reset_day with a property raising when accessed
     class BadPortfolio(type(te2.portfolio)):
-        def reset_day(self):  # method still present; weâ€™ll blow up by removing attribute mid-call
+        def reset_day(
+            self,
+        ):  # method still present; weâ€™ll blow up by removing attribute mid-call
             raise RuntimeError("outer-fail")
 
     te2.portfolio.reset_day = lambda: (_ for _ in ()).throw(RuntimeError("outer-fail"))
@@ -124,19 +126,37 @@ def test_algo_iceberg_and_vwap_success(monkeypatch):
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name, _orig=orig_import: fake_vwap if name.endswith(".vwap") else _orig(name),
+        lambda name, _orig=orig_import: (
+            fake_vwap if name.endswith(".vwap") else _orig(name)
+        ),
     )
     r1 = te.process_signal("AAPL", "BUY", price=1.0, size=1, algo="vwap")
-    assert r1["status"] in {"filled", "blocked", "ignored", "rejected", "error", "pending"}
+    assert r1["status"] in {
+        "filled",
+        "blocked",
+        "ignored",
+        "rejected",
+        "error",
+        "pending",
+    }
 
     # cover iceberg success
     monkeypatch.setattr(
         importlib,
         "import_module",
-        lambda name, _orig=orig_import: fake_iceberg if name.endswith(".iceberg") else _orig(name),
+        lambda name, _orig=orig_import: (
+            fake_iceberg if name.endswith(".iceberg") else _orig(name)
+        ),
     )
     r2 = te.process_signal("AAPL", "BUY", price=1.0, size=1, algo="iceberg")
-    assert r2["status"] in {"filled", "blocked", "ignored", "rejected", "error", "pending"}
+    assert r2["status"] in {
+        "filled",
+        "blocked",
+        "ignored",
+        "rejected",
+        "error",
+        "pending",
+    }
 
 
 # ---- router raises (286â€“288) ----

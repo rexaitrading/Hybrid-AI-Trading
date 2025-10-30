@@ -84,7 +84,9 @@ def test_place_order_live(monkeypatch, config_stub):
     config_stub["use_paper_simulator"] = False
     eng = ExecutionEngine(dry_run=False, config=config_stub)
     monkeypatch.setattr(eng.risk_manager, "approve_trade", lambda *a, **k: True)
-    monkeypatch.setattr(eng.order_manager, "place_order", lambda *a, **k: {"status": "filled"})
+    monkeypatch.setattr(
+        eng.order_manager, "place_order", lambda *a, **k: {"status": "filled"}
+    )
     res = eng.place_order("AAPL", "BUY", 1, 50)
     assert res["status"] == "filled"
 
@@ -189,7 +191,9 @@ def test_emergency_flatten_dry_run(config_stub, caplog):
 def test_emergency_flatten_live(monkeypatch, config_stub, caplog):
     config_stub["use_paper_simulator"] = False
     eng = ExecutionEngine(dry_run=False, config=config_stub)
-    monkeypatch.setattr(eng.order_manager, "flatten_all", lambda: {"status": "flattened"})
+    monkeypatch.setattr(
+        eng.order_manager, "flatten_all", lambda: {"status": "flattened"}
+    )
     caplog.set_level(logging.CRITICAL)
     res = eng.emergency_flatten()
     assert res["status"] == "flattened"

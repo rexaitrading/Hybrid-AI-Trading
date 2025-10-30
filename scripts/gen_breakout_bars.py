@@ -19,7 +19,14 @@ for i in range(n):
     l = o - 0.05
     v = 300 + (i % 50)
     rows.append(
-        [t.strftime("%Y-%m-%d %H:%M:%S"), f"{o:.2f}", f"{h:.2f}", f"{l:.2f}", f"{c:.2f}", v]
+        [
+            t.strftime("%Y-%m-%d %H:%M:%S"),
+            f"{o:.2f}",
+            f"{h:.2f}",
+            f"{l:.2f}",
+            f"{c:.2f}",
+            v,
+        ]
     )
 os.makedirs("data", exist_ok=True)
 with open(r"data/AAPL_1m.csv", "w", newline="") as f:

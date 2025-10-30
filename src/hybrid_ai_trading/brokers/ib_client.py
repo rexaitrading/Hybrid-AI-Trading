@@ -93,7 +93,9 @@ class IBClient:
             self.ib.reqMarketDataType(1)  # 1 = real-time
             t = self.ib.reqMktData(Stock(symbol, "SMART", "USD"), "", snapshot=True)
             self.ib.sleep(2.0)  # allow a moment for the snapshot
-            ok = (t is not None) and (t.bid is not None or t.last is not None or t.ask is not None)
+            ok = (t is not None) and (
+                t.bid is not None or t.last is not None or t.ask is not None
+            )
             return ok, errors
         finally:
             # Unsubscribe hook

@@ -44,7 +44,9 @@ def whatif_margins(
         "commissionCurrency": getattr(st, "commissionCurrency", ""),
         "initMargin": pick(st, "initMargin", "initMarginAfter", "initMarginChange"),
         "maintMargin": pick(st, "maintMargin", "maintMarginAfter", "maintMarginChange"),
-        "equityWithLoan": pick(st, "equityWithLoan", "equityWithLoanAfter", "equityWithLoanChange"),
+        "equityWithLoan": pick(
+            st, "equityWithLoan", "equityWithLoanAfter", "equityWithLoanChange"
+        ),
     }
     ib.disconnect()
     return out

@@ -11,7 +11,9 @@ for p in CANDIDATES:
     if sp not in sys.path:
         sys.path.insert(0, sp)
 spec = importlib.util.find_spec("hybrid_ai_trading")
-sys.stderr.write(f"[conftest] exe={sys.executable} importable={bool(spec)} root={ROOT}\\n")
+sys.stderr.write(
+    f"[conftest] exe={sys.executable} importable={bool(spec)} root={ROOT}\\n"
+)
 if spec is None:
     # leave path injected; test files also prepend a tiny shim as last resort
     pass

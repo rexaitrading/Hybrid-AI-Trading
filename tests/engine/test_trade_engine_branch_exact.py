@@ -16,7 +16,9 @@ class StubBroker:
     def server_time(self):
         return "2025-10-11 00:00:00"
 
-    def place_order(self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None):
+    def place_order(
+        self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None
+    ):
         return 1, {
             "status": "Filled",
             "filled": float(qty or 0),
@@ -58,7 +60,11 @@ class RouterStatusError:
 # ---- helper to install fake algo modules with exact class names --------------
 def _install_algo(monkeypatch, name, executor_cls):
     key = name.lower()
-    cls_map = {"twap": "TWAPExecutor", "vwap": "VWAPExecutor", "iceberg": "IcebergExecutor"}
+    cls_map = {
+        "twap": "TWAPExecutor",
+        "vwap": "VWAPExecutor",
+        "iceberg": "IcebergExecutor",
+    }
     cls_name = cls_map.get(key, "Executor")
     path = f"hybrid_ai_trading.algos.{key}"
     m = types.ModuleType(path)
@@ -108,7 +114,9 @@ def eng(monkeypatch):
     from hybrid_ai_trading import order_manager as om_mod
     from hybrid_ai_trading.brokers import factory as broker_factory
 
-    monkeypatch.setattr(broker_factory, "make_broker", lambda: StubBroker(), raising=True)
+    monkeypatch.setattr(
+        broker_factory, "make_broker", lambda: StubBroker(), raising=True
+    )
     monkeypatch.setattr(om_mod, "make_broker", lambda: StubBroker(), raising=True)
     import hybrid_ai_trading.trade_engine as te
 
@@ -121,22 +129,40 @@ def eng(monkeypatch):
 
 # ---- Validation & guardrails --------------------------------------------------
 def test_validate_invalid_signal_and_hold_and_price(eng):
-    assert eng.process_signal("AAPL", 123, price=100, size=1)["reason"] == "signal_not_string"
+    assert (
+        eng.process_signal("AAPL", 123, price=100, size=1)["reason"]
+        == "signal_not_string"
+    )
     assert eng.process_signal("AAPL", "XYZ", price=100, size=1)["status"] == "rejected"
-    assert eng.process_signal("AAPL", "HOLD", price=100, size=1)["reason"] == "hold_signal"
-    assert eng.process_signal("AAPL", "BUY", price=None, size=1)["reason"] == "invalid_price"
-    assert eng.process_signal("AAPL", "SELL", price=0, size=1)["reason"] == "invalid_price"
+    assert (
+        eng.process_signal("AAPL", "HOLD", price=100, size=1)["reason"] == "hold_signal"
+    )
+    assert (
+        eng.process_signal("AAPL", "BUY", price=None, size=1)["reason"]
+        == "invalid_price"
+    )
+    assert (
+        eng.process_signal("AAPL", "SELL", price=0, size=1)["reason"] == "invalid_price"
+    )
 
 
 def test_guardrails_equity_sector_hedge(eng, monkeypatch):
     eng.portfolio.equity = 0
-    assert eng.process_signal("AAPL", "BUY", price=100, size=1)["reason"] == "equity_depleted"
+    assert (
+        eng.process_signal("AAPL", "BUY", price=100, size=1)["reason"]
+        == "equity_depleted"
+    )
     eng.portfolio.equity = 100000.0
     monkeypatch.setattr(eng, "_sector_exposure_breach", lambda s: True, raising=True)
-    assert eng.process_signal("AAPL", "BUY", price=100, size=1)["reason"] == "sector_exposure"
+    assert (
+        eng.process_signal("AAPL", "BUY", price=100, size=1)["reason"]
+        == "sector_exposure"
+    )
     monkeypatch.setattr(eng, "_sector_exposure_breach", lambda s: False, raising=True)
     monkeypatch.setattr(eng, "_hedge_trigger", lambda s: True, raising=True)
-    assert eng.process_signal("AAPL", "SELL", price=100, size=1)["reason"] == "hedge_rule"
+    assert (
+        eng.process_signal("AAPL", "SELL", price=100, size=1)["reason"] == "hedge_rule"
+    )
     monkeypatch.setattr(eng, "_hedge_trigger", lambda s: False, raising=True)
 
 
@@ -156,19 +182,41 @@ def test_router_exception_none_error(eng):
 # ---- Algo routing (algo set) --------------------------------------------------
 def test_algo_known_unknown_and_error(eng, monkeypatch):
     # allow filters/perf for known-algo paths
-    monkeypatch.setattr(eng.sentiment_filter, "allow_trade", lambda *a, **k: True, raising=True)
-    monkeypatch.setattr(eng.gatescore, "allow_trade", lambda *a, **k: True, raising=True)
-    monkeypatch.setattr(eng.performance_tracker, "sharpe_ratio", lambda: 999.0, raising=True)
+    monkeypatch.setattr(
+        eng.sentiment_filter, "allow_trade", lambda *a, **k: True, raising=True
+    )
+    monkeypatch.setattr(
+        eng.gatescore, "allow_trade", lambda *a, **k: True, raising=True
+    )
+    monkeypatch.setattr(
+        eng.performance_tracker, "sharpe_ratio", lambda: 999.0, raising=True
+    )
 
     # TWAP ok
     _install_algo(monkeypatch, "twap", TWAPExecutor)
     r = eng.process_signal("AAPL", "BUY", price=100, size=1, algo="TWAP")
-    assert r["status"] in {"filled", "blocked", "rejected", "pending", "ok", "error", "ignored"}
+    assert r["status"] in {
+        "filled",
+        "blocked",
+        "rejected",
+        "pending",
+        "ok",
+        "error",
+        "ignored",
+    }
 
     # VWAP ok
     _install_algo(monkeypatch, "vwap", VWAPExecutor)
     r = eng.process_signal("AAPL", "SELL", price=100, size=1, algo="vwap")
-    assert r["status"] in {"filled", "blocked", "rejected", "pending", "ok", "error", "ignored"}
+    assert r["status"] in {
+        "filled",
+        "blocked",
+        "rejected",
+        "pending",
+        "ok",
+        "error",
+        "ignored",
+    }
 
     # Unknown algo early reject
     r = eng.process_signal("AAPL", "BUY", price=100, size=1, algo="StrAnGe")
@@ -187,7 +235,9 @@ def test_algo_known_unknown_and_error(eng, monkeypatch):
 
 # ---- Filters & Performance ----------------------------------------------------
 def test_filters_and_perf(eng, monkeypatch):
-    monkeypatch.setattr(eng.sentiment_filter, "allow_trade", lambda *a, **k: False, raising=True)
+    monkeypatch.setattr(
+        eng.sentiment_filter, "allow_trade", lambda *a, **k: False, raising=True
+    )
     r = eng.process_signal("AAPL", "BUY", price=100, size=1)
     assert r["reason"] == "sentiment_veto"
     monkeypatch.setattr(
@@ -198,8 +248,12 @@ def test_filters_and_perf(eng, monkeypatch):
     )
     r = eng.process_signal("AAPL", "BUY", price=100, size=1)
     assert r["reason"] == "sentiment_error"
-    monkeypatch.setattr(eng.sentiment_filter, "allow_trade", lambda *a, **k: True, raising=True)
-    monkeypatch.setattr(eng.gatescore, "allow_trade", lambda *a, **k: False, raising=True)
+    monkeypatch.setattr(
+        eng.sentiment_filter, "allow_trade", lambda *a, **k: True, raising=True
+    )
+    monkeypatch.setattr(
+        eng.gatescore, "allow_trade", lambda *a, **k: False, raising=True
+    )
     r = eng.process_signal("AAPL", "BUY", price=100, size=1)
     assert r["reason"] == "gatescore_veto"
     monkeypatch.setattr(
@@ -210,7 +264,11 @@ def test_filters_and_perf(eng, monkeypatch):
     )
     r = eng.process_signal("AAPL", "BUY", price=100, size=1)
     assert r["reason"] == "gatescore_error"
-    monkeypatch.setattr(eng.gatescore, "allow_trade", lambda *a, **k: True, raising=True)
-    monkeypatch.setattr(eng.performance_tracker, "sharpe_ratio", lambda: -999.0, raising=True)
+    monkeypatch.setattr(
+        eng.gatescore, "allow_trade", lambda *a, **k: True, raising=True
+    )
+    monkeypatch.setattr(
+        eng.performance_tracker, "sharpe_ratio", lambda: -999.0, raising=True
+    )
     r = eng.process_signal("AAPL", "BUY", price=100, size=1)
     assert r["reason"] == "sharpe_breach"

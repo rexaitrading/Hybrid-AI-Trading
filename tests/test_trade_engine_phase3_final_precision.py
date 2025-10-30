@@ -49,7 +49,12 @@ def _disarm_all_gates(te):
         if hasattr(te, name) and callable(getattr(te, name)):
             try:
                 # Functions that return bool -> return True to pass, others -> return None
-                if "validate" in name or "market" in name or "session" in name or "pending" in name:
+                if (
+                    "validate" in name
+                    or "market" in name
+                    or "session" in name
+                    or "pending" in name
+                ):
                     setattr(te, name, lambda *a, **k: True)
                 else:
                     setattr(te, name, lambda *a, **k: None)
@@ -140,7 +145,11 @@ def test_proc_drawdown_enter_continue_then_tail():
     if hasattr(te, "risk_manager"):
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     if hasattr(te, "order_manager"):
-        te.order_manager.submit = lambda *a, **k: {"status": "ok", "reason": "ok", "order_id": 9901}
+        te.order_manager.submit = lambda *a, **k: {
+            "status": "ok",
+            "reason": "ok",
+            "order_id": 9901,
+        }
     for waiter in ("wait_for_fill", "await_fill", "poll_fill", "_await_fill"):
         if hasattr(te, waiter):
             try:

@@ -65,7 +65,9 @@ def require_live(args: argparse.Namespace) -> bool:
     if not args.live:
         return False
     if os.getenv("KRAKEN_LIVE", "0") != "1":
-        print("Refusing LIVE: set KRAKEN_LIVE=1 to enable live orders.", file=sys.stderr)
+        print(
+            "Refusing LIVE: set KRAKEN_LIVE=1 to enable live orders.", file=sys.stderr
+        )
         sys.exit(2)
     return True
 
@@ -116,7 +118,9 @@ def available_quote(ex, symbol: str) -> float:
                 free = bal.get(quote) or 0.0
             else:
                 # Some exchanges use {'total': {...}} only
-                total_map = bal.get("total") if isinstance(bal.get("total"), dict) else None
+                total_map = (
+                    bal.get("total") if isinstance(bal.get("total"), dict) else None
+                )
                 if total_map and quote in total_map:
                     free = total_map.get(quote) or 0.0
     except Exception:
@@ -169,7 +173,10 @@ def main():
         for k in ("KRAKEN_API_KEY", "KRAKEN_SECRET"):
             if not os.getenv(k):
                 missing.append(k)
-        print(f"live mode requires env: {','.join(missing) or 'KRAKEN_API_KEY'}", flush=True)
+        print(
+            f"live mode requires env: {','.join(missing) or 'KRAKEN_API_KEY'}",
+            flush=True,
+        )
         sys.exit(2)
 
     # Dummy exchange object; available_quote is resilient
@@ -223,7 +230,9 @@ def main():
         bpct = float(args.below_percent) if args.below_percent else 0.0
     except Exception:
         bpct = 0.0
-    print(f"dry_run limit_buy base={base_amt:.8f} symbol={symbol} below_percent={bpct:.4f}")
+    print(
+        f"dry_run limit_buy base={base_amt:.8f} symbol={symbol} below_percent={bpct:.4f}"
+    )
     return 0
 
 

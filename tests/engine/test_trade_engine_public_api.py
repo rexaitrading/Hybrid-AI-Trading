@@ -14,7 +14,9 @@ class _StubBroker:
     def server_time(self):
         return "2025-10-11 00:00:00"
 
-    def place_order(self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None):
+    def place_order(
+        self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None
+    ):
         oid = 1
         return oid, {
             "status": "Filled" if order_type == "MARKET" else "Submitted",
@@ -36,7 +38,9 @@ def engine(monkeypatch):
     from hybrid_ai_trading import order_manager as om_mod
     from hybrid_ai_trading.brokers import factory as broker_factory
 
-    monkeypatch.setattr(broker_factory, "make_broker", lambda: _StubBroker(), raising=True)
+    monkeypatch.setattr(
+        broker_factory, "make_broker", lambda: _StubBroker(), raising=True
+    )
     monkeypatch.setattr(om_mod, "make_broker", lambda: _StubBroker(), raising=True)
 
     import hybrid_ai_trading.trade_engine as te

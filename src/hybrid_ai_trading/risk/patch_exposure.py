@@ -56,7 +56,9 @@ def _patch():
             p = getattr(self, "portfolio", None)
             exp = _get_exposure_value(p) if p is not None else None
             try:
-                eq = float(getattr(self, "equity", getattr(self, "starting_equity", 100_000.0)))
+                eq = float(
+                    getattr(self, "equity", getattr(self, "starting_equity", 100_000.0))
+                )
             except Exception:
                 eq = 100_000.0
             ratio = (float(exp) / max(eq, 1e-9)) if exp is not None else None

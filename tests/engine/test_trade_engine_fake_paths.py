@@ -22,7 +22,9 @@ class _StubBroker:
     def server_time(self):
         return "2025-10-11 00:00:00"
 
-    def place_order(self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None):
+    def place_order(
+        self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None
+    ):
         if not qty or qty <= 0:
             raise ValueError("qty must be positive")
         if order_type.upper() == "LIMIT" and limit_price is None:
@@ -39,7 +41,9 @@ class _StubBroker:
                 "status": status,
             }
         )
-        self._pos[symbol] = self._pos.get(symbol, 0.0) + (qty if side.upper() == "BUY" else -qty)
+        self._pos[symbol] = self._pos.get(symbol, 0.0) + (
+            qty if side.upper() == "BUY" else -qty
+        )
         return oid, {
             "status": status,
             "filled": float(qty if status == "Filled" else 0.0),
@@ -92,7 +96,9 @@ def _make_engine_or_fallback(monkeypatch):
     # Force the broker factory to return our stub (no network)
     from hybrid_ai_trading.brokers import factory as broker_factory
 
-    monkeypatch.setattr(broker_factory, "make_broker", lambda: _StubBroker(), raising=True)
+    monkeypatch.setattr(
+        broker_factory, "make_broker", lambda: _StubBroker(), raising=True
+    )
 
     # Import engine after monkeypatch so any global broker creation uses the stub
     from hybrid_ai_trading import trade_engine as te
@@ -168,7 +174,9 @@ def test_engine_exception_branch(monkeypatch):
         def positions(self):
             return []
 
-    monkeypatch.setattr(broker_factory, "make_broker", lambda: _BoomBroker(), raising=True)
+    monkeypatch.setattr(
+        broker_factory, "make_broker", lambda: _BoomBroker(), raising=True
+    )
     monkeypatch.setattr(om_mod, "make_broker", lambda: _BoomBroker(), raising=True)
 
     eng = _make_engine_or_fallback(monkeypatch)
@@ -201,7 +209,9 @@ def test_engine_bad_qty_behavior(monkeypatch):
         def server_time(self):
             return "2025-10-11 00:00:00"
 
-        def place_order(self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None):
+        def place_order(
+            self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None
+        ):
             # do NOT raise here; we want to observe engine behavior
             oid = 1
             return oid, {
@@ -253,7 +263,9 @@ def test_engine_bad_qty_behavior(monkeypatch):
         def server_time(self):
             return "2025-10-11 00:00:00"
 
-        def place_order(self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None):
+        def place_order(
+            self, symbol, side, qty, order_type="MARKET", limit_price=None, meta=None
+        ):
             # Do NOT raise here; let us observe engine behavior on qty=0
             oid = 1
             return oid, {

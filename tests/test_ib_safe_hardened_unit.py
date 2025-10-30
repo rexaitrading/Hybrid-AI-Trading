@@ -42,7 +42,9 @@ def test_connect_ib_retries_with_stub():
         def isConnected(self):
             return True
 
-    ib = connect_ib("127.0.0.1", 4002, 3021, 30, attempts=2, backoff=0.0, ib_factory=IBStub)
+    ib = connect_ib(
+        "127.0.0.1", 4002, 3021, 30, attempts=2, backoff=0.0, ib_factory=IBStub
+    )
     assert isinstance(ib, IBStub)
     assert ib.calls == 2
 
@@ -56,7 +58,9 @@ class Tr:
     def __init__(self, active=True):
         self._a = active
         self.order = types.SimpleNamespace()
-        self.orderStatus = types.SimpleNamespace(status="Filled", filled=1.0, avgFillPrice=1.23)
+        self.orderStatus = types.SimpleNamespace(
+            status="Filled", filled=1.0, avgFillPrice=1.23
+        )
 
     def isActive(self):
         return self._a

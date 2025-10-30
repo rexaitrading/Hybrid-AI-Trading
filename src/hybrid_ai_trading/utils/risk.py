@@ -1,7 +1,9 @@
 from ib_insync import IB, MarketOrder
 
 
-def intraday_risk_checks(ib: IB, max_gross=200_000, max_pos_per_name=5_000, max_draw=-1500):
+def intraday_risk_checks(
+    ib: IB, max_gross=200_000, max_pos_per_name=5_000, max_draw=-1500
+):
     # basic guards; extend with PnL tracking as needed
     positions = list(ib.positions())
     # gross exposure approximation (shares only)

@@ -10,9 +10,13 @@ np = cfg.get("news_providers") or {}
 np.setdefault("aggregate", True)
 np.setdefault("benzinga", {"enabled": True, "weight": 1.0})
 np.setdefault("polygon", {"enabled": True, "weight": 1.0})
-np.setdefault("alpaca", {"enabled": False, "weight": 1.0})  # turn on when ALPACA keys ready
+np.setdefault(
+    "alpaca", {"enabled": False, "weight": 1.0}
+)  # turn on when ALPACA keys ready
 np.setdefault("ibkr", {"enabled": False})  # placeholder for future IB news
-np.setdefault("coinapi", {"enabled": False})  # (CoinAPI is price data; no standard news)
+np.setdefault(
+    "coinapi", {"enabled": False}
+)  # (CoinAPI is price data; no standard news)
 # RSS bundle (Google/Yahoo templates + extra feeds)
 np.setdefault(
     "rss",

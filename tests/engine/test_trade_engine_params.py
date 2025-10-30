@@ -30,7 +30,11 @@ def _engine(monkeypatch):
 
     from hybrid_ai_trading import trade_engine as te
 
-    ctor_attempts = ({"config": {}}, {"config": {}, "broker": None}, {"broker": None, "config": {}})
+    ctor_attempts = (
+        {"config": {}},
+        {"config": {}, "broker": None},
+        {"broker": None, "config": {}},
+    )
     if hasattr(te, "TradeEngine"):
         for kw in ctor_attempts:
             try:

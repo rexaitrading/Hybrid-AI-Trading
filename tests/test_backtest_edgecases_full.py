@@ -295,7 +295,9 @@ def test_call_strategy_typeerror(monkeypatch, tmp_path, caplog):
             raise TypeError("dict required")
         return "BUY"
 
-    bt = IntradayBacktester(["AAPL"], days=1, strategies={"dict_only": dict_only_strategy})
+    bt = IntradayBacktester(
+        ["AAPL"], days=1, strategies={"dict_only": dict_only_strategy}
+    )
     bt.reports_dir = tmp_path
     # Force bars to be list, so first call raises TypeError
     monkeypatch.setattr(backtest, "get_intraday_bars", lambda *a, **k: fake_bars())
