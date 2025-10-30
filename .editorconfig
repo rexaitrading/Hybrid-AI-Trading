@@ -7,3 +7,5 @@ trim_trailing_whitespace = true
 
 [*.ps1]
 charset = utf-8
+
+# keep LF policy enforced
