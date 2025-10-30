@@ -76,3 +76,5 @@ _backup_notion_journal_*.py
 
 # local artifacts
 .artifacts/
+
+src/hybrid-ai-trading/
