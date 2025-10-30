@@ -10,7 +10,7 @@ coverage==7.10.7
 distlib==0.4.0
 -e git+https://github.com/rexaitrading/Hybrid-AI-Trading.git@cb31cd3aace5f3d220b5cde4069a7ba23dedc475#egg=hybrid_ai_trading
 eventkit==1.0.3
-fastapi==0.119.0
+fastapi==0.120.2
 feedparser==6.0.12
 filelock==3.19.1
 fsspec==2025.9.0
