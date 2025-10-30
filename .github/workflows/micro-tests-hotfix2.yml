@@ -1,25 +1,11 @@
-on:
-  workflow_dispatch:
-
 name: Micro Tests (hotfix2)
 
 on:
   workflow_dispatch:
-    inputs:
-      target_ref:
-        description: "Branch or SHA to test"
-        required: false
   push:
-    branches: [ "main" ]
+    branches: ["**"]
   pull_request:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: micro-tests-hotfix2-${{ github.ref }}
-  cancel-in-progress: true
-
+    branches: ["**"]
 jobs:
   tests:
     runs-on: windows-latest
