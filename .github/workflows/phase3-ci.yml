@@ -3,6 +3,8 @@ name: Phase3 CI
 on:
   workflow_dispatch:
 
+  push:     branches: [ "main", "chore/*", "feature/*" ]
+  pull_request:
 permissions:
   contents: read
 
