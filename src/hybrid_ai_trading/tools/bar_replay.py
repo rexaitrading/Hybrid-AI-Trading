@@ -8,16 +8,7 @@ from typing import Optional, Tuple
 
 import pandas as pd
 
-from hybrid_ai_trading.tools.replay_emit import ReplayEmitter
 from hybrid_ai_trading.tools.replay_logger_hook import log_closed_trade
-
-
-def emit_replay_event(symbol, bar, window, hypo_r=None, extra=None):
-    """Safe, fire-and-forget emitter for pattern_memory.py."""
-    try:
-        ReplayEmitter.emit(symbol, bar, window, hypo_r=hypo_r, extra=extra)
-    except Exception:
-        pass
 
 
 @dataclass
@@ -50,7 +41,7 @@ def orb_strategy_step(
     risk_cents: float,
     max_qty: int,
 ) -> Tuple[Position, Optional[str]]:
-    act: Optional[str] = None
+    act = None
     close = float(row["close"])
     if pos.side is None:
         if close > orb_high:
@@ -89,7 +80,7 @@ def run_replay(
         )
     if len(df) < (orb_minutes + 2):
         raise ValueError(
-            f"Not enough bars for ORB; need >= {orb_minutes + 2}, have {len(df)}"
+            f"Not enough bars for ORB; need >= {orb_minutes+2}, have {len(df)}"
         )
 
     orb_df = df.iloc[:orb_minutes]
@@ -98,8 +89,8 @@ def run_replay(
 
     pos = Position()
     trades = 0
-    entry_px: Optional[float] = None
-    exit_px: Optional[float] = None
+    entry_px = None
+    exit_px = None
     entry_dt: Optional[datetime] = None
     pnl = 0.0
 
@@ -110,44 +101,10 @@ def run_replay(
         )
         close_px = float(row["close"])
 
-        # Build recent window (last 20 bars incl. current) for NDJSON emitter
-        try:
-            _win_df = df.iloc[max(i - 19, 0) : i + 1][
-                ["open", "high", "low", "close", "volume"]
-            ]
-            recent_window = [
-                {
-                    "open": float(r["open"]),
-                    "high": float(r["high"]),
-                    "low": float(r["low"]),
-                    "close": float(r["close"]),
-                    "volume": float(r["volume"]),
-                }
-                for _, r in _win_df.iterrows()
-            ]
-        except Exception:
-            recent_window = []
-
         if action and action.startswith("enter_long"):
             trades += 1
             entry_px = close_px
             entry_dt = ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else ts
-            # Emit event on entry (no R yet)
-            try:
-                emit_replay_event(
-                    symbol,
-                    {
-                        "open": float(row["open"]),
-                        "high": float(row["high"]),
-                        "low": float(row["low"]),
-                        "close": close_px,
-                        "volume": float(row["volume"]),
-                    },
-                    recent_window,
-                    hypo_r=None,
-                )
-            except Exception:
-                pass
 
         elif action and action.startswith("exit_long"):
             trades += 1
@@ -160,27 +117,8 @@ def run_replay(
             if entry_px is not None:
                 pnl += (exit_px - entry_px) * q_used
                 pnl -= (fees_per_share * q_used) * 2
-            # Emit event on exit with hypothetical R
-            _den = max(0.01, (orb_high - orb_low))
-            _entry = entry_px if entry_px is not None else close_px
-            _r = float((exit_px - _entry) / _den) if _den else 0.0
-            try:
-                emit_replay_event(
-                    symbol,
-                    {
-                        "open": float(row["open"]),
-                        "high": float(row["high"]),
-                        "low": float(row["low"]),
-                        "close": close_px,
-                        "volume": float(row["volume"]),
-                    },
-                    recent_window,
-                    hypo_r=_r,
-                )
-            except Exception:
-                pass
 
-            # CSV journal via existing hook
+            # CSV journal via hook
             try:
                 et = entry_dt or (
                     ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else ts
@@ -230,38 +168,6 @@ def run_replay(
         if force_exit:
             pnl += (last_close - entry_px) * q_used
             pnl -= fees_per_share * q_used
-            # emit event on forced exit with R
-            try:
-                _den = max(0.01, (orb_high - orb_low))
-                _r = float((last_close - entry_px) / _den) if _den else 0.0
-                _win_df = df.iloc[max(len(df) - 20, 0) :][
-                    ["open", "high", "low", "close", "volume"]
-                ]
-                recent_window = [
-                    {
-                        "open": float(r["open"]),
-                        "high": float(r["high"]),
-                        "low": float(r["low"]),
-                        "close": float(r["close"]),
-                        "volume": float(r["volume"]),
-                    }
-                    for _, r in _win_df.iterrows()
-                ]
-                emit_replay_event(
-                    symbol,
-                    {
-                        "open": float(df.iloc[-1]["open"]),
-                        "high": float(df.iloc[-1]["high"]),
-                        "low": float(df.iloc[-1]["low"]),
-                        "close": last_close,
-                        "volume": float(df.iloc[-1]["volume"]),
-                    },
-                    recent_window,
-                    hypo_r=_r,
-                )
-            except Exception:
-                pass
-            # CSV journal via existing hook
             try:
                 lt = (
                     last_ts.to_pydatetime()

@@ -42,7 +42,7 @@ def log_closed_trade(
         Fees=fees,
         Slippage=slippage,
         RM=r_multiple,
-        PnL=pnl,
+        PnL=round(pnl, 2),
         Notes=notes,
         ReplayID=replay_id,
     )

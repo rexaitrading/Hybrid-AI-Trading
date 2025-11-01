@@ -80,3 +80,9 @@ _backup_notion_journal_*.py
 src/hybrid-ai-trading/
 
 protection.backup.json
+
+tmp/
+!tests/*.ps1
+!tests/**/*.ps1
+# keep sample data out
+data/
