@@ -19,3 +19,7 @@
 *.psm1 text eol=lf
 
 *.psd1 text eol=lf
+
+# Normalize Python to LF
+
+*.py   text eol=lf
