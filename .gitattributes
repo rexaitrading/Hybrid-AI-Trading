@@ -11,3 +11,11 @@
 *.jpeg -text
 *.gif -text
 *.pdf -text
+
+# Normalize PowerShell/Notion module files to LF
+
+*.ps1  text eol=lf
+
+*.psm1 text eol=lf
+
+*.psd1 text eol=lf
