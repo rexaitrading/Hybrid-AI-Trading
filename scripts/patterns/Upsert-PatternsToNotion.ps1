@@ -6,7 +6,7 @@ Import-Module NotionTrader -ErrorAction Stop
 $env:NOTION_TOKEN = $tok
 $day  = Get-Date -Format 'yyyyMMdd'
 $cand = Join-Path 'data\patterns' "candidates_$day.json"
-if (-not (Test-Path $cand)) { throw "Candidates not found: $cand. Run Export-PatternCandidates.ps1 first." }
+if (-not (Test-Path $cand)) { Write-Host "Candidates not found: $cand. Run Export-PatternCandidates.ps1 first." -ForegroundColor Yellow; exit 0 }
 $list = Get-Content -Raw $cand | ConvertFrom-Json
 foreach($p in $list){
   $props = @{
