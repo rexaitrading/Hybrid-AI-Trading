@@ -138,7 +138,12 @@ def mine_patterns(replay_stream: Iterable[Dict[str, Any]]) -> List[Dict[str, Any
                 )
                 patterns["VWAP reclaim"]["symbols"][sym] += 1
     out: List[Dict[str, Any]] = []
-    ts = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    ts = (
+        datetime.datetime.now(datetime.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
     for name, obj in patterns.items():
         smp = obj["samples"]
         if not smp:
@@ -170,7 +175,7 @@ def main() -> int:
     os.makedirs(OUT_DIR, exist_ok=True)
     data = list(_load_ndjson(REPLAY_PATH))
     pats = mine_patterns(data)
-    day = datetime.datetime.utcnow().strftime("%Y%m%d")
+    day = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d")
     out_path = os.path.join(OUT_DIR, f"candidates_{day}.json")
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(pats, f, ensure_ascii=False, indent=2)
