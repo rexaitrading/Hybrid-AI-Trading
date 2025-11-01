@@ -4,9 +4,11 @@ $tok = [Environment]::GetEnvironmentVariable('NOTION_TOKEN','Machine')
 if (-not $tok) { throw 'NOTION_TOKEN (Machine) not set; skipping upsert.' }
 Import-Module NotionTrader -ErrorAction Stop
 $env:NOTION_TOKEN = $tok
-$day  = Get-Date -Format 'yyyyMMdd'
-$cand = Join-Path 'data\patterns' "candidates_$day.json"
-if (-not (Test-Path $cand)) { Write-Host "Candidates not found: $cand. Run Export-PatternCandidates.ps1 first." -ForegroundColor Yellow; exit 0 }
+$patternDir = 'data\patterns'
+$latest = Get-ChildItem $patternDir -Filter 'candidates_*.json' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $latest) { Write-Host "No candidates_* files in $patternDir. Run Export-PatternCandidates.ps1 first." -ForegroundColor Yellow; exit 0 }
+$cand = $latest.FullName
+Write-Host "Using candidates file: $cand" -ForegroundColor Cyan
 $list = Get-Content -Raw $cand | ConvertFrom-Json
 foreach($p in $list){
   $props = @{
