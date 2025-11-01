@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-CoinAPI Client (Hybrid AI Quant Pro v1.4 Ã¢â‚¬â€œ Hedge-Fund OE Grade, Test-Friendly)
+CoinAPI Client (Hybrid AI Quant Pro v1.4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge-Fund OE Grade, Test-Friendly)
 -------------------------------------------------------------------------------
 Exports:
 - _iso, parse_symbol, coinapi_symbol
@@ -135,14 +135,14 @@ def _get_headers() -> Dict[str, str]:
     Determine headers based on config/env, with stub fallbacks.
 
     Rules per tests:
-    - If COINAPI_STUB=1 Ã¢â€ â€™ return {}
-    - load_config() may raise Ã¢â€ â€™ raise CoinAPIError
-    - invalid/None config Ã¢â€ â€™ raise CoinAPIError
-    - config.providers.coinapi.api_key_env missing/None Ã¢â€ â€™ raise CoinAPIError
+    - If COINAPI_STUB=1 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ return {}
+    - load_config() may raise ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ raise CoinAPIError
+    - invalid/None config ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ raise CoinAPIError
+    - config.providers.coinapi.api_key_env missing/None ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ raise CoinAPIError
     - env var missing or empty:
-        - if COINAPI_ALLOW_STUB != "0" Ã¢â€ â€™ return {}
+        - if COINAPI_ALLOW_STUB != "0" ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ return {}
         - else raise CoinAPIError
-    - happy path Ã¢â€ â€™ {"X-CoinAPI-Key": <env>}
+    - happy path ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ {"X-CoinAPI-Key": <env>}
     """
     if os.getenv("COINAPI_STUB") == "1":
         return {}
@@ -207,7 +207,7 @@ def _retry_get(
 ) -> Response:
     """
     requests.get with retry on retry_status, using _get_headers().
-    Stub path: if headers == {} and COINAPI_ALLOW_STUB!= "0" Ã¢â€ â€™ return _StubResponse().
+    Stub path: if headers == {} and COINAPI_ALLOW_STUB!= "0" ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ return _StubResponse().
     """
     headers = _get_headers()
     if headers == {} and os.getenv("COINAPI_ALLOW_STUB", "1") != "0":
@@ -452,7 +452,7 @@ def batch_prev_close(
 ) -> Dict[str, Dict[str, Optional[float]]]:
     """
     Return mapping symbol -> dict(asof, open, high, low, close, volume, vwap, status).
-    - STUB: if COINAPI_STUB=1 Ã¢â€ â€™ status 'STUB' w/ synthetic bar
+    - STUB: if COINAPI_STUB=1 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ status 'STUB' w/ synthetic bar
     - Live: uses CoinAPIClient.get_ohlcv_latest(...) so tests can patch that.
     """
     # STUB short-circuit

@@ -1,5 +1,5 @@
 """
-Hybrid AI Quant Pro – Algo Executors (Hedge-Fund OE Grade, Loop-Proof)
+Hybrid AI Quant Pro â€“ Algo Executors (Hedge-Fund OE Grade, Loop-Proof)
 ----------------------------------------------------------------------
 Central orchestrator for execution algorithms.
 

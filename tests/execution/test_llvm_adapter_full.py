@@ -1,11 +1,11 @@
 """
-Unit Tests – LLVMEngineAdapter
-(Hybrid AI Quant Pro v3.6 – Hedge Fund OE Grade, 100% Coverage)
+Unit Tests â€“ LLVMEngineAdapter
+(Hybrid AI Quant Pro v3.6 â€“ Hedge Fund OE Grade, 100% Coverage)
 ----------------------------------------------------------------
-Covers ALL branches in llvm_adapter.py (10–75):
+Covers ALL branches in llvm_adapter.py (10â€“75):
 - Normal init/finalize/dispose
 - Function address resolution (valid/invalid)
-- Double-add raises (lines 40–41)
+- Double-add raises (lines 40â€“41)
 - Finalize/dispose idempotent
 - Dispose-before-finalize safe
 - Engine creation failure
@@ -101,7 +101,7 @@ def test_add_module_twice_and_failure_branch(monkeypatch, caplog):
     tm = target.create_target_machine()
     adapter = LLVMEngineAdapter(llvm_mod, tm)
 
-    # 🔑 Explicit double-add (hits lines 40–41)
+    # ðŸ”‘ Explicit double-add (hits lines 40â€“41)
     with pytest.raises(RuntimeError):
         adapter.add_module(llvm_mod)
 

@@ -68,7 +68,7 @@ class OrderManager:
                     try:
                         lr = legacy(*args)
                     except TypeError:
-                        continue  # mismatched signature → try next
+                        continue  # mismatched signature â†’ try next
                     if isinstance(lr, tuple):
                         ok = bool(lr[0])
                         reason = lr[1] if len(lr) > 1 else ""
@@ -111,7 +111,7 @@ class OrderManager:
                             "notional": nf,
                         }
                     return None
-                # all signatures mismatched → proceed to modern checks
+                # all signatures mismatched â†’ proceed to modern checks
             except Exception as e:
                 logger.error("RiskManager error: %s", e)
                 logging.error("RiskManager error: %s", e)
@@ -277,7 +277,7 @@ class OrderManager:
                 "notional": nf,
             }
 
-        # Default: no explicit veto and no explicit approval ⇒ allow
+        # Default: no explicit veto and no explicit approval â‡’ allow
         return None
 
     def place_order(

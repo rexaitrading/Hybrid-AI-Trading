@@ -5,14 +5,14 @@ def R(brokers, cfg=None):
     return SmartOrderRouter(brokers, cfg or {})
 
 
-# 59–60: rank_brokers() dict-comp + sort
+# 59â€“60: rank_brokers() dict-comp + sort
 def test_rank_brokers_lines_59_60():
     r = R({"alpaca": object(), "binance": object(), "polygon": object()})
     ranked = r.rank_brokers()
     assert isinstance(ranked, list) and len(ranked) == 3
 
 
-# 97–98: if not client: continue
+# 97â€“98: if not client: continue
 def test_missing_client_lines_97_98(monkeypatch):
     r = R({"ghost": None, "ok": object()}, {"execution": {"max_order_retries": 1}})
     # ensure next broker is used and flow continues
@@ -37,7 +37,7 @@ def test_top_level_error_line_122(monkeypatch):
     assert out == {"status": "blocked", "reason": "broken"}
 
 
-# 142–146: ok->filled AND pending return lines
+# 142â€“146: ok->filled AND pending return lines
 def test_return_paths_ok_and_pending_lines_142_146(monkeypatch):
     r_ok = R({"only": object()})
     monkeypatch.setattr(
@@ -58,7 +58,7 @@ def test_return_paths_ok_and_pending_lines_142_146(monkeypatch):
     assert out_p["status"] == "pending"
 
 
-# 154–156: blocked and rejected both break inner loop; router must continue to next broker
+# 154â€“156: blocked and rejected both break inner loop; router must continue to next broker
 def test_blocked_and_rejected_break_then_continue_lines_154_156(monkeypatch):
     calls = {"i": 0}
     r = R(

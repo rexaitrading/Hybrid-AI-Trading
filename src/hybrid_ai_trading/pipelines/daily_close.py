@@ -1,5 +1,5 @@
 """
-Daily Close Exporter (Hybrid AI Quant Pro v6.8 – OE Grade, Polished)
+Daily Close Exporter (Hybrid AI Quant Pro v6.8 â€“ OE Grade, Polished)
 ---------------------------------------------------------------------
 - Fetches daily prev close data for stocks (Polygon) and crypto (CoinAPI).
 - Groups assets into Core_Stocks, Core_Crypto, Macro, Leverage ETFs, IPO Watch.
@@ -55,7 +55,7 @@ def main() -> None:
     rows: List[Dict[str, Any]] = []
 
     for group, symbols in asset_groups.items():
-        logger.info("📥 Fetching %s (%d)", group, len(symbols))
+        logger.info("ðŸ“¥ Fetching %s (%d)", group, len(symbols))
 
         if group == "Core_Crypto":
             try:
@@ -76,9 +76,9 @@ def main() -> None:
                             "status": r.get("status", "NO_DATA"),
                         }
                     )
-                logger.info("✅ %s complete", group)
+                logger.info("âœ… %s complete", group)
             except Exception as e:
-                logger.error("❌ %s error: %s", group, e)
+                logger.error("âŒ %s error: %s", group, e)
             continue
 
         # Stock / ETF assets
@@ -101,7 +101,7 @@ def main() -> None:
                             "status": data.get("status", "OK"),
                         }
                     )
-                    logger.info("✅ %s close=%s", symbol, r.get("c"))
+                    logger.info("âœ… %s close=%s", symbol, r.get("c"))
                 else:
                     rows.append(
                         {
@@ -117,7 +117,7 @@ def main() -> None:
                             "status": f"NO_DATA: {data}",
                         }
                     )
-                    logger.warning("⚠️ %s no data", symbol)
+                    logger.warning("âš ï¸ %s no data", symbol)
             except Exception as e:
                 rows.append(
                     {
@@ -133,7 +133,7 @@ def main() -> None:
                         "status": f"ERROR: {e}",
                     }
                 )
-                logger.error("❌ %s error: %s", symbol, e)
+                logger.error("âŒ %s error: %s", symbol, e)
 
     # ------------------------------------------------------------------
     # Export results
@@ -163,9 +163,9 @@ def main() -> None:
             writer.writerows(rows)
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(rows, f, ensure_ascii=False, indent=2)
-        logger.info("📂 Exported:\n- %s\n- %s", csv_path, json_path)
+        logger.info("ðŸ“‚ Exported:\n- %s\n- %s", csv_path, json_path)
     except Exception as e:
-        logger.error("❌ Export failed: %s", e)
+        logger.error("âŒ Export failed: %s", e)
         return
 
 

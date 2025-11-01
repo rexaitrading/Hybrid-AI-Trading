@@ -1,5 +1,5 @@
 """
-Unit Tests – CoinAPIClient (Hybrid AI Quant Pro v13.6 – Hedge-Fund OE Grade, 100% Coverage)
+Unit Tests â€“ CoinAPIClient (Hybrid AI Quant Pro v13.6 â€“ Hedge-Fund OE Grade, 100% Coverage)
 -------------------------------------------------------------------------------------------
 Covers ALL branches in coinapi_client.py:
 - _get_headers: stub, load_config exception, invalid config, None config,
@@ -70,18 +70,18 @@ def test_get_headers_full_paths(monkeypatch):
         with pytest.raises(CoinAPIError):
             coinapi_client._get_headers()
 
-        # missing env var → stub fallback
+        # missing env var â†’ stub fallback
         mock_cfg.return_value = {"providers": {"coinapi": {"api_key_env": "MISSING"}}}
         monkeypatch.delenv("MISSING", raising=False)
         assert coinapi_client._get_headers() == {}
 
-        # disable stub fallback → force error
+        # disable stub fallback â†’ force error
         monkeypatch.setenv("COINAPI_ALLOW_STUB", "0")
         with pytest.raises(CoinAPIError):
             coinapi_client._get_headers()
         monkeypatch.delenv("COINAPI_ALLOW_STUB", raising=False)
 
-        # env var is set but empty string → triggers stub
+        # env var is set but empty string â†’ triggers stub
         mock_cfg.return_value = {"providers": {"coinapi": {"api_key_env": "EMPTY"}}}
         monkeypatch.setenv("EMPTY", "")
         assert coinapi_client._get_headers() == {}

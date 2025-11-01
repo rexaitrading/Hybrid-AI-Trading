@@ -1,5 +1,5 @@
 """
-Unit Tests: TradeEngine (Hybrid AI Quant Pro v18.0 – Hedge-Fund Grade, 100% Coverage)
+Unit Tests: TradeEngine (Hybrid AI Quant Pro v18.0 â€“ Hedge-Fund Grade, 100% Coverage)
 -------------------------------------------------------------------------------------
 Covers ALL branches in trade_engine.py:
 - __init__: brokers, Kelly sanitize

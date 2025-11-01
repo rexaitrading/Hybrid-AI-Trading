@@ -1,5 +1,5 @@
 """
-Unit Tests: BreakoutPolygonSignal (Hybrid AI Quant Pro v23.7 – Hedge-Fund Grade, 100% Coverage)
+Unit Tests: BreakoutPolygonSignal (Hybrid AI Quant Pro v23.7 â€“ Hedge-Fund Grade, 100% Coverage)
 -----------------------------------------------------------------------------------------------
 Covers:
 - API key missing
@@ -42,7 +42,7 @@ def make_bars(closes, highs=None, lows=None):
 # API key / error branches
 # ----------------------------------------------------------------------
 def test_api_key_missing(monkeypatch):
-    """Guard: POLYGON_KEY missing → returns empty list."""
+    """Guard: POLYGON_KEY missing â†’ returns empty list."""
     monkeypatch.delenv("POLYGON_KEY", raising=False)
     sig = BreakoutPolygonSignal()
     result = sig._get_polygon_bars("AAPL")
@@ -51,7 +51,7 @@ def test_api_key_missing(monkeypatch):
 
 @patch("hybrid_ai_trading.signals.breakout_polygon.requests.get")
 def test_api_error_branch(mock_get, signal):
-    """Guard: requests.get raises → returns empty list."""
+    """Guard: requests.get raises â†’ returns empty list."""
     mock_get.side_effect = Exception("network down")
     result = signal._get_polygon_bars("AAPL")
     assert result == []
@@ -59,7 +59,7 @@ def test_api_error_branch(mock_get, signal):
 
 @patch("hybrid_ai_trading.signals.breakout_polygon.requests.get")
 def test_unexpected_api_format(mock_get, signal):
-    """Guard: Polygon returns unexpected JSON → returns empty list."""
+    """Guard: Polygon returns unexpected JSON â†’ returns empty list."""
     mock_get.return_value = MagicMock(
         status_code=200, json=lambda: {"results": {"oops": 123}}
     )
@@ -81,14 +81,14 @@ def test_api_returns_empty_list(monkeypatch, signal):
 # Data validation
 # ----------------------------------------------------------------------
 def test_not_enough_bars(signal):
-    """Guard: not enough bars → HOLD, reason not_enough_bars."""
+    """Guard: not enough bars â†’ HOLD, reason not_enough_bars."""
     result = signal.generate("AAPL", bars=make_bars([100]))
     assert result["signal"] == "HOLD"
     assert result["reason"] == "not_enough_bars"
 
 
 def test_incomplete_data(signal):
-    """Guard: some bars missing fields → HOLD, reason incomplete_data."""
+    """Guard: some bars missing fields â†’ HOLD, reason incomplete_data."""
     bars = [
         {"c": 100, "h": 105},  # missing low
         {"c": 102, "h": 106, "l": 98},  # valid
@@ -100,7 +100,7 @@ def test_incomplete_data(signal):
 
 
 def test_nan_detected(signal):
-    """Guard: NaN in closes → HOLD, reason nan_detected."""
+    """Guard: NaN in closes â†’ HOLD, reason nan_detected."""
     bars = make_bars([100, 101, float("nan")], highs=[105, 106, 107], lows=[99, 98, 97])
     result = signal.generate("AAPL", bars=bars)
     assert result["signal"] == "HOLD"
@@ -111,7 +111,7 @@ def test_nan_detected(signal):
 # Trading decisions
 # ----------------------------------------------------------------------
 def test_buy_signal(signal):
-    """Decision: last close > prev high → BUY."""
+    """Decision: last close > prev high â†’ BUY."""
     bars = make_bars([100, 102, 110], highs=[101, 103, 111], lows=[99, 97, 109])
     result = signal.generate("AAPL", bars=bars)
     assert result["signal"] == "BUY"
@@ -119,7 +119,7 @@ def test_buy_signal(signal):
 
 
 def test_sell_signal(signal):
-    """Decision: last close < prev low → SELL."""
+    """Decision: last close < prev low â†’ SELL."""
     bars = make_bars([100, 99, 90], highs=[105, 104, 95], lows=[100, 98, 89])
     result = signal.generate("AAPL", bars=bars)
     assert result["signal"] == "SELL"
@@ -127,7 +127,7 @@ def test_sell_signal(signal):
 
 
 def test_hold_signal(signal):
-    """Decision: last close inside prev high/low → HOLD."""
+    """Decision: last close inside prev high/low â†’ HOLD."""
     bars = make_bars([100, 102, 103], highs=[105, 106, 107], lows=[95, 96, 97])
     result = signal.generate("AAPL", bars=bars)
     assert result["signal"] == "HOLD"
@@ -138,7 +138,7 @@ def test_hold_signal(signal):
 # Error handling
 # ----------------------------------------------------------------------
 def test_parse_error(signal):
-    """Guard: float conversion fails → HOLD, reason parse_error."""
+    """Guard: float conversion fails â†’ HOLD, reason parse_error."""
     bars = [{"c": "oops", "h": "bad", "l": "bad"}] * 3
     result = signal.generate("AAPL", bars=bars)
     assert result["signal"] == "HOLD"
@@ -146,7 +146,7 @@ def test_parse_error(signal):
 
 
 def test_outermost_exception(monkeypatch, signal):
-    """Guard: _get_polygon_bars raises → HOLD, reason exception."""
+    """Guard: _get_polygon_bars raises â†’ HOLD, reason exception."""
     monkeypatch.setattr(
         signal,
         "_get_polygon_bars",
@@ -159,7 +159,7 @@ def test_outermost_exception(monkeypatch, signal):
 
 @patch("hybrid_ai_trading.signals.breakout_polygon.requests.get")
 def test_api_status_code_error(mock_get, signal):
-    """Guard: API returns non-200 → triggers PolygonAPIError branch."""
+    """Guard: API returns non-200 â†’ triggers PolygonAPIError branch."""
 
     class DummyResp:
         status_code = 500
@@ -170,7 +170,7 @@ def test_api_status_code_error(mock_get, signal):
 
     mock_get.return_value = DummyResp()
     result = signal._get_polygon_bars("AAPL")
-    assert result == []  # exception caught → []
+    assert result == []  # exception caught â†’ []
 
 
 def test_generate_outermost_exception(signal, monkeypatch):

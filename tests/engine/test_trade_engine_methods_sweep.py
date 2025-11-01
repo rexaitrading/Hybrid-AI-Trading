@@ -87,7 +87,7 @@ def _maybe(callable_):
     try:
         return callable_()
     except Exception:
-        # Don’t fail sweep on optional paths; goal is coverage, not strict behavior here
+        # Donâ€™t fail sweep on optional paths; goal is coverage, not strict behavior here
         return None
 
 

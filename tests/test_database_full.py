@@ -1,5 +1,5 @@
 """
-Unit Tests: Database Module (Hybrid AI Quant Pro v5.3 – 100% Coverage)
+Unit Tests: Database Module (Hybrid AI Quant Pro v5.3 â€“ 100% Coverage)
 ----------------------------------------------------------------------
 Covers:
 - init_db() success branch

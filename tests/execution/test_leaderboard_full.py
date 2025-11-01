@@ -1,12 +1,12 @@
 """
 Unit Tests: Leaderboard Exporter
-(Hybrid AI Quant Pro v3.4 – Hedge-Fund OE Grade, 100% Coverage)
+(Hybrid AI Quant Pro v3.4 â€“ Hedge-Fund OE Grade, 100% Coverage)
 ----------------------------------------------------------------
 Covers all branches of export_leaderboard:
 - Success path with normal data
-- Empty DataFrame → headers only + warning log
-- Exception path → error log + cleanup
-- Cleanup failure path (unlink itself fails → logs debug warning)
+- Empty DataFrame â†’ headers only + warning log
+- Exception path â†’ error log + cleanup
+- Cleanup failure path (unlink itself fails â†’ logs debug warning)
 - Error path where no file exists (skip unlink)
 """
 
@@ -37,7 +37,7 @@ def sample_df():
 # Tests
 # ----------------------------------------------------------------------
 def test_export_leaderboard_success(sample_df, tmp_path, caplog):
-    """✅ Should export a valid DataFrame and log success."""
+    """âœ… Should export a valid DataFrame and log success."""
     out_file: Path = tmp_path / "leaderboard.csv"
     caplog.set_level("INFO")
 
@@ -51,7 +51,7 @@ def test_export_leaderboard_success(sample_df, tmp_path, caplog):
 
 
 def test_export_leaderboard_empty(tmp_path, caplog):
-    """⚠️ Empty DataFrame should export headers only and log warning."""
+    """âš ï¸ Empty DataFrame should export headers only and log warning."""
     df = pd.DataFrame(columns=["strategy", "sharpe", "sortino"])
     out_file: Path = tmp_path / "empty.csv"
     caplog.set_level("WARNING")
@@ -65,7 +65,7 @@ def test_export_leaderboard_empty(tmp_path, caplog):
 
 
 def test_export_leaderboard_error_cleanup(monkeypatch, sample_df, tmp_path, caplog):
-    """❌ Force error → should log and cleanup half-written file."""
+    """âŒ Force error â†’ should log and cleanup half-written file."""
     caplog.set_level("ERROR")
 
     def bad_to_csv(*a, **k):
@@ -82,7 +82,7 @@ def test_export_leaderboard_error_cleanup(monkeypatch, sample_df, tmp_path, capl
 
 
 def test_export_leaderboard_cleanup_failure(monkeypatch, sample_df, tmp_path, caplog):
-    """⚠️ Covers branch where cleanup (unlink) itself raises an error."""
+    """âš ï¸ Covers branch where cleanup (unlink) itself raises an error."""
     caplog.set_level("DEBUG")
 
     out_file: Path = tmp_path / "bad.csv"
@@ -104,7 +104,7 @@ def test_export_leaderboard_cleanup_failure(monkeypatch, sample_df, tmp_path, ca
 
 
 def test_export_leaderboard_error_no_file(monkeypatch, sample_df, tmp_path, caplog):
-    """❌ Error occurs but no file exists → logs error, skips unlink."""
+    """âŒ Error occurs but no file exists â†’ logs error, skips unlink."""
     caplog.set_level("ERROR")
 
     def bad_to_csv(*a, **k):

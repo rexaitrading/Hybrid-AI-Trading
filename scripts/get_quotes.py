@@ -1,4 +1,4 @@
-# get_quotes.py  —  UTF-8 (no BOM)
+# get_quotes.py  â€”  UTF-8 (no BOM)
 import argparse
 import json
 import sys

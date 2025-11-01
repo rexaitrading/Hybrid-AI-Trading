@@ -1,4 +1,4 @@
-﻿import os
+import os
 
 import hybrid_ai_trading.runners.paper_trader as M  # exposes _qc_run_once
 from hybrid_ai_trading.runners.paper_logger import JsonlLogger

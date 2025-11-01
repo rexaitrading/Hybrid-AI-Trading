@@ -13,7 +13,7 @@ class App(EWrapper, EClient):
         self.done = False
 
     def nextValidId(self, orderId):
-        print(f"✅ Connected. nextValidId={orderId}", flush=True)
+        print(f"âœ… Connected. nextValidId={orderId}", flush=True)
         c = Contract()
         c.symbol = "AAPL"
         c.secType = "STK"
@@ -25,21 +25,21 @@ class App(EWrapper, EClient):
     def contractDetails(self, reqId, details):
         con = details.contract
         print(
-            f"📄 {con.symbol} conId={con.conId} exch={con.exchange} prim={con.primaryExchange} "
+            f"ðŸ“„ {con.symbol} conId={con.conId} exch={con.exchange} prim={con.primaryExchange} "
             f"currency={con.currency} local={con.localSymbol}",
             flush=True,
         )
 
     def contractDetailsEnd(self, reqId):
-        print("— contractDetailsEnd —", flush=True)
+        print("â€” contractDetailsEnd â€”", flush=True)
         self.done = True
         self.disconnect()
 
     def error(self, reqId, code, msg, *_):
-        print(f"❌ ERROR {code}: {msg}", flush=True)
+        print(f"âŒ ERROR {code}: {msg}", flush=True)
 
     def connectionClosed(self):
-        print("🔌 connectionClosed", flush=True)
+        print("ðŸ”Œ connectionClosed", flush=True)
 
 
 def main():
@@ -57,7 +57,7 @@ def main():
     while time.time() < deadline and not app.done:
         time.sleep(0.2)
     if not app.done:
-        print("⏱️ Timeout waiting for contract details.", flush=True)
+        print("â±ï¸ Timeout waiting for contract details.", flush=True)
         app.disconnect()
         time.sleep(0.2)
 

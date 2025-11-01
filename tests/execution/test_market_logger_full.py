@@ -1,6 +1,6 @@
 """
 Unit Tests: Market Logger
-(Hybrid AI Quant Pro v9.6 – Hedge-Fund OE Grade, 100% Coverage)
+(Hybrid AI Quant Pro v9.6 â€“ Hedge-Fund OE Grade, 100% Coverage)
 ----------------------------------------------------------------
 Covers:
 - ImportError when ib_insync not available
@@ -96,7 +96,7 @@ def test_start_logging_and_write_csv(tmp_path, monkeypatch, caplog):
     caplog.set_level(logging.DEBUG, logger="hybrid_ai_trading.execution.market_logger")
     fake_ib.run = MagicMock(side_effect=KeyboardInterrupt)
 
-    mlogger.start_logging()  # stops at KeyboardInterrupt → shutdown called
+    mlogger.start_logging()  # stops at KeyboardInterrupt â†’ shutdown called
 
     # Fire tick manually
     for cb in fake_ticker.updateEvent:

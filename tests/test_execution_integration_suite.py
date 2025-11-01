@@ -1,5 +1,5 @@
 """
-Integration Suite: Execution + Trade Engine (Hybrid AI Quant Pro v10.8 – Final AAA Polished)
+Integration Suite: Execution + Trade Engine (Hybrid AI Quant Pro v10.8 â€“ Final AAA Polished)
 -------------------------------------------------------------------------------------------
 Covers:
 1. Multi-broker routing (Alpaca, Binance, Polygon mocks)
@@ -333,7 +333,7 @@ def test_regime_disabled_branch(base_config, portfolio):
 
 
 def test_sentiment_and_gatescore_exceptions(base_config, portfolio, monkeypatch):
-    # ✅ Ensure regime is enabled so sentiment/gatescore branches are actually evaluated
+    # âœ… Ensure regime is enabled so sentiment/gatescore branches are actually evaluated
     base_config["regime"]["enabled"] = True
     te = TradeEngine(base_config, portfolio=portfolio)
 

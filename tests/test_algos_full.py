@@ -1,6 +1,6 @@
 """
 Unit Tests: Algo Orchestrator
-(Hybrid AI Quant Pro v3.1 – Hedge-Fund OE Grade, AAA Coverage)
+(Hybrid AI Quant Pro v3.1 â€“ Hedge-Fund OE Grade, AAA Coverage)
 ----------------------------------------------------------------
 Covers all branches in algos/orchestrator.py and __init__.py:
 

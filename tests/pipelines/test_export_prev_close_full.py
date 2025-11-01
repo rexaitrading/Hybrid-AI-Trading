@@ -1,13 +1,13 @@
 """
 Unit Tests: Export Previous Close
-(Hybrid AI Quant Pro v6.15 – Hedge-Fund Grade, 100% Coverage, Polished)
+(Hybrid AI Quant Pro v6.15 â€“ Hedge-Fund Grade, 100% Coverage, Polished)
 =======================================================================
 Covers:
 - _ms_to_iso (valid + invalid)
 - Core_Crypto branch via batch_prev_close (success + exception)
 - Polygon branch (success with data, no data, error)
 - Export CSV + JSON with failure handling
-- __main__ entrypoint execution (with stub + Polygon missing → warning)
+- __main__ entrypoint execution (with stub + Polygon missing â†’ warning)
 """
 
 import builtins
@@ -65,7 +65,7 @@ def test_ms_to_iso_valid_and_invalid():
 
 
 @patch("hybrid_ai_trading.pipelines.export_prev_close.batch_prev_close")
-@patch("sys.exit")  # ✅ patch sys.exit so tests don’t abort
+@patch("sys.exit")  # âœ… patch sys.exit so tests donâ€™t abort
 def test_core_crypto_success_and_error(mock_exit, mock_batch, tmp_path, monkeypatch):
     mock_exit.side_effect = lambda code=0: None  # no-op
     mock_batch.return_value = {"BTC/USDT": {"asof": "t", "open": 1, "status": "OK"}}
@@ -163,7 +163,7 @@ def test_export_failures(mock_exit, monkeypatch, tmp_path, caplog):
 
 
 def test_main_entrypoint_runs(tmp_path):
-    """Integration test: run as module with COINAPI_STUB but no POLYGON_KEY → should warn, not crash."""
+    """Integration test: run as module with COINAPI_STUB but no POLYGON_KEY â†’ should warn, not crash."""
     env = os.environ.copy()
     env["COINAPI_STUB"] = "1"  # stub crypto
     env.pop("POLYGON_KEY", None)  # ensure no Polygon key
@@ -181,6 +181,6 @@ def test_main_entrypoint_runs(tmp_path):
     combined_output = result.stdout + result.stderr
     assert (
         "Exported" in combined_output
-        or "📂" in combined_output
+        or "ðŸ“‚" in combined_output
         or "PolygonClient unavailable" in combined_output
     )

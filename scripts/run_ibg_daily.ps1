@@ -36,7 +36,7 @@ Write-Host ("Using one-shot: {0}" -f $oneShot) -ForegroundColor Cyan
 $log = Join-Path $env:USERPROFILE ("ibg_daily_{0}.log" -f (Get-Date -Format 'yyyyMMdd_HHmm'))
 Start-Transcript -Path $log -NoClobber
 try {
-  # start → wait → handshake → test
+  # start â†’ wait â†’ handshake â†’ test
   powershell -NoProfile -ExecutionPolicy Bypass -File $oneShot
 }
 finally {

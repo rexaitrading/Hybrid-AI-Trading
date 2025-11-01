@@ -1,5 +1,5 @@
 """
-Unit Tests: Polygon API Raw Endpoint (Hybrid AI Quant Pro v13.5 – Hedge-Fund Grade)
+Unit Tests: Polygon API Raw Endpoint (Hybrid AI Quant Pro v13.5 â€“ Hedge-Fund Grade)
 ----------------------------------------------------------------------------------
 Covers:
 - Successful REST call with mocked requests

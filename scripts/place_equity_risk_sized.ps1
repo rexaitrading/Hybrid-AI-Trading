@@ -81,12 +81,12 @@ $qty     = [Math]::Min($qtySize, $qtyValue)
 
 if ($qty -lt 1) {
   Write-Host ("Order exceeds CAD value cap at this price. " +
-              "MaxOrderValueCAD={0}, USDCAD={1:N4}, lmt={2:N2} → qtyValue={3}" -f $MaxOrderValueCAD,$usdcad,$lmt,$qtyValue)
+              "MaxOrderValueCAD={0}, USDCAD={1:N4}, lmt={2:N2} â†’ qtyValue={3}" -f $MaxOrderValueCAD,$usdcad,$lmt,$qtyValue)
   Write-Host "Tip: lower -RiskCash OR raise -MaxOrderValueCAD in script OR TWS Presets."
   exit 0
 }
-if ($qtyRisk -gt $MaxQty)   { Write-Host "Clamped by Size Limit: $qtyRisk → $qtySize (max $MaxQty)"; }
-if ($qtySize -gt $qty)      { Write-Host "Clamped by Value Limit: $qtySize → $qty (max CAD $MaxOrderValueCAD)"; }
+if ($qtyRisk -gt $MaxQty)   { Write-Host "Clamped by Size Limit: $qtyRisk â†’ $qtySize (max $MaxQty)"; }
+if ($qtySize -gt $qty)      { Write-Host "Clamped by Value Limit: $qtySize â†’ $qty (max CAD $MaxOrderValueCAD)"; }
 
 # --- Optional: bypass module cooldown for this symbol ---
 if ($BypassCooldown.IsPresent) {

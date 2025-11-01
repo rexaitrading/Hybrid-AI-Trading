@@ -1,9 +1,9 @@
 """
 DEPRECATED: Algo Orchestrator (Execution Layer)
-(Hybrid AI Quant Pro v3.0 – Backward-Compatible Wrapper)
+(Hybrid AI Quant Pro v3.0 â€“ Backward-Compatible Wrapper)
 --------------------------------------------------------
 
-⚠️ WARNING:
+âš ï¸ WARNING:
     This file is deprecated and kept only for backward compatibility.
     Use `hybrid_ai_trading.algos` (orchestrator) instead.
 
@@ -49,5 +49,5 @@ warnings.warn(
     stacklevel=2,
 )
 logger.warning(
-    "⚠️ DEPRECATED: import from execution.algos; use algos.orchestrator instead."
+    "âš ï¸ DEPRECATED: import from execution.algos; use algos.orchestrator instead."
 )

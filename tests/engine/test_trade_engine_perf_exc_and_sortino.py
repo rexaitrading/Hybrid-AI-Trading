@@ -16,7 +16,7 @@ def test_perf_exception_flows_to_normalization(monkeypatch, eng):
     monkeypatch.setattr(
         eng.gatescore, "allow_trade", lambda *a, **k: True, raising=True
     )
-    # force sharpe_ratio() to raise – covers the try/except block
+    # force sharpe_ratio() to raise â€“ covers the try/except block
     monkeypatch.setattr(
         eng.performance_tracker,
         "sharpe_ratio",
@@ -25,7 +25,7 @@ def test_perf_exception_flows_to_normalization(monkeypatch, eng):
     )
     r = eng.process_signal(
         "AAPL", "BUY", price=100, size=1
-    )  # algo=None → router path OK
+    )  # algo=None â†’ router path OK
     # we flowed past perf, so any allowed normalized status is acceptable
     assert r["status"] in {
         "filled",

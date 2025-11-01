@@ -110,7 +110,7 @@ Remove-Item $tmpProbe,$stdout,$stderr -ErrorAction SilentlyContinue
 
 # ---- Export envs ONLY after preflight OK ----
 $env:IB_HOST=$HostName; $env:IB_PORT="$Port"; $env:IB_CLIENT_ID="$ClientId"
-if($preflightOk){ $env:IB_INT="1"; Start-Sleep -Seconds 2 } else { $env:IB_INT="0"; Write-Host "IB preflight failed â†’ IB_INT=0; integration tests will skip." -ForegroundColor Yellow }
+if($preflightOk){ $env:IB_INT="1"; Start-Sleep -Seconds 2 } else { $env:IB_INT="0"; Write-Host "IB preflight failed Ã¢â€ â€™ IB_INT=0; integration tests will skip." -ForegroundColor Yellow }
 
 # ---- Run the single integration file (disable plugin autoload & silence warnings) ----
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = "1"

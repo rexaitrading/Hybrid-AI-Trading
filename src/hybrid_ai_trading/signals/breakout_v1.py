@@ -1,11 +1,11 @@
 """
-BreakoutV1Signal (Hybrid AI Quant Pro v24.0 – Hedge-Fund Grade, Wrapper-Aligned)
+BreakoutV1Signal (Hybrid AI Quant Pro v24.0 â€“ Hedge-Fund Grade, Wrapper-Aligned)
 -------------------------------------------------------------------------------
 Logic:
 - BUY if last close > max(highs of previous N bars)
 - SELL if last close < min(lows of previous N bars)
 - HOLD otherwise
-- Tie case: last_close == high == low → SELL (risk-off bias)
+- Tie case: last_close == high == low â†’ SELL (risk-off bias)
 - Guards: insufficient bars, NaN detection, parse errors
 - Full audit mode with decision tuple
 - breakout_v1: pure functional wrapper for tests
@@ -56,7 +56,7 @@ class BreakoutV1Signal:
             if bars is None:
                 bars = get_ohlcv_latest(symbol, period_id="1MIN", limit=self.window)
         except Exception as e:
-            logger.error("❌ Failed to fetch bars for %s: %s", symbol, e)
+            logger.error("âŒ Failed to fetch bars for %s: %s", symbol, e)
             self._log_decision(symbol, "HOLD", "wrapper_exception")
             return "HOLD" if not audit else ("HOLD", 0.0, 0.0, 0.0)
 
@@ -69,12 +69,12 @@ class BreakoutV1Signal:
             highs = [_safe_get(b, ["h", "price_high"]) for b in bars]
             lows = [_safe_get(b, ["l", "price_low"]) for b in bars]
         except Exception as e:
-            logger.error("❌ Failed to parse bars for %s: %s", symbol, e)
+            logger.error("âŒ Failed to parse bars for %s: %s", symbol, e)
             self._log_decision(symbol, "HOLD", "invalid_data")
             return "HOLD" if not audit else ("HOLD", 0.0, 0.0, 0.0)
 
         if any(math.isnan(x) for x in closes + highs + lows):
-            logger.error("❌ NaN detected in bars for %s", symbol)
+            logger.error("âŒ NaN detected in bars for %s", symbol)
             self._log_decision(symbol, "HOLD", "nan_detected")
             return (
                 "HOLD"

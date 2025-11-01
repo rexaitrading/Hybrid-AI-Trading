@@ -1,5 +1,5 @@
 """
-Unit Tests: SmartOrderRouter (Hybrid AI Quant Pro v5.1 – Hedge-Fund OE Grade, 100% Coverage)
+Unit Tests: SmartOrderRouter (Hybrid AI Quant Pro v5.1 â€“ Hedge-Fund OE Grade, 100% Coverage)
 --------------------------------------------------------------------------------------------
 Covers all branches in smart_router.py:
 - __init__: empty brokers raises ValueError
@@ -7,7 +7,7 @@ Covers all branches in smart_router.py:
 - choose_route: binance, polygon, alpaca, fallback
 - _timeout_wrapper: success, exception, timeout
 - _send_alert: message always tagged error
-- route_order: latency warning, non-dict, explicit error, ok→filled, pending,
+- route_order: latency warning, non-dict, explicit error, okâ†’filled, pending,
   blocked, rejected, unknown broker result, all brokers fail, pytest simulated fill
 """
 

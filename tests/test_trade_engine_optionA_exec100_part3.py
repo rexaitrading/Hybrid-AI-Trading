@@ -24,7 +24,7 @@ def make_engine(**cfg_overrides):
     return TradeEngine(config=base)
 
 
-# ---- reset_day: other dict-error combos (175â€“181, 182â€“188) + generic (197â€“198) ----
+# ---- reset_day: other dict-error combos (175Ã¢â‚¬â€œ181, 182Ã¢â‚¬â€œ188) + generic (197Ã¢â‚¬â€œ198) ----
 def test_reset_day_risk_error_dict_and_both_error_dicts():
     # risk error dict, portfolio ok
     te = make_engine()
@@ -58,7 +58,7 @@ def test_reset_day_generic_guard_outer():
     assert r["status"] == "error"
 
 
-# ---- adaptive_fraction: no-portfolio (205) + except fallback (211â€“212) ----
+# ---- adaptive_fraction: no-portfolio (205) + except fallback (211Ã¢â‚¬â€œ212) ----
 def test_adaptive_fraction_no_portfolio_and_exception():
     te = make_engine()
     # no-portfolio
@@ -71,7 +71,7 @@ def test_adaptive_fraction_no_portfolio_and_exception():
     assert te2.adaptive_fraction() == te2.base_fraction
 
 
-# ---- drawdown non-breach clean pass (241â€“251) ----
+# ---- drawdown non-breach clean pass (241Ã¢â‚¬â€œ251) ----
 def test_drawdown_non_breach_path():
     te = make_engine()
     te.portfolio.history = [(0, 100.0)]
@@ -93,7 +93,7 @@ def test_drawdown_non_breach_path():
     }
 
 
-# ---- performance try/except exception + normalization mapping lines (325â€“327, 334â€“339) ----
+# ---- performance try/except exception + normalization mapping lines (325Ã¢â‚¬â€œ327, 334Ã¢â‚¬â€œ339) ----
 def test_performance_exception_and_normalize_lines():
     te = make_engine()
     te.router.route_order = lambda *a, **k: {"status": "ok", "reason": "ok"}

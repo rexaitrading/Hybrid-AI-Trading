@@ -7,7 +7,7 @@ $envPath = ".\.env"
 $examplePath = ".\.env.example"
 
 if (-Not (Test-Path $envPath)) {
-    Write-Host "❌ No .env file found at $envPath"
+    Write-Host "âŒ No .env file found at $envPath"
     exit 1
 }
 
@@ -50,4 +50,4 @@ $exampleContent = foreach ($line in $content) {
 # Write to .env.example
 $exampleContent | Set-Content $examplePath -Encoding UTF8
 
-Write-Host "✅ .env.example created at $examplePath"
+Write-Host "âœ… .env.example created at $examplePath"

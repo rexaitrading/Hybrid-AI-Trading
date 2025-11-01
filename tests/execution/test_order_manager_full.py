@@ -1,6 +1,6 @@
 """
 Unit Tests: OrderManager Full Suite
-(Hybrid AI Quant Pro v16.0 – Hedge-Fund Grade, 100% Coverage)
+(Hybrid AI Quant Pro v16.0 â€“ Hedge-Fund Grade, 100% Coverage)
 ----------------------------------------------------------------
 Covers all branches in order_manager.py:
 - Invalid input rejection

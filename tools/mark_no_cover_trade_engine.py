@@ -10,7 +10,7 @@ cov.load()
 
 # Resolve filename exactly as coverage sees it
 src_file = os.path.normpath(
-    r"C:\Users\rhcy9\OneDrive\文件\HybridAITrading\src\hybrid_ai_trading\trade_engine.py"
+    r"C:\Users\rhcy9\OneDrive\æ–‡ä»¶\HybridAITrading\src\hybrid_ai_trading\trade_engine.py"
 )
 
 # Analyze missing lines
@@ -20,7 +20,7 @@ except Exception:
     missing = cov.analysis(src_file)[1]
 
 if not missing:
-    print("No missing lines – nothing to patch.")
+    print("No missing lines â€“ nothing to patch.")
     sys.exit(0)
 
 # Read source and append pragma on missing lines (skip blanks & already pragma'd)

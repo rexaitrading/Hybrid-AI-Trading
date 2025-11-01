@@ -1,5 +1,5 @@
 """
-Unit Tests: RegimeDetector (Hybrid AI Quant Pro – 100% Coverage, Branch-Safe)
+Unit Tests: RegimeDetector (Hybrid AI Quant Pro â€“ 100% Coverage, Branch-Safe)
 """
 
 from datetime import datetime, timedelta
@@ -391,7 +391,7 @@ def test_get_prices_from_list_success():
 
 
 def test_get_prices_list_bad_data_logs_and_returns_empty(caplog):
-    """Covers _get_prices(list) exception branch (bad price coercion) → empty Series."""
+    """Covers _get_prices(list) exception branch (bad price coercion) â†’ empty Series."""
     caplog.set_level("ERROR")
     d = RegimeDetector()
     # include an uncastable object to force the float() conversion error
@@ -478,7 +478,7 @@ def test_detect_normal_flow_without_monkeypatch_closes_and_logs(monkeypatch, cap
 
 
 def test_detect_stats_exception_again_hits_94_96(monkeypatch, caplog):
-    """Force std() to raise a distinct exception while mean() works, to hit error/return lines 94–96."""
+    """Force std() to raise a distinct exception while mean() works, to hit error/return lines 94â€“96."""
     import pandas as pd
 
     caplog.set_level("ERROR")

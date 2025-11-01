@@ -54,7 +54,7 @@ def test_targeted_clusters(monkeypatch, tmp_path):
         "result": {"status": "ok", "reason": "ok"},
     }
 
-    # -------- alerts success & exceptions (103–142)
+    # -------- alerts success & exceptions (103â€“142)
     class R:
         def __init__(self, c):
             self.status_code = c
@@ -106,7 +106,7 @@ def test_targeted_clusters(monkeypatch, tmp_path):
             except Exception:
                 pass
 
-    # -------- audit header then exception (148–169)
+    # -------- audit header then exception (148â€“169)
     te.audit_log = str(tmp_path / "audit.csv")
     te.backup_log = str(tmp_path / "backup.csv")
     for name in dir(te):
@@ -145,7 +145,7 @@ def test_targeted_clusters(monkeypatch, tmp_path):
     te0.portfolio.equity = 0.0
     call_signal(te0, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
 
-    # -------- kelly & drawdown (241–251)
+    # -------- kelly & drawdown (241â€“251)
     te1 = make_engine(history=[(0, 100.0)])
     call_signal(te1, symbol="AAPL", size=None, price=1.0, signal="BUY")
     te2 = make_engine(history=None)
@@ -158,7 +158,7 @@ def test_targeted_clusters(monkeypatch, tmp_path):
     )
     call_signal(te3, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
 
-    # -------- algo success (263–269) and import fail (261–282)
+    # -------- algo success (263â€“269) and import fail (261â€“282)
     class TWAP:
         def __init__(self, om):
             pass
@@ -196,7 +196,7 @@ def test_targeted_clusters(monkeypatch, tmp_path):
             pass
     monkeypatch.setattr(importlib, "import_module", orig_import)
 
-    # -------- router error (286–288)
+    # -------- router error (286â€“288)
     te5 = make_engine()
     if hasattr(te5, "order_manager"):
         te5.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
@@ -209,7 +209,7 @@ def test_targeted_clusters(monkeypatch, tmp_path):
         except Exception:
             pass
 
-    # -------- filters (306/312) & ratio gate (317–354)
+    # -------- filters (306/312) & ratio gate (317â€“354)
     te6 = make_engine()
     te6.config.setdefault("filters", {})
     te6.config["filters"].update({"sentiment": True, "gatescore": True})
@@ -237,7 +237,7 @@ def test_targeted_clusters(monkeypatch, tmp_path):
             _invoke(getattr(te6, name), {"result": {"status": "weird"}})
             _invoke(getattr(te6, name), {"result": {"status": "ok", "reason": "ok"}})
 
-    # -------- positions/history & record_trade_outcome (376/379/384–387)
+    # -------- positions/history & record_trade_outcome (376/379/384â€“387)
     if hasattr(te6, "get_positions"):
         te6.get_positions()
     if hasattr(te6, "get_history"):

@@ -75,7 +75,7 @@ do {
 
 if (-not $ok) {
   Write-Warning "Handshake still blocked after $MaxWaitSec sec."
-  Write-Host "👉 Check IB UI for login/modals or the 'Allow incoming API connection?' prompt."
+  Write-Host "ðŸ‘‰ Check IB UI for login/modals or the 'Allow incoming API connection?' prompt."
   exit 2
 }
 Write-Host "IB API handshake OK."

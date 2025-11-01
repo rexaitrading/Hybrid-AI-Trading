@@ -1,5 +1,5 @@
 """
-Unit Tests: BreakoutIntradaySignal (Hybrid AI Quant Pro v24.1 – Hedge-Fund Grade, 100% Coverage)
+Unit Tests: BreakoutIntradaySignal (Hybrid AI Quant Pro v24.1 â€“ Hedge-Fund Grade, 100% Coverage)
 -----------------------------------------------------------------------------------------------
 Covers ALL branches of breakout_intraday:
 - no_bars

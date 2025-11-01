@@ -9,7 +9,7 @@ def _make_breakout_bars():
 
 
 def test_grade_stock_B_branch(monkeypatch):
-    # Slightly > 1.5 to avoid float rounding: rr = 0.0182 / 0.012 ≈ 1.5167 -> "B"
+    # Slightly > 1.5 to avoid float rounding: rr = 0.0182 / 0.012 â‰ˆ 1.5167 -> "B"
     bars = _make_breakout_bars()
     monkeypatch.setattr(dash, "STOP_PCT", 0.012)
     monkeypatch.setattr(dash, "TARGET_PCT", 0.0182)
@@ -18,7 +18,7 @@ def test_grade_stock_B_branch(monkeypatch):
 
 
 def test_grade_stock_C_branch(monkeypatch):
-    # rr ≈ 1.133... -> "C"
+    # rr â‰ˆ 1.133... -> "C"
     bars = _make_breakout_bars()
     monkeypatch.setattr(dash, "STOP_PCT", 0.015)
     monkeypatch.setattr(dash, "TARGET_PCT", 0.017)

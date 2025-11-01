@@ -137,19 +137,19 @@ def _call_signal(te, **kw):
     return {"status": "rejected", "reason": "no_signal_entrypoint"}
 
 
-# 1) Kelly branch (size=None) + drawdown try/except block (241–251 and 247–248)
+# 1) Kelly branch (size=None) + drawdown try/except block (241â€“251 and 247â€“248)
 def test_kelly_branch_and_drawdown_try_except(tmp_path):
     # history present -> normal path
     te = _mk()
     te.audit_log = str(tmp_path / "a.csv")
     te.backup_log = str(tmp_path / "b.csv")
     _call_signal(te, symbol="AAPL", size=None, price=1.0, signal="BUY")
-    # history missing -> except path (247–248 pass)
+    # history missing -> except path (247â€“248 pass)
     te2 = _mk(pf=PF(hist=None))  # history=None triggers except in drawdown block
     _call_signal(te2, symbol="AAPL", size=None, price=1.0, signal="BUY")
 
 
-# 2) Algo import failure fallback (hit branches around 261–282 when import fails)
+# 2) Algo import failure fallback (hit branches around 261â€“282 when import fails)
 def test_algo_import_failure(monkeypatch):
     te = _mk()
     # make any algo import blow up -> engine should handle/fallback
@@ -167,7 +167,7 @@ def test_algo_import_failure(monkeypatch):
             pass
 
 
-# 3) Base-fraction fallbacks (203/205/208/211–212) – call any "*fraction*" helper with broken config
+# 3) Base-fraction fallbacks (203/205/208/211â€“212) â€“ call any "*fraction*" helper with broken config
 def test_base_fraction_fallbacks(monkeypatch):
     te = _mk()
     # poison any attribute the fraction helper may rely on
@@ -188,7 +188,7 @@ def test_base_fraction_fallbacks(monkeypatch):
     assert True or hit  # we don't fail if absent; we just try to touch it
 
 
-# 4) Force router direct error (286–288) + surrounding small lines (290–294, 301)
+# 4) Force router direct error (286â€“288) + surrounding small lines (290â€“294, 301)
 def test_router_direct_error(monkeypatch):
     te = _mk()
     if hasattr(te, "order_manager"):
@@ -203,7 +203,7 @@ def test_router_direct_error(monkeypatch):
             pass
 
 
-# 5) Alerts “general except” at top (103–104): smash requests & smtplib names entirely
+# 5) Alerts â€œgeneral exceptâ€ at top (103â€“104): smash requests & smtplib names entirely
 def test_alerts_general_except(monkeypatch):
     te = _mk()
     # delete modules from sys.modules to trigger NameError inside alert routine
@@ -216,7 +216,7 @@ def test_alerts_general_except(monkeypatch):
             pass  # function may swallow; either way lines execute
 
 
-# 6) Sector exposure + mid-block lines (240, 252–257, 261–282, 310–354 variants)
+# 6) Sector exposure + mid-block lines (240, 252â€“257, 261â€“282, 310â€“354 variants)
 def test_sector_and_midblocks(monkeypatch):
     # tight cap -> exposure path
     te = _mk(
@@ -245,7 +245,7 @@ def test_sector_and_midblocks(monkeypatch):
     _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
 
 
-# 7) Hit the “invalid status” normalization (329–333 already but ensure 330–338 full)
+# 7) Hit the â€œinvalid statusâ€ normalization (329â€“333 already but ensure 330â€“338 full)
 def test_normalize_variants():
     te = _mk()
     if hasattr(te, "_normalize_result"):
@@ -254,7 +254,7 @@ def test_normalize_variants():
         assert g["status"] == "filled" and g["reason"] == "normalized_ok"
 
 
-# 8) daily_reset full matrix again (175–198) to mop up 175->181/182->188/197–198 residues
+# 8) daily_reset full matrix again (175â€“198) to mop up 175->181/182->188/197â€“198 residues
 def test_daily_reset_full(monkeypatch):
     te = _mk()
     # portfolio error
@@ -285,7 +285,7 @@ def test_daily_reset_full(monkeypatch):
             pass  # in case implementation changed; lines should execute
 
 
-# 9) tiny helpers (201–212, 368, 373) via reflective sweep
+# 9) tiny helpers (201â€“212, 368, 373) via reflective sweep
 def test_helpers_reflective_sweep():
     te = _mk()
     defaults = {

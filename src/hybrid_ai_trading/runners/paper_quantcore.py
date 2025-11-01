@@ -17,7 +17,7 @@ def _norm_approval(a):
     return {"approved": False, "reason": "normalize_error"}
 
 
-# QuantCore (paper) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ minimal, stable
+# QuantCore (paper) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ minimal, stable
 
 
 def evaluate(symbol, price_map, risk_mgr):

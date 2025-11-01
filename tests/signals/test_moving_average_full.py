@@ -1,5 +1,5 @@
 """
-Unit Tests: Moving Average Signal (Hybrid AI Quant Pro v23.7 – Hedge-Fund Grade, 100% Coverage)
+Unit Tests: Moving Average Signal (Hybrid AI Quant Pro v23.7 â€“ Hedge-Fund Grade, 100% Coverage)
 -----------------------------------------------------------------------------------------------
 Covers ALL branches of moving_average_signal:
 - Empty bars
@@ -66,7 +66,7 @@ def test_nan_closes():
 # Core Decision Logic
 # ----------------------------------------------------------------------
 def test_forced_buy_branch(monkeypatch):
-    """Force short MA > long MA → BUY."""
+    """Force short MA > long MA â†’ BUY."""
     bars = make_bars(30)
 
     def fake_rolling(self, window, *args, **kwargs):
@@ -85,7 +85,7 @@ def test_forced_buy_branch(monkeypatch):
 
 
 def test_forced_sell_branch(monkeypatch):
-    """Force short MA < long MA → SELL."""
+    """Force short MA < long MA â†’ SELL."""
     bars = make_bars(30)
 
     def fake_rolling(self, window, *args, **kwargs):
@@ -104,7 +104,7 @@ def test_forced_sell_branch(monkeypatch):
 
 
 def test_hold_equal_forced(monkeypatch):
-    """Force short MA == long MA → HOLD."""
+    """Force short MA == long MA â†’ HOLD."""
     bars = make_bars(30)
 
     def fake_rolling(self, window, *args, **kwargs):
@@ -119,7 +119,7 @@ def test_hold_equal_forced(monkeypatch):
 
 
 def test_nan_sma(monkeypatch):
-    """Force rolling().mean() to produce NaN → HOLD."""
+    """Force rolling().mean() to produce NaN â†’ HOLD."""
     bars = make_bars(30)
 
     def fake_rolling(self, window, *args, **kwargs):
@@ -135,7 +135,7 @@ def test_nan_sma(monkeypatch):
 
 
 def test_rolling_failure(monkeypatch):
-    """Simulate exception in rolling mean → triggers 'failed rolling'."""
+    """Simulate exception in rolling mean â†’ triggers 'failed rolling'."""
     bars = make_bars(30)
 
     def boom_rolling(self, window, *args, **kwargs):

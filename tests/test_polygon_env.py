@@ -1,5 +1,5 @@
 """
-Unit Tests: PolygonClient API Calls (Hybrid AI Quant Pro – Hedge-Fund Grade)
+Unit Tests: PolygonClient API Calls (Hybrid AI Quant Pro â€“ Hedge-Fund Grade)
 ----------------------------------------------------------------------------
 Covers:
 - prev_close(): success + failure

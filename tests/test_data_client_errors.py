@@ -1,6 +1,6 @@
 """
 Unit Tests: Data Client Errors
-(Hybrid AI Quant Pro v1.0 – Hedge-Fund OE Grade, 100% Coverage)
+(Hybrid AI Quant Pro v1.0 â€“ Hedge-Fund OE Grade, 100% Coverage)
 ----------------------------------------------------------------
 Covers:
 - Direct raising and catching of each custom error class

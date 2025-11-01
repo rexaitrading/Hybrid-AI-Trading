@@ -1,4 +1,4 @@
-﻿# tools/stream.ps1 â€” clean helpers
+# tools/stream.ps1 â€” clean helpers
 
 # Resolve project paths relative to this file, not caller state
 $Script:ToolsDir = Split-Path -Path $MyInvocation.MyCommand.Path -Parent

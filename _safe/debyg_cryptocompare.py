@@ -16,7 +16,7 @@ import requests
 API_KEY: str | None = os.getenv("CRYPTOCOMPARE_API_KEY")
 if not API_KEY:
     print(
-        "❌ Missing CryptoCompare API key.\n"
+        "âŒ Missing CryptoCompare API key.\n"
         "Set it with:\n"
         '   setx CRYPTOCOMPARE_API_KEY "your_key_here"\n'
         "Then restart your terminal / shell and re-run this script."
@@ -33,20 +33,20 @@ def main() -> None:
 
     try:
         response = requests.get(url, params=params, headers=headers, timeout=10)
-        print("🌐 HTTP status:", response.status_code)
+        print("ðŸŒ HTTP status:", response.status_code)
         response.raise_for_status()
 
         data: dict[str, Any] = response.json()
-        print("\n✅ Parsed result:")
+        print("\nâœ… Parsed result:")
         print(json.dumps(data, indent=2))
     except requests.exceptions.RequestException as net_err:
-        print("❌ Network error:", repr(net_err))
+        print("âŒ Network error:", repr(net_err))
         sys.exit(1)
     except (ValueError, json.JSONDecodeError) as parse_err:
-        print("❌ JSON parse error:", repr(parse_err))
+        print("âŒ JSON parse error:", repr(parse_err))
         sys.exit(1)
     except Exception as e:
-        print("❌ Unexpected error:", repr(e))
+        print("âŒ Unexpected error:", repr(e))
         sys.exit(1)
 
 

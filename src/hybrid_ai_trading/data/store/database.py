@@ -1,5 +1,5 @@
 """
-Database Module for Hybrid AI Trading System (Quant Pro v5.2 – Suite-Aligned, Hedge Fund Grade)
+Database Module for Hybrid AI Trading System (Quant Pro v5.2 â€“ Suite-Aligned, Hedge Fund Grade)
 -----------------------------------------------------------------------------------------------
 Responsibilities:
 - Define SQLite database schema (news + price tables)
@@ -89,9 +89,9 @@ def init_db() -> None:
     """Initialize the database (create tables if not exist)."""
     try:
         Base.metadata.create_all(bind=engine)
-        logger.info("✅ Database initialized at %s", DB_PATH)
+        logger.info("âœ… Database initialized at %s", DB_PATH)
     except Exception as e:  # noqa: BLE001
-        logger.error("❌ Database initialization failed: %s", e)
+        logger.error("âŒ Database initialization failed: %s", e)
         raise
 
 

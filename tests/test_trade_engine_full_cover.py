@@ -145,7 +145,7 @@ def test_alerts_success_and_exceptions(monkeypatch):
         def __init__(self, c):
             self.status_code = c
 
-    # success (113â€“115/127â€“129/137â€“139)
+    # success (113Ã¢â‚¬â€œ115/127Ã¢â‚¬â€œ129/137Ã¢â‚¬â€œ139)
     monkeypatch.setitem(
         sys.modules,
         "requests",
@@ -168,7 +168,7 @@ def test_alerts_success_and_exceptions(monkeypatch):
     if hasattr(te, "_fire_alert"):
         te._fire_alert("ok")
 
-    # exceptions (115â€“117 / 131â€“132 / 141â€“142) and general except (103â€“104) if imports missing
+    # exceptions (115Ã¢â‚¬â€œ117 / 131Ã¢â‚¬â€œ132 / 141Ã¢â‚¬â€œ142) and general except (103Ã¢â‚¬â€œ104) if imports missing
     def boom(*a, **k):
         raise RuntimeError("boom")
 
@@ -202,7 +202,7 @@ def test_audit_header_and_exception(monkeypatch, tmp_path):
     te.audit_log = str(tmp_path / "audit.csv")
     te.backup_log = str(tmp_path / "backup.csv")
     if hasattr(te, "_write_audit"):
-        te._write_audit(["t", "AAPL", "BUY", 1, 1.0, "ok", 100.0, ""])  # 154â€“167
+        te._write_audit(["t", "AAPL", "BUY", 1, 1.0, "ok", 100.0, ""])  # 154Ã¢â‚¬â€œ167
     te.audit_log = str(tmp_path / "no_dir" / "audit.csv")
     te.backup_log = str(tmp_path / "no_dir" / "backup.csv")
     monkeypatch.setattr(
@@ -221,7 +221,7 @@ def test_audit_header_and_exception(monkeypatch, tmp_path):
 
     monkeypatch.setattr("builtins.open", Blower())
     if hasattr(te, "_write_audit"):
-        te._write_audit(["t", "AAPL", "BUY", 1, 1.0, "ok", 100.0, ""])  # 168â€“169
+        te._write_audit(["t", "AAPL", "BUY", 1, 1.0, "ok", 100.0, ""])  # 168Ã¢â‚¬â€œ169
 
 
 def test_invalids_equity_kelly_drawdown(monkeypatch):
@@ -234,7 +234,7 @@ def test_invalids_equity_kelly_drawdown(monkeypatch):
     te2 = _mk()
     te2.portfolio.equity = 0.0
     _call_signal(te2, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
-    # kelly branch (size=None) + drawdown try/except 241â€“251/247â€“248
+    # kelly branch (size=None) + drawdown try/except 241Ã¢â‚¬â€œ251/247Ã¢â‚¬â€œ248
     te3 = _mk()
     _call_signal(te3, symbol="AAPL", size=None, price=1.0, signal="BUY")
     te4 = _mk(pf=PF(hist=None))  # history=None -> except branch
@@ -242,13 +242,13 @@ def test_invalids_equity_kelly_drawdown(monkeypatch):
 
 
 def test_sector_algo_router(monkeypatch):
-    # sector exposure path 239â€“354
+    # sector exposure path 239Ã¢â‚¬â€œ354
     te = _mk(
         cfg={"risk": {"intraday_sector_exposure": 0.001}},
         pf=PF(pos={"AAPL": {"size": 3, "avg_price": 200.0}}),
     )
     _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
-    # algo success 263â€“269
+    # algo success 263Ã¢â‚¬â€œ269
     te2 = _mk()
 
     class TWAP:
@@ -270,7 +270,7 @@ def test_sector_algo_router(monkeypatch):
     if f:
         f("AAPL", "BUY", 1, 1.0, algo="twap")
         f("AAPL", "BUY", 1, 1.0, algo="vwap")
-    # algo import failure 261â€“282
+    # algo import failure 261Ã¢â‚¬â€œ282
     monkeypatch.setattr(
         importlib,
         "import_module",
@@ -281,7 +281,7 @@ def test_sector_algo_router(monkeypatch):
             f("AAPL", "BUY", 1, 1.0, algo="twap")
         except Exception:
             pass
-    # router direct error 286â€“288 (+ neighbors)
+    # router direct error 286Ã¢â‚¬â€œ288 (+ neighbors)
     te3 = _mk()
     if hasattr(te3, "order_manager"):
         te3.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
@@ -307,10 +307,10 @@ def test_filters_ratios_normalize_and_audit_capture(monkeypatch):
     te.sentiment_filter.allow = lambda *a, **k: True
     if h:
         h("AAPL", "BUY", 1, 1.0)  # 312
-    # ratio guards 317â€“326
+    # ratio guards 317Ã¢â‚¬â€œ326
     te.performance_tracker = PT(s=-2.0, t=-2.0)
     _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
-    # normalization 329â€“338
+    # normalization 329Ã¢â‚¬â€œ338
     if hasattr(te, "_normalize_result"):
         bad = te._normalize_result({"status": "weird"})
         assert bad["status"] == "rejected"
@@ -336,18 +336,18 @@ def test_positions_history_outcome(caplog):
 
         if hasattr(te, "performance_tracker"):
             te.performance_tracker.record_trade = bad
-        te.record_trade_outcome(1.23)  # 384â€“387
+        te.record_trade_outcome(1.23)  # 384Ã¢â‚¬â€œ387
 
 
 def test_daily_reset_matrix(monkeypatch):
     te = _mk()
-    # portfolio error 175â€“179
+    # portfolio error 175Ã¢â‚¬â€œ179
     if hasattr(te, "portfolio") and hasattr(te.portfolio, "reset_day"):
         te.portfolio.reset_day = lambda: (_ for _ in ()).throw(RuntimeError("PFAIL"))
         if hasattr(te, "daily_reset"):
             te.daily_reset()
         te.portfolio.reset_day = lambda: {"status": "ok"}
-    # risk error 182â€“186
+    # risk error 182Ã¢â‚¬â€œ186
     for attr in ("risk_manager", "risk", "rm"):
         if hasattr(te, attr):
             setattr(
@@ -358,7 +358,7 @@ def test_daily_reset_matrix(monkeypatch):
             break
     if hasattr(te, "daily_reset"):
         te.daily_reset()
-    # generic 197â€“198
+    # generic 197Ã¢â‚¬â€œ198
     if hasattr(te, "daily_reset"):
         monkeypatch.setattr(
             te, "daily_reset", lambda: (_ for _ in ()).throw(RuntimeError("GENERIC"))

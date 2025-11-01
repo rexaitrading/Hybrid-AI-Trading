@@ -19,16 +19,16 @@ def main():
     csv_path = latest_file("prev_close_*.csv")
     json_path = latest_file("prev_close_*.json")
 
-    assert csv_path, "âŒ æ‰¾ä¸åˆ° CSV æª” (data/prev_close_*.csv)"
-    assert json_path, "âŒ æ‰¾ä¸åˆ° JSON æª” (data/prev_close_*.json)"
-    print(f"âœ… æœ€æ–° CSV: {os.path.basename(csv_path)}")
-    print(f"âœ… æœ€æ–° JSON: {os.path.basename(json_path)}")
+    assert csv_path, "Ã¢ÂÅ’ Ã¦â€°Â¾Ã¤Â¸ÂÃ¥Ë†Â° CSV Ã¦Âªâ€ (data/prev_close_*.csv)"
+    assert json_path, "Ã¢ÂÅ’ Ã¦â€°Â¾Ã¤Â¸ÂÃ¥Ë†Â° JSON Ã¦Âªâ€ (data/prev_close_*.json)"
+    print(f"Ã¢Å“â€¦ Ã¦Å“â‚¬Ã¦â€“Â° CSV: {os.path.basename(csv_path)}")
+    print(f"Ã¢Å“â€¦ Ã¦Å“â‚¬Ã¦â€“Â° JSON: {os.path.basename(json_path)}")
 
-    # è®€ CSV
+    # Ã¨Â®â‚¬ CSV
     df = pd.read_csv(csv_path)
-    print("\n=== CSV æ¦‚è¦½ ===")
+    print("\n=== CSV Ã¦Â¦â€šÃ¨Â¦Â½ ===")
     print(df.head(3).to_string(index=False))
-    print("\næ¬„ä½ï¼š", list(df.columns))
+    print("\nÃ¦Â¬â€žÃ¤Â½ÂÃ¯Â¼Å¡", list(df.columns))
 
     required_cols = [
         "group",
@@ -43,26 +43,28 @@ def main():
         "status",
     ]
     missing_cols = [c for c in required_cols if c not in df.columns]
-    assert not missing_cols, f"âŒ ç¼ºå°‘æ¬„ä½: {missing_cols}"
+    assert not missing_cols, f"Ã¢ÂÅ’ Ã§Â¼ÂºÃ¥Â°â€˜Ã¦Â¬â€žÃ¤Â½Â: {missing_cols}"
 
-    # åŸºæœ¬æª¢æŸ¥
+    # Ã¥Å¸ÂºÃ¦Å“Â¬Ã¦ÂªÂ¢Ã¦Å¸Â¥
     n_rows = len(df)
     n_nulls = df.isna().sum().sum()
-    print(f"\nç¸½ç­†æ•¸ï¼š{n_rows}ï¼Œå…¨è¡¨ç©ºå€¼ç¸½æ•¸ï¼š{n_nulls}")
+    print(
+        f"\nÃ§Â¸Â½Ã§Â­â€ Ã¦â€¢Â¸Ã¯Â¼Å¡{n_rows}Ã¯Â¼Å’Ã¥â€¦Â¨Ã¨Â¡Â¨Ã§Â©ÂºÃ¥â‚¬Â¼Ã§Â¸Â½Ã¦â€¢Â¸Ã¯Â¼Å¡{n_nulls}"
+    )
 
-    # å„ group è¦†è“‹
-    print("\nå„ group è¦†è“‹ï¼š")
+    # Ã¥Ââ€ž group Ã¨Â¦â€ Ã¨â€œâ€¹
+    print("\nÃ¥Ââ€ž group Ã¨Â¦â€ Ã¨â€œâ€¹Ã¯Â¼Å¡")
     print(df.groupby("group")["symbol"].nunique().to_string())
 
-    # status æª¢æŸ¥
+    # status Ã¦ÂªÂ¢Ã¦Å¸Â¥
     bad = df[df["status"].astype(str).str.upper() != "OK"]
     if not bad.empty:
-        print("\nâš ï¸ éž OK ç‹€æ…‹ç­†æ•¸ï¼š", len(bad))
+        print("\nÃ¢Å¡Â Ã¯Â¸Â Ã©ÂÅ¾ OK Ã§â€¹â‚¬Ã¦â€¦â€¹Ã§Â­â€ Ã¦â€¢Â¸Ã¯Â¼Å¡", len(bad))
         print(bad[["group", "symbol", "status"]].to_string(index=False))
     else:
-        print("\nâœ… æ‰€æœ‰ç­†æ•¸ status éƒ½æ˜¯ OK")
+        print("\nÃ¢Å“â€¦ Ã¦â€°â‚¬Ã¦Å“â€°Ã§Â­â€ Ã¦â€¢Â¸ status Ã©Æ’Â½Ã¦ËœÂ¯ OK")
 
-    # è®€ JSON ç¢ºèªèƒ½ parse
+    # Ã¨Â®â‚¬ JSON Ã§Â¢ÂºÃ¨ÂªÂÃ¨Æ’Â½ parse
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    print(f"\nJSON ç­†æ•¸ï¼š{len(data)} âœ…")
+    print(f"\nJSON Ã§Â­â€ Ã¦â€¢Â¸Ã¯Â¼Å¡{len(data)} Ã¢Å“â€¦")
