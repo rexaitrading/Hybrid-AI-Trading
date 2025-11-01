@@ -4,7 +4,7 @@ param(
   [string]$DataSourceName,
   [Parameter(Mandatory=$true)][string]$Title,
   [Parameter(Mandatory=$true)][string]$Symbol,
-  [Parameter(Mandatory=$true)][ValidateSet('LONG','SHORT','BUY','SELL')][string]$Side,
+  [Parameter(Mandatory=$true)][string]$Side,      # validate in body
   [Parameter(Mandatory=$true)][double]$Qty,
   [double]$EntryPx,
   [double]$ExitPx,
@@ -15,9 +15,9 @@ param(
   [double]$KellyF,
   [double]$RMultiple,
   [double]$GrossPnl,
-  [ValidateSet('Bull','Bear','Neutral','Volatile','Calm','RiskOff','RiskOn')][string]$Regime,
-  [ValidateSet('Bullish','Bearish','Neutral')][string]$Sentiment,
-  [ValidateSet('Open','Closed','Planned','Cancelled')][string]$Status,
+  [string]$Regime,
+  [string]$Sentiment,
+  [string]$Status,                                # validate in body
   [string]$SessionId,
   [string]$Reason,
   [string]$Notes,
@@ -26,9 +26,15 @@ param(
 
 Set-Location C:\Dev\HybridAITrading
 
-# defaults (set AFTER param for PS5 compatibility)
-if (-not $DbId)            { $DbId = '2970bf31ef1580a6983ecf2c836cf97c' }
-if (-not $DataSourceName)  { $DataSourceName = 'Trading Journal' }
+# Defaults (PS5-safe)
+if (-not $DbId)           { $DbId = '2970bf31ef1580a6983ecf2c836cf97c' }
+if (-not $DataSourceName) { $DataSourceName = 'Trading Journal' }
+
+# Validate Side/Status values in body (avoid ValidateSet parser quirks)
+$validSides  = @('LONG','SHORT','BUY','SELL')
+$validStatus = @('Open','Closed','Planned','Cancelled')
+if (-not $validSides.Contains($Side))  { throw "Parameter -Side must be one of: $($validSides -join ', ')" }
+if (-not $validStatus.Contains($Status)) { throw "Parameter -Status must be one of: $($validStatus -join ', ')" }
 
 $tok = [Environment]::GetEnvironmentVariable('NOTION_TOKEN','Machine')
 if (-not $tok) { throw 'NOTION_TOKEN (Machine) not set.' }
