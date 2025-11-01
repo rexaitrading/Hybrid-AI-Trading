@@ -1,4 +1,3 @@
-$ErrorActionPreference = 'Stop'
 param(
   [string]$DbId,
   [string]$DataSourceName,
@@ -24,6 +23,7 @@ param(
   [Nullable[datetime]]$Ts
 )
 
+$ErrorActionPreference = 'Stop'
 Set-Location C:\Dev\HybridAITrading
 
 # defaults (PS5-safe)
@@ -34,8 +34,8 @@ if (-not $Ts)             { $Ts = Get-Date }
 # validate enums in body
 $validSides  = @('LONG','SHORT','BUY','SELL')
 $validStatus = @('Open','Closed','Planned','Cancelled')
-if (-not $validSides.Contains($Side))   { throw "Parameter -Side must be one of: $($validSides -join ', ')" }
-if (-not $validStatus.Contains($Status)){ throw "Parameter -Status must be one of: $($validStatus -join ', ')" }
+if (-not $validSides.Contains($Side))    { throw "Parameter -Side must be one of: $($validSides -join ', ')" }
+if (-not $validStatus.Contains($Status)) { throw "Parameter -Status must be one of: $($validStatus -join ', ')" }
 
 # coerce nullables to plain numbers where present
 function N([Nullable[Double]]$x){ if($null -eq $x){ $null } else { [double]$x } }
