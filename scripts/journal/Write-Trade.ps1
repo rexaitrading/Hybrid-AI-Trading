@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 param(
   [string]$DbId,
-  [string]$DataSourceName = 'Trading Journal',
+  [string]$DataSourceName,
   [Parameter(Mandatory=$true)][string]$Title,
   [Parameter(Mandatory=$true)][string]$Symbol,
   [Parameter(Mandatory=$true)][ValidateSet('LONG','SHORT','BUY','SELL')][string]$Side,
@@ -26,8 +26,9 @@ param(
 
 Set-Location C:\Dev\HybridAITrading
 
-# defaults
-if (-not $DbId) { $DbId = '2970bf31ef1580a6983ecf2c836cf97c' }
+# defaults (set AFTER param for PS5 compatibility)
+if (-not $DbId)            { $DbId = '2970bf31ef1580a6983ecf2c836cf97c' }
+if (-not $DataSourceName)  { $DataSourceName = 'Trading Journal' }
 
 $tok = [Environment]::GetEnvironmentVariable('NOTION_TOKEN','Machine')
 if (-not $tok) { throw 'NOTION_TOKEN (Machine) not set.' }
