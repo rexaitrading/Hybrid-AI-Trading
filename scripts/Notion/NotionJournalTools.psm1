@@ -1,4 +1,4 @@
-﻿Export-ModuleMember -Function Update-NotionRForNewest,Update-NotionRForPage
+Export-ModuleMember -Function Update-NotionRForNewest,Update-NotionRForPage
 
 function Update-NotionRForNewest {
   param([Parameter(Mandatory)][string]$DbUrlOrId)

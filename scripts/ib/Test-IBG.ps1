@@ -1,4 +1,4 @@
-﻿[CmdletBinding()] param([ValidateSet("paper","live")] [string] $Mode = "paper")
+[CmdletBinding()] param([ValidateSet("paper","live")] [string] $Mode = "paper")
 $ErrorActionPreference=' + "'Stop'" + '
 $port = if ($Mode -eq "live") { 7497 } else { 4002 }
 $c=Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue|Select-Object -First 1

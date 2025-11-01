@@ -1,5 +1,5 @@
 # cleanup_tests.ps1
-# Hybrid AI Trading Project – Test File Cleanup & Archiving
+# Hybrid AI Trading Project ï¿½ Test File Cleanup & Archiving
 # Hedge-Fund Grade v1.0
 
 Write-Host "=== Hybrid AI Project Test Cleanup Started ==="

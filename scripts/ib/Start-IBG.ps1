@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [ValidateSet("paper","live")] [string] $Mode = "paper",
   [string] $User      = $env:IB_USER,

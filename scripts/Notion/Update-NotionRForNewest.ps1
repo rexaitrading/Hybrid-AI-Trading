@@ -1,4 +1,4 @@
-﻿function Update-NotionRForNewest {
+function Update-NotionRForNewest {
   param([Parameter(Mandatory)][string]$DbUrlOrId)
 
   if (-not $env:NOTION_TOKEN) { throw "NOTION_TOKEN not set." }

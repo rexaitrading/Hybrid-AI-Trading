@@ -1,4 +1,4 @@
-﻿function Update-NotionRForPage {
+function Update-NotionRForPage {
   param([Parameter(Mandatory)][string]$PageUrlOrId)
 
   if (-not $env:NOTION_TOKEN) { throw "NOTION_TOKEN not set." }

@@ -1,4 +1,4 @@
-﻿param(
+param(
   [Parameter(Mandatory=$true)][string]$Ndjson = ".\data\feeds\youtube_latest.ndjson",
   [Parameter(Mandatory=$true)][string]$NotionDb = $env:NOTION_DB_NEWS
 )

@@ -1,4 +1,4 @@
-﻿param(
+param(
   [Parameter(Mandatory=$true)][string]$ApiKey,
   [string[]]$Channels,
   [int]$MaxPerChannel = 5,
