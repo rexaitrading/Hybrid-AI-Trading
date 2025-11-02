@@ -58,7 +58,7 @@ jobs:
         run: |
           rm -rf reports || true
           mkdir -p reports ci_artifacts || true- name: Run tests
-        run: pytest -q --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml
+        run: pytest -q --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml
           python - << 'PY'
           import sys; print("PYTEST DONE, python:", sys.version)
           PY
