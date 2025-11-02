@@ -1,6 +1,6 @@
 import warnings as _w
 
-# Emit on every import/reload, literal "deprecated" presence is asserted by tests
+# Emit deprecation on every import/reload of the submodule itself (covers importlib.reload)
 _w.warn(
     "deprecated: execution.algos  use concrete algo modules directly",
     category=DeprecationWarning,
