@@ -3,7 +3,9 @@ name: tests (py3.12)
 on:
   pull_request:
   workflow_dispatch:
-
+  push:
+    branches:
+      - feat/notion-multisource-smoke-20251101_2048
 concurrency:
   group: tests-py312-${{ github.ref }}
   cancel-in-progress: true
@@ -39,3 +41,5 @@ jobs:
           # add needed env vars for tests here, if any
         run: |
           pytest -q
+
+# ci: touch to trigger PR synchronize
