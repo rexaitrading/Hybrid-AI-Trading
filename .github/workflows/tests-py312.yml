@@ -7,7 +7,7 @@ on:
 jobs:
   py312:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -17,26 +17,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
 
-      - name: Install project (bash-safe)
+      - name: Install pytest only
         shell: bash
         run: |
           set -euxo pipefail
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f pyproject.toml ];  then pip install -e .; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
           pip install pytest
 
-            - name: Run pytest (hardened)
+      - name: Run pytest (hardened)
         shell: bash
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
         run: |
           set -euxo pipefail
-          pytest -q tests/test_smoke.py        shell: bash
-        run: |
-          set -euxo pipefail
-          # If your suite path is different, change 'tests'
-          pytest -q tests
+          pytest -q tests/test_smoke.py
