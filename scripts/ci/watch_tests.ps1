@@ -40,3 +40,8 @@ Get-ChildItem .\ci_artifacts\job_*.log | ForEach-Object {
     Select-Object -First 60 | ForEach-Object { $_.ToString() }
 }
 exit 1
+
+# Print job list at the end (helps when no error patterns were found)
+Write-Host "`n--- jobs in run ---" -ForegroundColor Cyan
+$jobs = (gh run view $rid --json jobs | ConvertFrom-Json).jobs
+$jobs | ForEach-Object { Write-Host ("{0}  ->  {1}" -f $_.name, $_.conclusion) }
