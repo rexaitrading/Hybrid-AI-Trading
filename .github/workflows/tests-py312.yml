@@ -4,6 +4,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Cancel older runs for the same ref if a new one starts
+concurrency:
+  group: tests-py312-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   py312:
     runs-on: ubuntu-latest
@@ -34,4 +39,14 @@ jobs:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
         run: |
           set -euxo pipefail
-          pytest -q tests
+          mkdir -p artifacts
+          # capture output and still fail the job correctly
+          pytest -q tests 2>&1 | tee artifacts/pytest_output.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload pytest logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-logs
+          path: artifacts/pytest_output.txt
