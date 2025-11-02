@@ -24,16 +24,28 @@ jobs:
           cache: "pip"
 
       - name: Install project (bash-safe)
-        shell: bash
-        run: |
-          set -euxo pipefail
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f pyproject.toml ]; then pip install -e .; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-          pip install pytest`n          pip install "llvmlite==0.43.*" "SQLAlchemy>=2,<3" "greenlet>=3,<4"
+  shell: bash
+  run: |
+    set -euxo pipefail
+    python -m pip install --upgrade pip
+    # Force-install heavy deps first to avoid import errors during -e .
+    python -m pip install "llvmlite==0.43.*" "SQLAlchemy>=2,<3" "greenlet>=3,<4"
+    python -m pip show llvmlite SQLAlchemy greenlet || true
+    # Usual project installs
+    if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    if [ -f pyproject.toml ]; then pip install -e .; fi
+    if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+    pip install pytest
 
-      - name: Run pytest (hardened)
+- name: Run pytest (hardened)
+  shell: bash
+  env:
+    PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+  run: |
+    set -euxo pipefail
+    mkdir -p artifacts
+    pytest -q tests 2>&1 | tee artifacts/pytest_output.txt
+    exit ${PIPESTATUS[0]}
         shell: bash
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
