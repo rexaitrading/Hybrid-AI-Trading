@@ -6,15 +6,11 @@ on:
   push:
     branches:
       - feat/notion-multisource-smoke-20251101_2048
-concurrency:
-  group: tests-py312-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   py312:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,8 +18,8 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: pip
 
       - name: Show Python version
         run: python -V
@@ -37,9 +33,4 @@ jobs:
           pip install pytest
 
       - name: Run tests
-        env:
-          # add needed env vars for tests here, if any
-        run: |
-          pytest -q
-
-# ci: touch to trigger PR synchronize
+        run: pytest -q
