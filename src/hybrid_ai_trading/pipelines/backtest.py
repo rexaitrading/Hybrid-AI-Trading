@@ -4,7 +4,7 @@ try:
         IntradayBacktester as IntradayBacktester,  # test-compat export
     )
 except Exception:
-    # Fallback stub to keep tests importable even if real impl is absent
+
     class IntradayBacktester:  # pragma: no cover
         def __init__(self, *args, **kwargs): ...
         def run(self, *args, **kwargs): ...
