@@ -36,6 +36,9 @@ jobs:
           python -m pip install --upgrade pip wheel setuptools
           pip install --only-binary=:all: llvmlite==0.43.*
           pip install -e .
+      # Filter out self-repo line to avoid nested clone
+      sed -E '/hybrid_ai_trading\s*@\s*git\+|Hybrid-AI-Trading\.git/d' requirements.txt > requirements.ci.txt
+      pip install -r requirements.ci.txt || true
           pip install -r requirements.txt || true
           python - << 'PY'
           import importlib,sys
