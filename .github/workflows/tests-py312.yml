@@ -54,14 +54,10 @@ jobs:
                   print("MISS:", m, e)
           PY
 
-      - name: Run tests
-        run: pytest -q --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml
-      - name: Upload test artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: micro-reports
-          path: |
-            reports/**
-            ci_artifacts/**
-            .pytest_cache/**
+            - name: Prepare report folders
+        run: |
+          rm -rf reports || true
+          mkdir -p reports ci_artifacts || true- name: Run tests
+        run: pytest -q --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml
+
+          if-no-files-found: warn
