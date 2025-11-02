@@ -1,6 +1,11 @@
 name: tests (py3.12)
 
 on:
+  push:
+    branches:
+      - feat/ci-restore-pytest-*
+    paths-ignore:
+      - "ci_artifacts/**"
   pull_request:
   workflow_dispatch:
 
@@ -8,6 +13,9 @@ on:
 concurrency:
   group: tests-py312-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   py312:
@@ -21,44 +29,24 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
 
-      - name: Install project (bash-safe)
-  shell: bash
-  run: |
-    set -euxo pipefail
-    python -m pip install --upgrade pip
-    # Force-install heavy deps first to avoid import errors during -e .
-    python -m pip install "llvmlite==0.43.*" "SQLAlchemy>=2,<3" "greenlet>=3,<4"
-    python -m pip show llvmlite SQLAlchemy greenlet || true
-    # Usual project installs
-    if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    if [ -f pyproject.toml ]; then pip install -e .; fi
-    if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-    pip install pytest
-
-- name: Run pytest (hardened)
-  shell: bash
-  env:
-    PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
-  run: |
-    set -euxo pipefail
-    mkdir -p artifacts
-    pytest -q tests 2>&1 | tee artifacts/pytest_output.txt
-    exit ${PIPESTATUS[0]}
-        shell: bash
-        env:
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+      - name: Install package and deps
         run: |
-          set -euxo pipefail
-          mkdir -p artifacts
-          # capture output and still fail the job correctly
-          pytest -q tests 2>&1 | tee artifacts/pytest_output.txt
-          exit ${PIPESTATUS[0]}
+          python -V
+          python -m pip install --upgrade pip wheel setuptools
+          pip install --only-binary=:all: llvmlite==0.43.*
+          pip install -e .
+          pip install -r requirements.txt || true
+          python - << 'PY'
+          import importlib,sys
+          print("PYTHON:", sys.version)
+          for m in ("llvmlite","sqlalchemy","greenlet","ibapi","ccxt","requests","dotenv"):
+              try:
+                  importlib.import_module(m if m!="dotenv" else "dotenv")
+                  print("OK:", m)
+              except Exception as e:
+                  print("MISS:", m, e)
+          PY
 
-      - name: Upload pytest logs (on failure)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-logs
-          path: artifacts/pytest_output.txt
+      - name: Run tests
+        run: pytest -q
