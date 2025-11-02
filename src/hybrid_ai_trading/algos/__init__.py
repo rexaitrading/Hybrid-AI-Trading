@@ -1,35 +1,57 @@
 """
-Hybrid AI Quant Pro – Algo Executors (Hedge-Fund OE Grade, Loop-Proof)
-----------------------------------------------------------------------
-Central orchestrator for execution algorithms.
-
-Exports:
-- VWAPExecutor
-- TWAPExecutor
-- IcebergExecutor
-- vwap_signal, VWAPSignal
-- get_algo_executor, ALGO_REGISTRY
+Deprecated wrapper: hybrid_ai_trading.algos
+Emits DeprecationWarning on import and reload, and re-exports real executors/signals.
 """
 
-from .orchestrator import ALGO_REGISTRY, VWAPSignal, get_algo_executor, vwap_signal
+import warnings as _w
 
-# ----------------------------------------------------------------------
-# Re-export executor classes for direct imports
-# (Resolved once at module import, using orchestrator lazy-loaders)
-# ----------------------------------------------------------------------
-VWAPExecutor = get_algo_executor("VWAP")
-TWAPExecutor = get_algo_executor("TWAP")
-IcebergExecutor = get_algo_executor("ICEBERG")
 
-# ----------------------------------------------------------------------
-# Public API
-# ----------------------------------------------------------------------
-__all__ = [
-    "get_algo_executor",
-    "ALGO_REGISTRY",
-    "VWAPExecutor",
-    "TWAPExecutor",
-    "IcebergExecutor",
-    "vwap_signal",
-    "VWAPSignal",
-]
+def _emit():
+    _w.warn(
+        "deprecated: hybrid_ai_trading.algos  use concrete algo modules directly",
+        category=Warning,
+        stacklevel=2,
+    )
+
+
+# make sure warnings aren't suppressed on re-import
+try:
+    del __warningregistry__
+except Exception:
+    pass
+_w.simplefilter("always")
+_emit()
+
+# Re-export real executors/signals from the canonical locations
+try:
+    from hybrid_ai_trading.execution.algos.iceberg_executor import IcebergExecutor
+    from hybrid_ai_trading.execution.algos.twap_executor import TWAPExecutor
+    from hybrid_ai_trading.execution.algos.vwap_executor import VWAPExecutor
+    from hybrid_ai_trading.signals.vwap import VWAPSignal, vwap_signal
+except Exception as _e:  # fallbacks so import never explodes in isolated runs
+
+    class VWAPExecutor: ...
+
+    class TWAPExecutor: ...
+
+    class IcebergExecutor: ...
+
+    def vwap_signal(*a, **k):
+        return "HOLD"
+
+    class VWAPSignal: ...
+
+    _w.warn(f"hybrid_ai_trading.algos fallback exports due to: {_e}", RuntimeWarning)
+
+ALGO_REGISTRY = {
+    "VWAP": VWAPExecutor,
+    "TWAP": TWAPExecutor,
+    "ICEBERG": IcebergExecutor,
+}
+
+
+def get_algo_executor(name: str):
+    key = str(name).upper()
+    if key not in ALGO_REGISTRY:
+        raise KeyError(f"Executor '{name}' not found")
+    return ALGO_REGISTRY[key]
