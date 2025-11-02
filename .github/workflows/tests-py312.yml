@@ -1,0 +1,26 @@
+name: tests (py3.12)
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  py312:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Smoke OK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python - <<'PY'
+          print("smoke ok: py312")
+          PY
