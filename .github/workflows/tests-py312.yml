@@ -7,8 +7,7 @@ on:
     paths-ignore:
       - 'ci_artifacts/**'
   pull_request:
-  workflow_dispatch:# Cancel older runs for the same ref if a new one starts
-concurrency:
+  workflow_dispatch:concurrency:
   group: tests-py312-${{ github.ref }}
   cancel-in-progress: true
 
@@ -27,7 +26,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py312-${{ hashFiles('requirements.ci.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-py312-
       - name: Install package and deps
         run: |
           python -V
@@ -50,4 +55,13 @@ jobs:
           PY
 
       - name: Run tests
-        run: pytest -q
+        run: pytest -q --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: micro-reports
+          path: |
+            reports/**
+            ci_artifacts/**
+            .pytest_cache/**
