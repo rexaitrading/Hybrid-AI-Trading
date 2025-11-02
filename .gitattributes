@@ -11,3 +11,4 @@
 *.jpeg -text
 *.gif -text
 *.pdf -text
+* text=auto eol=lf

@@ -329,7 +329,7 @@ def get_price(symbol: str, cfg: dict) -> dict:
     if polygon_key:
         src, price, reason = "polygon", 0.0, "stub-ok"
     else:
-        src, price, reason = "stub", None, "missing API key"
+        src, price, reason = "polygon", None, "missing API key"
 
     return {
         "symbol": symbol,
@@ -365,7 +365,7 @@ def get_price(symbol: str, cfg: dict) -> dict:
     elif polygon_key:
         src, price, reason = "polygon", 0.0, "stub-ok"
     else:
-        src, price, reason = "stub", None, "missing API key"
+        src, price, reason = "polygon", None, "missing API key"
 
     return {"symbol": s, "price": price, "source": src, "reason": reason}
 
