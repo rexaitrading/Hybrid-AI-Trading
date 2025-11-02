@@ -5,11 +5,9 @@ on:
     branches:
       - feat/ci-restore-pytest-*
     paths-ignore:
-      - "ci_artifacts/**"
+      - 'ci_artifacts/**'
   pull_request:
-  workflow_dispatch:
-
-# Cancel older runs for the same ref if a new one starts
+  workflow_dispatch:# Cancel older runs for the same ref if a new one starts
 concurrency:
   group: tests-py312-${{ github.ref }}
   cancel-in-progress: true
