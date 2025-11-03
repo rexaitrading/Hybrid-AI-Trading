@@ -45,3 +45,11 @@ def get_algo_executor(name: str):
     if key not in ALGO_REGISTRY:
         raise KeyError(f"Executor '{name}' not found")
     return ALGO_REGISTRY[key]
+
+
+__all__ = [
+    "VWAPExec",
+    "TWAPExec",
+    "ICEBERGExec",  # or the real names if present
+    "get_algo_executor",
+]

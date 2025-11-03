@@ -328,3 +328,131 @@ except NameError:
     # Class not present in this build; skip silently
     pass
 # ================================================================================
+
+# --- patched: robust load_config that uses builtins.open so tests can monkeypatch it ---
+try:
+    import builtins
+    import logging
+
+    import yaml
+except Exception:
+    pass  # keep module importable in constrained envs
+
+
+def load_config(path: str) -> dict:
+    """
+    Load a YAML config file.
+
+    Returns:
+        dict: parsed mapping, or {} on any error or non-mapping content.
+    """
+    try:
+        with builtins.open(path, "r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh) or {}
+        if not isinstance(data, dict):
+            logging.getLogger(__name__).error(
+                "load_config: YAML content is not a mapping: %s", path
+            )
+            return {}
+        return data
+    except Exception as e:
+        logging.getLogger(__name__).error(
+            "load_config: failed to open/read/parse '%s': %s", path, e
+        )
+        return {}
+
+
+# --- patched: robust load_config that uses builtins.open so tests can monkeypatch it ---
+try:
+    import builtins
+    import logging
+    from pathlib import Path
+
+    import yaml
+except Exception:
+    pass  # keep module importable in constrained envs
+
+
+def load_config(path: str) -> dict:
+    """
+    Load a YAML config file.
+
+    Returns:
+        dict: parsed mapping, or {} on any error or non-mapping content.
+    """
+    try:
+        p = Path(path)
+        if not p.exists():
+            logging.getLogger(__name__).error("missing file: %s", path)
+            return {}
+        with builtins.open(path, "r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh) or {}
+    except Exception as e:
+        logging.getLogger(__name__).error("failed to load %s: %s", path, e)
+        return {}
+    # Validate mapping
+    if not isinstance(data, dict):
+        logging.getLogger(__name__).error("must be a dict: %s", path)
+        logging.getLogger(__name__).error("failed to load %s", path)
+        return {}
+    # Keys must be strings
+    if any(not isinstance(k, str) for k in data.keys()):
+        logging.getLogger(__name__).error("keys must be strings: %s", path)
+        logging.getLogger(__name__).error("failed to load %s", path)
+        return {}
+    # Values cannot be None
+    if any(v is None for v in data.values()):
+        logging.getLogger(__name__).error("values cannot be none: %s", path)
+        logging.getLogger(__name__).error("failed to load %s", path)
+        return {}
+    return data
+
+
+# --- patched: robust load_config that uses builtins.open so tests can monkeypatch it ---
+try:
+    import builtins
+    import logging
+    from pathlib import Path
+
+    import yaml
+except Exception:
+    pass  # keep module importable in constrained envs
+
+
+def load_config(path: str) -> dict:
+    """
+    Load a YAML config file.
+
+    Returns:
+        dict: parsed mapping, or {} on any error or non-mapping content.
+    """
+    try:
+        p = Path(path)
+        if not p.exists():
+            logging.getLogger(__name__).error("missing file: %s", path)
+            return {}
+        with builtins.open(path, "r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except Exception as e:
+        logging.getLogger(__name__).error("failed to load %s: %s", path, e)
+        return {}
+    # Treat empty / null content as load failure
+    if data is None:
+        logging.getLogger(__name__).error("failed to load %s", path)
+        return {}
+    # Validate mapping
+    if not isinstance(data, dict):
+        logging.getLogger(__name__).error("must be a dict: %s", path)
+        logging.getLogger(__name__).error("failed to load %s", path)
+        return {}
+    # Keys must be strings
+    if any(not isinstance(k, str) for k in data.keys()):
+        logging.getLogger(__name__).error("keys must be strings: %s", path)
+        logging.getLogger(__name__).error("failed to load %s", path)
+        return {}
+    # Values cannot be None
+    if any(v is None for v in data.values()):
+        logging.getLogger(__name__).error("values cannot be none: %s", path)
+        logging.getLogger(__name__).error("failed to load %s", path)
+        return {}
+    return data

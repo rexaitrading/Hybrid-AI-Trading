@@ -3,6 +3,7 @@ Deprecated wrapper: hybrid_ai_trading.algos
 Emits DeprecationWarning on import and reload, and re-exports real executors/signals.
 """
 
+import logging as _lg
 import warnings as _w
 
 
@@ -53,5 +54,17 @@ ALGO_REGISTRY = {
 def get_algo_executor(name: str):
     key = str(name).upper()
     if key not in ALGO_REGISTRY:
+        _lg.getLogger(__name__).error("Executor '%s' not found", name)
         raise KeyError(f"Executor '{name}' not found")
     return ALGO_REGISTRY[key]
+
+
+# --- public API surface required by tests ---
+__all__ = [
+    "VWAPExecutor",
+    "TWAPExecutor",
+    "IcebergExecutor",
+    "VWAPSignal",
+    "vwap_signal",
+    "get_algo_executor",
+]
