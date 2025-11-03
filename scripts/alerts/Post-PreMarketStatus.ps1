@@ -8,6 +8,24 @@ $env:SLACK_BOT_TOKEN = [Environment]::GetEnvironmentVariable('SLACK_BOT_TOKEN','
 if (-not ($env:SLACK_BOT_TOKEN -match '^xoxb-' -and $env:SLACK_BOT_TOKEN.Length -ge 20 -and $env:SLACK_BOT_TOKEN -ne 'xoxb-PASTE_REAL_TOKEN')) {
   throw 'Machine SLACK_BOT_TOKEN missing/invalid. Set the real xoxb- at Machine scope and rerun.'
 }
+
+function Resolve-NonEmptyPath {
+  param([string]$Path)
+  if ([string]::IsNullOrWhiteSpace($Path)) { return $null }
+  if (-not (Test-Path -LiteralPath $Path)) { return $null }
+  $fi = Get-Item -LiteralPath $Path
+  if ($fi.Length -le 0) { return $null }
+  return $fi.FullName
+}
+
+function Get-FileHashLineSafe {
+  param([string]$Path)
+  $p = Resolve-NonEmptyPath -Path $Path
+  if (-not $p) { return $null }
+  $h = Get-FileHash -LiteralPath $p -Algorithm SHA256
+  $len = (Get-Item $p).Length
+  return ("{0}  {1} bytes  SHA256={2}" -f (Split-Path $p -Leaf), $len, $h.Hash)
+}
 # Transcript
 $logDir = 'C:\Dev\HybridAITrading\logs'; New-Item -ItemType Directory -Force $logDir | Out-Null
 $log = Join-Path $logDir ("PreMarket_" + (Get-Date -Format 'yyyyMMdd_HHmmss') + ".log")
@@ -160,6 +178,26 @@ try {
   $ci  = Parse-JUnit
   $cov = Parse-Coverage
 
+# --- GH fallback if junit/coverage missing locally ---
+if (-not (Resolve-NonEmptyPath $ci.src) -or -not (Resolve-NonEmptyPath $cov.src)) {
+  $ghTok = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN','Machine'); if (-not $ghTok) { $ghTok = $env:GITHUB_TOKEN }
+  if ($ghTok) {
+    $dirs = Get-GHA-Fallback -Owner 'rexaitrading' -Repo 'Hybrid-AI-Trading' -Token $ghTok
+    if ($dirs) {
+      foreach ($d in $dirs) {
+        if (-not (Resolve-NonEmptyPath $ci.src)) {
+          $cand = Find-FirstFileByName -Root $d -Names @('junit.xml','test-results.xml','pytest.xml')
+          if ($cand) { $ci = @{ pass=$ci.pass; fail=$ci.fail; skip=$ci.skip; total=$ci.total; src=$cand } }
+        }
+        if (-not (Resolve-NonEmptyPath $cov.src)) {
+          $cand = Find-FirstFileByName -Root $d -Names @('coverage.xml','coverage.txt')
+          if ($cand) { $cov = @{ pct=$cov.pct; src=$cand } }
+        }
+      }
+    }
+  }
+}
+
   $orb_ok   = [int]$orb.ok
   $orb_warn = [int]$orb.warn
   $orb_err  = [int]$orb.err
@@ -222,3 +260,87 @@ finally {
   Stop-Transcript
 }
 # ======================= End =======================
+
+function Get-GHA-Fallback {
+  [CmdletBinding()]param(
+    [Parameter(Mandatory)][string]$Owner,
+    [Parameter(Mandatory)][string]$Repo,
+    [Parameter(Mandatory)][string]$Token,
+    [string]$ArtifactNameHint = 'junit|coverage',
+    [string]$DestRoot = 'C:\Dev\HybridAITrading\.artifacts\gh_fallback'
+  )
+  $hdr = @{ Authorization = "Bearer $Token"; 'User-Agent'='ps-gh-fallback' }
+  $runs = Invoke-RestMethod -Uri "https://api.github.com/repos/$Owner/$Repo/actions/runs?status=success&per_page=1" -Headers $hdr -Method Get -TimeoutSec 90
+  if (-not $runs.workflow_runs) { return $null }
+  $rid = $runs.workflow_runs[0].id
+  $arts = Invoke-RestMethod -Uri "https://api.github.com/repos/$Owner/$Repo/actions/runs/$rid/artifacts" -Headers $hdr -Method Get -TimeoutSec 90
+  if (-not $arts.artifacts) { return $null }
+  $matches = @($arts.artifacts | Where-Object { $_.name -match $ArtifactNameHint -and $_.expired -ne $true })
+  if ($matches.Count -eq 0) { return $null }
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  New-Item -ItemType Directory -Force $DestRoot | Out-Null
+  $out = @()
+  foreach ($a in $matches) {
+    $zipPath = Join-Path $DestRoot ("artifact_{0}_{1}.zip" -f $a.id, $a.name)
+    Invoke-RestMethod -Uri $a.archive_download_url -Headers $hdr -Method Get -OutFile $zipPath -TimeoutSec 180
+    $extractDir = Join-Path $DestRoot ("extracted_{0}_{1}" -f $a.id, $a.name)
+    if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $extractDir)
+    $out += $extractDir
+  }
+  return $out
+}
+
+function Find-FirstFileByName {
+  param([Parameter(Mandatory)][string]$Root,[string[]]$Names)
+  foreach ($n in $Names) {
+    $f = Get-ChildItem -Recurse -File -Path $Root -ErrorAction SilentlyContinue -Filter $n | Select-Object -First 1
+    if ($f) { return $f.FullName }
+  }
+  return $null
+}
+function Parse-BarReplay {
+  $json = Find-LatestFile -Patterns @('.artifacts\bar_replay\*.json','bar_replay*.json','logs\bar_replay*.json','.logs\bar_replay*.json')
+  if ($json) {
+    try {
+      $j = Get-Content $json.FullName -Raw | ConvertFrom-Json
+      $pnl  = $j.pnl_total; if ($null -eq $pnl) { $pnl = $j.pnl }
+      $trds = $j.trades;    if ($null -eq $trds){ $trds = $j.count }
+      $kel  = $j.kelly_f;   if ($null -eq $kel) { $kel  = $j.kelly }
+      $reg  = $j.regime
+      if ($pnl -ne $null -or $trds -ne $null -or $kel -ne $null -or $reg) {
+        return @{ pnl=$pnl; trades=$trds; kelly=$kel; regime="$reg"; src=$json.FullName }
+      }
+    } catch {}
+  }
+  $txt = Find-LatestFile -Patterns @('logs\bar_replay*.log','.logs\bar_replay*.log','bar_replay*.log')
+  if ($txt) {
+    $t = Get-Content $txt.FullName -Raw
+    $pnl  = ([regex]::Match($t,'(?i)pnl[:=\s]+(-?\d+(\.\d+)?)')).Groups[1].Value
+    $trds = ([regex]::Match($t,'(?i)trades?[:=\s]+(\d+)')).Groups[1].Value
+    $kel  = ([regex]::Match($t,'(?i)kelly[_\s]*f?[:=\s]+(\d+(\.\d+)?)')).Groups[1].Value
+    $reg  = ([regex]::Match($t,'(?i)regime[:=\s]+([A-Za-z]+)')).Groups[1].Value
+    if ($pnl -or $trds -or $kel -or $reg) {
+      return @{ pnl=$pnl; trades=$trds; kelly=$kel; regime="$reg"; src=$txt.FullName }
+    }
+  }
+  return @{ pnl=$null; trades=$null; kelly=$null; regime=$null; src=$null }
+}
+
+function Resolve-NonEmptyPath {
+  param([string]$Path)
+  if ([string]::IsNullOrWhiteSpace($Path)) { return $null }
+  if (-not (Test-Path -LiteralPath $Path)) { return $null }
+  $fi = Get-Item -LiteralPath $Path
+  if ($fi.Length -le 0) { return $null }
+  return $fi.FullName
+}
+
+function Get-FileHashLineSafe {
+  param([string]$Path)
+  $p = Resolve-NonEmptyPath -Path $Path
+  if (-not $p) { return $null }
+  $h = Get-FileHash -LiteralPath $p -Algorithm SHA256
+  $len = (Get-Item $p).Length
+  return ("{0}  {1} bytes  SHA256={2}" -f (Split-Path $p -Leaf), $len, $h.Hash)
+}
