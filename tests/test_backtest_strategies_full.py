@@ -1,5 +1,5 @@
 """
-Backtest Strategies & Pipeline Suite (Hybrid AI Quant Pro v16.7 – Hedge-Fund OE Grade)
+Backtest Strategies & Pipeline Suite (Hybrid AI Quant Pro v16.7 â€“ Hedge-Fund OE Grade)
 ======================================================================================
 - Covers real strategy functions (Breakout, MA, RSI, Bollinger, MACD, VWAP)
 - Lambda signals sanity (BUY, SELL, HOLD)
@@ -14,6 +14,7 @@ import time
 import pandas as pd
 import pytest
 
+pytest.importorskip("matplotlib", reason="optional: backtest visuals need matplotlib")
 from hybrid_ai_trading.pipelines.backtest import IntradayBacktester
 from hybrid_ai_trading.signals import (
     bollinger_bands_signal,

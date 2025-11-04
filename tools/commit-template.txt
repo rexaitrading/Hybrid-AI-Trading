@@ -1,0 +1,4 @@
+﻿# Context: (Issue/Failing test/Link)
+# Change:  (Files + summary)
+# Tests:   (Commands + results)
+# Rollback:(How to revert: backup paths or git steps)

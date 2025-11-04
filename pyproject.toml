@@ -123,3 +123,18 @@ skip-string-normalization = false
 profile = "black"
 line_length = 88
 src_paths = ["src", "tests"]
+
+[project]
+name = "hybrid-ai-trading"
+version = "0.0.0"
+description = "Hybrid AI Trading"
+requires-python = ">=3.12"
+[project.optional-dependencies]
+backtest = ["matplotlib>=3.8"]
+llvm     = ["llvmlite>=0.43"]
+db       = ["SQLAlchemy>=2.0"]
+all      = [
+    "matplotlib>=3.8",
+    "llvmlite>=0.43",
+    "SQLAlchemy>=2.0",
+]

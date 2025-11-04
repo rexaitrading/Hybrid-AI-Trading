@@ -1,5 +1,5 @@
 """
-Edge Case Coverage Tests: Backtest Pipeline (v16.7 – Hedge-Fund OE Grade, Full Coverage)
+Edge Case Coverage Tests: Backtest Pipeline (v16.7 â€“ Hedge-Fund OE Grade, Full Coverage)
 =======================================================================================
 Covers ALL branches of backtest.py:
 - Config loader (missing, parse fail, not dict, bad keys, none values)
@@ -14,10 +14,13 @@ Covers ALL branches of backtest.py:
 import datetime
 
 import pandas as pd
+import pytest
 import requests
 import yaml
 
 from hybrid_ai_trading.execution.paper_simulator import PaperSimulator
+
+pytest.importorskip("matplotlib", reason="optional: backtest visuals need matplotlib")
 from hybrid_ai_trading.pipelines import backtest
 from hybrid_ai_trading.pipelines.backtest import (
     IntradayBacktester,
@@ -258,7 +261,7 @@ def test_export_leaderboard_success(tmp_path):
 
 
 def test_strategy_runtime_error(monkeypatch, tmp_path, caplog):
-    """Force a runtime error inside strategy → should log 'strategy ... failed'."""
+    """Force a runtime error inside strategy â†’ should log 'strategy ... failed'."""
 
     def bad_strategy(_bars):
         return 1 / 0  # raises ZeroDivisionError

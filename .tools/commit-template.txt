@@ -1,0 +1,11 @@
+﻿# Context:
+#   (Issue/Reason/Link to failing test or screenshot)
+#
+# Change:
+#   (Exact files and high-level summary)
+#
+# Tests:
+#   (Commands run + summary of pass/fail)
+#
+# Rollback:
+#   (How to revert; e.g., git revert <SHA> or restore backup)

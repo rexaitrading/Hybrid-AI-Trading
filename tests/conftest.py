@@ -4,6 +4,8 @@ import os
 import pathlib
 import sys
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]  # project root (tests/..)
 CANDIDATES = [ROOT / "src", ROOT]
 for p in CANDIDATES:
@@ -86,3 +88,11 @@ except Exception:
     m.__getattr__ = _ibins_getattr
     sys.modules["ib_insync"] = m
 # === IB_INSYNC_TEST_SHIM_END ===
+
+
+@pytest.fixture()
+def TradeEngineClass():
+    # Minimal import to satisfy tests that expect this fixture
+    from hybrid_ai_trading.trade_engine import TradeEngine
+
+    return TradeEngine

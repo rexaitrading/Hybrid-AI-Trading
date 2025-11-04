@@ -1,17 +1,17 @@
 """
-Trade Engine (Hybrid AI Quant Pro v17.5 – Hedge Fund Grade, Loop-Proof Normalized)
+Trade Engine (Hybrid AI Quant Pro v17.5 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Hedge Fund Grade, Loop-Proof Normalized)
 ---------------------------------------------------------------------------------
-- Guardrails BEFORE routing: equity → sector → hedge → drawdown
+- Guardrails BEFORE routing: equity ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ sector ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ hedge ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ drawdown
 - Router normalized BEFORE regime/filters/performance
-- Regime-disabled overrides Sharpe/Sortino ✅
-- Sentiment BEFORE GateScore BEFORE Sharpe/Sortino ✅
+- Regime-disabled overrides Sharpe/Sortino ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+- Sentiment BEFORE GateScore BEFORE Sharpe/Sortino ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 - Kelly config sanitized (drops "enabled")
 - Audit logging always creates files
 - alert() implemented for Slack/Telegram/Email
-- record_trade_outcome added ✅
-- reset_day patched with safe fallback ✅
-- 🔑 Final normalization: "ok" → "filled" for both status and reason
-- 🔒 FIX: unknown algo now returns early as rejected (no normalization overwrite)
+- record_trade_outcome added ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+- reset_day patched with safe fallback ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+- ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ Final normalization: "ok" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "filled" for both status and reason
+- ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ FIX: unknown algo now returns early as rejected (no normalization overwrite)
 """
 
 import csv
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 class TradeEngine:
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: Optional[Dict[str, Any]] = None,
         portfolio: Optional[PortfolioTracker] = None,
         brokers: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -285,7 +285,7 @@ class TradeEngine:
                     )
                 else:
                     logger.warning("Unknown algo requested: %s", algo)
-                    # 🔑 FIX: Early return ensures unknown algo is not normalized to "filled"
+                    # ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ FIX: Early return ensures unknown algo is not normalized to "filled"
                     return {"status": "rejected", "reason": "unknown_algo"}
             except Exception as e:
                 return {"status": "error", "reason": f"algo_error:{e}"}

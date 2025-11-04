@@ -1,5 +1,5 @@
 """
-Unit Tests: Database Module (Hybrid AI Quant Pro v5.3 – 100% Coverage)
+Unit Tests: Database Module (Hybrid AI Quant Pro v5.3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ 100% Coverage)
 ----------------------------------------------------------------------
 Covers:
 - init_db() success branch
@@ -7,10 +7,13 @@ Covers:
 - Ensures logger messages and re-raise
 """
 
+import pytest
+
+pytest.importorskip("sqlalchemy", reason="optional: database tests require SQLAlchemy")
+pytestmark = pytest.mark.db
+
 import logging
 from unittest.mock import patch
-
-import pytest
 
 from hybrid_ai_trading.data.store import database
 
