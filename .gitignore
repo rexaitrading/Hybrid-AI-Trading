@@ -80,3 +80,10 @@ _backup_notion_journal_*.py
 src/hybrid-ai-trading/
 
 protection.backup.json
+
+# runtime state
+/tmp_state.json
+
+# logs
+/audit.csv
+/backup.csv
