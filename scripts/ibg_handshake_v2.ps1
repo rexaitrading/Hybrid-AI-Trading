@@ -25,7 +25,7 @@ for ($i=1; $i -le 20; $i++){
   Start-Sleep -Seconds 3
 }
 if (-not $open){ Log "[PORT] FATAL: $Port not listening. Ensure IB Gateway (Paper) is logged in, API enabled, port=$Port."; exit 2 }
-Log "[PORT] Listening on 127.0.0.1:$Port âœ…"
+Log "[PORT] Listening on 127.0.0.1:$Port Ã¢Å“â€¦"
 
 # 3) Env for probe
 $env:IB_HOST="127.0.0.1"
@@ -93,11 +93,11 @@ if ($code -ne 0){
   } else {
     Log "[DIAG] No gateway logs found."
   }
-  Log "Fix on Gatewayâ†’API (Paper): Enable ActiveX+Socket ON, Read-Only OFF, Port=$Port,"
+  Log "Fix on GatewayÃ¢â€ â€™API (Paper): Enable ActiveX+Socket ON, Read-Only OFF, Port=$Port,"
   Log "  Master API Client ID = 0 (or exactly $ClientId), Allow localhost ON, Trusted IP 127.0.0.1,"
   Log "  approve the first 'Incoming API connection' prompt, then restart Gateway."
   exit $code
 }
 
-Log "âœ… HANDSHAKE PASSED. See $logFile"
+Log "Ã¢Å“â€¦ HANDSHAKE PASSED. See $logFile"
 exit 0

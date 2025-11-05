@@ -1,5 +1,5 @@
 """
-Backtest Strategies & Pipeline Suite (Hybrid AI Quant Pro v16.7 Ã¢â‚¬â€œ Hedge-Fund OE Grade)
+Backtest Strategies & Pipeline Suite (Hybrid AI Quant Pro v16.7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge-Fund OE Grade)
 ======================================================================================
 - Covers real strategy functions (Breakout, MA, RSI, Bollinger, MACD, VWAP)
 - Lambda signals sanity (BUY, SELL, HOLD)

@@ -1,5 +1,5 @@
 """
-Portfolio Tracker (Hybrid AI Quant Pro v91.4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge-Fund OE Grade, Polished)
+Portfolio Tracker (Hybrid AI Quant Pro v91.4 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Hedge-Fund OE Grade, Polished)
 -------------------------------------------------------------------------------
 - Tracks positions, cash, equity, realized/unrealized PnL
 - Handles long, short, flips, commissions
@@ -37,7 +37,7 @@ class PortfolioTracker:
         self.intraday_trades: List[Tuple[str, float, float]] = []
 
         logger.debug(
-            "ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ PortfolioTracker initialized | Equity=%.2f %s",
+            "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ PortfolioTracker initialized | Equity=%.2f %s",
             self.equity,
             self.base_currency,
         )
@@ -163,7 +163,7 @@ class PortfolioTracker:
         if len(rets) < 2:
             logger.debug(
                 "insufficient data for VaR"
-            )  # ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ aligned with tests
+            )  # ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ aligned with tests
             return 0.0
         try:
             cutoff = np.percentile(np.array(rets, dtype=float), (1 - alpha) * 100)

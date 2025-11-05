@@ -1,5 +1,5 @@
 """
-Core Market Data (Hybrid AI Quant Pro â€“ Hedge Fund Grade v2.1)
+Core Market Data (Hybrid AI Quant Pro Ã¢â‚¬â€œ Hedge Fund Grade v2.1)
 --------------------------------------------------------------
 Provides base interfaces/utilities for accessing market data feeds.
 """

@@ -27,7 +27,7 @@ def build_call_kwargs(fn):
             continue
         if name in sup:
             out[name] = sup[name]
-    # if only 2 or 3 params present, itâ€™s fine; engine will ignore extra
+    # if only 2 or 3 params present, itÃ¢â‚¬â„¢s fine; engine will ignore extra
     return out
 
 
@@ -55,7 +55,7 @@ def _neutralize(te):
     te.portfolio = SimpleNamespace(equity=100.0, history=[("t0", 100.0)])
 
 
-# ---------------- 241â†’251 (execute drawdown block without breach, then sizing) ----------------
+# ---------------- 241Ã¢â€ â€™251 (execute drawdown block without breach, then sizing) ----------------
 def test_ps_drawdown_block_executes_without_breach_then_sizing():
     te = make_engine()
     _neutralize(te)
@@ -116,7 +116,7 @@ def test_ps_sortino_breach_325():
         pass
 
 
-# ---------------- 334â€“339 (tail normalization) ----------------
+# ---------------- 334Ã¢â‚¬â€œ339 (tail normalization) ----------------
 def test_ps_tail_normalization_ok_to_filled():
     te = make_engine()
     _neutralize(te)

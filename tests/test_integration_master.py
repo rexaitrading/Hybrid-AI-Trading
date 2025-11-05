@@ -1,5 +1,5 @@
 """
-Integration Suite: TradeEngine v12.21 â€“ Hedge-Fund Grade & Loop-Proof
+Integration Suite: TradeEngine v12.21 Ã¢â‚¬â€œ Hedge-Fund Grade & Loop-Proof
 ----------------------------------------------------------------------
 Covers:
 - Sector tagging + exposure guardrails
@@ -183,16 +183,16 @@ def test_adaptive_fraction_paths(base_config):
 # ----------------------------------------------------------------------
 def test_reset_day_paths(base_config, portfolio, monkeypatch):
     te = TradeEngine(base_config, portfolio=portfolio)
-    # âœ… Happy path
+    # Ã¢Å“â€¦ Happy path
     assert te.reset_day()["status"] == "ok"
 
-    # âœ… Error path via portfolio.reset_day
+    # Ã¢Å“â€¦ Error path via portfolio.reset_day
     monkeypatch.setattr(
         te.portfolio, "reset_day", lambda: {"status": "error", "reason": "fail"}
     )
     assert te.reset_day()["status"] == "error"
 
-    # âœ… Error path via risk_manager.reset_day
+    # Ã¢Å“â€¦ Error path via risk_manager.reset_day
     monkeypatch.setattr(
         te.risk_manager, "reset_day", lambda: {"status": "error", "reason": "fail"}
     )

@@ -18,6 +18,6 @@ $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 if (Test-Path '.env') { Copy-Item -Force '.env' ".env.backup_$stamp" }
 Copy-Item -Force $map[$target] '.env'
 
-Write-Host "âœ… Switched to $target"
+Write-Host "Ã¢Å“â€¦ Switched to $target"
 Write-Host '---'
 Get-Content '.env' | ForEach-Object { "  $_" }

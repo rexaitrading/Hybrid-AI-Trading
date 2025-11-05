@@ -107,7 +107,7 @@ if final_state is None:
             final_state = st2
             break
         else:
-            print(f"[poller pass {attempt+1}] placeholder at {px}; waiting â€¦")
+            print(f"[poller pass {attempt+1}] placeholder at {px}; waiting Ã¢â‚¬Â¦")
             ib.waitOnUpdate(timeout=1.0)
 
 if final_state is None:

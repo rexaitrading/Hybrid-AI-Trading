@@ -1,5 +1,5 @@
 """
-Breakout Intraday Signal (Hybrid AI Quant Pro v24.1 â€“ Hedge-Fund Grade, Polished)
+Breakout Intraday Signal (Hybrid AI Quant Pro v24.1 Ã¢â‚¬â€œ Hedge-Fund Grade, Polished)
 ---------------------------------------------------------------------------------
 Logic:
 - BUY  if last close > max(highs) of lookback window (excluding current bar)
@@ -36,15 +36,15 @@ class BreakoutIntradaySignal:
     def generate(self, symbol: str, bars: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Generate breakout signal from bar data with audit-friendly reasons."""
         if not bars:
-            logger.info("No bars provided â†’ HOLD")
+            logger.info("No bars provided Ã¢â€ â€™ HOLD")
             return {"symbol": symbol, "signal": "HOLD", "reason": "no_bars"}
 
         if self.lookback <= 0:
-            logger.info("Invalid window (<=0) â†’ HOLD")
+            logger.info("Invalid window (<=0) Ã¢â€ â€™ HOLD")
             return {"symbol": symbol, "signal": "HOLD", "reason": "invalid_window"}
 
         if len(bars) < self.lookback:
-            logger.info("Not enough bars â†’ HOLD")
+            logger.info("Not enough bars Ã¢â€ â€™ HOLD")
             return {"symbol": symbol, "signal": "HOLD", "reason": "insufficient_data"}
 
         try:
@@ -52,7 +52,7 @@ class BreakoutIntradaySignal:
             highs = [float(b.get("h")) for b in bars if "h" in b]
             lows = [float(b.get("l")) for b in bars if "l" in b]
         except Exception as e:  # noqa: BLE001
-            logger.error("âŒ Failed to parse bar data: %s", e)
+            logger.error("Ã¢ÂÅ’ Failed to parse bar data: %s", e)
             return {"symbol": symbol, "signal": "HOLD", "reason": "parse_error"}
 
         if (
@@ -60,11 +60,11 @@ class BreakoutIntradaySignal:
             or len(highs) < self.lookback
             or len(lows) < self.lookback
         ):
-            logger.warning("Missing c/h/l fields â†’ HOLD")
+            logger.warning("Missing c/h/l fields Ã¢â€ â€™ HOLD")
             return {"symbol": symbol, "signal": "HOLD", "reason": "invalid_data"}
 
         if any(math.isnan(x) for x in closes + highs + lows):
-            logger.warning("NaN detected â†’ HOLD")
+            logger.warning("NaN detected Ã¢â€ â€™ HOLD")
             return {"symbol": symbol, "signal": "HOLD", "reason": "nan_detected"}
 
         # Last close vs. prior highs/lows (exclude the current bar)
@@ -83,10 +83,10 @@ class BreakoutIntradaySignal:
             logger.info("Breakout DOWN detected")
             return {"symbol": symbol, "signal": "SELL", "reason": "breakout_down"}
         if high == low == last_close:
-            logger.info("Tie case (flat range) â†’ SELL")
+            logger.info("Tie case (flat range) Ã¢â€ â€™ SELL")
             return {"symbol": symbol, "signal": "SELL", "reason": "tie_case"}
 
-        logger.debug("Inside range â†’ HOLD")
+        logger.debug("Inside range Ã¢â€ â€™ HOLD")
         return {"symbol": symbol, "signal": "HOLD", "reason": "inside_range"}
 
 

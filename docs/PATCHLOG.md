@@ -1,4 +1,4 @@
-﻿# PATCHLOG (surgical changes)
+# PATCHLOG (surgical changes)
 
 ## 20251103_190435  RiskManager: DAILY_LOSS gate hardened
 **Why:** Stabilize daily-loss flag and parser-safe block

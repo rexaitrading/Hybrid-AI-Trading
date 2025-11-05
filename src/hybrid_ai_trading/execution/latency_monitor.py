@@ -1,6 +1,6 @@
 # src/hybrid_ai_trading/execution/latency_monitor.py
 """
-Latency Monitor (Hybrid AI Quant Pro v3.0 â€“ OE Hedge-Fund Grade, AAA Coverage)
+Latency Monitor (Hybrid AI Quant Pro v3.0 Ã¢â‚¬â€œ OE Hedge-Fund Grade, AAA Coverage)
 -------------------------------------------------------------------------------
 Tracks latency, rolling avg, breach count, and halts trading after threshold breaches.
 """

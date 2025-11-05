@@ -71,7 +71,7 @@ def test_drawdown_recovery_time_hits_line_173():
 
 
 def test_sortino_no_downside_strict_fallback_value(caplog):
-    """Cover lines 130â€“131: no downside trades -> fallback using pstdev(trades) or 1.0."""
+    """Cover lines 130Ã¢â‚¬â€œ131: no downside trades -> fallback using pstdev(trades) or 1.0."""
     from statistics import mean, pstdev
 
     pt = PerformanceTracker()

@@ -25,5 +25,5 @@ def test_router_invalid_status(eng, monkeypatch):
     )
     r = eng.process_signal(
         "AAPL", "BUY", price=100, size=1
-    )  # algo=None â†’ router branch
+    )  # algo=None Ã¢â€ â€™ router branch
     assert r == {"status": "rejected", "reason": "invalid_status"}

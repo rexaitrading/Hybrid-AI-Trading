@@ -1,5 +1,5 @@
 """
-Market Logger (Hybrid AI Quant Pro v8.2 â€“ OE Hedge-Fund Grade, Polished)
+Market Logger (Hybrid AI Quant Pro v8.2 Ã¢â‚¬â€œ OE Hedge-Fund Grade, Polished)
 ------------------------------------------------------------------------
 Responsibilities:
 - Connect to IBKR TWS/Gateway
@@ -54,9 +54,9 @@ class MarketLogger:
         try:
             self.ib = IB()
             self.ib.connect(host, port, clientId=client_id)
-            logger.info("âœ… Connected to IBKR at %s:%d", host, port)
+            logger.info("Ã¢Å“â€¦ Connected to IBKR at %s:%d", host, port)
         except Exception as exc:  # noqa: BLE001
-            logger.error("âŒ Failed to connect to IBKR: %s", exc)
+            logger.error("Ã¢ÂÅ’ Failed to connect to IBKR: %s", exc)
             raise RuntimeError("IBKR connection failed") from exc
 
     # ------------------------------------------------------------------
@@ -75,7 +75,7 @@ class MarketLogger:
                 fhandle = open(csv_file, "a", newline="", encoding="utf-8")
                 writer = csv.writer(fhandle)
 
-                # âœ… Ensure header exists
+                # Ã¢Å“â€¦ Ensure header exists
                 if csv_file.stat().st_size == 0:
                     writer.writerow(["timestamp", "symbol", "last", "bid", "ask"])
 
@@ -96,20 +96,20 @@ class MarketLogger:
                             ask,
                         )
                     except Exception as err:  # noqa: BLE001
-                        logger.error("âŒ Failed to log tick for %s: %s", sym, err)
+                        logger.error("Ã¢ÂÅ’ Failed to log tick for %s: %s", sym, err)
 
                 ticker.updateEvent += log_tick
             except Exception as exc:  # noqa: BLE001
-                logger.error("âŒ Subscription failed for %s: %s", symbol, exc)
+                logger.error("Ã¢ÂÅ’ Subscription failed for %s: %s", symbol, exc)
 
-        logger.info("ðŸš€ Market logging started for: %s", ", ".join(self.symbols))
+        logger.info("Ã°Å¸Å¡â‚¬ Market logging started for: %s", ", ".join(self.symbols))
         try:
             self.ib.run()
         except KeyboardInterrupt:
-            logger.info("ðŸ›‘ Interrupted by user. Shutting down...")
+            logger.info("Ã°Å¸â€ºâ€˜ Interrupted by user. Shutting down...")
             self.shutdown()
         except Exception as exc:  # noqa: BLE001
-            logger.error("âŒ Market logging stopped unexpectedly: %s", exc)
+            logger.error("Ã¢ÂÅ’ Market logging stopped unexpectedly: %s", exc)
             self.shutdown()
 
     # ------------------------------------------------------------------
@@ -119,14 +119,14 @@ class MarketLogger:
             for sym, ticker in list(self.subscriptions.items()):
                 try:
                     self.ib.cancelMktData(ticker.contract)
-                    logger.info("âŒ Unsubscribed from %s", sym)
+                    logger.info("Ã¢ÂÅ’ Unsubscribed from %s", sym)
                 except Exception as exc:  # noqa: BLE001
-                    logger.warning("âš ï¸ Failed to unsubscribe %s: %s", sym, exc)
+                    logger.warning("Ã¢Å¡Â Ã¯Â¸Â Failed to unsubscribe %s: %s", sym, exc)
             try:
                 self.ib.disconnect()
-                logger.info("ðŸ”Œ Disconnected from IBKR")
+                logger.info("Ã°Å¸â€Å’ Disconnected from IBKR")
             except Exception as exc:  # noqa: BLE001
-                logger.warning("âš ï¸ IBKR disconnect issue: %s", exc)
+                logger.warning("Ã¢Å¡Â Ã¯Â¸Â IBKR disconnect issue: %s", exc)
             finally:
                 self.ib = None
         self.subscriptions.clear()
@@ -138,7 +138,7 @@ class MarketLogger:
 def main() -> None:  # pragma: no cover
     """CLI entry point for quick testing."""
     if IB is None:
-        sys.exit("âŒ ib_insync is not installed. Run `pip install ib-insync`.")
+        sys.exit("Ã¢ÂÅ’ ib_insync is not installed. Run `pip install ib-insync`.")
 
     symbols = ["AAPL", "TSLA"]
     logger.info("Starting MarketLogger for symbols: %s", symbols)

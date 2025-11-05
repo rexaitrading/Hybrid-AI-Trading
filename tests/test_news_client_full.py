@@ -1,5 +1,5 @@
 """
-Unit Tests Ã¢â‚¬â€œ NewsClient (Hybrid AI Quant Pro v2.5 Ã¢â‚¬â€œ Hedge-Fund OE Grade, 100% Coverage)
+Unit Tests ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ NewsClient (Hybrid AI Quant Pro v2.5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge-Fund OE Grade, 100% Coverage)
 ---------------------------------------------------------------------------------------
 Covers ALL branches of news_client.py:
 - _normalize_article: valid, missing fields, exception path
@@ -33,7 +33,7 @@ def test_normalize_article_valid_and_invalid():
     out = news_client._normalize_article(art)
     assert out["symbols"] == "AAPL,TSLA"
 
-    # Missing published_utc Ã¢â€ â€™ falls back to utcnow
+    # Missing published_utc ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ falls back to utcnow
     art2 = {"id": "2", "title": "h2", "url": "u2"}
     out2 = news_client._normalize_article(art2)
     assert "created" in out2

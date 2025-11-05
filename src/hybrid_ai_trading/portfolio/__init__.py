@@ -1,5 +1,5 @@
 """
-Hybrid AI Trading â€“ Portfolio Package (Hedge Fund Grade v2.2)
+Hybrid AI Trading Ã¢â‚¬â€œ Portfolio Package (Hedge Fund Grade v2.2)
 -------------------------------------------------------------
 Responsibilities:
 - PortfolioTracker: track holdings, equity, and exposure

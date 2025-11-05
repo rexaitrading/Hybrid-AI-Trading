@@ -1,5 +1,5 @@
 """
-Unit Tests: BollingerBandsSignal (Hybrid AI Quant Pro v24.0 â€“ Hedge-Fund Grade, 100% Coverage)
+Unit Tests: BollingerBandsSignal (Hybrid AI Quant Pro v24.0 Ã¢â‚¬â€œ Hedge-Fund Grade, 100% Coverage)
 ----------------------------------------------------------------------------------------------
 Covers:
 - Insufficient bars
@@ -72,7 +72,7 @@ def test_parse_error(monkeypatch):
 # Decision branches
 # ----------------------------------------------------------------------
 def test_flat_stdev():
-    """All closes equal â†’ stdev=0 â†’ HOLD flat_stdev."""
+    """All closes equal Ã¢â€ â€™ stdev=0 Ã¢â€ â€™ HOLD flat_stdev."""
     bars = make_bars([100] * 25)
     sig = BollingerBandsSignal(period=20)
     result = sig.generate("AAPL", bars)
@@ -81,7 +81,7 @@ def test_flat_stdev():
 
 
 def test_buy_below_lower_band():
-    """Last close well below lower band â†’ BUY."""
+    """Last close well below lower band Ã¢â€ â€™ BUY."""
     bars = make_bars([100] * 19 + [50])
     sig = BollingerBandsSignal(period=20, std_dev=2.0)
     result = sig.generate("AAPL", bars)
@@ -90,7 +90,7 @@ def test_buy_below_lower_band():
 
 
 def test_sell_above_upper_band():
-    """Last close well above upper band â†’ SELL."""
+    """Last close well above upper band Ã¢â€ â€™ SELL."""
     bars = make_bars([100] * 19 + [200])
     sig = BollingerBandsSignal(period=20, std_dev=2.0)
     result = sig.generate("AAPL", bars)
@@ -99,7 +99,7 @@ def test_sell_above_upper_band():
 
 
 def test_hold_inside_bands():
-    """Last close inside bands â†’ HOLD."""
+    """Last close inside bands Ã¢â€ â€™ HOLD."""
     # Oscillating around SMA
     bars = make_bars([100 + (i % 2) for i in range(25)])
     sig = BollingerBandsSignal(period=20, std_dev=2.0)

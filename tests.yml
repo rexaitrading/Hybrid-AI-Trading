@@ -1,4 +1,4 @@
-name: CI – Python Tests & Lint (Hybrid AI Quant Pro – Hedge Fund Level)
+name: CI â€“ Python Tests & Lint (Hybrid AI Quant Pro â€“ Hedge Fund Level)
 on:
   push:
     branches: [ "main" ]   # Run tests on pushes to main
@@ -43,7 +43,7 @@ jobs:
 
       - name: Run lint checks (flake8 + black)
         run: |
-          echo "🔍 Running flake8 and black checks"
+          echo "ðŸ” Running flake8 and black checks"
           flake8 src tests
           black --check src tests
 
@@ -59,7 +59,7 @@ jobs:
             --html=test-results/report.html --self-contained-html \
             --maxfail=1 --disable-warnings
         env:
-          # Enforce coverage minimum – hedge-fund discipline
+          # Enforce coverage minimum â€“ hedge-fund discipline
           PYTEST_ADDOPTS: "--cov-fail-under=90"
 
       - name: Upload test results (HTML + JUnit)

@@ -1,5 +1,5 @@
 """
-Polygon News Client (Hybrid AI Quant Pro v1.0 â€“ OE Grade)
+Polygon News Client (Hybrid AI Quant Pro v1.0 Ã¢â‚¬â€œ OE Grade)
 - Wraps Polygon v2 news endpoint
 - Env var: POLYGON_KEY or POLYGON_API_KEY
 - Normalizes to: {id, author, created, title, url, stocks:[{name,exchange}], source:"polygon"}

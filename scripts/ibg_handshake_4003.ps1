@@ -24,7 +24,7 @@ for ($i=1; $i -le 20; $i++){
   Start-Sleep -Seconds 3
 }
 if (-not $open){ Log "[PORT] FATAL: 4003 not listening. Ensure IB Gateway (Paper) is logged in, API enabled, port=4003."; exit 2 }
-Log "[PORT] Listening on 127.0.0.1:4003 âœ…"
+Log "[PORT] Listening on 127.0.0.1:4003 Ã¢Å“â€¦"
 
 # env for python probe
 $env:IB_HOST="127.0.0.1"
@@ -83,10 +83,10 @@ if ($code -ne 0){
   } else {
     Log "[DIAG] No gateway logs found."
   }
-  Log "Tips: Gatewayâ†’API Settings (PAPER): Enable ActiveX+Socket ON, Read-Only OFF, Port=4003, Allow localhost ON,"
+  Log "Tips: GatewayÃ¢â€ â€™API Settings (PAPER): Enable ActiveX+Socket ON, Read-Only OFF, Port=4003, Allow localhost ON,"
   Log "      Trusted IP=127.0.0.1, Master API Client ID = 0 or your clientId; approve incoming API prompt."
   exit $code
 }
 
-Log "âœ… HANDSHAKE PASSED. See $logFile"
+Log "Ã¢Å“â€¦ HANDSHAKE PASSED. See $logFile"
 exit 0

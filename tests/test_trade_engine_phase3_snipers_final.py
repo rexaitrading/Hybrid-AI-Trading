@@ -17,7 +17,7 @@ def _prep(te):
     te.portfolio = SimpleNamespace(equity=100.0, history=[("t0", 100.0)])
 
 
-# --- 241â†’251: ensure drawdown block executes WITHOUT breaching, then continue into sizing/Kelly ---
+# --- 241Ã¢â€ â€™251: ensure drawdown block executes WITHOUT breaching, then continue into sizing/Kelly ---
 def test_ps_drawdown_nonbreach_then_kelly_path():
     te = make_engine()
     _prep(te)
@@ -75,7 +75,7 @@ def test_ps_sortino_breach_325():
         pass
 
 
-# --- 334â€“339: tail normalization ("ok"â†’"filled" and "ok"â†’"normalized_ok") ---
+# --- 334Ã¢â‚¬â€œ339: tail normalization ("ok"Ã¢â€ â€™"filled" and "ok"Ã¢â€ â€™"normalized_ok") ---
 def test_ps_tail_normalization_334_339():
     te = make_engine()
     _prep(te)

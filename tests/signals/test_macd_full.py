@@ -1,5 +1,5 @@
 """
-Unit Tests: MACD Signal (Hybrid AI Quant Pro v16.6 â€“ Hedge-Fund Grade, 100% Coverage)
+Unit Tests: MACD Signal (Hybrid AI Quant Pro v16.6 Ã¢â‚¬â€œ Hedge-Fund Grade, 100% Coverage)
 ------------------------------------------------------------------------------------
 Covers every branch of macd.py:
 - Guards: empty bars, not enough bars, missing/NaN closes, empty closes, NaN MACD/Signal
@@ -81,7 +81,7 @@ def test_nan_in_closes():
 def test_buy_crossover(monkeypatch):
     ema_fast = pd.Series([1.0, 4.0])  # macd = [-1, 3]
     ema_slow = pd.Series([2.0, 1.0])
-    signal_line = pd.Series([2.0, 1.0])  # -1<2 and 3>1 â†’ BUY
+    signal_line = pd.Series([2.0, 1.0])  # -1<2 and 3>1 Ã¢â€ â€™ BUY
     monkeypatch.setattr(
         pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line])
     )
@@ -92,7 +92,7 @@ def test_buy_crossover(monkeypatch):
 def test_sell_crossover(monkeypatch):
     ema_fast = pd.Series([5.0, 1.0])  # macd = [3, -1]
     ema_slow = pd.Series([2.0, 2.0])
-    signal_line = pd.Series([1.0, 2.0])  # 3>1 and -1<2 â†’ SELL
+    signal_line = pd.Series([1.0, 2.0])  # 3>1 and -1<2 Ã¢â€ â€™ SELL
     monkeypatch.setattr(
         pd.Series, "ewm", fake_ewm_factory([ema_fast, ema_slow, signal_line])
     )
@@ -115,7 +115,7 @@ def test_macd_trend_confirmations(prices, expected):
 
 
 def test_macd_hold_explicit(monkeypatch):
-    """Force macd == signal_line â†’ HOLD final else branch."""
+    """Force macd == signal_line Ã¢â€ â€™ HOLD final else branch."""
     ema_fast = pd.Series([1.0, 2.0])
     ema_slow = pd.Series([0.5, 1.5])
     signal_line = pd.Series([0.5, 0.5])  # final macd == signal

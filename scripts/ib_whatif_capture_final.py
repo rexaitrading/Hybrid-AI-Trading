@@ -37,7 +37,7 @@ base_px = (
 base_px = round(base_px, 2)
 
 best = None
-for attempt in range(8):  # ~8 attempts over ~16â€“20s
+for attempt in range(8):  # ~8 attempts over ~16Ã¢â‚¬â€œ20s
     px = round(base_px + (attempt * 0.01), 2)  # tiny nudge to avoid caching
     o = LimitOrder("BUY", 1, px)
     o.account = acct
@@ -50,7 +50,7 @@ for attempt in range(8):  # ~8 attempts over ~16â€“20s
         break
     else:
         # keep the socket alive and let Gateway finish computing
-        print(f"[pass {attempt+1}] placeholder at {px}; waiting â€¦")
+        print(f"[pass {attempt+1}] placeholder at {px}; waiting Ã¢â‚¬Â¦")
         ib.waitOnUpdate(timeout=1.5)
 
 # final grace + one last fetch

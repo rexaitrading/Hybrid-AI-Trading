@@ -1,5 +1,5 @@
 """
-Hybrid AI Quant Pro â€“ Data Layer
+Hybrid AI Quant Pro Ã¢â‚¬â€œ Data Layer
 --------------------------------
 Unified access to external market data clients and adapters.
 

@@ -1,5 +1,5 @@
 """
-GateScore (Hybrid AI Quant Pro v37.5 â€“ Hedge Fund Grade, 100% Coverage)
+GateScore (Hybrid AI Quant Pro v37.5 Ã¢â‚¬â€œ Hedge Fund Grade, 100% Coverage)
 =======================================================================
 Weighted ensemble voting system with adaptive regime thresholds.
 
@@ -7,15 +7,15 @@ Features:
 - Weighted ensemble scoring with safe fallbacks.
 - Normalizes weights to sum=1 (guards against invalid or empty weights).
 - Adaptive threshold based on detected regime (if enabled):
-  * bull   â†’ threshold lower (easier to allow trades).
-  * bear   â†’ threshold higher (harder to allow trades).
-  * crisis â†’ threshold much higher (strict risk mode).
-  * neutral/sideways â†’ base threshold.
+  * bull   Ã¢â€ â€™ threshold lower (easier to allow trades).
+  * bear   Ã¢â€ â€™ threshold higher (harder to allow trades).
+  * crisis Ã¢â€ â€™ threshold much higher (strict risk mode).
+  * neutral/sideways Ã¢â€ â€™ base threshold.
 - Guards:
-  * Disabled gate â†’ always allow (audit-friendly path).
-  * Missing models â†’ ignored or veto depending on strict_missing.
-  * Invalid/exception in score â†’ treated as 0.
-  * total weight <= 0 â†’ block trade.
+  * Disabled gate Ã¢â€ â€™ always allow (audit-friendly path).
+  * Missing models Ã¢â€ â€™ ignored or veto depending on strict_missing.
+  * Invalid/exception in score Ã¢â€ â€™ treated as 0.
+  * total weight <= 0 Ã¢â€ â€™ block trade.
 """
 
 import logging
@@ -63,7 +63,9 @@ class GateScore:
             return {}
         total = sum(weights.values())
         if total <= 0:
-            logger.warning("âš ï¸ Invalid weights (sum<=0), assigning equal weights")
+            logger.warning(
+                "Ã¢Å¡Â Ã¯Â¸Â Invalid weights (sum<=0), assigning equal weights"
+            )
             n = len(weights)
             return {k: 1.0 / n for k in weights}
         return {k: v / total for k, v in weights.items()}
@@ -102,12 +104,16 @@ class GateScore:
 
             if m not in inputs:
                 if self.strict_missing:
-                    logger.warning("[GateScore] âŒ Missing model %s â†’ veto trade", m)
+                    logger.warning(
+                        "[GateScore] Ã¢ÂÅ’ Missing model %s Ã¢â€ â€™ veto trade", m
+                    )
                     if self.audit_mode:
                         return False, 0.0, self.base_threshold, regime
                     return False
                 else:
-                    logger.info("[GateScore] âš ï¸ Missing model %s â†’ ignored", m)
+                    logger.info(
+                        "[GateScore] Ã¢Å¡Â Ã¯Â¸Â Missing model %s Ã¢â€ â€™ ignored", m
+                    )
                     continue
 
             contrib = self._safe_score(m, inputs.get(m, 0.0))
@@ -116,13 +122,15 @@ class GateScore:
             contributing = True
 
         if not contributing:
-            logger.warning("[GateScore] âŒ No contributing models â†’ block trade")
+            logger.warning(
+                "[GateScore] Ã¢ÂÅ’ No contributing models Ã¢â€ â€™ block trade"
+            )
             if self.audit_mode:
                 return False, 0.0, self.base_threshold, regime
             return False
 
         if total_weight <= 0:
-            logger.warning("[GateScore] âŒ Total weight=0 â†’ block trade")
+            logger.warning("[GateScore] Ã¢ÂÅ’ Total weight=0 Ã¢â€ â€™ block trade")
             if self.audit_mode:
                 return False, 0.0, self.base_threshold, regime
             return False
@@ -188,7 +196,7 @@ class GateScore:
         try:
             return self.weights.get(m, 0.0) * float(val)
         except Exception as e:
-            logger.warning("âš ï¸ GateScore _safe_score failed for %s: %s", m, e)
+            logger.warning("Ã¢Å¡Â Ã¯Â¸Â GateScore _safe_score failed for %s: %s", m, e)
             return 0.0
 
 

@@ -114,13 +114,13 @@ def _positional_args_for(fn):
 
 
 def test_close_remaining_regions_precisely():
-    # 241â†’251: drawdown block executes + continues (no breach) THEN tail normalization
+    # 241Ã¢â€ â€™251: drawdown block executes + continues (no breach) THEN tail normalization
     te = make_engine()
     _max_neutralize(te)
     te.portfolio = SimpleNamespace(equity=99.0, history=[("t0", 100.0)])  # 1% drawdown
     te.portfolio.status = lambda: {"equity": 99.0, "history": [("t0", 100.0)]}
     te.config["risk"]["max_drawdown"] = 0.50  # non-breach => block runs then continues
-    # provide direct size and ok/ok submit -> tail (334â€“339)
+    # provide direct size and ok/ok submit -> tail (334Ã¢â‚¬â€œ339)
     if hasattr(te, "risk_manager"):
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 2}
     if hasattr(te, "order_manager"):

@@ -1,5 +1,5 @@
 """
-Paper Trade Demo (Hybrid AI Quant Pro â€“ Live Ready)
+Paper Trade Demo (Hybrid AI Quant Pro Ã¢â‚¬â€œ Live Ready)
 - Breakout signal on BTC/USD
 - Timezone-aware UTC stamping
 - Provides run_paper_trade(engine=None) for main.py compatibility

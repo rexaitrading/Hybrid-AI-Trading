@@ -1,5 +1,5 @@
 """
-Security Utilities (Hybrid AI Quant Pro v10.8 â€“ Hedge-Fund Grade, 100% Coverage)
+Security Utilities (Hybrid AI Quant Pro v10.8 Ã¢â‚¬â€œ Hedge-Fund Grade, 100% Coverage)
 -------------------------------------------------------------------------------
 Responsibilities:
 - Safe masking of API keys for logs and audit trails
@@ -15,10 +15,10 @@ def mask_key(key: Optional[str]) -> str:
     Mask an API key for safe logging.
 
     Rules:
-    - None or empty â†’ "None"
-    - Short (<8) â†’ returned unchanged
-    - ==8 â†’ show first 4 + '****' + last 4
-    - >8 â†’ show first 4 + stars (len-8) + last 4
+    - None or empty Ã¢â€ â€™ "None"
+    - Short (<8) Ã¢â€ â€™ returned unchanged
+    - ==8 Ã¢â€ â€™ show first 4 + '****' + last 4
+    - >8 Ã¢â€ â€™ show first 4 + stars (len-8) + last 4
 
     Examples:
         >>> mask_key(None)

@@ -437,7 +437,7 @@ def test_process_signal_partial_and_filled_paths(monkeypatch):
 def test_reset_day_both_raise_different(monkeypatch):
     """
     Force BOTH portfolio.reset_day and risk_manager.reset_day to raise
-    to exercise multi-except/aggregation paths inside reset_day (175ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ188).
+    to exercise multi-except/aggregation paths inside reset_day (175ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“188).
     """
     te = make_engine()
     if hasattr(te, "portfolio"):
@@ -453,7 +453,7 @@ def test_reset_day_both_raise_different(monkeypatch):
 
 def test_adaptive_fraction_nan_and_string(monkeypatch):
     """
-    Hit None/NaN/str handling and clamping branches in adaptive_fraction (205, 211ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ212).
+    Hit None/NaN/str handling and clamping branches in adaptive_fraction (205, 211ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“212).
     """
     te = make_engine()
     import math
@@ -481,7 +481,7 @@ def test_adaptive_fraction_nan_and_string(monkeypatch):
 
 def test_process_signal_risk_error_and_unknown_status(monkeypatch):
     """
-    Make approve_trade return status='error' and then an unknown status to hit 241ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ251 area.
+    Make approve_trade return status='error' and then an unknown status to hit 241ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“251 area.
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
@@ -504,7 +504,7 @@ def test_process_signal_risk_error_and_unknown_status(monkeypatch):
 
 def test_process_signal_negative_qty_sell(monkeypatch):
     """
-    Drive SELL path with negative/zero qty to tick guard/invalid branches (256ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ257).
+    Drive SELL path with negative/zero qty to tick guard/invalid branches (256ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“257).
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
@@ -547,7 +547,7 @@ def test_process_signal_submit_returns_empty_and_missing_status(monkeypatch):
 def test_process_signal_wait_timeout_and_cancel(monkeypatch):
     """
     Simulate a submit OK but fill-wait path that times out, then optional cancel()
-    to hit 334ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ339 tail branches.
+    to hit 334ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“339 tail branches.
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
@@ -577,7 +577,7 @@ def test_process_signal_wait_timeout_and_cancel(monkeypatch):
 
 def test_reset_day_positions_nonempty_merge(monkeypatch):
     """
-    reset_day 175ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ188: exercise the branch that inspects a *non-empty* positions list
+    reset_day 175ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“188: exercise the branch that inspects a *non-empty* positions list
     after both resets succeed (merge/summary path).
     """
     te = make_engine()
@@ -597,7 +597,7 @@ def test_reset_day_positions_nonempty_merge(monkeypatch):
 
 def test_reset_day_weird_types_but_safe(monkeypatch):
     """
-    reset_day 175ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ188: portfolio.reset_day returns list (non-dict), risk reset missing,
+    reset_day 175ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“188: portfolio.reset_day returns list (non-dict), risk reset missing,
     ensure defensive handling path is executed.
     """
     te = make_engine()
@@ -617,7 +617,7 @@ def test_reset_day_weird_types_but_safe(monkeypatch):
 
 def test_adaptive_fraction_with_cfg_clamp(monkeypatch):
     """
-    adaptive_fraction 205,211ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ212: drive *config-based* clamp (min/max) rather than generic parsing.
+    adaptive_fraction 205,211ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“212: drive *config-based* clamp (min/max) rather than generic parsing.
     """
     te = make_engine()
     # Try to attach clamp bounds on cfg/config/settings holder
@@ -658,7 +658,7 @@ def test_adaptive_fraction_with_cfg_clamp(monkeypatch):
 
 def test_process_signal_rare_statuses_and_lowercase_side(monkeypatch):
     """
-    process_signal 241ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ251 + normalization: risk statuses 'skip'/'noop', side lowercase 'buy'.
+    process_signal 241ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“251 + normalization: risk statuses 'skip'/'noop', side lowercase 'buy'.
     """
     te = make_engine()
     if hasattr(te, "risk_manager"):
@@ -701,7 +701,7 @@ def test_process_signal_submit_str_and_list(monkeypatch):
 
 def test_process_signal_waiter_filled_and_cancel_flag(monkeypatch):
     """
-    process_signal 334ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ339: waiter returns 'filled' (fast path), and explicit cancel_on_timeout flags
+    process_signal 334ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“339: waiter returns 'filled' (fast path), and explicit cancel_on_timeout flags
     toggle both branches when timeout.
     """
     te = make_engine()
@@ -770,7 +770,7 @@ def test_process_signal_waiter_filled_and_cancel_flag(monkeypatch):
 
 
 # ===========================
-# FINAL^2 snipers ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ hit the exact uncovered lines
+# FINAL^2 snipers ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ hit the exact uncovered lines
 # ===========================
 from types import SimpleNamespace
 
@@ -793,7 +793,7 @@ def test_reset_day_no_attrs_false_edges(monkeypatch):
 
 def test_adaptive_fraction_equity_le_zero_and_except(monkeypatch):
     """
-    Hits 205 (equity<=0 -> base_fraction) and 211ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ212 (except -> base_fraction).
+    Hits 205 (equity<=0 -> base_fraction) and 211ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“212 (except -> base_fraction).
     """
     te = make_engine()
     # 1) equity <= 0 with nonempty history to reach the 205 line (not the earlier guards)
@@ -804,7 +804,7 @@ def test_adaptive_fraction_equity_le_zero_and_except(monkeypatch):
     )  # <= 0 to trigger 205
     assert te.adaptive_fraction() == te.base_fraction
 
-    # 2) cause an exception in the try-block to hit 211ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ212
+    # 2) cause an exception in the try-block to hit 211ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“212
     te.portfolio = SimpleNamespace(
         equity=100.0, history=[("t0", "bad")]  # will raise in max(eq for ...)
     )
@@ -813,7 +813,7 @@ def test_adaptive_fraction_equity_le_zero_and_except(monkeypatch):
 
 def test_process_signal_drawdown_breach_and_kelly_except(monkeypatch):
     """
-    Hits 241Ã¢â‚¬â€œ246 (drawdown breach) and 256Ã¢â‚¬â€œ257 (Kelly except -> size=1).
+    Hits 241ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“246 (drawdown breach) and 256ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“257 (Kelly except -> size=1).
     We bypass sector-exposure logic to avoid needing portfolio.get_positions().
     """
     from types import SimpleNamespace
@@ -891,7 +891,7 @@ def test_process_signal_tail_normalization_to_filled_and_reason_normalized_ok(
     monkeypatch,
 ):
     """
-    Hits 334ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ337 normalization (status 'ok' -> 'filled', reason 'ok' -> 'normalized_ok').
+    Hits 334ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“337 normalization (status 'ok' -> 'filled', reason 'ok' -> 'normalized_ok').
     We coerce submit to return a dict that reaches the tail.
     """
     te = make_engine()
@@ -973,9 +973,9 @@ def test_ps_sortino_breach_blocked(monkeypatch):
 
 def test_ps_tail_normalization_ok_to_filled(monkeypatch):
     """
-    Hit lines 334Ã¢â‚¬â€œ339: tail normalization where result.status==ok -> filled
+    Hit lines 334ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“339: tail normalization where result.status==ok -> filled
     and reason==ok -> normalized_ok.
-    Also exercises 241Ã¢â‚¬â€œ257 by ensuring no drawdown, and Kelly not used.
+    Also exercises 241ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“257 by ensuring no drawdown, and Kelly not used.
     """
     from types import SimpleNamespace
 

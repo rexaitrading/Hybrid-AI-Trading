@@ -1,10 +1,10 @@
 """
-Kelly Sizer (Hybrid AI Quant Pro v13.2 â€“ Suite-Aligned, Hedge Fund OE Grade, Fixed)
+Kelly Sizer (Hybrid AI Quant Pro v13.2 Ã¢â‚¬â€œ Suite-Aligned, Hedge Fund OE Grade, Fixed)
 -----------------------------------------------------------------------------------
 Responsibilities:
 - Compute Kelly Criterion fraction (scaled, clamped)
 - Regime-aware scaling (input from RegimeDetector)
-- Integrates with RiskManager veto (PnL breach â†’ return 0)
+- Integrates with RiskManager veto (PnL breach Ã¢â€ â€™ return 0)
 - Structured audit trail for compliance & backtests
 - Supports batch portfolio sizing
 - Safe persistence of parameters (JSON)
@@ -41,7 +41,7 @@ class KellySizer:
         self.fraction = fraction
         self.regime_factor = regime_factor
         logger.info(
-            "âœ… KellySizer initialized | win_rate=%s, payoff=%s, fraction=%s, regime_factor=%s",
+            "Ã¢Å“â€¦ KellySizer initialized | win_rate=%s, payoff=%s, fraction=%s, regime_factor=%s",
             _safe_fmt(self.win_rate),
             _safe_fmt(self.payoff),
             _safe_fmt(self.fraction),
@@ -53,16 +53,20 @@ class KellySizer:
         """Return Kelly fraction (scaled, clamped in [0,1])."""
         try:
             if risk_veto:
-                logger.warning("âš ï¸ Risk veto active â†’ Kelly fraction=0.0")
+                logger.warning(
+                    "Ã¢Å¡Â Ã¯Â¸Â Risk veto active Ã¢â€ â€™ Kelly fraction=0.0"
+                )
                 return 0.0
             if self.payoff <= 0 or not (0 <= self.win_rate <= 1):
-                logger.warning("âš ï¸ Invalid Kelly inputs â†’ returning 0.0")
+                logger.warning(
+                    "Ã¢Å¡Â Ã¯Â¸Â Invalid Kelly inputs Ã¢â€ â€™ returning 0.0"
+                )
                 return 0.0
             f_star = self.win_rate - (1 - self.win_rate) / self.payoff
             scaled = f_star * max(0.0, self.fraction) * max(0.0, self.regime_factor)
             clamped = max(0.0, min(scaled, 1.0))
             logger.debug(
-                "ðŸ“Š Kelly fraction | f*=%.4f, scale=%.2f, regime=%.2f, clamped=%.4f",
+                "Ã°Å¸â€œÅ  Kelly fraction | f*=%.4f, scale=%.2f, regime=%.2f, clamped=%.4f",
                 f_star,
                 self.fraction,
                 self.regime_factor,
@@ -80,7 +84,9 @@ class KellySizer:
         """Return numeric position size. Detailed decision is logged for audit."""
         try:
             if equity <= 0 or price <= 0:
-                logger.warning("âš ï¸ Invalid equity/price â†’ returning 0.0")
+                logger.warning(
+                    "Ã¢Å¡Â Ã¯Â¸Â Invalid equity/price Ã¢â€ â€™ returning 0.0"
+                )
                 return 0.0
             f = self.kelly_fraction(risk_veto=risk_veto)
             size = (equity * f) / price
@@ -91,7 +97,7 @@ class KellySizer:
                 "price": price,
                 "reason": "risk_veto" if risk_veto else "ok",
             }
-            logger.info("ðŸ“ˆ Kelly sizing decision | %s", json.dumps(decision))
+            logger.info("Ã°Å¸â€œË† Kelly sizing decision | %s", json.dumps(decision))
             return max(0.0, size)
         except Exception as e:
             logger.error("Kelly sizing failed: %s", e)
@@ -121,7 +127,7 @@ class KellySizer:
         self.fraction = fraction
         self.regime_factor = regime_factor
         logger.info(
-            "ðŸ”„ KellySizer updated | win_rate=%s, payoff=%s, fraction=%s, regime_factor=%s",
+            "Ã°Å¸â€â€ž KellySizer updated | win_rate=%s, payoff=%s, fraction=%s, regime_factor=%s",
             _safe_fmt(self.win_rate),
             _safe_fmt(self.payoff),
             _safe_fmt(self.fraction),
@@ -143,9 +149,9 @@ class KellySizer:
                     f,
                     indent=2,
                 )
-            logger.info("ðŸ’¾ KellySizer parameters saved to %s", path)
+            logger.info("Ã°Å¸â€™Â¾ KellySizer parameters saved to %s", path)
         except Exception as e:
-            logger.error("âŒ Failed to save KellySizer params: %s", e)
+            logger.error("Ã¢ÂÅ’ Failed to save KellySizer params: %s", e)
 
     def __repr__(self) -> str:
         return (

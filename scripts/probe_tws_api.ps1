@@ -26,7 +26,7 @@ python $tmpRaw
 $rawOk = ($LASTEXITCODE -eq 0)
 Remove-Item $tmpRaw -ErrorAction SilentlyContinue
 
-# B) ib_insync probe: cidA then cidB (short timeouts; wonâ€™t hang)
+# B) ib_insync probe: cidA then cidB (short timeouts; wonÃ¢â‚¬â„¢t hang)
 $pyIB = @"
 from ib_insync import IB
 import sys

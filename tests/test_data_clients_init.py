@@ -1,6 +1,6 @@
 """
-Unit Tests â€“ Data Clients Package Init
-(Hybrid AI Quant Pro v1.0 â€“ Hedge-Fund OE Grade, 100% Coverage)
+Unit Tests Ã¢â‚¬â€œ Data Clients Package Init
+(Hybrid AI Quant Pro v1.0 Ã¢â‚¬â€œ Hedge-Fund OE Grade, 100% Coverage)
 ----------------------------------------------------------------
 Covers:
 - __all__ exports

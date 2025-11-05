@@ -1,5 +1,5 @@
 """
-Edge Case Coverage Tests: Backtest Pipeline (v16.7 Ã¢â‚¬â€œ Hedge-Fund OE Grade, Full Coverage)
+Edge Case Coverage Tests: Backtest Pipeline (v16.7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge-Fund OE Grade, Full Coverage)
 =======================================================================================
 Covers ALL branches of backtest.py:
 - Config loader (missing, parse fail, not dict, bad keys, none values)
@@ -261,7 +261,7 @@ def test_export_leaderboard_success(tmp_path):
 
 
 def test_strategy_runtime_error(monkeypatch, tmp_path, caplog):
-    """Force a runtime error inside strategy Ã¢â€ â€™ should log 'strategy ... failed'."""
+    """Force a runtime error inside strategy ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ should log 'strategy ... failed'."""
 
     def bad_strategy(_bars):
         return 1 / 0  # raises ZeroDivisionError

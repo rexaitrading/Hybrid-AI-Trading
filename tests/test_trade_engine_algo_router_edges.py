@@ -73,7 +73,7 @@ def _mk():
 def test_algo_fail_then_router_error(monkeypatch):
     te = _mk()
 
-    # 1) dynamic algo import failure (261â€“282)
+    # 1) dynamic algo import failure (261Ã¢â‚¬â€œ282)
     monkeypatch.setattr(
         importlib,
         "import_module",
@@ -88,7 +88,7 @@ def test_algo_fail_then_router_error(monkeypatch):
                 pass
             break
 
-    # 2) router direct error (286â€“288, neighbors)
+    # 2) router direct error (286Ã¢â‚¬â€œ288, neighbors)
     if hasattr(te, "order_manager"):
         te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
             RuntimeError("router")

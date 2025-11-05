@@ -51,7 +51,7 @@ def show_diff(target_file: str):
             break
 
     if not match:
-        print(f"âŒ File {target_file} not found in coverage.json")
+        print(f"Ã¢ÂÅ’ File {target_file} not found in coverage.json")
         return
 
     fname, meta = match
@@ -67,15 +67,15 @@ def show_diff(target_file: str):
     print(f"Branches: {summary['covered_branches']}/{summary['num_branches']}")
 
     if missing:
-        print("\nâŒ Missing Lines:")
+        print("\nÃ¢ÂÅ’ Missing Lines:")
         print(", ".join(map(str, missing)))
     if branches:
-        print("\nâŒ Missing Branches:")
+        print("\nÃ¢ÂÅ’ Missing Branches:")
         for br in branches:
-            print(f"  Line {br[0]} â†’ Branch {br[1]}")
+            print(f"  Line {br[0]} Ã¢â€ â€™ Branch {br[1]}")
 
     if not missing and not branches:
-        print("\nâœ… 100% Coverage!")
+        print("\nÃ¢Å“â€¦ 100% Coverage!")
 
 
 if __name__ == "__main__":

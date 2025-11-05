@@ -1,4 +1,4 @@
-﻿# Context:
+# Context:
 #   (Issue/Reason/Link to failing test or screenshot)
 #
 # Change:

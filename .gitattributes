@@ -1,14 +1,6 @@
-* text=auto eol=lf
+﻿* text=auto eol=lf
 *.ps1 text eol=lf
 *.py  text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
-*.json text eol=lf
 *.md  text eol=lf
-# binaries
-*.png -text
-*.jpg -text
-*.jpeg -text
-*.gif -text
-*.pdf -text
-* text=auto eol=lf

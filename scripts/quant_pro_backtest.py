@@ -1,5 +1,5 @@
 """
-Quant Pro Backtest Driver (Hybrid AI Quant Pro v26.0 â€“ Hedge Fund Level)
+Quant Pro Backtest Driver (Hybrid AI Quant Pro v26.0 Ã¢â‚¬â€œ Hedge Fund Level)
 ------------------------------------------------------------------------
 Responsibilities:
 - Load configuration (risk, costs, strategy params)
@@ -80,7 +80,7 @@ def load_data_ccxt(
 def main() -> None:
     """Run backtest using ExecutionEngine + PerformanceTracker."""
 
-    # === Config (stub â€“ replace with YAML loader later) ===
+    # === Config (stub Ã¢â‚¬â€œ replace with YAML loader later) ===
     config: Dict[str, Any] = {
         "risk": {
             "daily_loss_limit": -0.03,
@@ -108,12 +108,12 @@ def main() -> None:
     # === Fetch real data (example: AAPL from Polygon) ===
     api_key = os.getenv("POLYGON_KEY", "")
     if not api_key:
-        logger.error("âŒ POLYGON_KEY not found in environment")
+        logger.error("Ã¢ÂÅ’ POLYGON_KEY not found in environment")
         return
 
     df = load_data_polygon("AAPL", "2025-01-01", "2025-01-10", api_key)
 
-    logger.info("ðŸš€ Starting backtest on %d bars", len(df))
+    logger.info("Ã°Å¸Å¡â‚¬ Starting backtest on %d bars", len(df))
 
     for _, row in df.iterrows():
         ts: datetime = row["timestamp"].to_pydatetime()
@@ -131,7 +131,7 @@ def main() -> None:
 
     # === Final Report ===
     metrics = perf.snapshot()
-    logger.info("ðŸ“ˆ Final Performance Metrics:")
+    logger.info("Ã°Å¸â€œË† Final Performance Metrics:")
     for k, v in metrics.items():
         logger.info("  %-15s %s", k, v)
 
@@ -139,7 +139,7 @@ def main() -> None:
     Path("reports").mkdir(exist_ok=True)
     out_path = Path("reports/performance_snapshot.json")
     perf.export_json(str(out_path))
-    logger.info("âœ… Performance snapshot saved â†’ %s", out_path)
+    logger.info("Ã¢Å“â€¦ Performance snapshot saved Ã¢â€ â€™ %s", out_path)
 
 
 # ---------------------------------------------------------------------

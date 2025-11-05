@@ -26,7 +26,7 @@ def round2(x):
 
 
 def try_ticks(ib, contract, max_wait=6.0):
-    "Try realtime â†’ delayed â†’ delayed-frozen, return (px, source, ticker)"
+    "Try realtime Ã¢â€ â€™ delayed Ã¢â€ â€™ delayed-frozen, return (px, source, ticker)"
     for mdt in (1, 3, 4):
         try:
             ib.reqMarketDataType(mdt)

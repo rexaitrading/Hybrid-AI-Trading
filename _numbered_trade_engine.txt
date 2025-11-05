@@ -1,17 +1,17 @@
    1: """
-   2: Trade Engine (Hybrid AI Quant Pro v17.5 â€“ Hedge Fund Grade, Loop-Proof Normalized)
+   2: Trade Engine (Hybrid AI Quant Pro v17.5 Ã¢â‚¬â€œ Hedge Fund Grade, Loop-Proof Normalized)
    3: ---------------------------------------------------------------------------------
-   4: - Guardrails BEFORE routing: equity â†’ sector â†’ hedge â†’ drawdown
+   4: - Guardrails BEFORE routing: equity Ã¢â€ â€™ sector Ã¢â€ â€™ hedge Ã¢â€ â€™ drawdown
    5: - Router normalized BEFORE regime/filters/performance
-   6: - Regime-disabled overrides Sharpe/Sortino âœ…
-   7: - Sentiment BEFORE GateScore BEFORE Sharpe/Sortino âœ…
+   6: - Regime-disabled overrides Sharpe/Sortino Ã¢Å“â€¦
+   7: - Sentiment BEFORE GateScore BEFORE Sharpe/Sortino Ã¢Å“â€¦
    8: - Kelly config sanitized (drops "enabled")
    9: - Audit logging always creates files
   10: - alert() implemented for Slack/Telegram/Email
-  11: - record_trade_outcome added âœ…
-  12: - reset_day patched with safe fallback âœ…
-  13: - ðŸ”‘ Final normalization: "ok" â†’ "filled" for both status and reason
-  14: - ðŸ”’ FIX: unknown algo now returns early as rejected (no normalization overwrite)
+  11: - record_trade_outcome added Ã¢Å“â€¦
+  12: - reset_day patched with safe fallback Ã¢Å“â€¦
+  13: - Ã°Å¸â€â€˜ Final normalization: "ok" Ã¢â€ â€™ "filled" for both status and reason
+  14: - Ã°Å¸â€â€™ FIX: unknown algo now returns early as rejected (no normalization overwrite)
   15: """
   16:
   17: import csv
@@ -276,7 +276,7 @@
  276:                     )
  277:                 else:
  278:                     logger.warning("Unknown algo requested: %s", algo)
- 279:                     # ðŸ”‘ FIX: Early return ensures unknown algo is not normalized to "filled"
+ 279:                     # Ã°Å¸â€â€˜ FIX: Early return ensures unknown algo is not normalized to "filled"
  280:                     return {"status": "rejected", "reason": "unknown_algo"}
  281:             except Exception as e:
  282:                 return {"status": "error", "reason": f"algo_error:{e}"}

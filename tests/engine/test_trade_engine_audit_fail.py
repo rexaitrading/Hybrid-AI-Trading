@@ -19,7 +19,7 @@ def eng_ok():
 
 
 def test_audit_write_failure_is_logged(monkeypatch, eng_ok, caplog):
-    # Make audit raise so we hit logger.error lines (351â€“352)
+    # Make audit raise so we hit logger.error lines (351Ã¢â‚¬â€œ352)
     monkeypatch.setattr(
         eng_ok,
         "_write_audit",

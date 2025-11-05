@@ -1,5 +1,5 @@
 """
-Paper Simulator (Hybrid AI Quant Pro v13.0 â€“ Hedge Fund Level)
+Paper Simulator (Hybrid AI Quant Pro v13.0 Ã¢â‚¬â€œ Hedge Fund Level)
 --------------------------------------------------------------
 - Supports market, limit, stop, and stop-limit orders
 - Simulates fills with latency, partial fills, slippage, commissions
@@ -137,7 +137,7 @@ class PaperSimulator:
             result["bracket"] = {"stop": stop_price, "target": limit_price}
 
         logger.info(
-            "ðŸ“Š Paper fill | %s %s %s @ %.2f | Notional=%.2f | Comm=%.2f | Carry=%.2f",
+            "Ã°Å¸â€œÅ  Paper fill | %s %s %s @ %.2f | Notional=%.2f | Comm=%.2f | Carry=%.2f",
             side,
             size,
             symbol,

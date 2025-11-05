@@ -104,7 +104,7 @@ def main():
             outsideRth=os.getenv("OUTSIDE_RTH", "true").lower() in ("1", "true", "yes"),
         )
         tr = ib.placeOrder(c, o)
-        print(f"[PLAN] {side} {qty} {sym} @ ~{limit} (IOC) notionalâ‰ˆ${notional}")
+        print(f"[PLAN] {side} {qty} {sym} @ ~{limit} (IOC) notionalÃ¢â€°Ë†${notional}")
         print("[SUBMIT] sent, waiting...")
         for _ in range(40):
             ib.sleep(0.2)

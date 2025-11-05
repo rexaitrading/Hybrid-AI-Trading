@@ -75,7 +75,7 @@ $ok = $false
   if ($_ % 10 -eq 0) { Log ("...waiting for {0} owned by ibgateway (sec {1})" -f $Port, $_) }
 }
 if (-not $ok) { Log "FATAL: Port $Port not owned by ibgateway.exe. Login + API settings ($Profile), then re-run."; exit 2 }
-Log "[PORT] $Port is OPEN and owned by ibgateway.exe âœ…"
+Log "[PORT] $Port is OPEN and owned by ibgateway.exe Ã¢Å“â€¦"
 
 # ---------- python probe (version-proof) ----------
 $stdout = Join-Path $logD ("phase1_py_{0}_{1}.out.txt" -f $Profile,$ts)
@@ -122,5 +122,5 @@ $code = $proc.ExitCode
 Get-Content $stdout | Tee-Object -FilePath $log -Append | Out-Null
 Get-Content $stderr | Tee-Object -FilePath $log -Append | Out-Null
 Log "[PY] ExitCode=$code"
-if ($code -ne 0) { Log "âŒ Probe failed. Fix API on $Profile (Read-Only OFF, Master=0/ClientId, localhost ON, Trusted 127.0.0.1). Log: $log"; exit $code }
-Log "âœ… Phase1 OK. Log: $log"
+if ($code -ne 0) { Log "Ã¢ÂÅ’ Probe failed. Fix API on $Profile (Read-Only OFF, Master=0/ClientId, localhost ON, Trusted 127.0.0.1). Log: $log"; exit $code }
+Log "Ã¢Å“â€¦ Phase1 OK. Log: $log"

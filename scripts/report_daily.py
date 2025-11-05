@@ -123,17 +123,17 @@ def main():
         # if lots of ABORT -> after-hours attempts
         if S["abort"] >= 2:
             suggestions.append(
-                f"- **{sym}**: Many ABORTs â†’ after-hours. Keep `ABORT_IF_NO_QUOTE=true` (good)."
+                f"- **{sym}**: Many ABORTs Ã¢â€ â€™ after-hours. Keep `ABORT_IF_NO_QUOTE=true` (good)."
             )
 
-        # if low fill rate â†’ suggest +1 bps for tomorrow
+        # if low fill rate Ã¢â€ â€™ suggest +1 bps for tomorrow
         if fillable >= 3 and fill_rate < 60:
             bump = 1 if sym in ("MSFT", "NVDA") else 1
             suggestions.append(
                 f"- **{sym}**: Fill rate {fill_rate:.0f}% (<60%). Try **+{bump} bps** slippage tomorrow."
             )
 
-        # if 100% IOC cancels during RTH (no ABORTs) â†’ bump bps too
+        # if 100% IOC cancels during RTH (no ABORTs) Ã¢â€ â€™ bump bps too
         if S["cancelled"] >= 3 and S["abort"] == 0 and S["filled"] == 0:
             suggestions.append(
                 f"- **{sym}**: All IOC cancelled. Increase slippage bps slightly or wait for liquidity windows."
@@ -141,7 +141,7 @@ def main():
 
     # Build Markdown
     md = []
-    md.append(f"# Daily Report â€” {today}")
+    md.append(f"# Daily Report Ã¢â‚¬â€ {today}")
     md.append("")
     md.append("## Summary")
     md.append(
@@ -153,7 +153,7 @@ def main():
         fillable = S["filled"] + S["cancelled"]
         fill_rate = (S["filled"] / fillable) * 100 if fillable > 0 else 0.0
         md.append(
-            f"**{sym}** â€” orders {S['orders']}, filled {S['filled']}, cancelled {S['cancelled']}, abort {S['abort']}, fill-rate {fill_rate:.0f}%  |  realized PnL: **${S['realized_pnl']:.2f}**"
+            f"**{sym}** Ã¢â‚¬â€ orders {S['orders']}, filled {S['filled']}, cancelled {S['cancelled']}, abort {S['abort']}, fill-rate {fill_rate:.0f}%  |  realized PnL: **${S['realized_pnl']:.2f}**"
         )
     md.append("")
     md.append("## Suggestions for Tomorrow")

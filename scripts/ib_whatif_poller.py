@@ -54,7 +54,7 @@ for attempt in range(8):  # ~8s total with sleeps; gateway shows final within <1
     ib.waitOnUpdate(timeout=1.0)
 
 if best is None:
-    # Last chance â€“ one more settle and final try
+    # Last chance Ã¢â‚¬â€œ one more settle and final try
     ib.waitOnUpdate(timeout=1.0)
     best = ib.whatIfOrder(c, o)
 

@@ -1,5 +1,5 @@
 """
-Probe IB Connection (v3.0 â€“ Env Override + Summary + Market Snapshot + What-If)
+Probe IB Connection (v3.0 Ã¢â‚¬â€œ Env Override + Summary + Market Snapshot + What-If)
 -------------------------------------------------------------------------------
 - Loads .env with override=True so it beats OS env vars
 - Connects to host/port/clientId from env
@@ -43,7 +43,7 @@ def try_connect(host, port, cid, label="primary"):
     try:
         ib.connect(host, port, clientId=cid)
         if ib.isConnected():
-            print("âœ… Connected successfully!")
+            print("Ã¢Å“â€¦ Connected successfully!")
             print("Server version:", ib.client.serverVersion())
             print("TWS/Gateway time:", ib.reqCurrentTime())
 
@@ -78,10 +78,10 @@ def try_connect(host, port, cid, label="primary"):
 
             return True
         else:
-            print("âŒ Connected returned False.")
+            print("Ã¢ÂÅ’ Connected returned False.")
             return False
     except Exception as e:
-        print(f"âŒ API connection failed ({label}): {repr(e)}")
+        print(f"Ã¢ÂÅ’ API connection failed ({label}): {repr(e)}")
         return False
     finally:
         ib.disconnect()
@@ -92,15 +92,17 @@ def main():
     host, port, cid = get_cfg()
 
     if host == "127.0.0.1":
-        print("âš ï¸ Host is 127.0.0.1; prefer 'localhost' so IPv6 ::1 works.")
+        print("Ã¢Å¡Â Ã¯Â¸Â Host is 127.0.0.1; prefer 'localhost' so IPv6 ::1 works.")
 
     ok = try_connect(host, port, cid, label="env")
     if ok:
         return
 
-    # Fallback only if env wasnâ€™t already the known-good combo
+    # Fallback only if env wasnÃ¢â‚¬â„¢t already the known-good combo
     if not (host in ("localhost", "::1") and port == 4002):
-        print("ðŸ” Trying fallback to localhost:4002 (Gateway paper, IPv6-friendly)...")
+        print(
+            "Ã°Å¸â€Â Trying fallback to localhost:4002 (Gateway paper, IPv6-friendly)..."
+        )
         try_connect("localhost", 4002, cid if cid else 7, label="fallback")
 
 

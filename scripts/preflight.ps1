@@ -75,12 +75,12 @@ try {
 
 # 4) Verdict
 if ($fail.Count) {
-  Write-Host "âŒ PRE-FLIGHT: NO-GO"
+  Write-Host "Ã¢ÂÅ’ PRE-FLIGHT: NO-GO"
   $fail | ForEach-Object { Write-Host " - $_" }
   if ($StayOpen) { [void](Read-Host "Press Enter to close") }
   exit 1
 } else {
-  Write-Host "âœ… PRE-FLIGHT: GO"
+  Write-Host "Ã¢Å“â€¦ PRE-FLIGHT: GO"
   if ($StayOpen) { [void](Read-Host "Press Enter to close") }
   exit 0
 }

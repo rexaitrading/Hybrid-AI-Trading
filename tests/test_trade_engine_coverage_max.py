@@ -160,7 +160,7 @@ def test_pass_flow_header_and_normalize(tmp_path):
         assert g["status"] == "filled" and g["reason"] == "normalized_ok"
 
 
-# ---------- 2) ALERTS: success + exceptions (103â€“144) ----------
+# ---------- 2) ALERTS: success + exceptions (103Ã¢â‚¬â€œ144) ----------
 def test_alerts_success_and_exceptions(monkeypatch):
     te = _mk()
 
@@ -213,7 +213,7 @@ def test_alerts_success_and_exceptions(monkeypatch):
         te._fire_alert("B")
 
 
-# ---------- 3) AUDIT: header + exception (154â€“169) ----------
+# ---------- 3) AUDIT: header + exception (154Ã¢â‚¬â€œ169) ----------
 def test_audit_header_then_exception(monkeypatch, tmp_path):
     te = _mk()
     te.audit_log = str(tmp_path / "audit.csv")
@@ -258,7 +258,7 @@ def test_invalid_signal_and_price_and_equity_depleted():
     )  # equity depleted
 
 
-# ---------- 5) SECTOR EXPOSURE (239â€“354) ----------
+# ---------- 5) SECTOR EXPOSURE (239Ã¢â‚¬â€œ354) ----------
 def test_sector_exposure_path():
     te = _mk(
         cfg_override={"risk": {"intraday_sector_exposure": 0.001}},
@@ -267,7 +267,7 @@ def test_sector_exposure_path():
     _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
 
 
-# ---------- 6) ALGO & ROUTER ERROR (263â€“269, 286â€“288) ----------
+# ---------- 6) ALGO & ROUTER ERROR (263Ã¢â‚¬â€œ269, 286Ã¢â‚¬â€œ288) ----------
 def test_algo_and_router_error(monkeypatch):
     te = _mk()
 
@@ -297,7 +297,7 @@ def test_algo_and_router_error(monkeypatch):
         te._route_direct("AAPL", "BUY", 1, 1.0)
 
 
-# ---------- 7) FILTER VETO (306/312) + RATIO VETO (317â€“326) + audit capture (352) ----------
+# ---------- 7) FILTER VETO (306/312) + RATIO VETO (317Ã¢â‚¬â€œ326) + audit capture (352) ----------
 def test_filters_ratios_and_audit_capture(monkeypatch, tmp_path):
     te = _mk()
     te.config.setdefault("filters", {})
@@ -318,7 +318,7 @@ def test_filters_ratios_and_audit_capture(monkeypatch, tmp_path):
             te._fire_alert("audit capture")
 
 
-# ---------- 8) POSITIONS/HISTORY (376/379) + trade outcome log (384â€“387) ----------
+# ---------- 8) POSITIONS/HISTORY (376/379) + trade outcome log (384Ã¢â‚¬â€œ387) ----------
 def test_positions_history_outcome(caplog):
     te = _mk()
     if hasattr(te, "get_positions"):
@@ -335,7 +335,7 @@ def test_positions_history_outcome(caplog):
         te.record_trade_outcome(1.23)
 
 
-# ---------- 9) RESET DAY branches: portfolio, risk, generic (175â€“198) ----------
+# ---------- 9) RESET DAY branches: portfolio, risk, generic (175Ã¢â‚¬â€œ198) ----------
 def test_reset_day_branches(monkeypatch):
     te = _mk()
     if hasattr(te, "portfolio") and hasattr(te.portfolio, "reset_day"):
@@ -360,7 +360,7 @@ def test_reset_day_branches(monkeypatch):
         te.daily_reset()
 
 
-# ---------- 10) FUZZER: best-effort touch of miscellaneous helpers (incl. 201â€“212, 368, 373) ----------
+# ---------- 10) FUZZER: best-effort touch of miscellaneous helpers (incl. 201Ã¢â‚¬â€œ212, 368, 373) ----------
 def test_reflective_method_fuzzer():
     te = _mk()
     # safe defaults for parameter names commonly used

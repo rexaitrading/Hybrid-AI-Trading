@@ -2,7 +2,7 @@ from hybrid_ai_trading.utils.time_utils import utc_now
 
 # src/hybrid_ai_trading/performance_tracker.py
 """
-Performance Tracker (Hybrid AI Quant Pro v21.2 Ã¢â‚¬â€œ Hedge Fund OE Grade, AAA Coverage)
+Performance Tracker (Hybrid AI Quant Pro v21.2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge Fund OE Grade, AAA Coverage)
 ----------------------------------------------------------------------------------
 - Record trades and equity curve (rolling window)
 - Compute win rate, payoff, ROI, Sharpe, Sortino
@@ -119,7 +119,7 @@ class PerformanceTracker:
         avg = mean(self.trades)
         downside = [t for t in self.trades if t < 0]
         if not downside:
-            logger.warning("No downside trades Ã¢â€ â€™ fallback")
+            logger.warning("No downside trades ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fallback")
             return (avg - risk_free) / (pstdev(self.trades) or 1.0)
         try:
             dd_std = pstdev(downside)
@@ -215,6 +215,6 @@ class PerformanceTracker:
         try:
             with open(path, "w") as f:
                 json.dump(self.snapshot(), f, indent=2)
-            logger.info(f"Performance snapshot exported Ã¢â€ â€™ {path}")
+            logger.info(f"Performance snapshot exported ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ {path}")
         except Exception as e:
             logger.error(f"Failed to export performance snapshot: {e}")

@@ -24,7 +24,7 @@ def _install(monkeypatch, name, executor_cls):
     importlib.invalidate_caches()
 
 
-class WeirdExec:  # returns status not in allowed set â†’ invalid_status
+class WeirdExec:  # returns status not in allowed set Ã¢â€ â€™ invalid_status
     def __init__(self, om):
         pass
 

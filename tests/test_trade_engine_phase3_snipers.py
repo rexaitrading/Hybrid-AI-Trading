@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from tests.test_trade_engine_optionA_exec100 import make_engine
 
 
-# ---------- reset_day (175â€“188) ----------
+# ---------- reset_day (175Ã¢â‚¬â€œ188) ----------
 def test_reset_day_both_absent_and_postmerge_path():
     te = make_engine()
     # Replace with bare namespaces so hasattr(..., "reset_day") is False for both
@@ -14,24 +14,24 @@ def test_reset_day_both_absent_and_postmerge_path():
     assert r.get("status") in {
         "ok",
         "error",
-    }  # we mainly need execution through 175â€“188
+    }  # we mainly need execution through 175Ã¢â‚¬â€œ188
 
 
-# ---------- adaptive_fraction (205, 211â€“212) ----------
+# ---------- adaptive_fraction (205, 211Ã¢â‚¬â€œ212) ----------
 def test_adaptive_fraction_equity_le_zero_hits_205_and_exception_hits_211_212():
     te = make_engine()
     # equity<=0 with non-empty history -> 205
     te.portfolio = SimpleNamespace(equity=0, history=[("t0", 100.0)])
     bf = getattr(te, "base_fraction", 0.5)
     assert te.adaptive_fraction() == bf
-    # exception in try block -> 211â€“212
+    # exception in try block -> 211Ã¢â‚¬â€œ212
     te.portfolio = SimpleNamespace(
         equity=100.0, history=[("t0", "bad")]
     )  # max() will explode
     assert te.adaptive_fraction() == bf
 
 
-# ---------- process_signal (241â€“251 / 247â€“248 / 256â€“257) ----------
+# ---------- process_signal (241Ã¢â‚¬â€œ251 / 247Ã¢â‚¬â€œ248 / 256Ã¢â‚¬â€œ257) ----------
 def _prep(te):
     # neutralize sector exposure so it doesn't short-circuit
     if hasattr(te, "_sector_exposure_breach"):
@@ -54,7 +54,7 @@ def test_ps_drawdown_breach_block_and_guard_lines():
     if hasattr(te, "risk_manager"):
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": 1}
     try:
-        te.process_signal("AAPL", "BUY", 1)  # 241â€“246
+        te.process_signal("AAPL", "BUY", 1)  # 241Ã¢â‚¬â€œ246
     except Exception:
         pass
 
@@ -63,7 +63,7 @@ def test_ps_kelly_exception_sets_size_and_covers_256_257():
     te = make_engine()
     _prep(te)
     te.config["risk"]["max_drawdown"] = 0.99  # gate present but not breached
-    # Force Kelly by returning size=None and make Kelly raise -> size fallback path (256â€“257)
+    # Force Kelly by returning size=None and make Kelly raise -> size fallback path (256Ã¢â‚¬â€œ257)
     if hasattr(te, "risk_manager"):
         te.risk_manager.approve_trade = lambda *a, **k: {"status": "ok", "size": None}
     te.kelly_sizer = SimpleNamespace(
@@ -109,7 +109,7 @@ def test_ps_sortino_breach_hits_325():
         pass
 
 
-# ---------- process_signal tail normalization (334â€“339) ----------
+# ---------- process_signal tail normalization (334Ã¢â‚¬â€œ339) ----------
 def test_ps_tail_normalization_ok_to_filled_and_reason_normalized_ok():
     te = make_engine()
     _prep(te)

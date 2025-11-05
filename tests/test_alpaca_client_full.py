@@ -1,5 +1,5 @@
 """
-Unit Tests â€“ AlpacaClient (Hybrid AI Quant Pro v12.1 â€“ Hedge-Fund OE Grade, AAA+ Coverage)
+Unit Tests Ã¢â‚¬â€œ AlpacaClient (Hybrid AI Quant Pro v12.1 Ã¢â‚¬â€œ Hedge-Fund OE Grade, AAA+ Coverage)
 ------------------------------------------------------------------------------------------
 Covers all branches of alpaca_client.py with stable micro-tests:
 - __init__ with and without keys

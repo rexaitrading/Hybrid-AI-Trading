@@ -208,7 +208,7 @@ def test_adjusted_threshold_neutral_hits_line_170():
 
 
 def test_bottom_logging_and_return_paths_audit_and_non_audit(monkeypatch, caplog):
-    # Drive through logging and final return areas (177â€“179, 183 equivalents)
+    # Drive through logging and final return areas (177Ã¢â‚¬â€œ179, 183 equivalents)
     caplog.set_level(logging.INFO, logger="hybrid_ai_trading.risk.gatescore")
 
     # Non-audit path: contribute one model but set total_weight=0 -> warn + False

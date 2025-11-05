@@ -1,5 +1,5 @@
 """
-Hybrid AI Quant Pro â€“ Signals Registry
+Hybrid AI Quant Pro Ã¢â‚¬â€œ Signals Registry
 --------------------------------------
 Central export hub for all trading signal strategies.
 

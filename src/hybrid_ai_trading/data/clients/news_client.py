@@ -3,7 +3,7 @@ from __future__ import annotations
 from hybrid_ai_trading.utils.time_utils import utc_now
 
 """
-News Client (Hybrid AI Quant Pro v2.1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge Fund OE Grade, DB-Integrated)
+News Client (Hybrid AI Quant Pro v2.1 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Hedge Fund OE Grade, DB-Integrated)
 ---------------------------------------------------------------------------
 Responsibilities:
 - Fetch normalized news from provider APIs (Polygon, Benzinga, etc.)
@@ -55,7 +55,11 @@ def _normalize_article(article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "symbols": ",".join(article.get("tickers", []) or []),
         }
     except Exception as e:
-        logger.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Failed to normalize article: %s", e, exc_info=True)
+        logger.error(
+            "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Failed to normalize article: %s",
+            e,
+            exc_info=True,
+        )
         return None
 
 
@@ -78,7 +82,7 @@ def fetch_polygon_news(
     polygon_key = os.getenv("POLYGON_KEY")  # dynamic lookup
     if not polygon_key:
         logger.warning(
-            "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â POLYGON_KEY not set ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ skipping Polygon news fetch"
+            "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â POLYGON_KEY not set ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ skipping Polygon news fetch"
         )
         return []
 
@@ -92,10 +96,17 @@ def fetch_polygon_news(
         resp.raise_for_status()
         data = resp.json()
         results = data.get("results", [])
-        logger.info("ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Polygon news fetched | count=%s", len(results))
+        logger.info(
+            "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Polygon news fetched | count=%s",
+            len(results),
+        )
         return results
     except Exception as e:
-        logger.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Polygon news fetch failed: %s", e, exc_info=True)
+        logger.error(
+            "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Polygon news fetch failed: %s",
+            e,
+            exc_info=True,
+        )
         return []
 
 
@@ -113,7 +124,7 @@ def fetch_benzinga_news(symbol: str, limit: int = 10) -> List[Dict[str, Any]]:
     benzinga_key = os.getenv("BENZINGA_KEY")  # dynamic lookup
     if not benzinga_key:
         logger.warning(
-            "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â BENZINGA_KEY not set ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ skipping Benzinga news fetch"
+            "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â BENZINGA_KEY not set ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ skipping Benzinga news fetch"
         )
         return []
 
@@ -126,15 +137,22 @@ def fetch_benzinga_news(symbol: str, limit: int = 10) -> List[Dict[str, Any]]:
         data = resp.json()
         if isinstance(data, dict):
             logger.info(
-                "ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Benzinga news fetched | symbol=%s count=%s",
+                "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Benzinga news fetched | symbol=%s count=%s",
                 symbol,
                 len(data),
             )
             return data.get("articles", [])
-        logger.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Benzinga response invalid format: %s", type(data))
+        logger.error(
+            "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Benzinga response invalid format: %s",
+            type(data),
+        )
         return []
     except Exception as e:
-        logger.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Benzinga news fetch failed: %s", e, exc_info=True)
+        logger.error(
+            "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Benzinga news fetch failed: %s",
+            e,
+            exc_info=True,
+        )
         return []
 
 
@@ -165,10 +183,12 @@ def save_articles(articles: List[Dict[str, Any]]) -> int:
                 count += 1
             except IntegrityError:
                 session.rollback()  # already exists
-        logger.info("ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Saved %d new articles", count)
+        logger.info("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Saved %d new articles", count)
         return count
     except Exception as e:
-        logger.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Failed saving articles: %s", e, exc_info=True)
+        logger.error(
+            "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Failed saving articles: %s", e, exc_info=True
+        )
         session.rollback()
         return count
     finally:

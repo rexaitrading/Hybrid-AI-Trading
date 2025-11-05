@@ -1,5 +1,5 @@
 """
-Edge Case Tests: TradeEngine (Hybrid AI Quant Pro v20.1 â€“ Hedge-Fund OE Grade, 100% Coverage)
+Edge Case Tests: TradeEngine (Hybrid AI Quant Pro v20.1 Ã¢â‚¬â€œ Hedge-Fund OE Grade, 100% Coverage)
 ----------------------------------------------------------------------------------------------
 Targets the final uncovered branches in trade_engine.py:
 - Algo import failures across TWAP/VWAP/Iceberg
@@ -52,7 +52,7 @@ def engine(TradeEngineClass, base_config, monkeypatch):
 # Algo import failures
 # ----------------------------------------------------------------------
 def test_algo_import_failures(engine, monkeypatch):
-    """Algo import fails for multiple algo types â†’ returns error with algo_error reason."""
+    """Algo import fails for multiple algo types Ã¢â€ â€™ returns error with algo_error reason."""
     monkeypatch.setattr(
         importlib,
         "import_module",
@@ -69,7 +69,7 @@ def test_algo_import_failures(engine, monkeypatch):
 # Router invalid dicts
 # ----------------------------------------------------------------------
 def test_router_invalid_dicts(engine, monkeypatch):
-    """Router returns dicts without or with invalid status â†’ rejected."""
+    """Router returns dicts without or with invalid status Ã¢â€ â€™ rejected."""
     monkeypatch.setattr(engine.router, "route_order", lambda *_: {"foo": "bar"})
     assert engine.process_signal("AAPL", "BUY", 1, 100)["status"] == "rejected"
 
@@ -104,7 +104,7 @@ def test_sentiment_and_gatescore_exceptions(engine, monkeypatch):
 # Audit log failure
 # ----------------------------------------------------------------------
 def test_audit_log_primary_and_backup_fail(engine, tmp_path, monkeypatch, caplog):
-    """Both primary and backup audit log writes fail â†’ logs error."""
+    """Both primary and backup audit log writes fail Ã¢â€ â€™ logs error."""
     engine.audit_log = str(tmp_path / "audit.csv")
     engine.backup_log = str(tmp_path / "backup.csv")
     caplog.set_level("ERROR")
@@ -123,7 +123,7 @@ def test_audit_log_primary_and_backup_fail(engine, tmp_path, monkeypatch, caplog
 # record_trade_outcome exception
 # ----------------------------------------------------------------------
 def test_record_trade_outcome_exception(engine, monkeypatch, caplog):
-    """PerformanceTracker raises inside record_trade â†’ logs error."""
+    """PerformanceTracker raises inside record_trade Ã¢â€ â€™ logs error."""
     caplog.set_level("ERROR")
     monkeypatch.setattr(
         engine.performance_tracker,
@@ -136,7 +136,7 @@ def test_record_trade_outcome_exception(engine, monkeypatch, caplog):
 
 
 def test_normalization_paths(engine, monkeypatch):
-    """Router returns ok/ok â†’ normalized to filled/normalized_ok."""
+    """Router returns ok/ok Ã¢â€ â€™ normalized to filled/normalized_ok."""
     monkeypatch.setattr(
         engine.router, "route_order", lambda *_: {"status": "ok", "reason": "ok"}
     )
@@ -146,7 +146,7 @@ def test_normalization_paths(engine, monkeypatch):
 
 
 def test_performance_tracker_exception(engine, monkeypatch):
-    """Force sharpe_ratio to raise â†’ hits performance exception branch."""
+    """Force sharpe_ratio to raise Ã¢â€ â€™ hits performance exception branch."""
     monkeypatch.setattr(
         engine.performance_tracker,
         "sharpe_ratio",
@@ -157,7 +157,7 @@ def test_performance_tracker_exception(engine, monkeypatch):
 
 
 def test_drawdown_guardrail_exception(engine, monkeypatch):
-    """Force exception inside drawdown calc â†’ hits except branch."""
+    """Force exception inside drawdown calc Ã¢â€ â€™ hits except branch."""
     engine.portfolio.history = [(0, 100000)]
     engine.portfolio.equity = 50000
     monkeypatch.setattr(engine.portfolio, "history", None)  # breaks iteration
@@ -166,7 +166,7 @@ def test_drawdown_guardrail_exception(engine, monkeypatch):
 
 
 def test_performance_tracker_sortino_exception(engine, monkeypatch):
-    """Force sortino_ratio to raise â†’ hits exception branch."""
+    """Force sortino_ratio to raise Ã¢â€ â€™ hits exception branch."""
     monkeypatch.setattr(engine.performance_tracker, "sharpe_ratio", lambda: 2)
     monkeypatch.setattr(
         engine.performance_tracker,
@@ -228,7 +228,7 @@ def test_performance_tracker_exceptions(engine, monkeypatch):
 
 
 def test_invalid_status_normalization(engine, monkeypatch):
-    """Router returns nonsense status â†’ rejected by normalization block."""
+    """Router returns nonsense status Ã¢â€ â€™ rejected by normalization block."""
     monkeypatch.setattr(engine.router, "route_order", lambda *_: {"status": "nonsense"})
     res = engine.process_signal("AAPL", "BUY", 1, 100)
     assert res["status"] == "rejected"
@@ -246,14 +246,14 @@ def test_drawdown_guardrail_exception(engine, monkeypatch):
 
 
 def test_performance_sharpe_breach(engine, monkeypatch):
-    """Force sharpe_ratio below threshold â†’ triggers breach."""
+    """Force sharpe_ratio below threshold Ã¢â€ â€™ triggers breach."""
     monkeypatch.setattr(engine.performance_tracker, "sharpe_ratio", lambda: -5)
     res = engine.process_signal("AAPL", "BUY", 100)
     assert res["reason"] == "sharpe_breach"
 
 
 def test_performance_sortino_breach(engine, monkeypatch):
-    """Force sortino_ratio below threshold â†’ triggers breach."""
+    """Force sortino_ratio below threshold Ã¢â€ â€™ triggers breach."""
     monkeypatch.setattr(engine.performance_tracker, "sharpe_ratio", lambda: 2)
     monkeypatch.setattr(engine.performance_tracker, "sortino_ratio", lambda: -5)
     res = engine.process_signal("AAPL", "BUY", 100)
@@ -261,7 +261,7 @@ def test_performance_sortino_breach(engine, monkeypatch):
 
 
 def test_normalization_reason_ok(engine, monkeypatch):
-    """Router returns reason=='ok' â†’ normalized to 'normalized_ok'."""
+    """Router returns reason=='ok' Ã¢â€ â€™ normalized to 'normalized_ok'."""
     monkeypatch.setattr(
         engine.router, "route_order", lambda *_: {"status": "ok", "reason": "ok"}
     )
@@ -270,7 +270,7 @@ def test_normalization_reason_ok(engine, monkeypatch):
 
 
 def test_record_trade_outcome_logs_error(engine, monkeypatch, caplog):
-    """Force record_trade to raise â†’ log error at end of record_trade_outcome."""
+    """Force record_trade to raise Ã¢â€ â€™ log error at end of record_trade_outcome."""
     caplog.set_level("ERROR")
     monkeypatch.setattr(
         engine.performance_tracker,

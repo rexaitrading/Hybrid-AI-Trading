@@ -1,6 +1,6 @@
 # src/hybrid_ai_trading/data/clients/alpaca_client.py
 """
-Alpaca Client (Hybrid AI Quant Pro v11.0 â€“ Hedge-Fund Grade, Clean)
+Alpaca Client (Hybrid AI Quant Pro v11.0 Ã¢â‚¬â€œ Hedge-Fund Grade, Clean)
 -------------------------------------------------------------------
 Responsibilities:
 - Local wrapper around Alpaca REST API
@@ -30,7 +30,9 @@ class AlpacaClient:
         self.api_secret = api_secret or os.getenv("ALPACA_SECRET")
 
         if not self.api_key or not self.api_secret:
-            logger.warning("âš ï¸ Alpaca API keys not set â€“ client may not work")
+            logger.warning(
+                "Ã¢Å¡Â Ã¯Â¸Â Alpaca API keys not set Ã¢â‚¬â€œ client may not work"
+            )
 
     # ------------------------------------------------------------------
     @staticmethod
@@ -62,7 +64,7 @@ class AlpacaClient:
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
-            logger.error("âŒ Alpaca request failed: %s", e)
+            logger.error("Ã¢ÂÅ’ Alpaca request failed: %s", e)
             raise AlpacaAPIError(str(e))
 
     # ------------------------------------------------------------------
@@ -81,8 +83,8 @@ class AlpacaClient:
             acc = self.account()
             return bool(acc and acc.get("status"))
         except AlpacaAPIError as e:
-            logger.warning("âš ï¸ Alpaca ping failed: %s", e)
+            logger.warning("Ã¢Å¡Â Ã¯Â¸Â Alpaca ping failed: %s", e)
             return False
         except Exception as e:
-            logger.error("âŒ Unexpected ping error: %s", e)
+            logger.error("Ã¢ÂÅ’ Unexpected ping error: %s", e)
             return False

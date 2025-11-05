@@ -1,5 +1,5 @@
 """
-BreakoutPolygonSignal (Hybrid AI Quant Pro v23.6 â€“ OE AAA Polished)
+BreakoutPolygonSignal (Hybrid AI Quant Pro v23.6 Ã¢â‚¬â€œ OE AAA Polished)
 -------------------------------------------------------------------
 - BUY if last close > max of prev highs
 - SELL if last close < min of prev lows
@@ -34,7 +34,7 @@ class BreakoutPolygonSignal:
         self.lookback = lookback
         self.min_bars = min_bars
         if not self.api_key:
-            logger.warning("âš ï¸ POLYGON_KEY not set. API calls will fail.")
+            logger.warning("Ã¢Å¡Â Ã¯Â¸Â POLYGON_KEY not set. API calls will fail.")
 
     def _get_polygon_bars(self, ticker: str, limit: int = 3) -> List[Dict[str, Any]]:
         if not self.api_key:
@@ -54,7 +54,7 @@ class BreakoutPolygonSignal:
             data = resp.json().get("results", [])
             return data if isinstance(data, list) else []
         except Exception as e:
-            logger.error("âŒ Polygon request failed: %s", e)
+            logger.error("Ã¢ÂÅ’ Polygon request failed: %s", e)
             return []
 
     def generate(
@@ -74,7 +74,7 @@ class BreakoutPolygonSignal:
                 highs = [float(b["h"]) for b in bars if "h" in b]
                 lows = [float(b["l"]) for b in bars if "l" in b]
             except Exception as e:
-                logger.error("âŒ Failed to parse bar data: %s", e)
+                logger.error("Ã¢ÂÅ’ Failed to parse bar data: %s", e)
                 return {"signal": "HOLD", "reason": "parse_error"}
 
             if (
@@ -96,7 +96,7 @@ class BreakoutPolygonSignal:
                 return {"signal": "SELL", "reason": "breakout_down"}
             return {"signal": "HOLD", "reason": "inside_range"}
         except Exception as e:
-            logger.error("âŒ BreakoutPolygonSignal outermost failure: %s", e)
+            logger.error("Ã¢ÂÅ’ BreakoutPolygonSignal outermost failure: %s", e)
             return {"signal": "HOLD", "reason": "exception"}
 
 

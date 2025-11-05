@@ -7,7 +7,7 @@ $env:OUTSIDE_RTH="true"; $env:ABORT_IF_NO_QUOTE="true"
 $env:SYMBOL="AAPL"; $env:SIDE="BUY";  $env:QTY="1"; $env:SLIPPAGE_BPS="5"; python .\scripts\ib_quote_market_order.py
 $env:SIDE="SELL"; $env:QTY="1"; python .\scripts\ib_quote_market_order.py
 
-# MSFT (high price â†’ 3 bps to respect 20-tick cap)
+# MSFT (high price Ã¢â€ â€™ 3 bps to respect 20-tick cap)
 $env:SYMBOL="MSFT"; $env:SIDE="BUY";  $env:QTY="1"; $env:SLIPPAGE_BPS="3"; python .\scripts\ib_quote_market_order.py
 $env:SIDE="SELL"; $env:QTY="1"; python .\scripts\ib_quote_market_order.py
 

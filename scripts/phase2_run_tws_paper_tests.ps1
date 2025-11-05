@@ -73,7 +73,7 @@ Remove-Item $tmp,$so,$se -ErrorAction SilentlyContinue
 
 # Export envs; enable tests only on success
 $env:IB_HOST=$HostName; $env:IB_PORT="$Port"; $env:IB_CLIENT_ID="$ClientId"
-if($ok){ $env:IB_INT="1"; Start-Sleep -Seconds 2 } else { $env:IB_INT="0"; Write-Host "TWS preflight failed Ã¢â€ â€™ IB_INT=0; tests will skip." -ForegroundColor Yellow }
+if($ok){ $env:IB_INT="1"; Start-Sleep -Seconds 2 } else { $env:IB_INT="0"; Write-Host "TWS preflight failed ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ IB_INT=0; tests will skip." -ForegroundColor Yellow }
 
 # Minimal pytest.ini (UTF-8 no BOM) + filterwarnings; run single file
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"

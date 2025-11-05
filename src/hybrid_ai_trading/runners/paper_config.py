@@ -34,7 +34,7 @@ def build_parser():
     ap.add_argument(
         "--dry-drill",
         action="store_true",
-        help="DonÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢t place/route orders; dry run signals only.",
+        help="DonÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢t place/route orders; dry run signals only.",
     )
     ap.add_argument(
         "--snapshots-when-closed",

@@ -46,7 +46,7 @@ def clamp_by_ticks(limit, ref, max_ticks, tk, side):
 
 
 def now_local():
-    # Use local machine time (youâ€™re in Vancouver)
+    # Use local machine time (youÃ¢â‚¬â„¢re in Vancouver)
     return datetime.now()
 
 
@@ -250,7 +250,7 @@ def main():
         notional = info["notional"]
 
         print(
-            f"[PLAN] {side} {qty} {symbol} @ ~{limit} (TIF={tif}) notionalâ‰ˆ${notional:,.2f}"
+            f"[PLAN] {side} {qty} {symbol} @ ~{limit} (TIF={tif}) notionalÃ¢â€°Ë†${notional:,.2f}"
         )
         tr = ib.placeOrder(
             c, LimitOrder(side, qty, limit, tif=tif, outsideRth=outside_rth)

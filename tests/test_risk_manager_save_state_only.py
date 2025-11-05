@@ -12,7 +12,7 @@ def test_save_state_exception_branch(monkeypatch, tmp_path):
 
     monkeypatch.setattr(os, "makedirs", bad_makedirs)
 
-    # __init__ may call _save_state() alreadyâ€”should be swallowed
+    # __init__ may call _save_state() alreadyÃ¢â‚¬â€should be swallowed
     rm = RiskManager(RiskConfig(state_path=str(tmp_path / "risk_state.json")))
     assert calls["mk"] >= 1  # at least once from __init__
 

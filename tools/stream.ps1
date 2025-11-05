@@ -1,4 +1,4 @@
-# tools/stream.ps1 â€” clean helpers
+# tools/stream.ps1 Ã¢â‚¬â€ clean helpers
 
 # Resolve project paths relative to this file, not caller state
 $Script:ToolsDir = Split-Path -Path $MyInvocation.MyCommand.Path -Parent
@@ -46,7 +46,7 @@ function start-stream {
           # If an -ArgumentList contains gw + paper, strip paper
           $prefix = $matches[1]; $args = $matches[2]
           if ($args -match 'gw[^)]*paper'){
-            $args -replace '\s*["'']paper["'']\s*,?', '' | ForEach-Object { $prefix + # tools/stream.ps1 â€” clean helpers
+            $args -replace '\s*["'']paper["'']\s*,?', '' | ForEach-Object { $prefix + # tools/stream.ps1 Ã¢â‚¬â€ clean helpers
 
 # Resolve project paths relative to this file, not caller state
 $Script:ToolsDir = Split-Path -Path $MyInvocation.MyCommand.Path -Parent

@@ -11,7 +11,7 @@ $ibcExe = $null
 if (Test-Path 'C:\IBC\IBC.exe') { $ibcExe = 'C:\IBC\IBC.exe' }
 elseif (Test-Path 'C:\IBC\IBController.exe') { $ibcExe = 'C:\IBC\IBController.exe' }
 if (-not $ibcExe) {
-  Write-Host "â— IBC not found under C:\IBC. Unzip the IBC Windows ZIP to C:\IBC then re-run." -ForegroundColor Yellow
+  Write-Host "Ã¢Ââ€” IBC not found under C:\IBC. Unzip the IBC Windows ZIP to C:\IBC then re-run." -ForegroundColor Yellow
   exit 1
 }
 

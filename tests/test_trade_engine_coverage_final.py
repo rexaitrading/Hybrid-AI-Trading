@@ -283,7 +283,7 @@ def test_filters_ratio_normalize_write_capture_306_352(tmp_path):
     # ratio guards
     te.performance_tracker = PT(s=-2.0, t=-2.0)
     _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
-    # normalize OKâ†’filled + reason normalization
+    # normalize OKÃ¢â€ â€™filled + reason normalization
     if hasattr(te, "_normalize_result"):
         g = te._normalize_result({"status": "ok", "reason": "ok"})
         assert g["status"] == "filled" and g["reason"] == "normalized_ok"

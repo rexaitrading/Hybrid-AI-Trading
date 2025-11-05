@@ -411,7 +411,7 @@ def main():
         eff_bps = plan["eff_bps"]
 
         print(
-            f"[PLAN] {side} {qty} {symbol} @ ~{limit} (TIF={tif}) notionalâ‰ˆ${notional:,.2f}  [eff_bps={eff_bps}]"
+            f"[PLAN] {side} {qty} {symbol} @ ~{limit} (TIF={tif}) notionalÃ¢â€°Ë†${notional:,.2f}  [eff_bps={eff_bps}]"
         )
         tr = ib.placeOrder(
             c, LimitOrder(side, qty, limit, tif=tif, outsideRth=outside_rth)

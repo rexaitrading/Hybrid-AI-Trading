@@ -1,16 +1,16 @@
 """
-Unit Tests: RSI Signal (Hybrid AI Quant Pro v24.3 â€“ Hedge-Fund Grade, 100% Coverage)
+Unit Tests: RSI Signal (Hybrid AI Quant Pro v24.3 Ã¢â‚¬â€œ Hedge-Fund Grade, 100% Coverage)
 -----------------------------------------------------------------------------------
 Covers ALL branches of rsi_signal:
 - Empty bars
 - Not enough bars
-- Missing 'c' field â†’ closes.empty
+- Missing 'c' field Ã¢â€ â€™ closes.empty
 - NaN close values
 - BUY (<30)
 - SELL (>70)
-- HOLD (inside 30â€“70)
-- Loss=0 fallback: positive gain â†’ SELL
-- Loss=0 fallback: non-positive gain â†’ BUY
+- HOLD (inside 30Ã¢â‚¬â€œ70)
+- Loss=0 fallback: positive gain Ã¢â€ â€™ SELL
+- Loss=0 fallback: non-positive gain Ã¢â€ â€™ BUY
 - NaN RSI guard
 - Exception handling (parse + rolling)
 - Wrapper consistency
@@ -143,7 +143,7 @@ def test_exception_branch_parse(monkeypatch):
 
 
 def test_exception_branch_calc(monkeypatch):
-    """Patch rolling to throw â†’ triggers 'calc failed' branch."""
+    """Patch rolling to throw Ã¢â€ â€™ triggers 'calc failed' branch."""
 
     def boom_rolling(self, *_a, **_k):
         raise Exception("boom")

@@ -19,7 +19,7 @@ from debug_cryptocompare import daily_budget, suggested_interval_seconds
 API_KEY: Optional[str] = os.getenv("CRYPTOCOMPARE_API_KEY")
 if not API_KEY:
     raise EnvironmentError(
-        "❌ CRYPTOCOMPARE_API_KEY is not set.\n"
+        "âŒ CRYPTOCOMPARE_API_KEY is not set.\n"
         'Run: setx CRYPTOCOMPARE_API_KEY "your_key_here" '
         "and restart your terminal."
     )
@@ -63,14 +63,14 @@ def count_today_calls() -> int:
                 if ts.date() == today:
                     count += 1
     except Exception as e:
-        print(f"⚠️ Could not parse {path}: {e}")
+        print(f"âš ï¸ Could not parse {path}: {e}")
         return 0
     return count
 
 
 def print_and_save(data: Optional[Dict[str, Dict[str, Any]]]) -> None:
     """
-    Save API results into today’s CSV with header management.
+    Save API results into todayâ€™s CSV with header management.
 
     Args:
         data: dict like {"BTC": {"USD": 12345.67}, "ETH": {"USD": 2345.67}}
@@ -87,7 +87,7 @@ def print_and_save(data: Optional[Dict[str, Dict[str, Any]]]) -> None:
     ]
 
     if not rows:
-        print("⚠️ No rows to write")
+        print("âš ï¸ No rows to write")
         return
 
     with path.open("a", encoding="utf-8", newline="") as f:
@@ -96,7 +96,7 @@ def print_and_save(data: Optional[Dict[str, Dict[str, Any]]]) -> None:
             writer.writeheader()
         writer.writerows(rows)
 
-    print(f"✅ Saved {len(rows)} rows -> {path}")
+    print(f"âœ… Saved {len(rows)} rows -> {path}")
 
 
 def loop_fetch(monthly_calls: Optional[int] = None) -> None:
@@ -114,7 +114,7 @@ def loop_fetch(monthly_calls: Optional[int] = None) -> None:
     interval = suggested_interval_seconds(year, month, monthly)
 
     print(
-        f"[collector] {year}-{month:02d} → target/day ≈ {per_day}, interval ≈ {interval}s"
+        f"[collector] {year}-{month:02d} â†’ target/day â‰ˆ {per_day}, interval â‰ˆ {interval}s"
     )
 
     while True:
@@ -124,14 +124,14 @@ def loop_fetch(monthly_calls: Optional[int] = None) -> None:
             per_day = daily_budget(year, month, monthly)
             interval = suggested_interval_seconds(year, month, monthly)
             print(
-                f"[rollover] Entered {year}-{month:02d}; new quota/day ≈ {per_day}, interval ≈ {interval}s"
+                f"[rollover] Entered {year}-{month:02d}; new quota/day â‰ˆ {per_day}, interval â‰ˆ {interval}s"
             )
 
         used_today = count_today_calls()
         if used_today >= per_day:
             sleep_s = seconds_until_tomorrow_utc()
             print(
-                f"[quota] Reached {used_today}/{per_day}, sleeping {sleep_s}s until UTC midnight…"
+                f"[quota] Reached {used_today}/{per_day}, sleeping {sleep_s}s until UTC midnightâ€¦"
             )
             time.sleep(sleep_s)
             continue
@@ -140,7 +140,7 @@ def loop_fetch(monthly_calls: Optional[int] = None) -> None:
             data = fetch_prices()
             print_and_save(data)
         except Exception as e:
-            print("❌ Error fetching data:", e)
+            print("âŒ Error fetching data:", e)
 
         time.sleep(interval)
 

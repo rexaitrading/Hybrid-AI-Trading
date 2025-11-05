@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Backtest pipeline (TWS Paper) – robust, self-contained
+Backtest pipeline (TWS Paper) â€“ robust, self-contained
 
 - Auto-detects IB_HOST (if not provided) via API handshake on ::1/localhost/127.0.0.1
 - Connects with ib_insync to TWS Paper (default port 7497) using IB_CLIENT_ID

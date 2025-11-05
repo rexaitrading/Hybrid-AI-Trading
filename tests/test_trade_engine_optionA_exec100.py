@@ -64,7 +64,7 @@ def _invoke(fn, pool):
         pass
 
 
-# ---------- alerts: success & exceptions (103â€“142) + _fire_alert except (70â€“72) ----------
+# ---------- alerts: success & exceptions (103Ã¢â‚¬â€œ142) + _fire_alert except (70Ã¢â‚¬â€œ72) ----------
 def test_alerts_and_fire_alert_branches(monkeypatch):
     os.environ["SLACK_URL"] = "https://hook"
     os.environ["TG_BOT"] = "bot"
@@ -120,7 +120,7 @@ def test_alerts_and_fire_alert_branches(monkeypatch):
     te._fire_alert("router issue")  # should hit logger.error path without raising
 
 
-# ---------- audit header & exception (148â€“169) ----------
+# ---------- audit header & exception (148Ã¢â‚¬â€œ169) ----------
 def test_audit_header_and_exception(monkeypatch, tmp_path):
     te = make_engine()
     te.audit_log = str(tmp_path / "audit.csv")
@@ -151,7 +151,7 @@ def test_audit_header_and_exception(monkeypatch, tmp_path):
         pass
 
 
-# ---------- reset_day branches (175â€“198) ----------
+# ---------- reset_day branches (175Ã¢â‚¬â€œ198) ----------
 def test_reset_day_ok_and_errors(monkeypatch):
     te = make_engine()
 
@@ -175,7 +175,7 @@ def test_reset_day_ok_and_errors(monkeypatch):
         assert r3["status"] == "error" and "risk_reset_failed" in r3["reason"]
 
 
-# ---------- adaptive_fraction (201â€“212) ----------
+# ---------- adaptive_fraction (201Ã¢â‚¬â€œ212) ----------
 def test_adaptive_fraction_paths():
     te = make_engine()
     # no history
@@ -225,7 +225,7 @@ def test_process_signal_drawdown_and_kelly(monkeypatch):
         "error",
         "pending",
     }  # either draws on prior check
-    # size None â†’ Kelly
+    # size None Ã¢â€ â€™ Kelly
     te2 = make_engine()
     te2.kelly_sizer.size_position = lambda eq, px: {"size": 2}
     r2 = te2.process_signal("AAPL", "BUY", price=1.0, size=None)
@@ -283,7 +283,7 @@ def test_algo_and_router_branches(monkeypatch):
         "pending",
     }
 
-    # unknown algo â†’ early reject (no normalization override)
+    # unknown algo Ã¢â€ â€™ early reject (no normalization override)
     r2 = te.process_signal("AAPL", "BUY", price=1.0, size=1, algo="unknown")
     assert r2["status"] == "rejected" and r2["reason"] == "unknown_algo"
 

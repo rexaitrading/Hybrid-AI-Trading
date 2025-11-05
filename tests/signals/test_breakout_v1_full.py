@@ -1,5 +1,5 @@
 """
-Unit Tests: BreakoutV1Signal (Hybrid AI Quant Pro v24.2 â€“ Hedge-Fund Grade, 100% Coverage)
+Unit Tests: BreakoutV1Signal (Hybrid AI Quant Pro v24.2 Ã¢â‚¬â€œ Hedge-Fund Grade, 100% Coverage)
 -----------------------------------------------------------------------------------------
 Covers:
 - Decision branches: BUY / SELL / HOLD / tie_case
@@ -117,7 +117,7 @@ def test_breakout_signal_exception(mock_get):
 
 @patch("hybrid_ai_trading.signals.breakout_v1.get_ohlcv_latest")
 def test_generate_wrapper_exception(monkeypatch):
-    """Force get_ohlcv_latest to raise â†’ wrapper_exception path."""
+    """Force get_ohlcv_latest to raise Ã¢â€ â€™ wrapper_exception path."""
 
     def boom(*_a, **_k):
         raise RuntimeError("boom")

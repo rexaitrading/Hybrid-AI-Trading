@@ -1,26 +1,26 @@
 """
-Unit Tests: RiskManager (Hybrid AI Quant Pro v24.8 â€“ Hedge-Fund OE Grade, 100% Coverage)
+Unit Tests: RiskManager (Hybrid AI Quant Pro v24.8 Ã¢â‚¬â€œ Hedge-Fund OE Grade, 100% Coverage)
 ========================================================================================
 Covers ALL paths in risk_manager.py:
 - Initialization (defaults, legacy kwargs)
 - approve_trade (valid, invalid size)
 - update_equity (normal, breach)
 - check_trade:
-    â€¢ Per-trade loss guard
-    â€¢ Daily loss guard
-    â€¢ Portfolio leverage & exposure guard
-    â€¢ Portfolio exception branch
-    â€¢ DB logger success + failure
+    Ã¢â‚¬Â¢ Per-trade loss guard
+    Ã¢â‚¬Â¢ Daily loss guard
+    Ã¢â‚¬Â¢ Portfolio leverage & exposure guard
+    Ã¢â‚¬Â¢ Portfolio exception branch
+    Ã¢â‚¬Â¢ DB logger success + failure
 - kelly_size:
-    â€¢ Normal case
-    â€¢ Invalid inputs
-    â€¢ Regime scaling
-    â€¢ Exception branch
+    Ã¢â‚¬Â¢ Normal case
+    Ã¢â‚¬Â¢ Invalid inputs
+    Ã¢â‚¬Â¢ Regime scaling
+    Ã¢â‚¬Â¢ Exception branch
 - control_signal (HOLD pass-through, override on breach, casing normalization)
 - reset_day:
-    â€¢ With portfolio success
-    â€¢ Without portfolio
-    â€¢ Failure path
+    Ã¢â‚¬Â¢ With portfolio success
+    Ã¢â‚¬Â¢ Without portfolio
+    Ã¢â‚¬Â¢ Failure path
 """
 
 import logging

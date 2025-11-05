@@ -12,7 +12,7 @@ def test_alerts_success_and_exceptions(monkeypatch):
         def __init__(self, c):
             self.status_code = c
 
-    # success (113ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“115/127ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“129/137ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“139)
+    # success (113ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ115/127ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ129/137ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ139)
     monkeypatch.setitem(
         sys.modules,
         "requests",
@@ -35,7 +35,7 @@ def test_alerts_success_and_exceptions(monkeypatch):
     if hasattr(te, "_fire_alert"):
         te._fire_alert("ok")
 
-    # exceptions (115ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“117 / 131ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“132 / 141ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“142) + top except (103ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“104)
+    # exceptions (115ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ117 / 131ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ132 / 141ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ142) + top except (103ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ104)
     def boom(*a, **k):
         raise RuntimeError("boom")
 
@@ -71,7 +71,7 @@ def test_audit_header_then_exception(monkeypatch, tmp_path):
     if hasattr(te, "_write_audit"):
         te._write_audit(
             ["t", "AAPL", "BUY", 1, 1.0, "ok", 100.0, ""]
-        )  # 154ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“167
+        )  # 154ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ167
     te.audit_log = str(tmp_path / "no_dir" / "audit.csv")
     te.backup_log = str(tmp_path / "no_dir" / "backup.csv")
     monkeypatch.setattr(
@@ -92,7 +92,7 @@ def test_audit_header_then_exception(monkeypatch, tmp_path):
     if hasattr(te, "_write_audit"):
         te._write_audit(
             ["t", "AAPL", "BUY", 1, 1.0, "ok", 100.0, ""]
-        )  # 168ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“169
+        )  # 168ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ169
 
 
 def test_invalids_equity_and_kelly_drawdown():
@@ -104,7 +104,7 @@ def test_invalids_equity_and_kelly_drawdown():
     # equity depleted 236
     te2 = make_engine(equity=0.0)
     call_signal(te2, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
-    # kelly + drawdown try/except 241ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“251 / 247ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“248
+    # kelly + drawdown try/except 241ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ251 / 247ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ248
     te3 = make_engine(history=[(0, 100.0)])
     call_signal(te3, symbol="AAPL", size=None, price=1.0, signal="BUY")
     te4 = make_engine(history=None)
@@ -117,14 +117,14 @@ def test_sector_algo_success_and_fail_router_error(monkeypatch):
 
     from _engine_factory import call_signal, find, make_engine
 
-    # sector exposure path 239â€“354
+    # sector exposure path 239Ã¢â‚¬â€œ354
     te = make_engine(
         risk_override={"intraday_sector_exposure": 0.001},
         positions={"AAPL": {"size": 3, "avg_price": 200.0}},
     )
     call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
 
-    # algo success 263â€“269
+    # algo success 263Ã¢â‚¬â€œ269
     class TWAP:
         def __init__(self, om):
             pass
@@ -170,7 +170,7 @@ def test_sector_algo_success_and_fail_router_error(monkeypatch):
     # restore importer before proceeding
     monkeypatch.setattr(importlib, "import_module", orig_import)
 
-    # router error 286â€“288 + neighbors
+    # router error 286Ã¢â‚¬â€œ288 + neighbors
     te3 = make_engine()
     if hasattr(te3, "order_manager"):
         te3.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
@@ -222,13 +222,13 @@ def test_positions_history_and_outcome(caplog):
 
 def test_reset_day_branches(monkeypatch):
     te = make_engine()
-    # portfolio error 175ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“179
+    # portfolio error 175ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ179
     if hasattr(te, "portfolio") and hasattr(te.portfolio, "reset_day"):
         te.portfolio.reset_day = lambda: (_ for _ in ()).throw(RuntimeError("PFAIL"))
         if hasattr(te, "daily_reset"):
             te.daily_reset()
         te.portfolio.reset_day = lambda: {"status": "ok"}
-    # risk error 182ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“186
+    # risk error 182ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ186
     for attr in ("risk_manager", "risk", "rm"):
         if hasattr(te, attr):
             setattr(
@@ -239,7 +239,7 @@ def test_reset_day_branches(monkeypatch):
             break
     if hasattr(te, "daily_reset"):
         te.daily_reset()
-    # generic 197ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“198
+    # generic 197ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ198
     if hasattr(te, "daily_reset"):
         monkeypatch.setattr(
             te, "daily_reset", lambda: (_ for _ in ()).throw(RuntimeError("GENERIC"))

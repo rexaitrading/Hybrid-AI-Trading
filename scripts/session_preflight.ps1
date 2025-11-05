@@ -1,4 +1,4 @@
-Write-Host '=== Session Preflight (IB Gateway / Paper) â€” probe only ==='
+Write-Host '=== Session Preflight (IB Gateway / Paper) Ã¢â‚¬â€ probe only ==='
 
 # 1) Load .env
 if (Test-Path ".env") {
@@ -19,7 +19,7 @@ Write-Host ('  IB_ACCOUNT={0}' -f $env:IB_ACCOUNT)
 Write-Host ''
 Write-Host '-- Port check (Test-NetConnection) --'
 $tnc = Test-NetConnection -ComputerName $env:IB_HOST -Port ([int]$env:IB_PORT) -WarningAction SilentlyContinue
-if ($tnc.TcpTestSucceeded) { Write-Host 'âœ… Port reachable' } else { Write-Host 'âŒ Port NOT reachable' }
+if ($tnc.TcpTestSucceeded) { Write-Host 'Ã¢Å“â€¦ Port reachable' } else { Write-Host 'Ã¢ÂÅ’ Port NOT reachable' }
 
 # 3) Socket cleanup + wait: kill FIN_WAIT_2; wait up to 45s for FIN_WAIT_2 + CLOSE_WAIT to clear
 Write-Host ''
@@ -41,7 +41,7 @@ do {
   $hasClose = ($lines | Select-String 'CLOSE_WAIT')
   if (-not $hasFin -and -not $hasClose) { $cleared = $true; break }
 } while ((Get-Date) -lt $deadline)
-if ($cleared) { Write-Host 'âœ… sockets clear' } else { Write-Host 'âš ï¸ sockets not fully clear; proceeding' }
+if ($cleared) { Write-Host 'Ã¢Å“â€¦ sockets clear' } else { Write-Host 'Ã¢Å¡Â Ã¯Â¸Â sockets not fully clear; proceeding' }
 
 # 4) Single connection: PROBE ONLY (fresh clientId)
 $env:IB_CLIENT_ID = (Get-Random -Minimum 1000 -Maximum 9999).ToString()

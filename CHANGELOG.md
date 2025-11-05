@@ -1,5 +1,5 @@
 
-## [Phase 1] Bar Replay (ORB) — 2025-10-26
+## [Phase 1] Bar Replay (ORB) â€” 2025-10-26
 - Introduced \	ools/bar_replay.py\ with ORB simulation and \--force-exit\.
 - Added sample data \data/AAPL_1m.csv\ and helper scripts.
 - Environment hardening: \ctivate_safe.ps1\, utf8 no-BOM pip configs, \

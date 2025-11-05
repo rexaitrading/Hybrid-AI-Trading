@@ -20,16 +20,16 @@ class App(EWrapper, EClient):
 
     # --- lifecycle ---
     def nextValidId(self, orderId):
-        print(f"âœ… Connected. nextValidId={orderId}", flush=True)
+        print(f"Ã¢Å“â€¦ Connected. nextValidId={orderId}", flush=True)
         self.order_id = orderId
         self.place_test_order()
 
     def connectionClosed(self):
-        print("ðŸ”Œ connectionClosed", flush=True)
+        print("Ã°Å¸â€Å’ connectionClosed", flush=True)
         self.done = True
 
     def error(self, reqId, code, msg, *_):
-        print(f"âŒ ERROR {code}: {msg}", flush=True)
+        print(f"Ã¢ÂÅ’ ERROR {code}: {msg}", flush=True)
         # If order is rejected (like 10268), stop cleanly
         if code in (10268, 201, 202, 10148):
             self._disconnect_later(0.5)
@@ -38,7 +38,9 @@ class App(EWrapper, EClient):
     def openOrder(self, orderId, contract, order, orderState):
         if self.order_id is not None and orderId == self.order_id:
             self.acknowledged = True
-        print(f"ðŸ“„ openOrder id={orderId} status={orderState.status}", flush=True)
+        print(
+            f"Ã°Å¸â€œâ€ž openOrder id={orderId} status={orderState.status}", flush=True
+        )
 
     def orderStatus(
         self,
@@ -57,7 +59,7 @@ class App(EWrapper, EClient):
         if self.order_id is not None and orderId == self.order_id:
             self.acknowledged = True
         print(
-            f"ðŸ“ˆ orderStatus id={orderId} status={status} filled={filled} remaining={remaining}",
+            f"Ã°Å¸â€œË† orderStatus id={orderId} status={status} filled={filled} remaining={remaining}",
             flush=True,
         )
         if status.lower() in ("cancelled", "inactive"):
@@ -65,7 +67,7 @@ class App(EWrapper, EClient):
             self._disconnect_later(0.8)
 
     def openOrderEnd(self):
-        print("â€” openOrderEnd â€”", flush=True)
+        print("Ã¢â‚¬â€ openOrderEnd Ã¢â‚¬â€", flush=True)
 
     # --- helpers ---
     def _disconnect_later(self, delay):
@@ -101,7 +103,7 @@ class App(EWrapper, EClient):
             o.account = self.account
 
         print(
-            f"ðŸš€ placing {o.action} {o.totalQuantity} AAPL LMT {o.lmtPrice} (orderId={self.order_id})",
+            f"Ã°Å¸Å¡â‚¬ placing {o.action} {o.totalQuantity} AAPL LMT {o.lmtPrice} (orderId={self.order_id})",
             flush=True,
         )
         self.placeOrder(self.order_id, c, o)
@@ -121,11 +123,11 @@ class App(EWrapper, EClient):
             return
 
         if self.acknowledged and not self.canceled:
-            print(f"ðŸ›‘ cancelling orderId={self.order_id}", flush=True)
+            print(f"Ã°Å¸â€ºâ€˜ cancelling orderId={self.order_id}", flush=True)
             self.cancelOrder(self.order_id)
         else:
             print(
-                "â„¹ï¸ No acknowledged open order to cancel; exiting cleanly.",
+                "Ã¢â€žÂ¹Ã¯Â¸Â No acknowledged open order to cancel; exiting cleanly.",
                 flush=True,
             )
             self._disconnect_later(0.5)
@@ -147,7 +149,7 @@ def main():
     while time.time() < deadline and not app.done:
         time.sleep(0.2)
     if not app.done:
-        print("â±ï¸ Timeout. Disconnecting.", flush=True)
+        print("Ã¢ÂÂ±Ã¯Â¸Â Timeout. Disconnecting.", flush=True)
         app.disconnect()
         time.sleep(0.3)
 
