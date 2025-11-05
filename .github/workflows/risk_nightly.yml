@@ -22,4 +22,9 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: |
-          python -B -m pytest -q tests -k "risk and not ib" --maxfail=1
+          python -B -m pytest -q `
+             tests/risk `
+             tests/unified/test_risk_* `
+             tests/test_risk_* `
+             tests/*risk* `
+             --maxfail=1
