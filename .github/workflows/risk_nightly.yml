@@ -1,4 +1,7 @@
-﻿name: Risk Nightly (non-IB)
+name: Risk Nightly (non-IB)
+permissions:
+  contents: read
+
 
 on:
   schedule:

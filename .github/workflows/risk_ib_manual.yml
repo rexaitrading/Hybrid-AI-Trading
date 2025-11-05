@@ -1,4 +1,7 @@
-﻿name: Risk IB (manual only)
+name: Risk IB (manual only)
+permissions:
+  contents: read
+
 
 on:
   workflow_dispatch:
