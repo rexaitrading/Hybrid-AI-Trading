@@ -1,5 +1,5 @@
 """
-Unit Tests: Security Utilities (Hybrid AI Quant Pro v11.2 – Hedge-Fund Grade, 100% Coverage)
+Unit Tests: Security Utilities (Hybrid AI Quant Pro v11.2 â€“ Hedge-Fund Grade, 100% Coverage)
 ============================================================================================
 Covers all branches of mask_key():
 - None key
@@ -18,19 +18,19 @@ def test_mask_key_none_and_empty():
 
 
 def test_mask_key_short_keys():
-    # Shorter than 8 → unchanged
+    # Shorter than 8 â†’ unchanged
     assert mask_key("ABC123") == "ABC123"
     assert mask_key("1234567") == "1234567"
 
 
 def test_mask_key_exactly_8_chars():
-    # Exactly 8 → first 4 + **** + last 4
+    # Exactly 8 â†’ first 4 + **** + last 4
     assert mask_key("ABCDEFGH") == "ABCD****EFGH"
     assert mask_key("12345678") == "1234****5678"
 
 
 def test_mask_key_longer_than_8_chars():
-    # >8 → stars = len(key) - 8
+    # >8 â†’ stars = len(key) - 8
     key = "SUPERSECRETKEY123456789"
     result = mask_key(key)
     assert result.startswith("SUPE")
@@ -40,7 +40,7 @@ def test_mask_key_longer_than_8_chars():
 
 
 def test_mask_key_minimal_long_case():
-    """Check smallest >8 case (9 chars) → 1 star in the middle."""
+    """Check smallest >8 case (9 chars) â†’ 1 star in the middle."""
     key = "ABCDEFGHI"
     result = mask_key(key)
     assert result == "ABCD*FGHI"  # exactly one star
@@ -48,11 +48,11 @@ def test_mask_key_minimal_long_case():
 
 def test_mask_key_boundary_cases():
     """Check edge boundaries explicitly."""
-    key7 = "1234567"  # 7 chars → unchanged
+    key7 = "1234567"  # 7 chars â†’ unchanged
     assert mask_key(key7) == key7
 
-    key8 = "12345678"  # 8 chars → formatted
+    key8 = "12345678"  # 8 chars â†’ formatted
     assert mask_key(key8) == "1234****5678"
 
-    key9 = "123456789"  # 9 chars → 1 star
+    key9 = "123456789"  # 9 chars â†’ 1 star
     assert mask_key(key9) == "1234*6789"

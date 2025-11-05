@@ -82,7 +82,7 @@ def eng(monkeypatch):
 
 
 def test_no_brokers_and_unknown_algo_paths(eng):
-    # 1) wipe brokers/smart router if present → trigger "no brokers"/fallback branches
+    # 1) wipe brokers/smart router if present â†’ trigger "no brokers"/fallback branches
     if hasattr(eng, "brokers"):
         try:
             eng.brokers.clear()
@@ -97,7 +97,7 @@ def test_no_brokers_and_unknown_algo_paths(eng):
         except Exception:
             pass
 
-    # 2) unknown/odd algos and symbol edges → earlier else/guard branches
+    # 2) unknown/odd algos and symbol edges â†’ earlier else/guard branches
     cases = [
         ("AAPL", "BUY", 100.0, 1, "UNKNOWN_ALGO"),
         ("AAPL", "SELL", None, 1, "weird"),
@@ -111,7 +111,7 @@ def test_no_brokers_and_unknown_algo_paths(eng):
             out = eng.process_signal(sym, sig, price=px, size=sz, algo=algo)
             assert isinstance(out, dict) or out is None
         except Exception:
-            # acceptable — we only need to touch the branches
+            # acceptable â€” we only need to touch the branches
             pass
 
 
@@ -148,7 +148,7 @@ def test_order_manager_and_router_fail_branches(eng):
 
 
 def test_extreme_and_nonfinite_pnl_then_reset(eng):
-    # ±extremes and non-finite → guard branches in outcome/accumulators
+    # Â±extremes and non-finite â†’ guard branches in outcome/accumulators
     for pnl in (1e9, -1e9, float("inf"), float("-inf"), float("nan")):
         try:
             eng.record_trade_outcome(pnl)

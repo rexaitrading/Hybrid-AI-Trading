@@ -1,4 +1,4 @@
-﻿$code = @'
+$code = @'
 from ib_insync import IB, Stock
 ib = IB()
 ib.connect("127.0.0.1", 4002, clientId=77, readonly=False)

@@ -1,5 +1,5 @@
 """
-Hybrid AI Quant Pro – Signals Test Suite
+Hybrid AI Quant Pro â€“ Signals Test Suite
 ----------------------------------------
 This package groups all unit + branch coverage tests for trading signal modules.
 

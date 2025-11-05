@@ -1,4 +1,4 @@
-﻿import math
+import math
 
 from scripts.guardrails import load_guardrails, vet_and_adjust
 

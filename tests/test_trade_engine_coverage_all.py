@@ -159,7 +159,7 @@ def test_alerts_matrix_success_and_exceptions(monkeypatch):
         def __init__(self, c):
             self.status_code = c
 
-    # success paths (hits 113–115/127–129/137–139)
+    # success paths (hits 113â€“115/127â€“129/137â€“139)
     monkeypatch.setitem(
         sys.modules,
         "requests",
@@ -182,7 +182,7 @@ def test_alerts_matrix_success_and_exceptions(monkeypatch):
     if hasattr(te, "_fire_alert"):
         te._fire_alert("ok")
 
-    # exceptions (hits 115–117 / 131–132 / 141–142, and 103–104 general except if raised at router dispatch)
+    # exceptions (hits 115â€“117 / 131â€“132 / 141â€“142, and 103â€“104 general except if raised at router dispatch)
     def boom(*a, **k):
         raise RuntimeError("boom")
 
@@ -211,8 +211,8 @@ def test_audit_header_then_exception(monkeypatch, tmp_path):
     if hasattr(te, "_write_audit"):
         te._write_audit(
             ["t", "AAPL", "BUY", 1, 1.0, "ok", 100.0, ""]
-        )  # header path 154–167
-    # now force exception path 168–169 (caught/logged)
+        )  # header path 154â€“167
+    # now force exception path 168â€“169 (caught/logged)
     te.audit_log = str(tmp_path / "no_dir" / "audit.csv")
     te.backup_log = str(tmp_path / "no_dir" / "backup.csv")
     monkeypatch.setattr(
@@ -247,7 +247,7 @@ def test_equity_depleted_and_sector_exposure():
     te = _mk()
     te.portfolio.equity = 0.0
     _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
-    # sector exposure (239–354 region exercised in engine flow; ensure tech pos exists & tight cap)
+    # sector exposure (239â€“354 region exercised in engine flow; ensure tech pos exists & tight cap)
     te2 = _mk(
         cfg_override={"risk": {"intraday_sector_exposure": 0.001}},
         pf=PF(pos={"AAPL": {"size": 3, "avg_price": 100}}),
@@ -258,7 +258,7 @@ def test_equity_depleted_and_sector_exposure():
 def test_algo_dynamic_imports_and_router_error(monkeypatch):
     te = _mk()
 
-    # dynamic algo imports 263–269
+    # dynamic algo imports 263â€“269
     class TWAP:
         def __init__(self, om):
             pass
@@ -277,7 +277,7 @@ def test_algo_dynamic_imports_and_router_error(monkeypatch):
     if hasattr(te, "_route_with_algo"):
         assert te._route_with_algo("AAPL", "BUY", 1, 1.0, algo="twap")["status"] == "ok"
         assert te._route_with_algo("AAPL", "BUY", 1, 1.0, algo="vwap")["status"] == "ok"
-    # router error 286–288
+    # router error 286â€“288
     if hasattr(te, "order_manager"):
         te.order_manager.route = lambda *a, **k: (_ for _ in ()).throw(
             RuntimeError("router")
@@ -298,11 +298,11 @@ def test_filters_ratio_normalize_and_audit_capture(tmp_path):
         te.sentiment_filter.allow = lambda *a, **k: True
         assert te._filters_ok("AAPL", "BUY", 1, 1.0)["status"] == "blocked"  # 312
 
-    # ratio guards 317–326
+    # ratio guards 317â€“326
     te.performance_tracker = PT(s=-2.0, t=-2.0)
     _call_signal(te, symbol="AAPL", size=1.0, price=1.0, signal="BUY")
 
-    # normalize ok->filled & reason norm 329–338
+    # normalize ok->filled & reason norm 329â€“338
     if hasattr(te, "_normalize_result"):
         g = te._normalize_result({"status": "ok", "reason": "ok"})
         assert g["status"] == "filled" and g["reason"] == "normalized_ok"
@@ -329,19 +329,19 @@ def test_positions_history_and_outcome_logging(caplog):
 
         if hasattr(te, "performance_tracker"):
             te.performance_tracker.record_trade = bad
-        te.record_trade_outcome(1.23)  # 384–387 (log path)
+        te.record_trade_outcome(1.23)  # 384â€“387 (log path)
 
 
 def test_daily_reset_specific_and_generic(monkeypatch):
     te = _mk()
-    # portfolio-specific error 175–179
+    # portfolio-specific error 175â€“179
     if hasattr(te, "portfolio") and hasattr(te.portfolio, "reset_day"):
         te.portfolio.reset_day = lambda: (_ for _ in ()).throw(RuntimeError("PFAIL"))
         if hasattr(te, "daily_reset"):
             r = te.daily_reset()
             assert r["status"] == "error" and "portfolio_reset_failed" in r["reason"]
         te.portfolio.reset_day = lambda: {"status": "ok"}
-    # risk-specific error 182–186
+    # risk-specific error 182â€“186
     for attr in ("risk_manager", "risk", "rm"):
         if hasattr(te, attr):
             setattr(
@@ -354,7 +354,7 @@ def test_daily_reset_specific_and_generic(monkeypatch):
         r = te.daily_reset()
         assert r["status"] == "error" and "risk_reset_failed" in r["reason"]
 
-    # generic catch-all 197–198 (wrap te.daily_reset)
+    # generic catch-all 197â€“198 (wrap te.daily_reset)
     if hasattr(te, "daily_reset"):
         monkeypatch.setattr(
             te, "daily_reset", lambda: (_ for _ in ()).throw(RuntimeError("GENERIC"))

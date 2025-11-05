@@ -59,8 +59,8 @@ def ingest_news(
             writer = csv.writer(f)
             writer.writerow(["id", "created", "title", "url", "symbols"])
 
-    logger.info(f"ðŸ”Ž Fetching Benzinga headlines for {symbols}")
-    logger.info(f"Date range: {date_from} â†’ {date_to or utc_now().date()}")
+    logger.info(f"Ã°Å¸â€Å½ Fetching Benzinga headlines for {symbols}")
+    logger.info(f"Date range: {date_from} Ã¢â€ â€™ {date_to or utc_now().date()}")
 
     # Fetch headlines (API client must support date params)
     articles = client.get_news(
@@ -68,7 +68,7 @@ def ingest_news(
     )
 
     if not articles:
-        logger.warning("âš ï¸ No articles fetched")
+        logger.warning("Ã¢Å¡Â Ã¯Â¸Â No articles fetched")
         return
 
     new_count = 0
@@ -99,12 +99,12 @@ def ingest_news(
                 )
                 new_count += 1
             except Exception as e:
-                logger.error(f"âš ï¸ Error saving article: {e}")
+                logger.error(f"Ã¢Å¡Â Ã¯Â¸Â Error saving article: {e}")
                 session.rollback()
 
     session.commit()
     session.close()
-    logger.info(f"âœ“ Logged {new_count} headlines into DB + CSV")
+    logger.info(f"Ã¢Å“â€œ Logged {new_count} headlines into DB + CSV")
 
 
 if __name__ == "__main__":

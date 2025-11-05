@@ -23,8 +23,8 @@ def test_process_signal_perf_exception_flows_to_normalization(monkeypatch, eng):
         lambda: (_ for _ in ()).throw(RuntimeError("sharpe_boom")),
         raising=True,
     )
-    # route should succeed → we reach normalization not ‘blocked’
-    r = eng.process_signal("AAPL", "BUY", price=100, size=1)  # algo=None → router OK
+    # route should succeed â†’ we reach normalization not â€˜blockedâ€™
+    r = eng.process_signal("AAPL", "BUY", price=100, size=1)  # algo=None â†’ router OK
     assert r["status"] in {
         "filled",
         "rejected",

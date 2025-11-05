@@ -1,5 +1,5 @@
 """
-Unified Risk & Signal Suite (Hybrid AI Quant Pro v35.7 – Hedge-Fund OE Grade, 100% Coverage)
+Unified Risk & Signal Suite (Hybrid AI Quant Pro v35.7 â€“ Hedge-Fund OE Grade, 100% Coverage)
 --------------------------------------------------------------------------------------------
 Includes:
 - RiskManager
@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 
 from hybrid_ai_trading.algos.vwap_executor import VWAPExecutor
-from hybrid_ai_trading.execution.portfolio_tracker import (  # ✅ FIX ADDED
+from hybrid_ai_trading.execution.portfolio_tracker import (  # âœ… FIX ADDED
     PortfolioTracker,
 )
 from hybrid_ai_trading.risk.black_swan_guard import BlackSwanGuard
@@ -260,7 +260,7 @@ def test_daily_loss_and_roi_sharpe_sortino_guards(caplog):
     caplog.set_level(logging.WARNING)
     result = rm.check_trade("AAPL", "BUY", 1, 1000)
     assert not result
-    assert "daily_loss" in caplog.text or "❌" in caplog.text
+    assert "daily_loss" in caplog.text or "âŒ" in caplog.text
 
 
 def test_portfolio_checks_and_exceptions(caplog):
@@ -385,7 +385,7 @@ def test_vwap_signal_core_and_exceptions(monkeypatch):
     bars2 = make_bars([10, 10], vols=[1, 1])
     assert vwap_signal(bars2) == "HOLD"
 
-    # Symmetry case – allow HOLD if VWAP midpoint == avg of first/last
+    # Symmetry case â€“ allow HOLD if VWAP midpoint == avg of first/last
     bars3 = make_bars([10, 20], vols=[5, 5])
     bars3[-1]["c"] = 15
     result = vwap_signal(bars3)

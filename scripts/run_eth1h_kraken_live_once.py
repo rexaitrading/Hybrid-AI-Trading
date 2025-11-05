@@ -30,7 +30,7 @@ bsg = BlackSwanGuard()
 
 r = ETH1HRunner(cfg, risk, kelly, bsg, logger)
 
-# Inject keys into the Kraken broker (runnerâ€™s factory creates a plain client)
+# Inject keys into the Kraken broker (runnerÃ¢â‚¬â„¢s factory creates a plain client)
 key = os.getenv("KRAKEN_KEY", "")
 sec = os.getenv("KRAKEN_SECRET", "")
 r.broker = KrakenClient(api_key=key, secret=sec)

@@ -1,5 +1,5 @@
 """
-Hybrid AI Quant Pro – Data Client Errors (Hedge-Fund Grade, Flake8 Clean)
+Hybrid AI Quant Pro â€“ Data Client Errors (Hedge-Fund Grade, Flake8 Clean)
 -------------------------------------------------------------------------
 Centralized base and provider-specific exceptions for all
 data client modules. This ensures consistent error handling

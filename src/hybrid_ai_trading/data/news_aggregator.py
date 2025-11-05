@@ -1,5 +1,5 @@
 """
-News Aggregator (Hybrid AI Quant Pro v2.0 – OE Grade)
+News Aggregator (Hybrid AI Quant Pro v2.0 â€“ OE Grade)
 - Combines Benzinga + Polygon + Alpaca + RSS (Google/Yahoo/extra)
 - Dedupe by URL first, then (source,id)
 """

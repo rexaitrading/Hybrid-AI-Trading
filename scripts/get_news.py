@@ -1,4 +1,4 @@
-# get_news.py — UTF-8 (no BOM)
+# get_news.py â€” UTF-8 (no BOM)
 import argparse
 import json
 import re

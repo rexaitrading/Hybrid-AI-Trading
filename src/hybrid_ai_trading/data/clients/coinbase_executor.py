@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-Coinbase Executor (Hybrid AI Quant Pro v1.0 – DRY-RUN Safe)
+Coinbase Executor (Hybrid AI Quant Pro v1.0 â€“ DRY-RUN Safe)
 - Uses coinbase-advanced-py RESTClient.
 - Default is DRY-RUN (no real orders). Pass --live to actually place orders.
 

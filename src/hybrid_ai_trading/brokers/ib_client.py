@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-IBClient (Hybrid AI Quant Pro – minimal, safe wrapper)
+IBClient (Hybrid AI Quant Pro â€“ minimal, safe wrapper)
 - Env-driven connect (defaults to TWS paper: localhost:7497)
 - Clean timeouts/retries
 - Account summary helper

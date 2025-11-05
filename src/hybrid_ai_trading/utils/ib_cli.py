@@ -161,7 +161,7 @@ def cmd_health(args):
 
 def main(argv: Optional[list[str]] = None):
     parser = argparse.ArgumentParser(
-        prog="ib", description="Hybrid AI Quant Pro — IBKR CLI"
+        prog="ib", description="Hybrid AI Quant Pro â€” IBKR CLI"
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 

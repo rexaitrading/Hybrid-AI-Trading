@@ -1,5 +1,5 @@
 """
-Black Swan Guard (Hybrid AI Quant Pro v12.7 – Hedge Fund OE Grade, 100% Coverage)
+Black Swan Guard (Hybrid AI Quant Pro v12.7 â€“ Hedge Fund OE Grade, 100% Coverage)
 ---------------------------------------------------------------------------------
 - Blocks trades when catastrophic/rare events are triggered
 - Supports multiple simultaneous active events
@@ -17,28 +17,28 @@ class BlackSwanGuard:
     """Blocks trading signals when black swan anomaly conditions are active."""
 
     def __init__(self) -> None:
-        # Map: source → reason
+        # Map: source â†’ reason
         self.events: Dict[str, str] = {}
-        logger.info("✅ BlackSwanGuard initialized | events=%s", self.events)
+        logger.info("âœ… BlackSwanGuard initialized | events=%s", self.events)
 
     # --------------------------------------------------
     def trigger_event(self, source: str, reason: str = "unspecified") -> None:
         """Activate guard due to a catastrophic event."""
         self.events[source] = reason
         logger.warning(
-            "[BlackSwanGuard] ⚠️ Triggered | source=%s, reason=%s", source, reason
+            "[BlackSwanGuard] âš ï¸ Triggered | source=%s, reason=%s", source, reason
         )
 
     def clear_event(self, source: str) -> None:
         """Clear a specific event if it exists."""
         if source in self.events:
-            logger.info("[BlackSwanGuard] ✅ Event Cleared | source=%s", source)
+            logger.info("[BlackSwanGuard] âœ… Event Cleared | source=%s", source)
             self.events.pop(source)
 
     def clear_all(self) -> None:
         """Clear all active events."""
         if self.events:
-            logger.info("[BlackSwanGuard] ✅ All events cleared")
+            logger.info("[BlackSwanGuard] âœ… All events cleared")
             self.events.clear()
 
     # --------------------------------------------------
@@ -49,7 +49,7 @@ class BlackSwanGuard:
     def filter_signal(self, signal: str) -> str:
         """
         Filter a trading signal:
-        - If active and signal is BUY/SELL → returns "HOLD"
+        - If active and signal is BUY/SELL â†’ returns "HOLD"
         - HOLD always passes
         - Unknown signals unchanged
         """
@@ -58,7 +58,7 @@ class BlackSwanGuard:
 
         if signal.upper() in {"BUY", "SELL"}:
             logger.warning(
-                "[BlackSwanGuard] ❌ Trade Blocked | signal=%s, active_events=%s",
+                "[BlackSwanGuard] âŒ Trade Blocked | signal=%s, active_events=%s",
                 signal,
                 list(self.events.keys()),
             )

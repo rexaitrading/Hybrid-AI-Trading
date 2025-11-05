@@ -1,5 +1,5 @@
 """
-Universe Definitions (Hybrid AI Quant Pro – Hedge-Fund Grade)
+Universe Definitions (Hybrid AI Quant Pro â€“ Hedge-Fund Grade)
 -------------------------------------------------------------
 Defines the static trading universe across asset categories:
 - Core_Stocks: diversified equities (tech, defensive, financials)

@@ -29,6 +29,6 @@ allowed = [s for s in res["stories"] if s.get("allow")]
 allowed.sort(key=lambda x: x.get("score", 0), reverse=True)
 print(f"\nTop {min(TOPN,len(allowed))} ALLOW headlines:")
 for s in allowed[:TOPN]:
-    title = shorten(s.get("title", ""), width=100, placeholder="…")
+    title = shorten(s.get("title", ""), width=100, placeholder="â€¦")
     syms = ",".join(s.get("symbols", []))
     print(f"  {s.get('score',0):.2f}  [{syms}]  {title}  -> {s.get('url')}")

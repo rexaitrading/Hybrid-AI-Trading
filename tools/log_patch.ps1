@@ -1,4 +1,4 @@
-﻿param(
+param(
   [Parameter(Mandatory=$true)][string]$Title,
   [string]$Why="", [string]$Files="", [string]$Tests="python -m pytest -q", [switch]$SkipTests
 )

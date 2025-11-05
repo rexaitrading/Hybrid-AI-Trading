@@ -55,7 +55,7 @@ foreach ($sym in $symbols) {
 # write summary
 if ($rows.Count -gt 0) {
   $rows | Export-Csv -NoTypeInformation -Encoding UTF8 $outCsv
-  Write-Host "✔ Summary -> $outCsv" -ForegroundColor Green
+  Write-Host "âœ” Summary -> $outCsv" -ForegroundColor Green
 } else {
   Write-Host "No rows to summarize." -ForegroundColor Yellow
 }

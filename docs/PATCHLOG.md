@@ -77,3 +77,11 @@ ERROR tests/engine/test_trade_engine_alert_branches.py
 
 
 ---
+### 2025-11-05  RiskManager hardening
+- Add kelly_size() with bounds & exception log
+- control_signal() honors absolute daily_loss_limit
+- Aggregate Sharpe/Sortino exception logs
+- Lowercase leverage message for test stability
+- update_equity(): reject negative; critical log
+- reset_day(): return reason + exact log string
+- Encoding/line-endings: UTF-8 no-BOM, LF

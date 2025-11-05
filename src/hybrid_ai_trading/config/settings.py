@@ -1,6 +1,6 @@
 # src/hybrid_ai_trading/config/settings.py
 """
-Settings Loader (Hybrid AI Quant Pro – Suite-Aligned, Hedge Fund Grade)
+Settings Loader (Hybrid AI Quant Pro â€“ Suite-Aligned, Hedge Fund Grade)
 -----------------------------------------------------------------------
 Central utility for loading and accessing the YAML configuration file.
 """

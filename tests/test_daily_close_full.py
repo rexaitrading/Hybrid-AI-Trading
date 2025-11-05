@@ -1,6 +1,6 @@
 """
 Unit Tests: Daily Close Exporter
-(Hybrid AI Quant Pro v6.14 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Hedge-Fund Grade, 100% Coverage, Polished)
+(Hybrid AI Quant Pro v6.14 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ Hedge-Fund Grade, 100% Coverage, Polished)
 =======================================================================
 Covers:
 - _ms_to_iso (valid + invalid inputs)
@@ -180,6 +180,6 @@ def test_main_entrypoint_runs(tmp_path):
     else:
         assert (
             ("Exported" in combined_output)
-            or ("📂" in combined_output)
             or ("ðŸ“‚" in combined_output)
+            or ("Ã°Å¸â€œâ€š" in combined_output)
         )

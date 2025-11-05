@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$IbcDir = 'C:\IBC',
   [string]$Settings = 'C:\Users\rhcy9\Documents\IBC\config.ini'
 )

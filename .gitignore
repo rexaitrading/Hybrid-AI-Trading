@@ -87,3 +87,13 @@ protection.backup.json
 # logs
 /audit.csv
 /backup.csv
+# local temp / reports
+.tmp/
+_tmp/
+.reports/
+_reports/
+.quarantine/
+# pytest caches
+.pytest_cache/
+# bytecode
+**/__pycache__/

@@ -1,5 +1,5 @@
 """
-MovingAverageSignal (Hybrid AI Quant Pro v2.2 – Hedge-Fund Grade)
+MovingAverageSignal (Hybrid AI Quant Pro v2.2 â€“ Hedge-Fund Grade)
 -----------------------------------------------------------------
 Responsibilities:
 - Detect moving average crossovers (short vs long)
@@ -30,36 +30,36 @@ class MovingAverageSignal:
     ) -> Dict[str, Union[str, float]]:
         """Generate moving average crossover signal."""
         if not bars:
-            logger.info("No bars provided → HOLD (not enough bars)")
+            logger.info("No bars provided â†’ HOLD (not enough bars)")
             return {"signal": "HOLD", "reason": "not enough bars"}
 
         if len(bars) < self.long_window + 1:
-            logger.info("Not enough bars (%s) → HOLD", len(bars))
+            logger.info("Not enough bars (%s) â†’ HOLD", len(bars))
             return {"signal": "HOLD", "reason": "not enough bars"}
 
         try:
             closes = pd.Series([float(b["c"]) for b in bars if "c" in b])
         except Exception as e:  # noqa: BLE001
-            logger.error("❌ Failed to parse closes for MA signal: %s", e)
+            logger.error("âŒ Failed to parse closes for MA signal: %s", e)
             return {"signal": "HOLD", "reason": "failed parse"}
 
         if closes.empty:
-            logger.warning("Missing 'c' field in bars → HOLD")
+            logger.warning("Missing 'c' field in bars â†’ HOLD")
             return {"signal": "HOLD", "reason": "missing close"}
 
         if closes.isna().any():
-            logger.warning("NaN detected in closes → HOLD")
+            logger.warning("NaN detected in closes â†’ HOLD")
             return {"signal": "HOLD", "reason": "nan detected"}
 
         try:
             short_ma = closes.rolling(self.short_window).mean()
             long_ma = closes.rolling(self.long_window).mean()
         except Exception as e:  # noqa: BLE001
-            logger.error("❌ Rolling mean failed: %s", e)
+            logger.error("âŒ Rolling mean failed: %s", e)
             return {"signal": "HOLD", "reason": "failed rolling"}
 
         if pd.isna(short_ma.iloc[-1]) or pd.isna(long_ma.iloc[-1]):
-            logger.warning("NaN SMA detected → HOLD")
+            logger.warning("NaN SMA detected â†’ HOLD")
             return {"signal": "HOLD", "reason": "nan sma"}
 
         prev_short, prev_long = short_ma.iloc[-2], long_ma.iloc[-2]
@@ -72,10 +72,10 @@ class MovingAverageSignal:
             logger.info("SELL signal generated (short MA crossed below long MA)")
             sig = "SELL"
         elif curr_short == curr_long:
-            logger.info("MAs equal → HOLD")
+            logger.info("MAs equal â†’ HOLD")
             sig = "HOLD"
         else:
-            logger.info("No crossover → HOLD")
+            logger.info("No crossover â†’ HOLD")
             sig = "HOLD"
 
         return {"signal": sig, "short_ma": curr_short, "long_ma": curr_long}

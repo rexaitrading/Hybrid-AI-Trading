@@ -61,7 +61,7 @@ def test_process_signal_edges(monkeypatch):
         if hasattr(eng, attr):
             setattr(eng, attr, val)
 
-    # size None → default sizing branch; price None → price-less branch
+    # size None â†’ default sizing branch; price None â†’ price-less branch
     r1 = eng.process_signal("AAPL", "BUY", price=None, size=None, algo="Adaptive")
     assert isinstance(r1, dict)
 
@@ -73,7 +73,7 @@ def test_process_signal_edges(monkeypatch):
     r3 = eng.process_signal("AAPL", "SELL", price=101.25, size=2, algo="VWAP")
     assert isinstance(r3, dict)
 
-    # unknown/neutral: HOLD/None/empty → default/else branch
+    # unknown/neutral: HOLD/None/empty â†’ default/else branch
     for sig in ("HOLD", "UNKNOWN", "", None):
         r = eng.process_signal("AAPL", sig, price=99.9, size=0)
         assert isinstance(r, dict)

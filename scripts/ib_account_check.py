@@ -16,27 +16,27 @@ class App(EWrapper, EClient):
         self.stop_evt = threading.Event()
 
     def nextValidId(self, orderId):
-        print(f"✅ Connected. nextValidId={orderId}", flush=True)
+        print(f"âœ… Connected. nextValidId={orderId}", flush=True)
         self.reqAccountSummary(9001, "All", TAGS)
 
     def accountSummary(self, reqId, account, tag, value, currency):
         print(f" {account:>10} | {tag:<24} | {value} {currency or ''}", flush=True)
 
     def accountSummaryEnd(self, reqId):
-        print("— accountSummaryEnd —", flush=True)
+        print("â€” accountSummaryEnd â€”", flush=True)
         self.done = True
         self.stop_evt.set()
         self.disconnect()
 
     def managedAccounts(self, accountsList):
-        print(f"👤 managedAccounts: {accountsList}", flush=True)
+        print(f"ðŸ‘¤ managedAccounts: {accountsList}", flush=True)
 
     def error(self, reqId, code, msg, *_):
         if not self.stop_evt.is_set():
-            print(f"❌ ERROR {code}: {msg}", flush=True)
+            print(f"âŒ ERROR {code}: {msg}", flush=True)
 
     def connectionClosed(self):
-        print("🔌 connectionClosed", flush=True)
+        print("ðŸ”Œ connectionClosed", flush=True)
         self.stop_evt.set()
 
 
@@ -46,7 +46,7 @@ def connect_and_run(app, host, port, cid):
         app.run()
     except Exception as e:
         if not app.stop_evt.is_set():
-            print(f"❌ Connect/run exception: {e}", flush=True)
+            print(f"âŒ Connect/run exception: {e}", flush=True)
 
 
 def main():
@@ -69,7 +69,7 @@ def main():
         time.sleep(0.2)
 
     if not app.done:
-        print("⏱️ Timeout waiting for account summary.", flush=True)
+        print("â±ï¸ Timeout waiting for account summary.", flush=True)
         app.stop_evt.set()
         app.disconnect()
         time.sleep(0.3)

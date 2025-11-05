@@ -77,8 +77,8 @@ def main() -> None:
     today = load_guard_today()
     used_not = float(today.get("notional", 0.0))
     used_tr = int(today.get("trades", 0))
-    room_not = "∞" if daily_not <= 0 else f"{max(0.0,daily_not - used_not):.2f}"
-    room_tr = "∞" if daily_tr <= 0 else f"{max(0,daily_tr - used_tr)}"
+    room_not = "âˆž" if daily_not <= 0 else f"{max(0.0,daily_not - used_not):.2f}"
+    room_tr = "âˆž" if daily_tr <= 0 else f"{max(0,daily_tr - used_tr)}"
     print(
         f"LiveGuard caps: per-trade={cap_q}  daily_notional={daily_not}  daily_trades={daily_tr}"
     )
@@ -101,7 +101,7 @@ def main() -> None:
                 else float(sig["size_quote"])
             )
             print(
-                f"{p} ({sig['tf']}): entry≈{sig['last']:.2f} size≈{eff:.2f} stop≈{(sig['stop'] or float('nan')):.2f}"
+                f"{p} ({sig['tf']}): entryâ‰ˆ{sig['last']:.2f} sizeâ‰ˆ{eff:.2f} stopâ‰ˆ{(sig['stop'] or float('nan')):.2f}"
             )
             anyb = True
         if not anyb:
@@ -112,7 +112,7 @@ def main() -> None:
     # GO / NO-GO
     go = (usdc >= 6.0) if usdc >= 0 else False
     print("\nCHECK\n-----")
-    print("GO" if go else "NO-GO: need ≥ ~6 USDC (or funding to post)")
+    print("GO" if go else "NO-GO: need â‰¥ ~6 USDC (or funding to post)")
 
 
 if __name__ == "__main__":

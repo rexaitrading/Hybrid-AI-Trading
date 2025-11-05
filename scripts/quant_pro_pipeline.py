@@ -1,5 +1,5 @@
 """
-Quant Pro Pipeline (Hybrid AI v31.0 – Hedge Fund Level)
+Quant Pro Pipeline (Hybrid AI v31.0 â€“ Hedge Fund Level)
 ------------------------------------------------------
 - Central orchestration of TradeEngine + ExecutionEngine
 - Loads config.yaml (schema validated via settings.py)
@@ -50,7 +50,7 @@ def main() -> None:
     """Run hedge-fund grade Quant Pro pipeline."""
     cfg: Dict[str, Any] = CONFIG
     if not cfg:
-        logger.error("❌ Config could not be loaded. Exiting.")
+        logger.error("âŒ Config could not be loaded. Exiting.")
         return
 
     # === Initialize core components ===
@@ -61,13 +61,13 @@ def main() -> None:
     gatescore = GateScore(audit_mode=True, **cfg.get("gatescore", {}))
     regime = RegimeDetector(**cfg.get("regime", {}))
 
-    logger.info("✅ Quant Pro Pipeline initialized")
+    logger.info("âœ… Quant Pro Pipeline initialized")
 
     # === Asset universe ===
     tickers = cfg.get("universe", ["AAPL", "MSFT", "BTC/USDT"])
 
     for symbol in tickers:
-        logger.info("🔎 Evaluating %s", symbol)
+        logger.info("ðŸ”Ž Evaluating %s", symbol)
 
         # --- Signal generation ---
         breakout = breakout_signal_polygon(symbol)
@@ -83,7 +83,7 @@ def main() -> None:
 
         if not decision:
             logger.warning(
-                "❌ GateScore veto %s | score=%.2f < thr=%.2f | regime=%s",
+                "âŒ GateScore veto %s | score=%.2f < thr=%.2f | regime=%s",
                 symbol,
                 gs_score,
                 gs_thr,
@@ -102,7 +102,7 @@ def main() -> None:
             perf.record_trade(snapshot["realized_pnl"])
 
         logger.info(
-            "📊 %s | signal=%s | reason=%s | result=%s",
+            "ðŸ“Š %s | signal=%s | reason=%s | result=%s",
             symbol,
             signal,
             reason,
@@ -111,14 +111,14 @@ def main() -> None:
 
     # === Final report ===
     metrics = perf.snapshot()
-    logger.info("📈 Final Performance Metrics:")
+    logger.info("ðŸ“ˆ Final Performance Metrics:")
     for k, v in metrics.items():
         logger.info("  %-15s %s", k, v)
 
     Path("reports").mkdir(exist_ok=True)
     out_path = Path("reports/pipeline_performance.json")
     perf.export_json(str(out_path))
-    logger.info("✅ Pipeline snapshot saved → %s", out_path)
+    logger.info("âœ… Pipeline snapshot saved â†’ %s", out_path)
 
 
 # ---------------------------------------------------------------------

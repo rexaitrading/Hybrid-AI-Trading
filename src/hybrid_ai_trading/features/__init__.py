@@ -1,5 +1,5 @@
 """
-Hybrid AI Trading – Features Package (Hedge Fund Grade)
+Hybrid AI Trading â€“ Features Package (Hedge Fund Grade)
 -------------------------------------------------------
 Contains feature engineering modules for signals,
 market structure analysis, and AI-driven strategies.

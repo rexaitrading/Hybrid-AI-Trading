@@ -1,5 +1,5 @@
 """
-Hybrid AI Quant Pro – Data Clients Package (Hedge-Fund Grade)
+Hybrid AI Quant Pro â€“ Data Clients Package (Hedge-Fund Grade)
 -------------------------------------------------------------
 Unified public API for all data provider clients.
 

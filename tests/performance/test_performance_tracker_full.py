@@ -1,5 +1,5 @@
 """
-Unit Tests: PerformanceTracker (Hybrid AI Quant Pro v7.5 – AAA+ Coverage)
+Unit Tests: PerformanceTracker (Hybrid AI Quant Pro v7.5 â€“ AAA+ Coverage)
 -----------------------------------------------------------------------
 Covers ALL branches in performance_tracker.py:
 - recorders (trade/equity/benchmark)
