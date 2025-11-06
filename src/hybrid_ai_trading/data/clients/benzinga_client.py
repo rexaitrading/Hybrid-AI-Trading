@@ -33,7 +33,7 @@ def mask_key(key: Optional[str]) -> str:
 
 
 def _coerce_date_str(
-    d: Optional[Union[str, _dt.date, _dt.datetime, int, float]]
+    d: Optional[Union[str, _dt.date, _dt.datetime, int, float]],
 ) -> Optional[str]:
     """
     Permissive coercion for query params:
