@@ -12,11 +12,11 @@ s = socket.socket()
 s.settimeout(1.5)
 try:
     s.connect((host, port))
-    print("✅ Port reachable")
+    print("Ã¢Å“â€¦ Port reachable")
     s.close()
 except Exception as e:
-    print(f"❌ Port check failed: {e}")
+    print(f"Ã¢ÂÅ’ Port check failed: {e}")
     sys.exit(1)
 if not acct:
-    print("⚠️ IB_ACCOUNT missing (ok in dev; set before live).")
+    print("Ã¢Å¡Â Ã¯Â¸Â IB_ACCOUNT missing (ok in dev; set before live).")
 print("Pre-flight OK.")

@@ -1,0 +1,77 @@
+
+==================================== ERRORS ====================================
+__________ ERROR collecting tests/execution/test_llvm_adapter_full.py __________
+ImportError while importing test module '/home/runner/work/Hybrid-AI-Trading/Hybrid-AI-Trading/tests/execution/test_llvm_adapter_full.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/execution/test_llvm_adapter_full.py:23: in <module>
+    from llvmlite import binding, ir
+E   ModuleNotFoundError: No module named 'llvmlite'
+____________ ERROR collecting tests/test_backtest_edgecases_full.py ____________
+ImportError while importing test module '/home/runner/work/Hybrid-AI-Trading/Hybrid-AI-Trading/tests/test_backtest_edgecases_full.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_backtest_edgecases_full.py:22: in <module>
+    from hybrid_ai_trading.pipelines.backtest import (
+E   ImportError: cannot import name 'IntradayBacktester' from 'hybrid_ai_trading.pipelines.backtest' (/home/runner/work/Hybrid-AI-Trading/Hybrid-AI-Trading/src/hybrid_ai_trading/pipelines/backtest.py)
+___________ ERROR collecting tests/test_backtest_strategies_full.py ____________
+ImportError while importing test module '/home/runner/work/Hybrid-AI-Trading/Hybrid-AI-Trading/tests/test_backtest_strategies_full.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_backtest_strategies_full.py:17: in <module>
+    from hybrid_ai_trading.pipelines.backtest import IntradayBacktester
+E   ImportError: cannot import name 'IntradayBacktester' from 'hybrid_ai_trading.pipelines.backtest' (/home/runner/work/Hybrid-AI-Trading/Hybrid-AI-Trading/src/hybrid_ai_trading/pipelines/backtest.py)
+_________________ ERROR collecting tests/test_database_full.py _________________
+ImportError while importing test module '/home/runner/work/Hybrid-AI-Trading/Hybrid-AI-Trading/tests/test_database_full.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_database_full.py:15: in <module>
+    from hybrid_ai_trading.data.store import database
+src/hybrid_ai_trading/data/store/database.py:14: in <module>
+    from sqlalchemy import (
+E   ModuleNotFoundError: No module named 'sqlalchemy'
+_______________ ERROR collecting tests/test_news_client_full.py ________________
+ImportError while importing test module '/home/runner/work/Hybrid-AI-Trading/Hybrid-AI-Trading/tests/test_news_client_full.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_news_client_full.py:17: in <module>
+    from hybrid_ai_trading.data.clients import news_client
+src/hybrid_ai_trading/data/clients/news_client.py:22: in <module>
+    from sqlalchemy.exc import IntegrityError
+E   ModuleNotFoundError: No module named 'sqlalchemy'
+=============================== warnings summary ===============================
+../../../../../opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/eventkit/util.py:21
+  /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/eventkit/util.py:21: DeprecationWarning: There is no current event loop
+    return asyncio.get_event_loop_policy().get_event_loop()
+
+tests/integration/test_ib_gateway_integration.py:9
+  /home/runner/work/Hybrid-AI-Trading/Hybrid-AI-Trading/tests/integration/test_ib_gateway_integration.py:9: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.integration
+
+tests/integration/test_runner_paper_smoke.py:8
+  /home/runner/work/Hybrid-AI-Trading/Hybrid-AI-Trading/tests/integration/test_runner_paper_smoke.py:8: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/execution/test_llvm_adapter_full.py
+ERROR tests/test_backtest_edgecases_full.py
+ERROR tests/test_backtest_strategies_full.py
+ERROR tests/test_database_full.py
+ERROR tests/test_news_client_full.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 5 errors during collection !!!!!!!!!!!!!!!!!!!!

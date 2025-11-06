@@ -13,24 +13,24 @@ class App(EWrapper, EClient):
         self.stop_evt = threading.Event()
 
     def nextValidId(self, orderId):
-        print(f"✅ IB API CONNECTED. nextValidId={orderId}", flush=True)
+        print(f"Ã¢Å“â€¦ IB API CONNECTED. nextValidId={orderId}", flush=True)
         self.ready = True
         self.stop_evt.set()
         self.disconnect()
 
     def managedAccounts(self, accountsList):
-        print(f"👤 managedAccounts: {accountsList}", flush=True)
+        print(f"Ã°Å¸â€˜Â¤ managedAccounts: {accountsList}", flush=True)
 
     def currentTime(self, t):
-        print(f"⏰ currentTime: {t}", flush=True)
+        print(f"Ã¢ÂÂ° currentTime: {t}", flush=True)
 
     def error(self, reqId, code, msg, *_):
         # Only print while connected, or before we decided to stop
         if not self.stop_evt.is_set():
-            print(f"❌ ERROR {code}: {msg}", flush=True)
+            print(f"Ã¢ÂÅ’ ERROR {code}: {msg}", flush=True)
 
     def connectionClosed(self):
-        print("🔌 connectionClosed", flush=True)
+        print("Ã°Å¸â€Å’ connectionClosed", flush=True)
         self.stop_evt.set()
 
 
@@ -40,7 +40,7 @@ def connect_and_run(app, host, port, cid):
         app.run()
     except Exception as e:
         if not app.stop_evt.is_set():
-            print(f"❌ Connect/run exception: {e}", flush=True)
+            print(f"Ã¢ÂÅ’ Connect/run exception: {e}", flush=True)
 
 
 def pokes(app):
@@ -72,7 +72,7 @@ while time.time() < deadline and not app.ready and not app.stop_evt.is_set():
     time.sleep(0.2)
 
 if not app.ready and not app.stop_evt.is_set():
-    print("⏱️ Timed out waiting for handshake.", flush=True)
+    print("Ã¢ÂÂ±Ã¯Â¸Â Timed out waiting for handshake.", flush=True)
     app.stop_evt.set()
     app.disconnect()
 

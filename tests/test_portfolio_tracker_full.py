@@ -1,10 +1,10 @@
 """
-Unit Tests: PortfolioTracker (Hybrid AI Quant Pro v114.0 – 100% Coverage, Hedge-Fund Grade)
+Unit Tests: PortfolioTracker (Hybrid AI Quant Pro v114.0 Ã¢â‚¬â€œ 100% Coverage, Hedge-Fund Grade)
 --------------------------------------------------------------------------------------------
 Covers all branches in portfolio_tracker.py:
 - Invalid inputs
 - Commissions (buy/sell deduction)
-- Partial closes & flips (long→short, short→long, cover→long)
+- Partial closes & flips (longÃ¢â€ â€™short, shortÃ¢â€ â€™long, coverÃ¢â€ â€™long)
 - Cleanup (flat, tolerance positive & negative, exact flat cases)
 - update_equity: None, {}, valid, unknown-only, mixed, tolerance cleanup
 - Exposures: total, net

@@ -92,7 +92,7 @@ Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAct
 Start-Sleep -Milliseconds 200
 
 Wait-For-IBG -Port $Port -Seconds 120
-Log "[PORT] $Port is OPEN and owned by ibgateway.exe ✅"
+Log "[PORT] $Port is OPEN and owned by ibgateway.exe Ã¢Å“â€¦"
 
 # 1) try requested clientId
 $rc = Run-Probe -Port $Port -ClientId $ClientId -TimeoutSec $TimeoutSec -Tag "cid$ClientId"
@@ -114,13 +114,13 @@ if ($rc -ne 0) {
     } else {
       Log "[DIAG] No gateway logs found."
     }
-    Log "Fix in Gateway→API (Paper): Enable ActiveX+Socket ON, Read-Only OFF, Port=$Port,"
+    Log "Fix in GatewayÃ¢â€ â€™API (Paper): Enable ActiveX+Socket ON, Read-Only OFF, Port=$Port,"
     Log "  Master API Client ID = 0 (or exactly $ClientId), Allow localhost ON, Trusted IP 127.0.0.1,"
     Log "  approve the first 'Incoming API connection' prompt, then Save & Restart."
-    Log "❌ HANDSHAKE FAILED. See $log"
+    Log "Ã¢ÂÅ’ HANDSHAKE FAILED. See $log"
     exit 2
   }
 }
 
-Log "✅ HANDSHAKE PASSED. See $log"
+Log "Ã¢Å“â€¦ HANDSHAKE PASSED. See $log"
 exit 0

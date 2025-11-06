@@ -1,5 +1,5 @@
 """
-Leaderboard Exporter (Hybrid AI Quant Pro – Hedge-Fund Grade)
+Leaderboard Exporter (Hybrid AI Quant Pro Ã¢â‚¬â€œ Hedge-Fund Grade)
 -------------------------------------------------------------
 Provides a robust export function for leaderboard DataFrames.
 
@@ -37,20 +37,22 @@ def export_leaderboard(df: pd.DataFrame, out_file: Path) -> None:
     """
     try:
         if df.empty:
-            logger.warning("⚠️ Empty leaderboard → writing headers only")
+            logger.warning(
+                "Ã¢Å¡Â Ã¯Â¸Â Empty leaderboard Ã¢â€ â€™ writing headers only"
+            )
             # Always write headers even if no rows
             df.to_csv(out_file, index=False)
             return
 
         df.to_csv(out_file, index=False)
-        logger.info("✅ Leaderboard exported to %s", out_file)
+        logger.info("Ã¢Å“â€¦ Leaderboard exported to %s", out_file)
 
     except Exception as e:
-        logger.error("❌ Failed to export leaderboard: %s", e, exc_info=True)
+        logger.error("Ã¢ÂÅ’ Failed to export leaderboard: %s", e, exc_info=True)
         # Ensure no corrupted file remains
         if out_file.exists():
             try:
                 out_file.unlink()
-                logger.debug("🗑️ Removed half-written file: %s", out_file)
+                logger.debug("Ã°Å¸â€”â€˜Ã¯Â¸Â Removed half-written file: %s", out_file)
             except Exception as cleanup_error:
-                logger.debug("⚠️ Failed to cleanup file: %s", cleanup_error)
+                logger.debug("Ã¢Å¡Â Ã¯Â¸Â Failed to cleanup file: %s", cleanup_error)

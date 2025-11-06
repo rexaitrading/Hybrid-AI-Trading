@@ -62,7 +62,7 @@ def test_process_signal_fuzz(monkeypatch):
             res = eng.process_signal(s, sig, price=p, size=q, algo=a)
             assert isinstance(res, dict)
         except Exception:
-            # acceptable for invalid (e.g., negative qty) – goal is branch coverage
+            # acceptable for invalid (e.g., negative qty) Ã¢â‚¬â€œ goal is branch coverage
             pass
 
 

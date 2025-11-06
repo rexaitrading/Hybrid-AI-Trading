@@ -1,5 +1,5 @@
 """
-Micro Tests: TradeEngine (Hybrid AI Quant Pro v20.0 – Hedge-Fund OE Grade, 100% Coverage)
+Micro Tests: TradeEngine (Hybrid AI Quant Pro v20.0 Ã¢â‚¬â€œ Hedge-Fund OE Grade, 100% Coverage)
 -----------------------------------------------------------------------------------------
 Covers every uncovered branch in trade_engine.py:
 - alert(): success + all fail + no env

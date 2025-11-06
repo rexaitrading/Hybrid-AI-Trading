@@ -43,7 +43,9 @@ def quote_market(
         limit = dround(base * (1 - slippage_bps / 10_000), 2)
 
     notional = limit * qty
-    print(f"[PLAN] {side} {qty} {symbol} @ ~{limit} (IOC), notional≈${notional:,.2f}")
+    print(
+        f"[PLAN] {side} {qty} {symbol} @ ~{limit} (IOC), notionalÃ¢â€°Ë†${notional:,.2f}"
+    )
     if notional > max_notional:
         raise RuntimeError(
             f"Notional ${notional:,.2f} exceeds cap ${max_notional:,.2f}"

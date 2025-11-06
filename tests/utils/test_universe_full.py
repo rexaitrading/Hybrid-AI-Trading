@@ -1,5 +1,5 @@
 """
-Unit Tests: Universe Definitions (Hybrid AI Quant Pro – Hedge-Fund Grade)
+Unit Tests: Universe Definitions (Hybrid AI Quant Pro Ã¢â‚¬â€œ Hedge-Fund Grade)
 Covers:
 - groups() returns all expected keys
 - Each group is a non-empty list of strings

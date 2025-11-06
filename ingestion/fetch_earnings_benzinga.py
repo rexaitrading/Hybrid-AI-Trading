@@ -31,7 +31,7 @@ def fetch_earnings(start: str, end: str):
 
 
 if __name__ == "__main__":
-    # è®€å–ä¸Šæ¬¡æŠ“åˆ°çš„æ—¥æœŸï¼Œé è¨­å¾€å‰ä¸€å¤©
+    # Ã¨Â®â‚¬Ã¥Ââ€“Ã¤Â¸Å Ã¦Â¬Â¡Ã¦Å â€œÃ¥Ë†Â°Ã§Å¡â€žÃ¦â€”Â¥Ã¦Å“Å¸Ã¯Â¼Å’Ã©Â ÂÃ¨Â¨Â­Ã¥Â¾â‚¬Ã¥â€°ÂÃ¤Â¸â‚¬Ã¥Â¤Â©
     start = load_checkpoint("earnings_day_ckpt", dt.date.today().strftime("%Y-%m-%d"))
     end = (dt.date.fromisoformat(start) + relativedelta(days=7)).strftime("%Y-%m-%d")
 
@@ -40,9 +40,9 @@ if __name__ == "__main__":
     day = dt.date.today().strftime("%Y-%m-%d")
     out_path = json_path(BASE_DIR, day, f"earnings_{start}_to_{end}")
     atomic_write_json(out_path, data, indent=2)
-    print("âœ… Saved:", out_path, "items:", len(data.get("earnings", [])))
+    print("Ã¢Å“â€¦ Saved:", out_path, "items:", len(data.get("earnings", [])))
 
-    # æ›´æ–° checkpoint
+    # Ã¦â€ºÂ´Ã¦â€“Â° checkpoint
     save_checkpoint(
         "earnings_day_ckpt", dt.date.fromisoformat(end).strftime("%Y-%m-%d")
     )

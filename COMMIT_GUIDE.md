@@ -1,8 +1,8 @@
-\# 📝 Commit Style Guide
+\# ðŸ“ Commit Style Guide
 
 
 
-To keep this project’s Git history clean and professional, follow this commit message format:
+To keep this projectâ€™s Git history clean and professional, follow this commit message format:
 
 
 

@@ -1,5 +1,5 @@
 """
-Execution Engine (Hybrid AI Quant Pro v4.0 – AAA Hedge-Fund Grade)
+Execution Engine (Hybrid AI Quant Pro v4.0 â€“ AAA Hedge-Fund Grade)
 ==================================================================
 Provides broker abstraction, trade logging, risk checks, stress testing,
 and order execution for portfolio trades.
@@ -123,11 +123,11 @@ def check_risk(current_dd: float, shift_fraction: float) -> None:
     """
     if current_dd < -MAX_DRAWDOWN:
         raise RuntimeError(
-            f"❌ Max drawdown exceeded ({current_dd:.2%}). Blocked trades."
+            f"âŒ Max drawdown exceeded ({current_dd:.2%}). Blocked trades."
         )
     if shift_fraction > MAX_DAILY_SHIFT:
         raise RuntimeError(
-            f"❌ Shift {shift_fraction:.2%} exceeds max_daily_shift "
+            f"âŒ Shift {shift_fraction:.2%} exceeds max_daily_shift "
             f"{MAX_DAILY_SHIFT:.2%}."
         )
 
@@ -139,7 +139,7 @@ def run_stress_test(weights: Dict[str, float]) -> pd.DataFrame:
     """
     Run portfolio shocks based on configured stress scenarios.
     Args:
-        weights: dict of asset → weight
+        weights: dict of asset â†’ weight
     Returns:
         DataFrame of scenario impacts
     """
@@ -194,7 +194,7 @@ def execute_order(
     except Exception as exc:
         with open("execution_errors.log", "a", encoding="utf-8") as errfile:
             errfile.write(f"{datetime.utcnow()} | {symbol} | {str(exc)}\n")
-        logger.error("⚠️ Execution error for %s: %s", symbol, exc)
+        logger.error("âš ï¸ Execution error for %s: %s", symbol, exc)
         return None
 
 

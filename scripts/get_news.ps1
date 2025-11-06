@@ -1,4 +1,4 @@
-﻿param(
+param(
   [switch]$ToNotion,
   [int]$Batch = 20,
   [string]$ScriptRoot = "",

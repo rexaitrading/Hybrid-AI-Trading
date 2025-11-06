@@ -106,7 +106,7 @@ def connect_ib(
 def account_snapshot(
     ib: IB, acct: Optional[str] = None, wait_sec: float = 3.0
 ) -> List[Tuple[str, str, str]]:
-    """Version-proof snapshot via low-level subscribe → accountValues."""
+    """Version-proof snapshot via low-level subscribe Ã¢â€ â€™ accountValues."""
     if acct is None:
         ma = getattr(ib, "managedAccounts", lambda: [])() or []
         acct = ma[0] if ma else ""

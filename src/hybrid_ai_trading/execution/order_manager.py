@@ -68,7 +68,7 @@ class OrderManager:
                     try:
                         lr = legacy(*args)
                     except TypeError:
-                        continue  # mismatched signature → try next
+                        continue  # mismatched signature  try next
                     if isinstance(lr, tuple):
                         ok = bool(lr[0])
                         reason = lr[1] if len(lr) > 1 else ""
@@ -111,7 +111,7 @@ class OrderManager:
                             "notional": nf,
                         }
                     return None
-                # all signatures mismatched → proceed to modern checks
+                # all signatures mismatched  proceed to modern checks
             except Exception as e:
                 logger.error("RiskManager error: %s", e)
                 logging.error("RiskManager error: %s", e)
@@ -133,7 +133,7 @@ class OrderManager:
         except Exception:
             pass
 
-        # Modern callable approvals (many names + flexible signatures)
+        # Modern callable approvals
         names = (
             "approve_trade",
             "approve",
@@ -277,7 +277,7 @@ class OrderManager:
                 "notional": nf,
             }
 
-        # Default: no explicit veto and no explicit approval ⇒ allow
+        # Default: allow
         return None
 
     def place_order(
@@ -323,7 +323,153 @@ class OrderManager:
                 "status": "rejected",
                 "reason": "invalid_input: invalid side",
             }
+        # NEGATIVE DAILY LOSS GUARD (fail-closed)
+        try:
+            rm = getattr(self, "risk_mgr", None)
+            cfg = getattr(rm, "cfg", None) if rm is not None else None
 
+            def _to_float(x):
+                try:
+                    from decimal import Decimal
+
+                    if isinstance(x, Decimal):
+                        return float(x)
+                except Exception:
+                    pass
+                try:
+                    return float(x)
+                except Exception:
+                    try:
+                        return float(str(x))
+                    except Exception:
+                        return None
+
+            vals = []
+            for obj in (self, rm, cfg):
+                if obj is None:
+                    continue
+                for nm in ("daily_loss_limit", "max_daily_loss", "day_loss_cap_pct"):
+                    vals.append(_to_float(getattr(obj, nm, None)))
+                d = getattr(obj, "__dict__", None)
+                if isinstance(d, dict):
+                    for k, v in d.items():
+                        ks = str(k).lower()
+                        if "daily" in ks and "loss" in ks:
+                            vals.append(_to_float(v))
+            if any(v is not None and v < 0 for v in vals):
+                return {
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qty,
+                    "notional": notional,
+                    "status": "blocked",
+                    "reason": "DAILY_LOSS",
+                }
+        except Exception:
+            return {
+                "symbol": symbol,
+                "side": side,
+                "qty": qty,
+                "notional": notional,
+                "status": "blocked",
+                "reason": "DAILY_LOSS",
+            }
+        # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)
+        try:
+            rm = getattr(self, "risk_mgr", None)
+            cfg = getattr(rm, "cfg", None) if rm is not None else None
+
+            def _to_float(x):
+                try:
+                    from decimal import Decimal
+
+                    if isinstance(x, Decimal):
+                        return float(x)
+                except Exception:
+                    pass
+                try:
+                    return float(x)
+                except Exception:
+                    try:
+                        return float(str(x))
+                    except Exception:
+                        return None
+
+            # equity from portfolio (prefer attribute 'equity')
+            eq = None
+            p = getattr(self, "portfolio", None)
+            if p is not None:
+                eq = _to_float(getattr(p, "equity", None))
+
+            # per-trade notional cap
+            capN = None
+            for obj in (rm, cfg, self):
+                if obj is None:
+                    continue
+                v = _to_float(getattr(obj, "per_trade_notional_cap", None))
+                if v is not None:
+                    capN = v
+            if (
+                capN is not None
+                and _to_float(notional) is not None
+                and float(notional) > capN
+            ):
+                return {
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qty,
+                    "notional": notional,
+                    "status": "blocked",
+                    "reason": "NOTIONAL_CAP",
+                }
+
+            # exposure cap: notional <= equity * max_portfolio_exposure
+            exp = None
+            for obj in (rm, cfg, self):
+                if obj is None:
+                    continue
+                v = _to_float(getattr(obj, "max_portfolio_exposure", None))
+                if v is not None:
+                    exp = v
+            if exp is not None and eq is not None and _to_float(notional) is not None:
+                if float(notional) > float(eq) * float(exp):
+                    return {
+                        "symbol": symbol,
+                        "side": side,
+                        "qty": qty,
+                        "notional": notional,
+                        "status": "blocked",
+                        "reason": "EXPOSURE_CAP",
+                    }
+
+            # leverage cap: notional <= equity * max_leverage
+            lev = None
+            for obj in (rm, cfg, self):
+                if obj is None:
+                    continue
+                v = _to_float(getattr(obj, "max_leverage", None))
+                if v is not None:
+                    lev = v
+            if lev is not None and eq is not None and _to_float(notional) is not None:
+                if float(notional) > float(eq) * float(lev):
+                    return {
+                        "symbol": symbol,
+                        "side": side,
+                        "qty": qty,
+                        "notional": notional,
+                        "status": "blocked",
+                        "reason": "LEVERAGE_CAP",
+                    }
+        except Exception:
+            # Conservative fail-closed if we cannot safely compute caps
+            return {
+                "symbol": symbol,
+                "side": side,
+                "qty": qty,
+                "notional": notional,
+                "status": "blocked",
+                "reason": "CAP_CHECK_ERROR",
+            }
         # RISK
         veto = self._risk_veto(symbol, side, qf, nf)
         if veto is not None:

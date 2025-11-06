@@ -1,11 +1,11 @@
 """
-Unit Tests: settings.py (Hybrid AI Quant Pro – 100% Coverage)
+Unit Tests: settings.py (Hybrid AI Quant Pro Ã¢â‚¬â€œ 100% Coverage)
 -------------------------------------------------------------
 Covers:
 - Missing config file
 - Config returns non-dict
 - YAML parsing error
-- File open exception (new → covers lines 45–47)
+- File open exception (new Ã¢â€ â€™ covers lines 45Ã¢â‚¬â€œ47)
 - Valid config dictionary
 - get_config_value with nested keys and defaults
 - load_config(force=True) refreshes global CONFIG
@@ -48,7 +48,7 @@ def test_yaml_parse_error(monkeypatch, tmp_path, caplog):
 
 
 def test_file_open_exception(monkeypatch, caplog):
-    """Covers the bare except branch (lines 45–47)."""
+    """Covers the bare except branch (lines 45Ã¢â‚¬â€œ47)."""
     monkeypatch.setattr(settings, "_find_config_path", lambda: "bad.yaml")
     monkeypatch.setattr("os.path.exists", lambda path: True)
     monkeypatch.setattr(
@@ -57,7 +57,7 @@ def test_file_open_exception(monkeypatch, caplog):
     with caplog.at_level("ERROR"):
         cfg = settings.load_config()
     assert cfg == {}
-    # ✅ Match the actual log message from settings.py
+    # Ã¢Å“â€¦ Match the actual log message from settings.py
     assert "Unexpected error reading config.yaml" in caplog.text
 
 

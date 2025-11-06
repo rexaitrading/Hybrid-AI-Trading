@@ -72,7 +72,7 @@ $presence = @(
 }
 
 # ----- banner -----
-Write-Section "Provider Audit — Start"
+Write-Section "Provider Audit Ã¢â‚¬â€ Start"
 "Repo        : $Repo"
 "Src         : $src"
 "Scripts     : $scr"

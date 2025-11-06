@@ -30,7 +30,7 @@ def make_engine(**cfg_overrides):
     return TradeEngine(config=base)
 
 
-# ---- reset_day: combined error and generic except (175â€“198, 192) ----
+# ---- reset_day: combined error and generic except (175ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“198, 192) ----
 def test_reset_day_combined_and_generic(monkeypatch):
     te = make_engine()
     # combined error branch: portfolio error dict, risk ok
@@ -48,7 +48,7 @@ def test_reset_day_combined_and_generic(monkeypatch):
     class BadPortfolio(type(te2.portfolio)):
         def reset_day(
             self,
-        ):  # method still present; weâ€™ll blow up by removing attribute mid-call
+        ):  # method still present; weÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ll blow up by removing attribute mid-call
             raise RuntimeError("outer-fail")
 
     te2.portfolio.reset_day = lambda: (_ for _ in ()).throw(RuntimeError("outer-fail"))
@@ -63,12 +63,12 @@ def test_reset_day_combined_and_generic(monkeypatch):
     assert r3["status"] == "ok" and "Daily reset complete" in r3["reason"]
 
 
-# ---- adaptive_fraction missing paths (205, 208, 211â€“212) ----
+# ---- adaptive_fraction missing paths (205, 208, 211ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“212) ----
 def test_adaptive_fraction_peak_zero_and_protection():
     te = make_engine()
     te.portfolio.history = [(0, 0.0)]
     te.portfolio.equity = 10.0
-    # peak=0 â†’ base_fraction
+    # peak=0 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ base_fraction
     assert te.adaptive_fraction() == te.base_fraction
 
     te.portfolio.history = [(0, 50.0), (1, 50.0)]
@@ -83,7 +83,7 @@ def test_hold_signal_ignored():
     assert r["status"] == "ignored" and r["reason"] == "hold_signal"
 
 
-# ---- drawdown try/except (241â€“251 esp. 247â€“248) + hedge check (240) ----
+# ---- drawdown try/except (241ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“251 esp. 247ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“248) + hedge check (240) ----
 def test_drawdown_try_except_and_hedge(monkeypatch):
     te = make_engine(risk={"hedge_rules": {"equities_vol_spike": ["AAPL"]}})
     # Malformed history to force exception in drawdown block
@@ -106,7 +106,7 @@ def test_drawdown_try_except_and_hedge(monkeypatch):
     }
 
 
-# ---- algo lines coverage: iceberg path & residual lines (256â€“257, 269, 273â€“274) ----
+# ---- algo lines coverage: iceberg path & residual lines (256ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“257, 269, 273ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“274) ----
 def test_algo_iceberg_and_vwap_success(monkeypatch):
     te = make_engine()
 
@@ -159,7 +159,7 @@ def test_algo_iceberg_and_vwap_success(monkeypatch):
     }
 
 
-# ---- router raises (286â€“288) ----
+# ---- router raises (286ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“288) ----
 def test_router_raises_exception_path(monkeypatch):
     te = make_engine()
     te.router.route_order = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
@@ -167,7 +167,7 @@ def test_router_raises_exception_path(monkeypatch):
     assert r["status"] == "blocked" and "router_error" in r["reason"]
 
 
-# ---- invalid_status normalization guard (332) & log capture (351â€“352) ----
+# ---- invalid_status normalization guard (332) & log capture (351ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“352) ----
 def test_invalid_status_and_audit_capture(monkeypatch):
     te = make_engine()
     # Permissive filters & ratios so we reach normalization guard
@@ -176,7 +176,7 @@ def test_invalid_status_and_audit_capture(monkeypatch):
     te.performance_tracker.sharpe_ratio = lambda: 1.0
     te.performance_tracker.sortino_ratio = lambda: 1.0
 
-    # Invalid status from router → must normalize to rejected/invalid_status
+    # Invalid status from router Ã¢â€ â€™ must normalize to rejected/invalid_status
     te.router.route_order = lambda *a, **k: {"status": "weird"}
     r = te.process_signal("AAPL", "BUY", price=1.0, size=1)
     assert r["status"] == "rejected" and r["reason"] == "invalid_status"

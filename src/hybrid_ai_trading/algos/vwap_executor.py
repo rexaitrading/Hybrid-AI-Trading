@@ -1,5 +1,5 @@
 """
-VWAP Executor (Hybrid AI Quant Pro v2.5 – Hedge-Fund Grade, Loop-Proof)
+VWAP Executor (Hybrid AI Quant Pro v2.5 Ã¢â‚¬â€œ Hedge-Fund Grade, Loop-Proof)
 -----------------------------------------------------------------------
 Executes trades using VWAP signal logic.
 """

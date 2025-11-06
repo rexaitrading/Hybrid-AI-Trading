@@ -1,5 +1,5 @@
 """
-Polygon Ingestor for Hybrid AI Trading System (Quant Pro v5.1 – Hedge Fund Grade)
+Polygon Ingestor for Hybrid AI Trading System (Quant Pro v5.1 Ã¢â‚¬â€œ Hedge Fund Grade)
 --------------------------------------------------------------------------------
 Responsibilities:
 - Continuously fetch OHLCV bars from Polygon.io
@@ -69,8 +69,8 @@ def run_polygon_ingestor(
                 ["timestamp", "symbol", "open", "high", "low", "close", "volume"]
             )
 
-    logger.info("✅ Database initialized at data/hybrid_ai_trading.db")
-    logger.info("🔎 Starting Polygon price ingestor for %s", symbol)
+    logger.info("Ã¢Å“â€¦ Database initialized at data/hybrid_ai_trading.db")
+    logger.info("Ã°Å¸â€Å½ Starting Polygon price ingestor for %s", symbol)
     logger.info("Logging to %s every %ss", outfile, interval)
 
     while True:
@@ -119,7 +119,9 @@ def run_polygon_ingestor(
                     except Exception as inner_e:
                         session.rollback()
                         logger.error(
-                            "⚠️ Error inserting bar for %s: %s", symbol, inner_e
+                            "Ã¢Å¡Â Ã¯Â¸Â Error inserting bar for %s: %s",
+                            symbol,
+                            inner_e,
                         )
 
                 if new_rows:
@@ -127,12 +129,14 @@ def run_polygon_ingestor(
                         writer = csv.writer(f)
                         writer.writerows(new_rows)
 
-                    logger.info("✓ Logged %s new bars for %s", len(new_rows), symbol)
+                    logger.info(
+                        "Ã¢Å“â€œ Logged %s new bars for %s", len(new_rows), symbol
+                    )
                 else:
                     logger.info("No new unique bars")
 
         except Exception as e:  # noqa: BLE001
-            logger.error("❌ Error during ingestion: %s", e)
+            logger.error("Ã¢ÂÅ’ Error during ingestion: %s", e)
 
         time.sleep(interval)
 

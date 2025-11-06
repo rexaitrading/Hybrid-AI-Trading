@@ -1,6 +1,6 @@
 function Show-Header {
   Write-Host "============================================="
-  Write-Host " Hybrid AI Trading – Ops Console (LIVE)      "
+  Write-Host " Hybrid AI Trading â€“ Ops Console (LIVE)      "
   Write-Host "============================================="
 }
 

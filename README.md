@@ -1,6 +1,11 @@
+﻿<p align="left">
+  <a href="https://github.com/rexaitrading/Hybrid-AI-Trading/actions/workflows/risk_nightly.yml">
+    <img src="https://github.com/rexaitrading/Hybrid-AI-Trading/actions/workflows/risk_nightly.yml/badge.svg" alt="Risk Nightly (non-IB)">
+  </a>
+</p>
 
 
-# 🚀 Hybrid AI Trading
+# Ã°Å¸Å¡â‚¬ Hybrid AI Trading
 
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Status](https://img.shields.io/badge/status-active-success)
@@ -12,32 +17,32 @@ Includes **risk management modules**, **backtesting pipelines**, and **interacti
 
 ---
 
-## 📌 Overview
+## Ã°Å¸â€œÅ’ Overview
 This project is a **Hybrid AI Aggressive High-Performance Trading System**.
 It combines **quantitative trading**, **AI signals**, and **multi-broker execution** into one pipeline:
 
-- 📈 **Equities** via Polygon + Interactive Brokers (IBKR)
-- 📊 **Futures** via EdgeClear (Rithmic)
-- 💱 **Forex** via OANDA
-- ₿ **Crypto** via CCXT (Binance, Bybit, Kraken)
-- 📰 **News/Sentiment** via Benzinga Pro & Dow Jones / LSEG
-- ☁️ **Infrastructure** on AWS/GCP for 24/7 execution
+- Ã°Å¸â€œË† **Equities** via Polygon + Interactive Brokers (IBKR)
+- Ã°Å¸â€œÅ  **Futures** via EdgeClear (Rithmic)
+- Ã°Å¸â€™Â± **Forex** via OANDA
+- Ã¢â€šÂ¿ **Crypto** via CCXT (Binance, Bybit, Kraken)
+- Ã°Å¸â€œÂ° **News/Sentiment** via Benzinga Pro & Dow Jones / LSEG
+- Ã¢ËœÂÃ¯Â¸Â **Infrastructure** on AWS/GCP for 24/7 execution
 
-Built for **day trading** with a focus on **1–2% daily return targets** and strict **risk controls** (+1% lock, –3% stop).
-
----
-
-## 🛠️ Features
-- ✅ **Backtesting Engine** (daily & intraday strategies)
-- ✅ **Signal Modules** (breakout, anomaly detection)
-- ✅ **Risk Manager** (daily loss caps, per-trade risk, black swan guard)
-- ✅ **Broker Integrations** (IBKR, OANDA, Rithmic, CCXT)
-- ✅ **Data Feeds** (Polygon, CoinAPI, Kaiko, LSEG, Benzinga)
-- ✅ **Visualization** (equity curves, drawdowns, portfolio reports)
+Built for **day trading** with a focus on **1Ã¢â‚¬â€œ2% daily return targets** and strict **risk controls** (+1% lock, Ã¢â‚¬â€œ3% stop).
 
 ---
 
-## ⚡ Setup
+## Ã°Å¸â€ºÂ Ã¯Â¸Â Features
+- Ã¢Å“â€¦ **Backtesting Engine** (daily & intraday strategies)
+- Ã¢Å“â€¦ **Signal Modules** (breakout, anomaly detection)
+- Ã¢Å“â€¦ **Risk Manager** (daily loss caps, per-trade risk, black swan guard)
+- Ã¢Å“â€¦ **Broker Integrations** (IBKR, OANDA, Rithmic, CCXT)
+- Ã¢Å“â€¦ **Data Feeds** (Polygon, CoinAPI, Kaiko, LSEG, Benzinga)
+- Ã¢Å“â€¦ **Visualization** (equity curves, drawdowns, portfolio reports)
+
+---
+
+## Ã¢Å¡Â¡ Setup
 
 Clone the repo and install dependencies:
 

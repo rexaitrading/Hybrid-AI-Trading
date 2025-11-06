@@ -44,12 +44,13 @@ jobs:
           print("importable:", bool(importlib.util.find_spec("hybrid_ai_trading")))
           PY
 
-      - name: Run tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
-        run: |
-          if [ -f "pytest.ini" ]; then
-            python -m pytest -c "${{ github.workspace }}/pytest.ini" -q
-          else
-            python -m pytest -q
+
+                     param($m)
+                     $hdr = $m.Groups[1].Value
+                     $ind = $m.Groups[2].Value
+                     $cmd = $m.Groups[3].Value
+                     $cmdLF = $cmd -replace "`r?`n","`n"
+                     $tee = "$cmdLF | tee .reports/ci_tradeengine.log"
+                     "$hdr$ind$tee"
+
           fi

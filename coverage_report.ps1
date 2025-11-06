@@ -6,7 +6,7 @@
 #  3. HTML report saved to htmlcov/index.html
 # --------------------------------------------------------
 
-Write-Host "🧪 Running tests with coverage..." -ForegroundColor Cyan
+Write-Host "ðŸ§ª Running tests with coverage..." -ForegroundColor Cyan
 
 # Clean old coverage
 if (Test-Path .coverage) { Remove-Item .coverage -Force }
@@ -22,6 +22,6 @@ pytest tests -vv --cache-clear `
   --disable-warnings `
   | Tee-Object -FilePath coverage_summary.txt
 
-Write-Host "`n✅ Coverage reports generated:" -ForegroundColor Green
-Write-Host "   • coverage_summary.txt   (plain text report)"
-Write-Host "   • htmlcov/index.html     (open in browser for full UI)" -ForegroundColor Yellow
+Write-Host "`nâœ… Coverage reports generated:" -ForegroundColor Green
+Write-Host "   â€¢ coverage_summary.txt   (plain text report)"
+Write-Host "   â€¢ htmlcov/index.html     (open in browser for full UI)" -ForegroundColor Yellow

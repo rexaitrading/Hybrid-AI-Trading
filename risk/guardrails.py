@@ -58,6 +58,6 @@ def guardrails(
     if not in_trading_window(start, end):
         return (
             False,
-            f"outside trading window PT {start[0]}:{start[1]}–{end[0]}:{end[1]}",
+            f"outside trading window PT {start[0]}:{start[1]}â€“{end[0]}:{end[1]}",
         )
     return True, "guardrails: PASS"

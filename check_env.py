@@ -20,7 +20,7 @@ for key in keys:
     value = os.getenv(key)
     if value:
         print(
-            f"{key} present ✅, preview: ******{value[-6:]}"
+            f"{key} present âœ…, preview: ******{value[-6:]}"
         )  # only show last 6 chars
     else:
-        print(f"{key} MISSING ❌")
+        print(f"{key} MISSING âŒ")

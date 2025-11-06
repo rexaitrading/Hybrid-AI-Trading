@@ -68,7 +68,7 @@ def test_signal_matrix_more(monkeypatch):
 def test_repeat_helpers_variations(monkeypatch):
     eng = _eng(monkeypatch)
     # alert with unusual strings
-    for msg in ("   ", "\n", "\t", "🚀" * 50):
+    for msg in ("   ", "\n", "\t", "Ã°Å¸Å¡â‚¬" * 50):
         try:
             a = eng.alert(msg)
             assert isinstance(a, dict)
@@ -113,7 +113,7 @@ def test_run_empty_and_nonempty_batches(monkeypatch):
 
 def test_reset_day_twice_again(monkeypatch):
     eng = _eng(monkeypatch)
-    # ensure repeated calls don’t crash and touch alternate lines
+    # ensure repeated calls donÃ¢â‚¬â„¢t crash and touch alternate lines
     for _ in range(2):
         try:
             r = eng.reset_day()

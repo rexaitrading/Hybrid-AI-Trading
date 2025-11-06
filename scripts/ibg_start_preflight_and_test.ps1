@@ -27,30 +27,30 @@ function Wait-ForIBG([int]$totalSec,[int]$needed){
     } else { $okCount=0 }
 
     if($okCount -ge $needed){ return $true }
-    if($tick % 7 -eq 0){ Write-Host ("â€¦waiting for login & API (sec ~{0})" -f ($tick*0.7)) -ForegroundColor DarkGray }
+    if($tick % 7 -eq 0){ Write-Host ("ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦waiting for login & API (sec ~{0})" -f ($tick*0.7)) -ForegroundColor DarkGray }
     Start-Sleep -Milliseconds 700
   }
   return $false
 }
 
-Write-Host "Killing any stale IB/TWS/Javaâ€¦" -ForegroundColor Cyan
+Write-Host "Killing any stale IB/TWS/JavaÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" -ForegroundColor Cyan
 'tws.exe','ibgateway.exe','javaw.exe','java.exe' | % { Get-Process $_ -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue }
 
-Write-Host "Starting IB Gatewayâ€¦" -ForegroundColor Cyan
+Write-Host "Starting IB GatewayÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" -ForegroundColor Cyan
 Start-Process $Exe
-Write-Host "Log in to Paper; waiting for API listener (4002) to be stably owned by ibgatewayâ€¦" -ForegroundColor Yellow
+Write-Host "Log in to Paper; waiting for API listener (4002) to be stably owned by ibgatewayÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" -ForegroundColor Yellow
 
 if (-not (Wait-ForIBG -totalSec $WaitSec -needed $ConsecOK)) {
   Write-Host "4002 never became stably owned by ibgateway; finish login/API then re-run." -ForegroundColor Yellow
   exit 0
 }
 
-Write-Host "Listener is up and stable. Small settleâ€¦" -ForegroundColor Green
+Write-Host "Listener is up and stable. Small settleÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" -ForegroundColor Green
 Start-Sleep -Seconds 6
 
 # re-check just before handshake
 $tcp = Get-NetTCPConnection -State Listen -LocalPort 4002 -ErrorAction SilentlyContinue | Select-Object -First 1
-if(-not $tcp){ Write-Host "Listener dropped; waiting againâ€¦" -ForegroundColor Yellow; if (-not (Wait-ForIBG -totalSec 90 -needed $ConsecOK)) { exit 0 } }
+if(-not $tcp){ Write-Host "Listener dropped; waiting againÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" -ForegroundColor Yellow; if (-not (Wait-ForIBG -totalSec 90 -needed $ConsecOK)) { exit 0 } }
 
 # Preflight (127.0.0.1 only): 3021 first (Master=3021), then 0 if needed
 Write-Host ("Preflight: trying cid=3021 on 127.0.0.1 (timeout {0}s)..." -f $Tout3021) -ForegroundColor Cyan
@@ -84,7 +84,7 @@ $out | Write-Host
 Remove-Item $tmp,($tmp+'.out'),($tmp+'.err') -ErrorAction SilentlyContinue
 
 if(-not $ok){
-  Write-Host "Handshake blocked â†’ tests will skip. IBG log hint:" -ForegroundColor Yellow
+  Write-Host "Handshake blocked ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ tests will skip. IBG log hint:" -ForegroundColor Yellow
   $lg = Get-ChildItem "C:\Jts\ibgateway\1040\logs\*.log","C:\Jts\ibgateway\*\logs\*.log" -ErrorAction SilentlyContinue |
         Sort-Object LastWriteTime -Desc | Select-Object -First 1
   if($lg){

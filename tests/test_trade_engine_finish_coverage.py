@@ -20,7 +20,7 @@ def _prep(te):
 def test_finish_process_signal_all_branches():
     te = make_engine()
 
-    # A) regime disabled → early return (~301)
+    # A) regime disabled Ã¢â€ â€™ early return (~301)
     _prep(te)
     te.config["regime"]["enabled"] = False
     if hasattr(te, "risk_manager"):
@@ -32,7 +32,7 @@ def test_finish_process_signal_all_branches():
     except Exception:
         pass
 
-    # B) sortino breach → blocked (~325)
+    # B) sortino breach Ã¢â€ â€™ blocked (~325)
     _prep(te)
     te.config["regime"]["enabled"] = True
     te.config["risk"]["min_sortino"] = 10.0
@@ -46,7 +46,7 @@ def test_finish_process_signal_all_branches():
     except Exception:
         pass
 
-    # C) drawdown gate present & Kelly exception → size fallback (241–257)
+    # C) drawdown gate present & Kelly exception Ã¢â€ â€™ size fallback (241Ã¢â‚¬â€œ257)
     _prep(te)
     te.config["risk"]["max_drawdown"] = 0.99  # keep the drawdown gate present
     # Force Kelly path by making size=None then raising inside Kelly -> fallback size=1
@@ -62,7 +62,7 @@ def test_finish_process_signal_all_branches():
     except Exception:
         pass
 
-    # D) tail normalization: result.status/reason "ok" -> "filled"/"normalized_ok" (334–339)
+    # D) tail normalization: result.status/reason "ok" -> "filled"/"normalized_ok" (334Ã¢â‚¬â€œ339)
     _prep(te)
     te.config["regime"]["enabled"] = True
     if hasattr(te, "risk_manager"):

@@ -57,7 +57,7 @@ def _pos_args_for(fn):
         if name in sup:
             args.append(sup[name])
         else:
-            # generic, but harmless fallback — strings for likely names, else simple numerics
+            # generic, but harmless fallback Ã¢â‚¬â€ strings for likely names, else simple numerics
             if "sym" in name or "tick" in name:
                 args.append("AAPL")
             elif "side" in name or "sig" in name:
@@ -72,7 +72,7 @@ def _pos_args_for(fn):
     return args
 
 
-# -------- (241→251) drawdown block executes WITHOUT breach, then continues to sizing -----------
+# -------- (241Ã¢â€ â€™251) drawdown block executes WITHOUT breach, then continues to sizing -----------
 def test_ps_drawdown_nonbreach_then_kelly_sizing_positional():
     te = make_engine()
     _neutralize(te)
@@ -98,12 +98,12 @@ def test_ps_drawdown_nonbreach_then_kelly_sizing_positional():
         pass
 
 
-# -------- (247–248) drawdown try/except path: malformed history triggers except ----------
+# -------- (247Ã¢â‚¬â€œ248) drawdown try/except path: malformed history triggers except ----------
 def test_ps_drawdown_except_path_malformed_history_positional():
     te = make_engine()
     _neutralize(te)
     te.config["risk"]["max_drawdown"] = 0.99  # gate present
-    # history is a string => indexing [0][1] raises -> except path (247–248)
+    # history is a string => indexing [0][1] raises -> except path (247Ã¢â‚¬â€œ248)
     te.portfolio = SimpleNamespace(equity=90.0, history="NOT_A_LIST")
     te.portfolio.status = lambda: {"equity": 90.0, "history": "NOT_A_LIST"}
     if hasattr(te, "risk_manager"):
@@ -150,7 +150,7 @@ def test_ps_sortino_breach_325_positional():
         pass
 
 
-# -------- (334–339) tail normalization (status/ reason "ok" -> "filled"/"normalized_ok") ----------
+# -------- (334Ã¢â‚¬â€œ339) tail normalization (status/ reason "ok" -> "filled"/"normalized_ok") ----------
 def test_ps_tail_normalization_334_339_positional():
     te = make_engine()
     _neutralize(te)

@@ -9,7 +9,7 @@ if ($env:NOTION_DB_REPLAYS) {
   try {
     $h=@{"Authorization"="Bearer $($env:NOTION_TOKEN)";"Notion-Version"="2022-06-28"}
     $db = Invoke-RestMethod -Method GET -Uri ("https://api.notion.com/v1/databases/{0}" -f $env:NOTION_DB_REPLAYS) -Headers $h
-    "✔ NOTION_DB_REPLAYS OK: $($db.title.plain_text -join ' ')"
+    "Ã¢Å“â€ NOTION_DB_REPLAYS OK: $($db.title.plain_text -join ' ')"
     exit 0
   } catch {
     Write-Host "WARN: NOTION_DB_REPLAYS invalid or not accessible. Creating new DB..." -ForegroundColor Yellow
@@ -47,4 +47,4 @@ $body = @{
 
 $res = Invoke-RestMethod -Method POST -Uri "https://api.notion.com/v1/databases" -Headers $headers -Body $body
 $env:NOTION_DB_REPLAYS = $res.id
-"✔ Created NOTION_DB_REPLAYS: $($res.id)"
+"Ã¢Å“â€ Created NOTION_DB_REPLAYS: $($res.id)"

@@ -1,5 +1,5 @@
 """
-Hybrid AI Quant Pro – Configuration
+Hybrid AI Quant Pro Ã¢â‚¬â€œ Configuration
 -----------------------------------
 Centralized configuration utilities:
 - settings: load and validate YAML configs with dynamic upgrades
