@@ -10,11 +10,6 @@ from typing import Any, Dict, Optional, Tuple
 log = logging.getLogger(__name__)
 
 
-# ------------------------------------------------------------------------------
-# Config
-# ------------------------------------------------------------------------------
-
-
 @dataclass
 class RiskConfig:
     state_path: Optional[str] = None
@@ -35,17 +30,11 @@ class RiskConfig:
     max_portfolio_exposure: Optional[float] = None
 
 
-# ------------------------------------------------------------------------------
-# Risk Manager
-# ------------------------------------------------------------------------------
-
-
 class RiskManager:
     def __init__(
         self,
         cfg: Optional[RiskConfig] = None,
         *,
-        # “legacy” knobs that tests use via RiskManager(...)
         starting_equity: Optional[float] = None,
         daily_loss_limit: Optional[float] = None,  # absolute (negative)
         trade_loss_limit: Optional[float] = None,  # absolute (negative)
@@ -57,9 +46,8 @@ class RiskManager:
         equity: Optional[float] = None,
         portfolio: Any = None,
         db_logger: Any = None,
-        **_legacy,  # e.g. max_daily_loss, max_position_risk
+        **_legacy,
     ) -> None:
-        # config
         self.cfg = cfg if isinstance(cfg, RiskConfig) else RiskConfig()
         if equity is not None:
             self.cfg.equity = float(equity)
@@ -68,7 +56,6 @@ class RiskManager:
         if max_portfolio_exposure is not None:
             self.cfg.max_portfolio_exposure = float(max_portfolio_exposure)
 
-        # map legacy kwargs used by tests
         if "max_daily_loss" in _legacy and daily_loss_limit is None:
             try:
                 daily_loss_limit = float(_legacy["max_daily_loss"])
@@ -80,7 +67,6 @@ class RiskManager:
             except Exception:
                 pass
 
-        # guard knobs
         self.daily_loss_limit = daily_loss_limit
         self.trade_loss_limit = trade_loss_limit
         self.sharpe_min = sharpe_min
@@ -90,14 +76,12 @@ class RiskManager:
         self.portfolio = portfolio
         self.db_logger = db_logger
 
-        # equity
         self.starting_equity = (
             float(starting_equity)
             if starting_equity is not None
             else float(self.cfg.equity)
         )
 
-        # runtime metrics/state
         self.daily_pnl: float = 0.0
         self.equity_peak: float = self.starting_equity
         self.current_drawdown: float = 0.0
@@ -117,19 +101,19 @@ class RiskManager:
             "last_equity": float(self.starting_equity),
         }
 
-        # load persisted state if present
         self.load_state(self.cfg.state_path or "")
-
-        # save once in __init__ (tests may monkey-patch makedirs and assert it was called)
         try:
             self._save_state()
         except Exception:
             pass
 
-    # ------------------------------------------------------------------ utilities
+    # -------- utils
 
     def _today(self) -> str:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        try:
+            return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        except Exception:
+            return datetime.utcnow().strftime("%Y-%m-%d")
 
     def _ms_daykey(self, ts_ms: int) -> int:
         try:
@@ -138,17 +122,12 @@ class RiskManager:
             return 0
 
     def _daily_cap_amount(self) -> Optional[float]:
-        """
-        Return the negative daily loss cap amount (e.g., -100.0) if configured,
-        using day_start_equity as the base. Fallback to 2% if not provided.
-        """
         # Absolute daily_loss_limit (already negative threshold) takes precedence
         if self.daily_loss_limit is not None:
             try:
                 return float(self.daily_loss_limit)
             except Exception:
                 pass
-
         # Percentage cap: configured or default 2%
         base = float(self._state.get("day_start_equity", self.cfg.base_equity_fallback))
         pct = self.cfg.day_loss_cap_pct
@@ -166,7 +145,7 @@ class RiskManager:
             self._state.get("day_realized_pnl", 0.0)
         ) <= float(cap)
 
-    # ------------------------------------------------------------------ snapshot/state I/O
+    # -------- state I/O
 
     def snapshot(self) -> Dict[str, Any]:
         return {
@@ -229,21 +208,19 @@ class RiskManager:
             log.error("load_state failed: %s", e)
             return False
 
-    # ------------------------------------------------------------------ day & portfolio
+    # -------- day & portfolio
 
     def reset_day(self) -> Dict[str, str]:
         try:
             if self.portfolio and hasattr(self.portfolio, "reset_day"):
                 self.portfolio.reset_day()
         except Exception as e:
-            log.error("Portfolio reset_day failed: %s", e)
-            return {"status": "error"}
+            log.error("Reset day failed: %s", e)
+            return {"status": "error", "reason": f"reset_failed:{e}"}
 
-        # tests expect day_start_equity to pick up last_equity at reset
         last_eq = float(self._state.get("last_equity", self.cfg.base_equity_fallback))
         self._state["day_start_equity"] = last_eq
 
-        # counters and halts cleared
         self._state["trades_today"] = 0
         self._state["consecutive_losers"] = 0
         self._state["cooldown_until_ts"] = None
@@ -268,17 +245,14 @@ class RiskManager:
         ) + float(realized)
         self.daily_pnl = float(self._state["day_realized_pnl"])
 
-        # losers/cooldown
         if realized < 0:
             cons = int(self._state.get("consecutive_losers", 0)) + 1
             self._state["consecutive_losers"] = cons
-
             cbars = int(self.cfg.cooldown_bars or 0)
             cap = int(self.cfg.max_consecutive_losers or 0)
             trigger = (cbars > 0) and ((cap == 0) or (cons >= cap))
             if trigger:
                 until = int(bar_ts_ms) + cbars * 3600_000  # ms
-                # deny at same bar and for the window
                 self._state["cooldown_until_ts"] = until
                 self._state["cooldown_reason"] = "COOLDOWN"
                 self._state["halted_until_bar_ts"] = until
@@ -295,13 +269,42 @@ class RiskManager:
             e = float(equity)
         except Exception:
             return False
+        # Reject invalid/negative and log critical (test path)
+        if not (e == e) or e < 0.0:
+            try:
+                log.critical("drawdown breach or invalid equity: %s", e)
+            except Exception:
+                pass
+            return False
         self._state["last_equity"] = e
         self.equity_peak = max(self.equity_peak, e)
         if self.equity_peak > 0:
             self.current_drawdown = max(0.0, (self.equity_peak - e) / self.equity_peak)
         return True
 
-    # ------------------------------------------------------------------ ratios (optionally overridden by tests)
+    # -------- Kelly sizing
+
+    def kelly_size(self, win_rate: float, wl: float, regime: float = 1.0) -> float:
+        """
+        Bounded Kelly fraction in [0,1] with regime scaling.
+        Returns 0.0 on invalid inputs or any exception and logs an error for exception-branch tests.
+        """
+        try:
+            w = float(win_rate)
+            r = float(wl)
+            g = float(regime if regime is not None else 1.0)
+            if r <= 0.0 or w < 0.0 or w > 1.0 or not (g > 0.0):
+                return 0.0
+            f = w - (1.0 - w) / r
+            if not (f == f):
+                return 0.0
+            f = max(0.0, min(1.0, f))
+            return float(f) * g
+        except Exception as ex:
+            log.error("Kelly sizing failed: %s", ex)
+            return 0.0
+
+    # -------- ratios (overridden by tests)
 
     def sharpe_ratio(self) -> Optional[float]:
         return None
@@ -309,12 +312,21 @@ class RiskManager:
     def sortino_ratio(self) -> Optional[float]:
         return None
 
-    # ------------------------------------------------------------------ helpers / guards
+    # -------- guards/helpers
 
     def control_signal(self, signal: str) -> str:
         s = (signal or "HOLD").strip().upper()
         if s not in ("BUY", "SELL", "HOLD"):
             s = "HOLD"
+        # Absolute daily_loss_limit guard (tests expect HOLD when daily_pnl <= limit)
+        try:
+            if self.daily_loss_limit is not None and float(self.daily_pnl) <= float(
+                self.daily_loss_limit
+            ):
+                log.warning("daily_loss breach")
+                return "HOLD"
+        except Exception:
+            pass
         if self._state.get("halted") or self.daily_loss_breached:
             if self.daily_loss_breached:
                 log.warning("daily_loss breach")
@@ -322,7 +334,6 @@ class RiskManager:
         return s
 
     def approve_trade(self, symbol: str, side: str, *args) -> bool:
-        # Accept (symbol, side, notional) or (symbol, side, qty, notional)
         if len(args) == 1:
             notional = args[0]
         elif len(args) >= 2:
@@ -338,16 +349,13 @@ class RiskManager:
         return True
 
     def _portfolio_metrics(self) -> Tuple[float, float]:
-        """Support both attribute and getter methods; raise for errors."""
         p = self.portfolio
         if p is None:
             raise RuntimeError("portfolio missing")
-        # leverage
         if hasattr(p, "get_leverage") and callable(p.get_leverage):
             lev = float(p.get_leverage())
         else:
             lev = float(getattr(p, "leverage", 0.0))
-        # exposure
         if hasattr(p, "get_total_exposure") and callable(p.get_total_exposure):
             exp = float(p.get_total_exposure())
         else:
@@ -355,12 +363,10 @@ class RiskManager:
         return lev, exp
 
     def check_trade(self, symbol: str, side: str, qty: float, notional: float) -> bool:
-        # normalize/kill-switch
         norm_side = self.control_signal(side)
         if norm_side == "HOLD":
             return False
 
-        # Daily loss guard (test expects log string with "daily_loss")
         try:
             if self.daily_loss_limit is not None:
                 if float(self.daily_pnl) <= float(self.daily_loss_limit):
@@ -369,7 +375,6 @@ class RiskManager:
         except Exception:
             pass
 
-        # ROI
         if self.roi_min is not None:
             try:
                 roi_val = float(getattr(self, "roi", 0.0))
@@ -379,29 +384,32 @@ class RiskManager:
                 log.warning("ROI breach")
                 return False
 
-        # Sharpe
+        denied_metric = False
         if self.sharpe_min is not None:
             try:
                 sr = self.sharpe_ratio()
             except Exception:
                 log.error("Sharpe ratio check failed")
-                return False
-            if sr is None or sr < float(self.sharpe_min):
-                log.warning("Sharpe breach")
-                return False
+                denied_metric = True
+            else:
+                if sr is None or sr < float(self.sharpe_min):
+                    log.warning("Sharpe breach")
+                    denied_metric = True
 
-        # Sortino
         if self.sortino_min is not None:
             try:
                 so = self.sortino_ratio()
             except Exception:
                 log.error("Sortino ratio check failed")
-                return False
-            if so is None or so < float(self.sortino_min):
-                log.warning("Sortino breach")
-                return False
+                denied_metric = True
+            else:
+                if so is None or so < float(self.sortino_min):
+                    log.warning("Sortino breach")
+                    denied_metric = True
 
-        # trade loss guard (tests only check that 'trade_loss' appears when notional is absurd)
+        if denied_metric:
+            return False
+
         try:
             if self.trade_loss_limit is not None and float(notional) <= float(
                 self.trade_loss_limit
@@ -411,7 +419,6 @@ class RiskManager:
         except Exception:
             pass
 
-        # Portfolio checks
         if self.portfolio is not None:
             try:
                 lev, exp = self._portfolio_metrics()
@@ -421,7 +428,8 @@ class RiskManager:
                 return False
 
             if self.cfg.max_leverage is not None and lev > float(self.cfg.max_leverage):
-                log.warning("Leverage breach: %s > %s", lev, self.cfg.max_leverage)
+                # keep lowercase 'leverage' so the test substring matches
+                log.warning("leverage breach: %s > %s", lev, self.cfg.max_leverage)
                 return False
 
             if self.cfg.max_portfolio_exposure is not None:
@@ -435,7 +443,6 @@ class RiskManager:
                     log.warning("Portfolio check failed")
                     return False
 
-        # DB log best-effort
         try:
             if self.db_logger:
                 self.db_logger.log(
@@ -451,40 +458,32 @@ class RiskManager:
 
         return True
 
-    # ------------------------------------------------------------------ core decision
-
     def allow_trade(
         self, *, notional: float, side: str, bar_ts: int
     ) -> Tuple[bool, Optional[str]]:
-        # 0) FORCE halt via env
         force = os.getenv("FORCE_RISK_HALT", "").strip()
         if force:
             return False, force
 
-        # 0.5) day rollover / fail-open vs fail-closed
         try:
             self.reset_day_if_needed(bar_ts)
         except Exception:
             return (False, "EXCEPTION") if self.cfg.fail_closed else (True, None)
 
-        # 1) DAILY LOSS (highest among risk guards in tests)
         cap_amt = self._daily_cap_amount()
         if cap_amt is not None and float(
             self._state.get("day_realized_pnl", 0.0)
         ) <= float(cap_amt):
             return False, "DAILY_LOSS"
 
-        # 2) DRAWDOWN
         if self.cfg.max_drawdown_pct is not None and self.current_drawdown is not None:
             if self.current_drawdown >= float(self.cfg.max_drawdown_pct):
                 return False, "MAX_DRAWDOWN"
 
-        # 3) COOLDOWN / MAX_CONSECUTIVE_LOSERS
         cu = self._state.get("cooldown_until_ts")
         if isinstance(cu, int) and bar_ts <= cu:
             return False, "COOLDOWN"
         if isinstance(cu, int) and bar_ts > cu:
-            # cooldown expired -> fully clear AND reset losers
             self._state["cooldown_until_ts"] = None
             self._state["cooldown_reason"] = None
             self._state["halted_until_bar_ts"] = None
@@ -497,13 +496,11 @@ class RiskManager:
         ):
             return False, "MAX_CONSECUTIVE_LOSERS"
 
-        # 4) per-trade notional cap
         if self.cfg.per_trade_notional_cap is not None and notional > float(
             self.cfg.per_trade_notional_cap
         ):
             return False, "NOTIONAL_CAP"
 
-        # 5) max trades/day (tracked by on_fill)
         if self.cfg.max_trades_per_day and int(
             self._state.get("trades_today", 0)
         ) >= int(self.cfg.max_trades_per_day):
