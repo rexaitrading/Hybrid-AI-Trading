@@ -1,5 +1,5 @@
 """
-Quant Report Generator (Hybrid AI Quant Pro v1.0 – Research Tool)
+Quant Report Generator (Hybrid AI Quant Pro v1.0 Ã¢â‚¬â€œ Research Tool)
 -----------------------------------------------------------------
 - Simulates trades with random PnL outcomes
 - Tracks equity curve, drawdowns, Kelly fraction trend
@@ -118,7 +118,7 @@ def save_report(equity_history, pnl_history, kelly_frac_history, summary):
             )
         f.write("===============================\n")
 
-    print(f"\n✅ Quant report saved to:\n  {chart_path}\n  {text_path}")
+    print(f"\nÃ¢Å“â€¦ Quant report saved to:\n  {chart_path}\n  {text_path}")
 
 
 def main():

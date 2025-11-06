@@ -93,7 +93,7 @@ def main():
         notional = d2(limit * qty)
 
         print(
-            f"[PREVIEW] Will {side} {qty} {symbol}  @ ~{limit}  (TIF={tif}, outsideRth={outside_rth})  notional≈${notional:,.2f}"
+            f"[PREVIEW] Will {side} {qty} {symbol}  @ ~{limit}  (TIF={tif}, outsideRth={outside_rth})  notionalÃ¢â€°Ë†${notional:,.2f}"
         )
         if notional <= 0 or notional > max_notional:
             print(f"[BLOCK] Invalid or exceeds cap (${max_notional:,.2f}).")

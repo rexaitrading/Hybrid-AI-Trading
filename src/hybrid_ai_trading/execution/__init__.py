@@ -1,4 +1,15 @@
-# Clean, patched init to prefer route_exec only.
-from .route_exec import *  # noqa: F401,F403
+from __future__ import annotations
 
-__all__ = [name for name in globals().keys() if not name.startswith("_")]
+import importlib as _imp
+import warnings as _w
+
+
+def __getattr__(name: str):
+    if name == "algos":
+        _w.warn(
+            "deprecated: execution.algos  use concrete algo modules directly",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return _imp.import_module(__name__ + ".algos")
+    raise AttributeError(name)

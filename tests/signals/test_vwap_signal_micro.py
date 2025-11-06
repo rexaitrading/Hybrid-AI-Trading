@@ -1,5 +1,5 @@
 """
-VWAP Signal (Hybrid AI Quant Pro v47.2 – Hedge-Fund OE Grade, Full Logging)
+VWAP Signal (Hybrid AI Quant Pro v47.2 Ã¢â‚¬â€œ Hedge-Fund OE Grade, Full Logging)
 ---------------------------------------------------------------------------
 Strict truth table for VWAP-based trading signals with full guardrails
 and deterministic logging for test coverage.
@@ -65,7 +65,7 @@ def vwap_signal(
     cfg = config or VWAPConfig()
     try:
         if not bars:
-            logger.info("no bars → HOLD")
+            logger.info("no bars Ã¢â€ â€™ HOLD")
             return "HOLD"
 
         if "c" not in bars[-1] or "v" not in bars[-1]:
@@ -89,7 +89,7 @@ def vwap_signal(
             return "HOLD"
 
         if len(bars) == 1:
-            logger.info("insufficient bars (n=1) → HOLD")
+            logger.info("insufficient bars (n=1) Ã¢â€ â€™ HOLD")
             return "HOLD"
 
         # --- Symmetry safeguard ---
@@ -103,9 +103,9 @@ def vwap_signal(
                     and abs(vwap_two - midpoint) <= cfg.tolerance
                 ):
                     if cfg.tie_policy == "SELL":
-                        logger.info("symmetry safeguard → SELL")
+                        logger.info("symmetry safeguard Ã¢â€ â€™ SELL")
                         return "SELL"
-                    logger.info("symmetry safeguard → HOLD")
+                    logger.info("symmetry safeguard Ã¢â€ â€™ HOLD")
                     return "HOLD"
             except Exception as e:
                 logger.warning("symmetry check failed: %s", e)
@@ -117,9 +117,9 @@ def vwap_signal(
 
         if abs(last_close - vwap_val) <= cfg.tolerance:
             if cfg.tie_policy == "SELL":
-                logger.info("tie/tolerance → SELL")
+                logger.info("tie/tolerance Ã¢â€ â€™ SELL")
                 return "SELL"
-            logger.info("tie/tolerance → HOLD")
+            logger.info("tie/tolerance Ã¢â€ â€™ HOLD")
             return "HOLD"
 
         if last_close > vwap_val:

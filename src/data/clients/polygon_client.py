@@ -24,7 +24,7 @@ class PolygonClient:
         self.headers = {"Authorization": f"Bearer {key}"}
 
     def prev_close(self, ticker: str):
-        """Get previous day’s close data for a ticker"""
+        """Get previous dayÃ¢â‚¬â„¢s close data for a ticker"""
         url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/prev"
         try:
             r = requests.get(url, headers=self.headers, timeout=10)

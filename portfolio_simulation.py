@@ -31,7 +31,7 @@ SMTP_HOST = cfg.get("smtp_host", "smtp.gmail.com")
 SMTP_PORT = cfg.get("smtp_port", 587)
 
 print(
-    "📄 Config loaded:",
+    "ðŸ“„ Config loaded:",
     TICKERS,
     START_DATE,
     END_DATE,
@@ -42,7 +42,7 @@ print(
 polygon_key = os.getenv("POLYGON_KEY") or cfg.get("polygon_key")
 if not polygon_key:
     raise RuntimeError(
-        "❌ Missing Polygon API key. Set POLYGON_KEY in env or in portfolio_config.yaml"
+        "âŒ Missing Polygon API key. Set POLYGON_KEY in env or in portfolio_config.yaml"
     )
 
 _binance = ccxt.binance()
@@ -69,7 +69,7 @@ def send_email(subject, body, attachments=None):
         if attachments:
             for fname in attachments:
                 if not os.path.exists(fname):
-                    print(f"⚠️ Missing attachment, skipping: {fname}")
+                    print(f"âš ï¸ Missing attachment, skipping: {fname}")
                     continue
                 with open(fname, "rb") as f:
                     data = f.read()
@@ -85,15 +85,15 @@ def send_email(subject, body, attachments=None):
             server.login(SMTP_USER, SMTP_PASS)
             server.send_message(msg)
 
-        print(f"📧 Email sent to {EMAIL_TO}")
+        print(f"ðŸ“§ Email sent to {EMAIL_TO}")
     except Exception as e:
-        print(f"❌ Email sending failed: {e}")
+        print(f"âŒ Email sending failed: {e}")
 
 
 # --- Data Fetchers ---
 def fetch_crypto(symbol: str, start_date: str) -> pd.DataFrame:
     try:
-        print(f"🔗 Fetching crypto {symbol} from Binance...")
+        print(f"ðŸ”— Fetching crypto {symbol} from Binance...")
         ohlcv = _binance.fetch_ohlcv(
             symbol, timeframe="1d", since=_binance.parse8601(start_date + "T00:00:00Z")
         )
@@ -105,20 +105,20 @@ def fetch_crypto(symbol: str, start_date: str) -> pd.DataFrame:
         df["returns"] = np.log(df["close"] / df["close"].shift(1))
         return df[["close", "returns"]]
     except Exception as e:
-        print(f"❌ Failed to fetch crypto {symbol}: {e}")
+        print(f"âŒ Failed to fetch crypto {symbol}: {e}")
         return pd.DataFrame()
 
 
 def fetch_polygon(symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
     """Fetch daily OHLCV from Polygon (works for stocks, ETFs, IPOs, and forex)."""
     try:
-        print(f"🔗 Fetching {symbol} from Polygon...")
+        print(f"ðŸ”— Fetching {symbol} from Polygon...")
         bars = _polygon_client.get_aggs(
             ticker=symbol, multiplier=1, timespan="day", from_=start_date, to=end_date
         )
 
         if not bars or not getattr(bars, "results", None):
-            print(f"⚠️ No data returned for {symbol}")
+            print(f"âš ï¸ No data returned for {symbol}")
             return pd.DataFrame()
 
         df = pd.DataFrame(bars.results)
@@ -139,7 +139,7 @@ def fetch_polygon(symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
         return df[["close", "returns"]]
 
     except Exception as e:
-        print(f"❌ Failed to fetch {symbol} from Polygon: {e}")
+        print(f"âŒ Failed to fetch {symbol} from Polygon: {e}")
         return pd.DataFrame()
 
 
@@ -253,10 +253,10 @@ if __name__ == "__main__":
         if not df.empty:
             assets[ticker] = df
         else:
-            print(f"⚠️ Skipping {ticker} (no data)")
+            print(f"âš ï¸ Skipping {ticker} (no data)")
 
     if not assets:
-        raise RuntimeError("❌ No asset data available. Check APIs/keys.")
+        raise RuntimeError("âŒ No asset data available. Check APIs/keys.")
 
     combined = pd.concat([df["returns"].rename(t) for t, df in assets.items()], axis=1)
     combined = combined.reindex(pd.date_range(START_DATE, END_DATE, freq="B")).ffill()
@@ -265,11 +265,11 @@ if __name__ == "__main__":
     opt_metrics = simulate_portfolio(opt_w, combined, REBALANCE)
 
     print(
-        "⭐ Optimal Weights:",
+        "â­ Optimal Weights:",
         dict(zip(combined.columns, [round(w * 100, 2) for w in opt_w])),
     )
     print(
-        "📊 Optimal Metrics:",
+        "ðŸ“Š Optimal Metrics:",
         {
             k: round(v, 4)
             for k, v in opt_metrics.items()
@@ -293,7 +293,7 @@ if __name__ == "__main__":
 
     generate_report_html(opt_metrics, opt_w, combined.columns, html_file)
 
-    print(f"📂 Reports saved: {xlsx_file} & {html_file}")
+    print(f"ðŸ“‚ Reports saved: {xlsx_file} & {html_file}")
 
     # --- Email them ---
     send_email(

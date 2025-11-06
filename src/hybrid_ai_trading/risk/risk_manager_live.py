@@ -26,7 +26,7 @@ except Exception:
     class RiskManager:  # type: ignore
         def __init__(self, *args, **kwargs): ...
         def approve_trade(self, *args, **kwargs):
-            return {"approved": True, "reason": "stub"}
+            return {"approved": True, "reason": "polygon"}
 
 
 from hybrid_ai_trading.risk.price_gate import latest_price

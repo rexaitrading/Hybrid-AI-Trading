@@ -1,5 +1,5 @@
 """
-Unit Tests: PaperSimulator (Hybrid AI Quant Pro v13.5 – Absolute 100% Coverage)
+Unit Tests: PaperSimulator (Hybrid AI Quant Pro v13.5 Ã¢â‚¬â€œ Absolute 100% Coverage)
 -------------------------------------------------------------------------------
 Covers ALL branches in simulate_fill:
 - Invalid side rejection
@@ -56,10 +56,10 @@ def test_limit_order_rejection():
 
 def test_limit_order_triggers_buy_and_sell():
     sim = PaperSimulator(slippage=0.0)
-    # BUY price <= limit_price → normal fill
+    # BUY price <= limit_price Ã¢â€ â€™ normal fill
     r1 = sim.simulate_fill("AAPL", "BUY", 10, 95, order_type="limit", limit_price=100)
     assert r1["status"] == "filled"
-    # SELL price >= limit_price → normal fill
+    # SELL price >= limit_price Ã¢â€ â€™ normal fill
     r2 = sim.simulate_fill("AAPL", "SELL", 10, 105, order_type="limit", limit_price=100)
     assert r2["status"] == "filled"
 

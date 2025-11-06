@@ -33,7 +33,7 @@ def _now_et():
 
 
 def in_trading_window(now_et, allow_ext=True):
-    # RTH: 09:30–16:00 ET; extended: 04:00–20:00 ET
+    # RTH: 09:30Ã¢â‚¬â€œ16:00 ET; extended: 04:00Ã¢â‚¬â€œ20:00 ET
     t = now_et.time()
     rth = dt.time(9, 30) <= t <= dt.time(16, 0)
     ext = dt.time(4, 0) <= t <= dt.time(20, 0)

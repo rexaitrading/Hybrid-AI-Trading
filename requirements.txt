@@ -69,6 +69,7 @@ wheel==0.45.1
 xlsxwriter==3.2.5
 yarl==1.20.1
 zipp==3.23.0
-llvmlite==0.43.*
-SQLAlchemy>=2.0,<3
-greenlet>=3.0,<4
+requests>=2.31
+python-dotenv>=1.0
+numpy>=2.0
+pandas>=2.2

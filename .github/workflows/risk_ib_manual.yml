@@ -1,0 +1,33 @@
+name: Risk IB (manual only)
+permissions:
+  contents: read
+
+
+on:
+  workflow_dispatch:
+    inputs:
+      RUN_INTEGRATION:
+        description: "Run IB integration tests?"
+        required: true
+        default: "false"
+
+jobs:
+  risk-ib:
+    if: ${{ github.event.inputs.RUN_INTEGRATION == 'true' }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" || pip install -r requirements.txt
+      - name: Run IB suite
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          IB_TEST_ENABLE: "1"
+        run: |
+          python -B -m pytest -q tests --run-integration --maxfail=1

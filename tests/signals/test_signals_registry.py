@@ -1,5 +1,5 @@
 """
-Unit Tests: Signals Registry (Hybrid AI Quant Pro v2.5 – Hedge-Fund Grade, 100% Coverage)
+Unit Tests: Signals Registry (Hybrid AI Quant Pro v2.5 Ã¢â‚¬â€œ Hedge-Fund Grade, 100% Coverage)
 ----------------------------------------------------------------------------------------
 Validates that the STRATEGIES registry in signals/__init__.py:
 - Contains all expected keys
@@ -26,7 +26,7 @@ def test_registry_keys_and_callables():
     }
     assert (
         set(STRATEGIES.keys()) == expected_keys
-    ), f"STRATEGIES keys mismatch → expected {expected_keys}, got {set(STRATEGIES.keys())}"
+    ), f"STRATEGIES keys mismatch Ã¢â€ â€™ expected {expected_keys}, got {set(STRATEGIES.keys())}"
     for name, func in STRATEGIES.items():
         assert callable(func), f"Strategy {name} is not callable"
 

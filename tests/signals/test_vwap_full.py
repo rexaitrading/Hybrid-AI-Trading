@@ -1,5 +1,5 @@
 """
-Unit Tests: VWAP Signal (Hybrid AI Quant Pro v50.9 – Final Coverage Fix)
+Unit Tests: VWAP Signal (Hybrid AI Quant Pro v50.9 Ã¢â‚¬â€œ Final Coverage Fix)
 =======================================================================
 - Fixes no-usable-volume test by patching builtins.sum (not np.sum).
 - Adjusts symmetry-not-triggered test: allow HOLD if safeguard still fires.
@@ -126,14 +126,14 @@ def test_symmetry_hold_and_sell_tie_policy():
 
 
 def test_symmetry_not_triggered_conditions():
-    # Different vols → symmetry not applied
+    # Different vols Ã¢â€ â€™ symmetry not applied
     bars_diff_vol = [{"c": 10, "v": 4}, {"c": 20, "v": 8}]
     assert vwap.vwap_signal(bars_diff_vol, vwap.VWAPConfig(enable_symmetry=True)) in {
         "BUY",
         "SELL",
     }
 
-    # Equal vols but last far from midpoint → safeguard *may* still HOLD depending on implementation
+    # Equal vols but last far from midpoint Ã¢â€ â€™ safeguard *may* still HOLD depending on implementation
     bars_not_mid = [{"c": 10, "v": 5}, {"c": 30, "v": 5}]  # midpoint=20, last=30
     result = vwap.vwap_signal(bars_not_mid, vwap.VWAPConfig(enable_symmetry=True))
     assert result in {"BUY", "SELL", "HOLD"}  # accept HOLD if safeguard fires

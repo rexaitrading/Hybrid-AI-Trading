@@ -78,7 +78,7 @@ def test_precision_finish_all_remaining():
     te = make_engine()
     _neutralize_all(te)
 
-    # -------- 241–251 (enter + continue) ----------
+    # -------- 241Ã¢â‚¬â€œ251 (enter + continue) ----------
     te.portfolio = SimpleNamespace(equity=99.0, history=[("t0", 100.0)])  # 1% drawdown
     te.config["risk"]["max_drawdown"] = 0.5  # non-breach but executes the block
     # Provide size so we bypass Kelly and ensure the flow proceeds
@@ -134,7 +134,7 @@ def test_precision_finish_all_remaining():
     except Exception:
         pass
 
-    # -------- 334–339 (tail normalization) ----------
+    # -------- 334Ã¢â‚¬â€œ339 (tail normalization) ----------
     te = make_engine()
     _neutralize_all(te)
     te.config["regime"]["enabled"] = True

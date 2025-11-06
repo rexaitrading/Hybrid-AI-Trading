@@ -1,5 +1,5 @@
 """
-Hybrid AI Trading – Config Package (Hedge Fund Grade)
+Hybrid AI Trading Ã¢â‚¬â€œ Config Package (Hedge Fund Grade)
 -----------------------------------------------------
 Holds configuration loaders and settings for the trading system.
 """

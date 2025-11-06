@@ -1,6 +1,6 @@
 """
 Unit Tests: main.py
-(Hybrid AI Quant Pro – Hedge Fund Grade v1.4, 100% Coverage)
+(Hybrid AI Quant Pro Ã¢â‚¬â€œ Hedge Fund Grade v1.4, 100% Coverage)
 ============================================================
 Covers:
 - Successful run (backtest, daily_close, paper_trade pipelines)

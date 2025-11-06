@@ -8,7 +8,9 @@ CID = int(os.getenv("IB_CLIENT_ID", "3021"))
 ib = IB()
 ib.connect(HOST, PORT, clientId=CID, timeout=25)
 aapl = Stock("AAPL", "SMART", "USD")
-trade = ib.placeOrder(aapl, LimitOrder("BUY", 1, 0.01))  # far from market; won’t fill
+trade = ib.placeOrder(
+    aapl, LimitOrder("BUY", 1, 0.01)
+)  # far from market; wonÃ¢â‚¬â„¢t fill
 ib.sleep(3)
 print(
     "Status:",

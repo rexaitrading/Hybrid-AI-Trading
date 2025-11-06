@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-Coinbase Advanced Trade Client (Hybrid AI Quant Pro v1.2 – Secure)
+Coinbase Advanced Trade Client (Hybrid AI Quant Pro v1.2 Ã¢â‚¬â€œ Secure)
 - Uses coinbase-advanced-py RESTClient with the new key file format (name + privateKey).
 - Robust key-file resolution: explicit arg, env var, cwd/config, repo/config, src/config.
 

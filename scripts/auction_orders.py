@@ -79,7 +79,7 @@ def place(symbol: str, side: str, qty: int, kind: str, limit: float = None):
         tr = ib.placeOrder(c, o)
         print(
             f"[SUBMIT] {kind} {side} {qty} {symbol} "
-            f"{'@'+str(limit) if limit else ''}  → waiting…"
+            f"{'@'+str(limit) if limit else ''}  Ã¢â€ â€™ waitingÃ¢â‚¬Â¦"
         )
         for _ in range(50):
             ib.sleep(0.2)

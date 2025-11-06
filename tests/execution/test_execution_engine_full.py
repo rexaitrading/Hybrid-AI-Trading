@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 """
-Unit Tests: ExecutionEngine (Hybrid AI Quant Pro v15.7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge Fund Grade, 100% Coverage)
+Unit Tests: ExecutionEngine (Hybrid AI Quant Pro v15.7 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ Hedge Fund Grade, 100% Coverage)
 -----------------------------------------------------------------------------------------
 Covers ALL branches in execution_engine.py:
 - Initialization (dry_run True/False)
@@ -35,7 +35,7 @@ def config_stub(tmp_path):
         "audit_log_path": str(tmp_path / "audit.csv"),
         "backup_log_path": str(tmp_path / "backup.csv"),
         "risk": {
-            "equity": 50_000.0,  # ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ regression guard for equity kwarg
+            "equity": 50_000.0,  # ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ regression guard for equity kwarg
             "max_drawdown": 0.2,
             "kelly": {"win_rate": 0.5, "payoff": 2.0, "fraction": 0.5},
         },

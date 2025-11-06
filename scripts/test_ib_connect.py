@@ -1,20 +1,40 @@
 import os
+import socket
 
-from dotenv import load_dotenv
+import pytest
 from ib_insync import IB
 
-load_dotenv(override=True)
+HOST = os.getenv("IB_HOST", "127.0.0.1")
+PORT = int(os.getenv("IB_PORT", "4002"))
+CLIENT_ID = int(os.getenv("IB_CLIENT_ID", "7"))
+ENABLED = os.getenv("IB_CONNECT_TEST", "0").lower() in ("1", "true", "yes", "y")
 
-host = os.getenv("IB_GATEWAY_HOST", "127.0.0.1")
-port = int(os.getenv("IB_GATEWAY_PORT", "7497"))
-client_id = int(os.getenv("IB_CLIENT_ID", "1"))
+# Require explicit opt-in to run this smoke; skip otherwise.
+if not ENABLED:
+    pytest.skip(
+        "IB connect smoke disabled (set IB_CONNECT_TEST=1 to enable)",
+        allow_module_level=True,
+    )
 
-ib = IB()
-try:
-    ib.connect(host, port, clientId=client_id, timeout=10)
-    print("Connected:", ib.isConnected())
-    # Print a few account summary tags
-    for row in ib.accountSummary()[:10]:
-        print(f"{row.tag:20} {row.value} {row.currency}")
-finally:
-    ib.disconnect()
+
+def _port_open(h, p):
+    try:
+        with socket.create_connection((h, p), timeout=1.0):
+            return True
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(
+    not _port_open(HOST, PORT), reason=f"IB Gateway not listening on {HOST}:{PORT}"
+)
+def test_ib_connect_smoke():
+    ib = IB()
+    try:
+        ib.connect(HOST, PORT, clientId=CLIENT_ID, timeout=10)
+        assert ib.isConnected()
+    finally:
+        try:
+            ib.disconnect()
+        except Exception:
+            pass

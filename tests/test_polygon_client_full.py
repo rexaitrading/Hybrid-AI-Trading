@@ -1,5 +1,5 @@
 """
-Unit Tests: PolygonClient (Hybrid AI Quant Pro v13.4 – Hedge-Fund OE Grade, 100% Coverage)
+Unit Tests: PolygonClient (Hybrid AI Quant Pro v13.4 Ã¢â‚¬â€œ Hedge-Fund OE Grade, 100% Coverage)
 ------------------------------------------------------------------------------------------
 Covers:
 - __init__ with env, missing keys, invalid config, bad key_env, bad providers
@@ -191,12 +191,12 @@ def test_ping_success_and_failures(mock_prev, caplog):
     mock_prev.return_value = {"results": [{"c": 100}]}
     assert client.ping() is True
 
-    # PolygonAPIError → False
+    # PolygonAPIError Ã¢â€ â€™ False
     mock_prev.side_effect = PolygonAPIError("fail")
     caplog.set_level("WARNING")
     assert client.ping() is False
     assert "Polygon ping failed" in caplog.text
 
-    # Generic Exception → False
+    # Generic Exception Ã¢â€ â€™ False
     mock_prev.side_effect = Exception("boom")
     assert client.ping() is False

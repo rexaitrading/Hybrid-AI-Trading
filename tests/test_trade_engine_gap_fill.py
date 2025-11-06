@@ -1,11 +1,11 @@
 # tests/test_trade_engine_gap_fill.py
 """
 Gap-Filler Tests: TradeEngine
-(Hybrid AI Quant Pro v21.0 – Coverage 100%)
+(Hybrid AI Quant Pro v21.0 Ã¢â‚¬â€œ Coverage 100%)
 ------------------------------------------------
 Covers the last uncovered branches in trade_engine.py:
-- Normalization of {"status": "ok", "reason": "ok"} → "filled"/"normalized_ok"
-- Router invalid dict → "invalid_status"
+- Normalization of {"status": "ok", "reason": "ok"} Ã¢â€ â€™ "filled"/"normalized_ok"
+- Router invalid dict Ã¢â€ â€™ "invalid_status"
 - Performance tracker breaches + exceptions
 - Sector exposure non-breach branch
 - record_trade_outcome exception branch
@@ -111,7 +111,7 @@ def test_performance_exceptions(engine, monkeypatch):
 def test_sector_exposure_non_breach(engine):
     """Covers the false branch of _sector_exposure_breach."""
     engine.portfolio.positions = {"IBM": {"size": 10, "avg_price": 100}}
-    # IBM not in tech set → should not breach
+    # IBM not in tech set Ã¢â€ â€™ should not breach
     assert engine._sector_exposure_breach("IBM") is False
 
 
@@ -134,12 +134,12 @@ def test_record_trade_outcome_exception(engine, monkeypatch, caplog):
 # ----------------------------------------------------------------------
 def test_kelly_sizer_negative_and_exception(engine, monkeypatch):
     """Cover negative and exception fallback branches in Kelly sizing."""
-    # Negative size → max(1, -5) → size = 1
+    # Negative size Ã¢â€ â€™ max(1, -5) Ã¢â€ â€™ size = 1
     monkeypatch.setattr(engine.kelly_sizer, "size_position", lambda *_: -5)
     res1 = engine.process_signal("AAPL", "BUY", None, 100)
     assert res1["status"] in {"blocked", "filled", "rejected"}
 
-    # Exception in KellySizer → fallback size = 1
+    # Exception in KellySizer Ã¢â€ â€™ fallback size = 1
     monkeypatch.setattr(
         engine.kelly_sizer,
         "size_position",

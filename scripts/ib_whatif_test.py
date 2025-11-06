@@ -1,33 +1,34 @@
 import os
 
-from ib_insync import IB, LimitOrder, Stock
+import pytest
+from ib_insync import IB, Stock
 
-ib = IB()
-ib.connect(
-    os.getenv("IB_HOST", "127.0.0.1"),
-    int(os.getenv("IB_PORT", "4002")),
-    int(os.getenv("IB_CLIENT_ID", "901")),
-    timeout=15,
-)
+HOST = os.getenv("IB_HOST", "127.0.0.1")
+PORT = int(os.getenv("IB_PORT", "4002"))
+CLIENT_ID = int(os.getenv("IB_CLIENT_ID", "8"))
+ENABLED = os.getenv("IB_CONNECT_TEST", "0").lower() in ("1", "true", "yes", "y")
 
-contract = Stock("AAPL", "SMART", "USD")
-ib.qualifyContracts(contract)
+# Require explicit opt-in to run this smoke; skip otherwise to avoid spurious CI/local failures.
+if not ENABLED:
+    pytest.skip(
+        "IB connect smokes disabled (set IB_CONNECT_TEST=1 to enable)",
+        allow_module_level=True,
+    )
 
-order = LimitOrder("BUY", 1, 100.00)  # no whatIf flag here
-state = ib.whatIfOrder(contract, order)
 
-print("whatIf.status:", getattr(state, "status", None))
-print(
-    "commission:",
-    getattr(state, "commission", None),
-    getattr(state, "commissionCurrency", ""),
-)
-print(
-    "min/max commission:",
-    getattr(state, "minCommission", None),
-    getattr(state, "maxCommission", None),
-)
-print("equityWithLoanChange:", getattr(state, "equityWithLoanChange", None))
-print("initMarginChange:", getattr(state, "initMarginChange", None))
-print("maintMarginChange:", getattr(state, "maintMarginChange", None))
-ib.disconnect()
+def test_ib_whatif_smoke():
+    ib = IB()
+    try:
+        ib.connect(HOST, PORT, clientId=CLIENT_ID, timeout=10)
+        assert ib.isConnected()
+        contract = Stock("AAPL", "SMART", "USD")
+        ib.qualifyContracts(contract)
+        ticks = ib.reqMktData(contract, "", False, False)
+        ib.sleep(0.2)
+        ib.cancelMktData(contract)
+        assert ticks is not None
+    finally:
+        try:
+            ib.disconnect()
+        except Exception:
+            pass

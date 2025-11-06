@@ -1,10 +1,10 @@
 ============================= test session starts =============================
 
-platform win32 -- Python 3.12.10, pytest-8.4.2, pluggy-1.6.0 -- C:\Users\rhcy9\OneDrive\µûçΣ╗╢\HybridAITrading\.venv\Scripts\python.exe
+platform win32 -- Python 3.12.10, pytest-8.4.2, pluggy-1.6.0 -- C:\Users\rhcy9\OneDrive\ÂµÃ»Ã§Î£â•—â•¢\HybridAITrading\.venv\Scripts\python.exe
 
 cachedir: .pytest_cache
 
-rootdir: C:\Users\rhcy9\OneDrive\µûçΣ╗╢\HybridAITrading
+rootdir: C:\Users\rhcy9\OneDrive\ÂµÃ»Ã§Î£â•—â•¢\HybridAITrading
 
 configfile: pytest.ini
 
@@ -18,7 +18,7 @@ collecting ... collected 171 items / 1 error
 
 ______________ ERROR collecting tests/test_backtest_pipeline.py _______________
 
-ImportError while importing test module 'C:\Users\rhcy9\OneDrive\µûçΣ╗╢\HybridAITrading\tests\test_backtest_pipeline.py'.
+ImportError while importing test module 'C:\Users\rhcy9\OneDrive\ÂµÃ»Ã§Î£â•—â•¢\HybridAITrading\tests\test_backtest_pipeline.py'.
 
 Hint: make sure your test modules/packages have valid Python names.
 
@@ -80,4 +80,4 @@ ERROR tests/test_backtest_pipeline.py
 
 ======================== 5 warnings, 1 error in 2.66s =========================
 
-�
+ï¿½

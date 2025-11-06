@@ -234,7 +234,7 @@ def main() -> None:
     print_section("RISK")
     if risk["risk_off"]:
         print_line(
-            f"BLACK SWAN: BTC 24h drop â‰ˆ {risk['metric']:.1f}% â‰¥ {risk['threshold']:.1f}% -> NO NEW BUYS"
+            f"BLACK SWAN: BTC 24h drop ÃƒÂ¢Ã¢â‚¬Â°Ã‹â€  {risk['metric']:.1f}% ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ {risk['threshold']:.1f}% -> NO NEW BUYS"
         )
         lev = 0.0
     else:
@@ -280,8 +280,8 @@ def main() -> None:
             any_buy = True
             stop_txt = f"{sig['stop']:.2f}" if sig["stop"] is not None else "n/a"
             print_line(
-                f"{pair} ({sig['tf']}): BUY  entryâ‰ˆ{sig['last']:.2f}  sizeâ‰ˆ{eff_size:.2f}  "
-                f"stopâ‰ˆ{stop_txt}  (ATR={sig['atr']:.2f})  {sig['reason']}"
+                f"{pair} ({sig['tf']}): BUY  entryÃƒÂ¢Ã¢â‚¬Â°Ã‹â€ {sig['last']:.2f}  sizeÃƒÂ¢Ã¢â‚¬Â°Ã‹â€ {eff_size:.2f}  "
+                f"stopÃƒÂ¢Ã¢â‚¬Â°Ã‹â€ {stop_txt}  (ATR={sig['atr']:.2f})  {sig['reason']}"
             )
 
     if not any_buy:
@@ -290,7 +290,7 @@ def main() -> None:
             print_line("NEAR:")
             for it in near[:5]:
                 print_line(
-                    f"  {it['pair']}: lastâ‰ˆ{it['last']:.2f} stopâ‰ˆSMA50 {it['sma50']:.2f}"
+                    f"  {it['pair']}: lastÃƒÂ¢Ã¢â‚¬Â°Ã‹â€ {it['last']:.2f} stopÃƒÂ¢Ã¢â‚¬Â°Ã‹â€ SMA50 {it['sma50']:.2f}"
                 )
     if suppressed:
         print_line("SUPPRESSED (caps):")
@@ -315,7 +315,7 @@ def main() -> None:
                 sells_printed = True
                 stop_txt = f"{sig['stop']:.2f}" if sig["stop"] is not None else "n/a"
                 print_line(
-                    f"{pair}: SELL  qtyâ‰ˆ{amt:.8f}  lastâ‰ˆ{sig['last']:.2f}  stopâ‰ˆ{stop_txt}  ({sig['reason']})"
+                    f"{pair}: SELL  qtyÃƒÂ¢Ã¢â‚¬Â°Ã‹â€ {amt:.8f}  lastÃƒÂ¢Ã¢â‚¬Â°Ã‹â€ {sig['last']:.2f}  stopÃƒÂ¢Ã¢â‚¬Â°Ã‹â€ {stop_txt}  ({sig['reason']})"
                 )
     else:
         print_line("(no Kraken holdings or KRAKEN_KEYFILE not set)")
@@ -411,7 +411,7 @@ def run_loop():
                     if cur["buys"]:
                         for b in cur["buys"]:
                             print_line(
-                                f"BUY {b['p']} sizeâ‰ˆ{b['size']} stopâ‰ˆ{b['stop']}"
+                                f"BUY {b['p']} sizeÃƒÂ¢Ã¢â‚¬Â°Ã‹â€ {b['size']} stopÃƒÂ¢Ã¢â‚¬Â°Ã‹â€ {b['stop']}"
                             )
                     else:
                         print_line("(no buys)")

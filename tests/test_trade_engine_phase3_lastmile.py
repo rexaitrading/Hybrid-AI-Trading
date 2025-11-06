@@ -52,7 +52,7 @@ def _prep(te):
     te.portfolio = SimpleNamespace(equity=100.0, history=[("t0", 100.0)])
 
 
-# --- A) Drawdown block: ENTER + CONTINUE (241→251), then reach tail (334–339) ---
+# --- A) Drawdown block: ENTER + CONTINUE (241Ã¢â€ â€™251), then reach tail (334Ã¢â‚¬â€œ339) ---
 def test_ps_drawdown_enter_continue_and_tail():
     te = make_engine()
     _prep(te)

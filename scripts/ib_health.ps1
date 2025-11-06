@@ -5,7 +5,7 @@ param(
   [string]$LogFile = ".\logs\ib_health.jsonl"
 )
 if (-not (Test-Path ".\logs")) { New-Item -ItemType Directory -Path ".\logs" | Out-Null }
-Write-Host "Hybrid AI Quant Pro — IB Health via CLI" -ForegroundColor Cyan
+Write-Host "Hybrid AI Quant Pro Ã¢â‚¬â€ IB Health via CLI" -ForegroundColor Cyan
 Write-Host "Target: $Host:$Port (clientId=$ClientId)" -ForegroundColor DarkCyan
 $env:PYTHONPATH = 'src'
 # Port probe

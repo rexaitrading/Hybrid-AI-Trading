@@ -1,6 +1,6 @@
 """
 Unit Tests: OrderManager Micro Patches
-(Hybrid AI Quant Pro v16.0 – Hedge-Fund Grade, 100% Coverage)
+(Hybrid AI Quant Pro v16.0 Ã¢â‚¬â€œ Hedge-Fund Grade, 100% Coverage)
 ----------------------------------------------------------------
 Covers missing branches in order_manager.py:
 - Legacy risk_manager.check_trade fallback

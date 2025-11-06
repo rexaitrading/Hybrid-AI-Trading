@@ -77,7 +77,7 @@ def test_process_signal_paths(engine):
     r2 = engine.process_signal("AAPL", "SELL", price=101.0, size=1)
     assert isinstance(r2, dict)
 
-    # HOLD/unknown path — exercise default/else branch
+    # HOLD/unknown path Ã¢â‚¬â€ exercise default/else branch
     r3 = engine.process_signal("AAPL", "HOLD", price=102.0, size=0)
     assert isinstance(r3, dict)
 

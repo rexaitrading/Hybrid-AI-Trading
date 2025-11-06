@@ -59,7 +59,7 @@ do {
     Pop-Location; exit 2
   }
   $remain = [int]($WaitSec - $elapsed.TotalSeconds)
-  Write-Host (". waiting for IB API port to open (tried: {0}) — {1}s left" -f ($ports -join ', '), $remain) -ForegroundColor DarkYellow
+  Write-Host (". waiting for IB API port to open (tried: {0}) Ã¢â‚¬â€ {1}s left" -f ($ports -join ', '), $remain) -ForegroundColor DarkYellow
   Start-Sleep -Seconds 2
 } while (-not $chosen)
 
@@ -88,7 +88,7 @@ if ($Once) {
   if (Test-Path $LogFile) { Write-Host "`n--- Tail of $LogFile ---`n"; Get-Content $LogFile -Tail 20 }
   $audit = "logs\paper_trades.jsonl"
   if (Test-Path $audit) { Write-Host "`n--- Tail of $audit ---`n"; Get-Content $audit -Tail 20 }
-  else { Write-Host "`n(no audit yet — appears after first evaluation pass inside a trading window)" -ForegroundColor Yellow }
+  else { Write-Host "`n(no audit yet Ã¢â‚¬â€ appears after first evaluation pass inside a trading window)" -ForegroundColor Yellow }
 }
 
 Pop-Location

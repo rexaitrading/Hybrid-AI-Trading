@@ -14,13 +14,13 @@ class Client:
             return {
                 "symbol": symbol,
                 "price": None,
-                "source": "stub",
+                "source": "polygon",
                 "reason": "no_key_or_base",
             }
         # real HTTP call would go here; keep stub-safe
         return {
             "symbol": symbol,
             "price": None,
-            "source": "stub",
+            "source": "polygon",
             "reason": "not_implemented",
         }

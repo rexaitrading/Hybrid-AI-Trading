@@ -1,5 +1,5 @@
 """
-IBKR Execution Harness (Quant Pro v7.0 – Hedge Fund Level)
+IBKR Execution Harness (Quant Pro v7.0 Ã¢â‚¬â€œ Hedge Fund Level)
 ----------------------------------------------------------
 Responsibilities:
 - Connect to IBKR TWS / Gateway (paper/live configurable)
@@ -39,16 +39,16 @@ class RiskManager:
     def approve(self, symbol: str, qty: int, price: float) -> bool:
         """Approve or reject trade based on basic limits."""
         if qty > self.max_qty:
-            logger.error("❌ Risk breach: qty %d > max %d", qty, self.max_qty)
+            logger.error("Ã¢ÂÅ’ Risk breach: qty %d > max %d", qty, self.max_qty)
             return False
         if qty * price > self.max_order_value:
             logger.error(
-                "❌ Risk breach: order value %.2f > max %.2f",
+                "Ã¢ÂÅ’ Risk breach: order value %.2f > max %.2f",
                 qty * price,
                 self.max_order_value,
             )
             return False
-        logger.info("✅ Risk check passed for %s %d @ %.2f", symbol, qty, price)
+        logger.info("Ã¢Å“â€¦ Risk check passed for %s %d @ %.2f", symbol, qty, price)
         return True
 
 
@@ -128,7 +128,7 @@ def main(
     try:
         # Connect (7497=paper, 7496=live)
         ib.connect("127.0.0.1", port, clientId=client_id)
-        logger.info("✅ Connected to IBKR (port=%d, clientId=%d)", port, client_id)
+        logger.info("Ã¢Å“â€¦ Connected to IBKR (port=%d, clientId=%d)", port, client_id)
 
         # Define contract
         contract = Stock(symbol, "SMART", "USD")
@@ -143,12 +143,12 @@ def main(
         # Risk check
         last_price = ib.reqMktData(contract, "", False, False).last or entry_price or 0
         if not risk.approve(symbol, qty, last_price):
-            logger.error("❌ Trade blocked by RiskManager")
+            logger.error("Ã¢ÂÅ’ Trade blocked by RiskManager")
             return
 
         # Place entry order
         trade: Trade = ib.placeOrder(contract, order)
-        logger.info("🚀 Entry submitted: %s %d %s", side, qty, symbol)
+        logger.info("Ã°Å¸Å¡â‚¬ Entry submitted: %s %d %s", side, qty, symbol)
 
         # Attach stop-loss + target if given
         if stop_price and target_price:
@@ -158,13 +158,15 @@ def main(
             for o in bracket:
                 ib.placeOrder(contract, o)
             logger.info(
-                "📊 Bracket placed: stop=%.2f target=%.2f", stop_price, target_price
+                "Ã°Å¸â€œÅ  Bracket placed: stop=%.2f target=%.2f",
+                stop_price,
+                target_price,
             )
 
         # Wait for updates
         ib.sleep(5)
         status = trade.orderStatus.status
-        logger.info("📈 Final order status: %s", status)
+        logger.info("Ã°Å¸â€œË† Final order status: %s", status)
 
         # Audit log
         audit.log_trade(
@@ -178,11 +180,11 @@ def main(
         )
 
     except Exception as e:  # noqa: BLE001
-        logger.error("❌ Error: %s", e)
+        logger.error("Ã¢ÂÅ’ Error: %s", e)
     finally:
         if ib.isConnected():
             ib.disconnect()
-            logger.info("🔌 Disconnected from IBKR")
+            logger.info("Ã°Å¸â€Å’ Disconnected from IBKR")
 
 
 # ---------------------------------------------------------------------

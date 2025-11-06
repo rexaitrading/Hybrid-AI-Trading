@@ -1,4 +1,4 @@
-﻿import os
+import os
 
 from ib_insync import IB, Stock
 

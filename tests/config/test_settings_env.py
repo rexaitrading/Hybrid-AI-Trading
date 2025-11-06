@@ -1,6 +1,6 @@
 """
-Unit Tests: settings.py – Environment Handling
-(Hybrid AI Quant Pro – 100% Coverage, AAA Polished)
+Unit Tests: settings.py Ã¢â‚¬â€œ Environment Handling
+(Hybrid AI Quant Pro Ã¢â‚¬â€œ 100% Coverage, AAA Polished)
 --------------------------------------------------
 Covers:
 - .env loading via dotenv
@@ -45,7 +45,7 @@ def test_invalid_env_format(monkeypatch, tmp_path):
     env_file = tmp_path / ".env"
     env_file.write_text("INVALID LINE WITHOUT = SIGN\n")
     load_dotenv(env_file, override=True)  # should not crash
-    # ensure it doesn’t inject bogus values
+    # ensure it doesnÃ¢â‚¬â„¢t inject bogus values
     assert os.getenv("INVALID") is None
 
 

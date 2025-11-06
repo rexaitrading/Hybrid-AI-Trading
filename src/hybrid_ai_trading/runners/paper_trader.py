@@ -392,7 +392,7 @@ def _phase4_enrich_decisions(result: dict, symbols, snapshots, cfg, logger):
             dec["regime"] = {
                 "regime": reg or "neutral",
                 "confidence": float(conf or 0.5),
-                "reason": "stub" if conf is None else "metrics",
+                "reason": "polygon" if conf is None else "metrics",
             }
         except Exception:
             pass
@@ -412,7 +412,7 @@ def _phase4_enrich_decisions(result: dict, symbols, snapshots, cfg, logger):
             dec["sentiment"] = {
                 "sentiment": float(sent),
                 "confidence": float(conf),
-                "reason": "stub",
+                "reason": "polygon",
             }
         except Exception:
             pass

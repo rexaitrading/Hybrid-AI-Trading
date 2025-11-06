@@ -1,5 +1,5 @@
 """
-Env Key Audit Tool (Hybrid AI Quant Pro – Secure)
+Env Key Audit Tool (Hybrid AI Quant Pro Ã¢â‚¬â€œ Secure)
 -------------------------------------------------
 Usage:
     $env:PYTHONPATH="src"
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     # Always override stale session/system vars with .env values
     load_dotenv(override=True)
 
-    print("\n=== 🔑 Provider Keys Audit ===\n")
+    print("\n=== Ã°Å¸â€â€˜ Provider Keys Audit ===\n")
 
     # Kraken (crypto live)
     check_env(["KRAKEN_API_KEY", "KRAKEN_PRIVATE_KEY"])
@@ -70,5 +70,5 @@ if __name__ == "__main__":
     check_env(["OPENAI_API_KEY"])
 
     print(
-        "\n✅ Audit complete – verify all active providers are masked, Binance marked as DISABLED.\n"
+        "\nÃ¢Å“â€¦ Audit complete Ã¢â‚¬â€œ verify all active providers are masked, Binance marked as DISABLED.\n"
     )

@@ -124,7 +124,7 @@ try {
   Write-Host "  WARN: external smoke failed: $($_.Exception.Message)"
 }
 
-# 6) Verdict — LAST
+# 6) Verdict Ã¢â‚¬â€ LAST
 if ($fail.Count) {
   Write-Host "PRE-FLIGHT: NO-GO"
   $fail | ForEach-Object { Write-Host " - $_" }

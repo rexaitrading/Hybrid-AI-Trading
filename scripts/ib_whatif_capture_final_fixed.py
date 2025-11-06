@@ -66,7 +66,7 @@ for attempt in range(10):
         print(f"[pass {attempt+1}] FINAL at {px}")
         break
     else:
-        print(f"[pass {attempt+1}] placeholder at {px}; waiting …")
+        print(f"[pass {attempt+1}] placeholder at {px}; waiting Ã¢â‚¬Â¦")
         ib.waitOnUpdate(timeout=1.0)
 
 if best is None:

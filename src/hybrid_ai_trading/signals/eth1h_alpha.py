@@ -1,5 +1,5 @@
 """
-ETH 1h Alpha Signal (trend + breakout + EMA200 ± K*ATR thrust, ATR clamp)
+ETH 1h Alpha Signal (trend + breakout + EMA200 Ã‚Â± K*ATR thrust, ATR clamp)
 Returns: "BUY" / "SELL" / None
 Bars: [[ts, o, h, l, c, v], ...]
 """

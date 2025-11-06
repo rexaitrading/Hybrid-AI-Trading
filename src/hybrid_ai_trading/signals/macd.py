@@ -1,8 +1,8 @@
 """
-MACDSignal (Hybrid AI Quant Pro v2.3 – Hedge-Fund Grade, Test-Aligned)
+MACDSignal (Hybrid AI Quant Pro v2.3 Ã¢â‚¬â€œ Hedge-Fund Grade, Test-Aligned)
 ----------------------------------------------------------------------
 Responsibilities:
-- Compute MACD (EMA12 – EMA26) and Signal line (EMA9 of MACD)
+- Compute MACD (EMA12 Ã¢â‚¬â€œ EMA26) and Signal line (EMA9 of MACD)
 - Detect crossovers:
   * BUY  if MACD crosses above Signal OR stays above in uptrend
   * SELL if MACD crosses below Signal OR stays below in downtrend
@@ -33,7 +33,7 @@ class MACDSignal:
     ) -> Dict[str, Union[str, float]]:
         """Generate a MACD signal from bars with close 'c'."""
         if not bars:
-            logger.info("No bars provided → HOLD")
+            logger.info("No bars provided Ã¢â€ â€™ HOLD")
             return {"signal": "HOLD", "reason": "no bars"}
 
         try:
@@ -43,15 +43,15 @@ class MACDSignal:
             return {"signal": "HOLD", "reason": "invalid"}
 
         if closes.empty:
-            logger.error("Invalid: no 'c' fields found in bars → HOLD")
+            logger.error("Invalid: no 'c' fields found in bars Ã¢â€ â€™ HOLD")
             return {"signal": "HOLD", "reason": "invalid"}
 
         if len(closes) < self.slow + self.signal_window:
-            logger.info("Not enough bars (%s) → HOLD", len(closes))
+            logger.info("Not enough bars (%s) Ã¢â€ â€™ HOLD", len(closes))
             return {"signal": "HOLD", "reason": "not enough bars"}
 
         if closes.isna().any():
-            logger.warning("NaN detected in closes → HOLD")
+            logger.warning("NaN detected in closes Ã¢â€ â€™ HOLD")
             return {"signal": "HOLD", "reason": "nan detected"}
 
         ema_fast = closes.ewm(span=self.fast, adjust=False).mean()
@@ -61,7 +61,7 @@ class MACDSignal:
         histogram = macd - signal_line
 
         if math.isnan(macd.iloc[-1]) or math.isnan(signal_line.iloc[-1]):
-            logger.warning("NaN MACD/Signal value detected → HOLD")
+            logger.warning("NaN MACD/Signal value detected Ã¢â€ â€™ HOLD")
             return {"signal": "HOLD", "reason": "nan macd"}
 
         # --- Decision Logic ---
@@ -69,22 +69,22 @@ class MACDSignal:
             macd.iloc[-2] < signal_line.iloc[-2]
             and macd.iloc[-1] > signal_line.iloc[-1]
         ):
-            logger.info("MACD crossover up → BUY")
+            logger.info("MACD crossover up Ã¢â€ â€™ BUY")
             sig = "BUY"
         elif (
             macd.iloc[-2] > signal_line.iloc[-2]
             and macd.iloc[-1] < signal_line.iloc[-1]
         ):
-            logger.info("MACD crossover down → SELL")
+            logger.info("MACD crossover down Ã¢â€ â€™ SELL")
             sig = "SELL"
         elif macd.iloc[-1] > signal_line.iloc[-1]:
-            logger.info("MACD above signal → BUY (trend confirmation)")
+            logger.info("MACD above signal Ã¢â€ â€™ BUY (trend confirmation)")
             sig = "BUY"
         elif macd.iloc[-1] < signal_line.iloc[-1]:
-            logger.info("MACD below signal → SELL (trend confirmation)")
+            logger.info("MACD below signal Ã¢â€ â€™ SELL (trend confirmation)")
             sig = "SELL"
         else:
-            logger.info("MACD holds inside range → HOLD")
+            logger.info("MACD holds inside range Ã¢â€ â€™ HOLD")
             sig = "HOLD"
 
         return {

@@ -8,7 +8,7 @@ $gitignorePath = ".\.gitignore"
 # Content for v4.4
 $gitignoreContent = @"
 # ===========================
-# Hybrid AI Trading – .gitignore v4.4
+# Hybrid AI Trading â€“ .gitignore v4.4
 # Hedge-Fund Grade (Datasets + Models + CI)
 # ===========================
 
@@ -63,7 +63,7 @@ logs/
 *.db
 *.csv
 *.json
-# 🔒 Execution audit trails
+# ðŸ”’ Execution audit trails
 logs/trade_blotter.csv
 logs/trade_blotter_backup.csv
 
@@ -228,4 +228,4 @@ cython_debug/
 # Write file
 $gitignoreContent | Set-Content $gitignorePath -Encoding UTF8
 
-Write-Host "✅ .gitignore updated to v4.4 at $gitignorePath"
+Write-Host "âœ… .gitignore updated to v4.4 at $gitignorePath"

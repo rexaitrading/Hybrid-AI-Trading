@@ -1,8 +1,8 @@
 """
-RSISignal (Hybrid AI Quant Pro v23.3 – Hedge-Fund Grade, Wrapper-Aligned)
+RSISignal (Hybrid AI Quant Pro v23.3 Ã¢â‚¬â€œ Hedge-Fund Grade, Wrapper-Aligned)
 -------------------------------------------------------------------------
 Logic:
-- Compute RSI using Wilder’s method
+- Compute RSI using WilderÃ¢â‚¬â„¢s method
 - BUY if RSI < 30
 - SELL if RSI > 70
 - HOLD otherwise
@@ -41,7 +41,7 @@ class RSISignal:
         try:
             closes = pd.Series([float(b["c"]) for b in bars if "c" in b])
         except Exception as e:
-            logger.error("❌ Failed to parse closes for RSI: %s", e)
+            logger.error("Ã¢ÂÅ’ Failed to parse closes for RSI: %s", e)
             return {"signal": "HOLD", "reason": "failed parse"}
 
         if closes.empty:
@@ -64,7 +64,7 @@ class RSISignal:
             avg_gain = pd.Series(gains).rolling(self.period).mean().iloc[-1]
             avg_loss = pd.Series(losses).rolling(self.period).mean().iloc[-1]
         except Exception as e:
-            logger.error("❌ RSI calculation failed: %s", e)
+            logger.error("Ã¢ÂÅ’ RSI calculation failed: %s", e)
             return {"signal": "HOLD", "reason": "calc failed"}
 
         # --- RSI calculation ---

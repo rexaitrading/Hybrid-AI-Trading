@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-# Optional deps — tests may monkeypatch these names to None
+# Optional deps Ã¢â‚¬â€ tests may monkeypatch these names to None
 try:
     from nltk.sentiment import SentimentIntensityAnalyzer  # type: ignore
 except Exception:  # pragma: no cover

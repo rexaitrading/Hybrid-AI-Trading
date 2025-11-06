@@ -92,7 +92,7 @@ Remove-Item $tmp,($tmp+'.out'),($tmp+'.err') -ErrorAction SilentlyContinue
 $env:IB_HOST=$HostName; $env:IB_PORT="$Port"; $env:IB_CLIENT_ID="$ClientId"
 if($ok){ $env:IB_INT="1"; Start-Sleep -Seconds 2 }
 else{
-  $env:IB_INT="0"; Write-Host "IB preflight failed → tests will skip." -ForegroundColor Yellow
+  $env:IB_INT="0"; Write-Host "IB preflight failed Ã¢â€ â€™ tests will skip." -ForegroundColor Yellow
   $lg = Get-ChildItem "C:\Jts\ibgateway\*\logs\*.log" -ErrorAction SilentlyContinue |
         Sort-Object LastWriteTime -Desc | Select-Object -First 1
   if($lg){

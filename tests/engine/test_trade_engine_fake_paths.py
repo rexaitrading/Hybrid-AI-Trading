@@ -192,8 +192,8 @@ def test_engine_bad_qty_behavior(monkeypatch):
     """
     Some engines validate and raise on qty<=0; others handle/ignore it.
     Accept either:
-      â€¢ raises AssertionError/ValueError/RuntimeError, OR
-      â€¢ returns a result object with sane fields (filled >= 0).
+      ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ raises AssertionError/ValueError/RuntimeError, OR
+      ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ returns a result object with sane fields (filled >= 0).
     Also patch make_broker in both places so fallback path is deterministic.
     """
     from hybrid_ai_trading import order_manager as om_mod

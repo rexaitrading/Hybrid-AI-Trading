@@ -167,7 +167,7 @@ def send(side):
     )
     tr = ib.placeOrder(c, order)
     log(
-        f"[PLAN] {side} {qty} {sym} @ ~{limit} (TIF={tif}) notional≈${notional:,.2f} [eff_bps={eff_bps}]"
+        f"[PLAN] {side} {qty} {sym} @ ~{limit} (TIF={tif}) notionalÃ¢â€°Ë†${notional:,.2f} [eff_bps={eff_bps}]"
     )
     log("[SUBMIT] sent, waiting...")
     for _ in range(30):

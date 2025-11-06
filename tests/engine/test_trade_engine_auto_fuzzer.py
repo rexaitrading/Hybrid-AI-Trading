@@ -85,7 +85,7 @@ def test_auto_fuzz(monkeypatch):
     random.seed(7)
     eng = _eng(monkeypatch)
 
-    # 1) process_signal: SHORT/COVER + edges to drive 101–169
+    # 1) process_signal: SHORT/COVER + edges to drive 101Ã¢â‚¬â€œ169
     signals = ["BUY", "SELL", "HOLD", "SHORT", "COVER", "UNKNOWN", ""]
     prices = [None, 0.0, 100.0, 101.5]
     sizes = [None, 0, 1, 5, 10]
@@ -93,11 +93,11 @@ def test_auto_fuzz(monkeypatch):
     for sig, px, sz, algo in itertools.product(signals, prices, sizes, algos):
         _safe_call(eng.process_signal, "AAPL", sig, price=px, size=sz, algo=algo)
 
-    # 2) record_trade_outcome ± extremes → 175–198
+    # 2) record_trade_outcome Ã‚Â± extremes Ã¢â€ â€™ 175Ã¢â‚¬â€œ198
     for pnl in (0.0, +0.01, +10.0, +1e6, -0.01, -10.0, -1e6):
         _safe_call(eng.record_trade_outcome, pnl)
 
-    # 3) reset_day: success then force error path → 201–212
+    # 3) reset_day: success then force error path Ã¢â€ â€™ 201Ã¢â‚¬â€œ212
     _safe_call(eng.reset_day)
     if hasattr(eng, "portfolio") and hasattr(eng.portfolio, "reset_day"):
         try:
@@ -111,7 +111,7 @@ def test_auto_fuzz(monkeypatch):
             if hasattr(eng, "_orig_reset_day"):
                 eng.portfolio.reset_day = eng._orig_reset_day
 
-    # 4) late helpers / loops → 310–354 etc.
+    # 4) late helpers / loops Ã¢â€ â€™ 310Ã¢â‚¬â€œ354 etc.
     # 4a single-event hooks
     event_good = {"symbol": "AAPL", "signal": "BUY", "price": 100.2, "size": 1}
     event_bad = {"foo": "bar"}  # malformed
@@ -139,8 +139,8 @@ def test_auto_fuzz(monkeypatch):
         )  # valid
         _safe_call(eng.run)  # zero-arg variant
 
-    # 5) alerts / getters / history → tiny branches
-    for msg in ("", "ok", " " * 4, "\n", "🚀" * 40, json.dumps({"m": "x"})):
+    # 5) alerts / getters / history Ã¢â€ â€™ tiny branches
+    for msg in ("", "ok", " " * 4, "\n", "Ã°Å¸Å¡â‚¬" * 40, json.dumps({"m": "x"})):
         _safe_call(eng.alert, msg)
     for f in ("get_equity", "get_history", "get_positions"):
         if hasattr(eng, f):

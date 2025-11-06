@@ -1,5 +1,5 @@
 """
-Unit Tests: Daily Stock Dashboard (Quant Pro v7.1 – Hedge-Fund Grade, 100% Coverage)
+Unit Tests: Daily Stock Dashboard (Quant Pro v7.1 Ã¢â‚¬â€œ Hedge-Fund Grade, 100% Coverage)
 ====================================================================================
 Covers:
 - get_bars success + request failure
@@ -10,7 +10,7 @@ Covers:
   * IBKR connection fail
   * disconnect branch
   * executed summary logging
-- ✅ Cleanup of generated files in logs/
+- Ã¢Å“â€¦ Cleanup of generated files in logs/
 """
 
 import logging
