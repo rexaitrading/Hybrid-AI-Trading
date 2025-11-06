@@ -245,3 +245,17 @@ def simulate_rr_exit(
     # Unit interprets positive ticks as “target hit” irrespective of side.
     ticks = float(round(target_ticks, 4))
     return (ticks, entry_idx)
+
+
+# --- canonical simulate_rr_exit re-export (do not define here) ---
+from hybrid_ai_trading.eval import pnl as _pnl  # canonical source
+
+simulate_rr_exit = _pnl.simulate_rr_exit  # noqa: F401
+# --- canonical simulate_rr_exit re-export (do not define here) ---
+from hybrid_ai_trading.eval import pnl as _pnl  # canonical source
+
+simulate_rr_exit = _pnl.simulate_rr_exit  # noqa: F401
+# --- canonical simulate_rr_exit re-export (do not define here) ---
+from hybrid_ai_trading.eval import pnl as _pnl  # canonical source
+
+simulate_rr_exit = _pnl.simulate_rr_exit  # noqa: F401
