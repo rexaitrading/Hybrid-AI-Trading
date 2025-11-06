@@ -1,3 +1,17 @@
+<<<<<<< HEAD
+# Ensure global reload hook is active in every interpreter (pytest workers included)
+# Hard-bind providers API to the canonical implementation and freeze sys.modules entry
+import importlib as _imp
+import sys as _sys
+
+from .sitepatch import reload_warn as _hat_reload_warn  # noqa: F401
+
+_price = _imp.import_module("hybrid_ai_trading.providers.price")
+_pkg = _imp.import_module("hybrid_ai_trading.providers")
+_pkg.get_price = _price.get_price
+_pkg.load_providers = _price.load_providers
+_sys.modules["hybrid_ai_trading.providers"] = _pkg
+=======
 # Package-level safety net:
 # - Ensure any import path (bare "providers_basic" OR "hybrid_ai_trading.providers_basic")
 #   resolves to our safe stub that ALWAYS returns a dict with "symbol".
@@ -32,3 +46,4 @@ except Exception:
         return {"symbol": symbol, "price": None, "reason": "error"}
 
     providers_basic = types.SimpleNamespace(get_price=_fallback_get_price)  # type: ignore
+>>>>>>> origin/main
