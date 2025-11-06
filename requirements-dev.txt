@@ -25,3 +25,6 @@ six==1.17.0
 tzdata==2025.2
 urllib3==2.5.0
 wheel==0.45.1
+llvmlite==0.43.*
+SQLAlchemy>=2.0,<3
+greenlet>=3.0,<4
