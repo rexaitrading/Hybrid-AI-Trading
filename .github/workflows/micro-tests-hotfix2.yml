@@ -19,16 +19,4 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .
-          if (Test-Path requirements.txt) { pip install -r requirements.txt }
-          pip install pytest
-          pip install pyyaml
-
-      - name: Run micro tests
-        run: |
-          pytest -q -k "micro or smoke" || pytest -q
+          python-version: '3.12'

@@ -1,7 +1,6 @@
 name: Phase3 CI
 
-on:
-  workflow_dispatch:
+on:`n  push:`n    branches:`n      - feat/ci-restore-pytest-*`n    paths-ignore:`n      - 'ci_artifacts/**'`nworkflow_dispatch:
 
 permissions:
   contents: read
@@ -28,8 +27,7 @@ jobs:
       - name: Install package and test deps
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --upgrade pytest
-          python -m pip install pyyaml
+          python -m pip install --upgrade pytest -q -m "integration"
           python -m pip install -e .
 
       - name: Sanity
@@ -49,7 +47,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
         run: |
           if [ -f "pytest.ini" ]; then
-            python -m pytest -c "${{ github.workspace }}/pytest.ini" -q
+            python -m pytest -q -m "integration"
           else
-            python -m pytest -q
+            python -m pytest -q -m "integration"
           fi

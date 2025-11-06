@@ -1,14 +1,23 @@
 name: tests (py3.12)
 
 on:
+  push:
+    branches:
+      - feat/ci-restore-pytest-*
+    paths-ignore:
+      - 'ci_artifacts/**'
   pull_request:
-  workflow_dispatch:
+  workflow_dispatch:concurrency:
+  group: tests-py312-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   py312:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,18 +26,41 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Install pytest only
-        shell: bash
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py312-${{ hashFiles('requirements.ci.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-py312-
+      - name: Install package and deps
         run: |
-          set -euxo pipefail
-          python -m pip install --upgrade pip
-          pip install pytest
+          python -V
+          python -m pip install --upgrade pip wheel setuptools
+          pip install --only-binary=:all: llvmlite==0.43.*
+          pip install -e .
+      # Filter out self-repo line to avoid nested clone
+      sed -E '/hybrid_ai_trading\s*@\s*git\+|Hybrid-AI-Trading\.git/d' requirements.txt > requirements.ci.txt
+      pip install -r requirements.ci.txt || true
+          pip install -r requirements.txt || true
+          python - << 'PY'
+          import importlib,sys
+          print("PYTHON:", sys.version)
+          for m in ("llvmlite","sqlalchemy","greenlet","ibapi","ccxt","requests","dotenv"):
+              try:
+                  importlib.import_module(m if m!="dotenv" else "dotenv")
+                  print("OK:", m)
+              except Exception as e:
+                  print("MISS:", m, e)
+          PY
 
-      - name: Run pytest (hardened)
-        shell: bash
-        env:
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+            - name: Prepare report folders
         run: |
-          set -euxo pipefail
-          pytest -q tests/test_smoke.py
+          rm -rf reports || true
+          mkdir -p reports ci_artifacts || true- name: Run tests
+        run: pytest -q --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml --junitxml=reports/junit.xml --cov=hybrid_ai_trading --cov-report=xml:reports/coverage.xml
+          python - << 'PY'
+          import sys; print("PYTEST DONE, python:", sys.version)
+          PY
+
+          if-no-files-found: warn

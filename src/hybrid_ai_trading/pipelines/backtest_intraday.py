@@ -1,0 +1,6 @@
+﻿from __future__ import annotations
+
+
+class IntradayBacktester:  # minimal compat stub; real implementation can replace
+    def __init__(self, *args, **kwargs): ...
+    def run(self, *args, **kwargs): ...
