@@ -1,4 +1,24 @@
-# PATCHLOG (surgical changes)
+
+# PATCHLOG  2025-11-07 00:20:44 -08:00
+
+- IBG module (`C:\IBC\IBGTools.psm1`):
+  - Added **paramless** helpers: `Get-IBGStatusPaper`, `Get-IBGStatusLive` for binder-proof fixed ports (4002/4001).
+  - Kept legacy `Get-IBGStatus -Port` and supporting functions; explicit **Export-ModuleMember** authoritative line.
+  - Introduced `Set-IBCDirectory` (approved verb) and ensured UTF-8 **no BOM** throughout.
+
+- Heartbeat pipeline:
+  - Shape-safe accessor `Get-SafeProp` pattern in wrappers to avoid property errors when LIVE is down.
+  - Confirmed writes: `C:\IBC\status\ibg_status.json`, `ibg_live_status.json`.
+
+- Runspace hardening:
+  - Purged stray typed `[switch]$live` from Local/Script/Global scopes before assignments.
+  - Avoided ambiguous variable names in wrappers (`$liveStatus/$paperStatus`).
+
+- Scheduler:
+  - Safe TaskName (no colon), safe `-Argument` quoting, S4U + Highest at 06:55 PT.
+
+- Single source of truth:
+  - All watchers/wrappers import `C:\IBC\IBGTools.psm1`. Legacy Extras/Loader may be retired.# PATCHLOG (surgical changes)
 
 ## 20251103_190435  RiskManager: DAILY_LOSS gate hardened
 **Why:** Stabilize daily-loss flag and parser-safe block
