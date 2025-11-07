@@ -1,5 +1,7 @@
 name: Phase3 CI
 
+permissions:
+  contents: read
 on:
   workflow_dispatch:
 

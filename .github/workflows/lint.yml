@@ -1,0 +1,20 @@
+name: lint
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Lint placeholder
+        run: echo "lint ok"
