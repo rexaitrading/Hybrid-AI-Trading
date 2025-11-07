@@ -2,62 +2,63 @@ name: CodeQL
 
 on:
   push:
-    branches: [ main, "**" ]
+    branches: [ "main", "**" ]
   pull_request:
-    branches: [ main ]
-    types: [opened, synchronize, reopened]
+    branches: [ "main" ]
+  workflow_dispatch:
 
 permissions:
   contents: read
   security-events: write
+  actions: read
 
 jobs:
-  analyze:
-    name: Analyze (actions)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: actions
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:actions"
-
   analyze-python:
     name: Analyze (python)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: python
+          queries: security-extended,security-and-quality
+
       - name: Autobuild
-        run: |
-          python -V
+        uses: github/codeql-action/autobuild@v3
+
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:python"
+
+  analyze-actions:
+    name: Analyze (actions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: actions
+          queries: security-extended
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:actions"
