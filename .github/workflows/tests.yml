@@ -1,8 +1,10 @@
 name: TradeEngine Dev Tests
 
+permissions:
+  contents: read
 on:
   workflow_dispatch:
-  push:
+   push:
     branches: ["**"]
   pull_request:
     branches: ["**"]

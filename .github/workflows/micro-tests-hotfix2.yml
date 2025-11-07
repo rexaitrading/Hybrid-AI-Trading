@@ -1,8 +1,10 @@
 name: Micro Tests (hotfix2)
 
+permissions:
+  contents: read
 on:
   workflow_dispatch:
-  push:
+   push:
     branches: ["**"]
   pull_request:
     branches: ["**"]

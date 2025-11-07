@@ -1,8 +1,10 @@
 name: tests (py3.12)
 
+permissions:
+  contents: read
 on:
   push:
-    branches:
+     branches:
       - feat/ci-restore-pytest-*
     paths-ignore:
       - 'ci_artifacts/**'

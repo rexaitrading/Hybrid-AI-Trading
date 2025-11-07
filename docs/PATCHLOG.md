@@ -105,3 +105,4 @@ ERROR tests/engine/test_trade_engine_alert_branches.py
 - update_equity(): reject negative; critical log
 - reset_day(): return reason + exact log string
 - Encoding/line-endings: UTF-8 no-BOM, LF
+[2025-11-07] Phase 6/7: CodeQL advanced-only; branch-protection contexts; PreMarket smoke; paper runner tests.

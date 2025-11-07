@@ -3,9 +3,11 @@ permissions:
   contents: read
 
 
+permissions:
+  contents: read
 on:
   schedule:
-    - cron: "15 10 * * *"   # 02:15 PT daily
+     - cron: "15 10 * * *"   # 02:15 PT daily
   workflow_dispatch:
 
 jobs:
