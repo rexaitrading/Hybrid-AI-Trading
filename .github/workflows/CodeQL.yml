@@ -1,29 +1,63 @@
 name: CodeQL
+
 on:
   push:
-    branches: ["**"]
+    branches: [ main, "**" ]
   pull_request:
-    branches: ["**"]
-  workflow_dispatch:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
 permissions:
   contents: read
   security-events: write
+
 jobs:
   analyze:
-    name: Analyze (${{ matrix.language }})
+    name: Analyze (actions)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ actions, python ]
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
-          languages: ${{ matrix.language }}
+          languages: actions
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:${{ matrix.language }}"
+          category: "/language:actions"
+
+  analyze-python:
+    name: Analyze (python)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+      - name: Autobuild
+        run: |
+          python -V
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python"
