@@ -115,3 +115,11 @@ _reports/
 secrets/
 out/
 artifacts/
+
+# ignore .backup artifacts
+.backup/
+
+# secrets and transient outputs
+secrets/
+out/
+artifacts/

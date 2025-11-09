@@ -1,4 +1,5 @@
-exclude: '^(?:\.venv/|_safe/|archive_legacy_pkg_.*|\.backup/|build/|dist|node_modules)/|(^|/)-(Fees|Headers)$'
+exclude: '^(?:\.venv/|_safe/|archive_legacy_pkg_.*|\.backup/|build/|dist/|node_modules)/|(^|/)-(Fees|Headers)$'
+
 
 
 exclude: '^(?:\.venv/|_safe/|archive_legacy_pkg_.*|\.backup/|build/|dist/|node_modules/)/|(^|/)-(Fees|Headers)$'
