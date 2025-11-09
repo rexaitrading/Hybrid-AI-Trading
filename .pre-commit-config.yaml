@@ -24,11 +24,10 @@ repos:
     hooks:
       - id: isort
         exclude: '^_safe/|(^|/)-(Fees|Headers)$'
-
-  - repo: local
-    hooks:
-      - id: repo-sanity
-        name: repo-sanity (no nested .git / stray src/hybrid-ai-trading)
-        language: system
-        entry: bash scripts/ci/Invoke-PSPortable.sh scripts/ci/repo_sanity.ps1
-        files: .*
+- repo: local
+  hooks:
+    - id: repo-sanity
+      name: repo-sanity (no nested .git / stray src/hybrid-ai-trading)
+      language: system
+      entry: python scripts/ci/ps_portable.py scripts/ci/repo_sanity.ps1
+      files: .*
