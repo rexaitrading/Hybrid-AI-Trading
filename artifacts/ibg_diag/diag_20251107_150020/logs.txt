@@ -1,0 +1,175 @@
+== LOG SNAPSHOT @ 2025-11-07T15:00:22 ==
+---- IBC logs (C:\IBC\Logs) ----
+
+[C:\IBC\Logs\autorun_20251026_054501.log]
+[2025-10-26T05:45:01.8228784-07:00] Launch-IBG: start
+[2025-10-26T05:45:01.8268827-07:00] killing old ibgateway/javaw...
+
+[C:\IBC\Logs\autorun_20251025_054501.log]
+[2025-10-25T05:45:01.8344734-07:00] Launch-IBG: start
+[2025-10-25T05:45:01.8379785-07:00] killing old ibgateway/javaw...
+---- IBG logs (C:\Jts\ibgateway\1040.bad_20251011_122818.disabled.disabled.disabled) ----
+
+[C:\Jts\ibgateway\1040.bad_20251011_122818.disabled.disabled.disabled\launcher.log]
+2025-10-11 12:00:09.565 [BL] INFO  [JTS-CachedThreadExecutor-21] - AdManager: sending request with header X-USERNAME
+2025-10-11 12:00:09.574 [BL] ERROR [JTS-CachedThreadExecutor-12] - AdManager: IMAGE_SHOWN service 411
+2025-10-11 12:00:09.694 [BL] INFO  [JTS-CachedThreadExecutor-21] - AdManager: NEXT_AD request is ok
+2025-10-11 12:00:09.694 [BL] INFO  [JTS-CachedThreadExecutor-21] - AdManager: NEXT_AD receive raw response {"imagePath":"/info/image/328-0-1200x1000-en.jpg","expire":1767193200000,"id":"b3Rsd3B3MDY0LWRUV1MtMzI4LTAtMTc2MDIwOTIwOTU1Nw==","target_alt":"https://www.interactivebrokers.com?adid=b3Rsd3B3MDY0LWRUV1MtMzI4LTAtMTc2MDIwOTIwOTU1Nw==","target":"http://www.interactivebrokers.com/en/trading/ibkr-desktop.php?adid=b3Rsd3B3MDY0LWRUV1MtMzI4LTAtMTc2MDIwOTIwOTU1Nw=="}
+2025-10-11 12:00:09.695 [BL] INFO  [JTS-CachedThreadExecutor-21] - AdsManager: parsed json object:
+id: b3Rsd3B3MDY0LWRUV1MtMzI4LTAtMTc2MDIwOTIwOTU1Nw==
+expire: 1767193200000
+imagePath: /info/image/328-0-1200x1000-en.jpg
+target: http://www.interactivebrokers.com/en/trading/ibkr-desktop.php?adid=b3Rsd3B3MDY0LWRUV1MtMzI4LTAtMTc2MDIwOTIwOTU1Nw==
+target_alt: https://www.interactivebrokers.com?adid=b3Rsd3B3MDY0LWRUV1MtMzI4LTAtMTc2MDIwOTIwOTU1Nw==
+
+2025-10-11 12:00:09.695 [BL] INFO  [JTS-CachedThreadExecutor-21] - AdsManager: try to save image  inC:\Jts\ibgateway\1039\lkplbbanbjdnalogghoajigaiaihojdebfobonmi\\328-0-1200x1000-en.jpg
+2025-10-11 12:00:09.695 [BL] ERROR [JTS-CachedThreadExecutor-21] - Unable create ad locator: The system cannot find the path specified
+2025-10-11 12:00:09.695 [BL] WARN  [JTS-CachedThreadExecutor-21] - Unable store ad locator: C:\Jts\ibgateway\1039\lkplbbanbjdnalogghoajigaiaihojdebfobonmi\ad.locator (The system cannot find the path specified)
+2025-10-11 12:00:09.732 [BL] INFO  [JTS-Login-14] - SPLASH Authenticating
+2025-10-11 12:00:09.732 [BL] INFO  [JTS-CCPListenerS2-17] - Initial listener buffer size is 65536.
+2025-10-11 12:00:09.732 [BL] INFO  [JTS-CCPListenerS2-17] - Listener thread [sessionID=2] is ready to process messages.
+2025-10-11 12:00:09.732 [BL] INFO  [JTS-Login-14] - Terminating launcher login thread
+2025-10-11 12:00:09.794 [BL] INFO  [JTS-AuthDispatcherS2-18] - SPLASH 0249 step 2 AuthDispatcher.processDataItr
+2025-10-11 12:00:09.795 [BL] INFO  [JTS-AuthDispatcherS2-18] - set nsMsgVersion: context=AuthStart; version=50
+2025-10-11 12:00:09.795 [BL] INFO  [JTS-AuthDispatcherS2-18] - Received NS_AUTH_START: 1
+2025-10-11 12:00:09.795 [BL] INFO  [JTS-AuthDispatcherS2-18] - pwd time to expiry ms: 2342167191000 days: 27109
+2025-10-11 12:00:09.796 [BL] INFO  [JTS-AuthDispatcherS2-18] - Long pwd allowed: true
+2025-10-11 12:00:09.796 [BL] INFO  [JTS-AuthDispatcherS2-18] -  NS_AUTH_START version=50 pwd=1 soft=0 token(s)=[token=0] initialTokenType=PWD authenticationType=MARKET_DATA_CONNECTION identityHashcode=2136055705
+2025-10-11 12:00:09.796 [BL] INFO  [JTS-AuthDispatcherS2-18] - ### onStartAuthentication
+2025-10-11 12:00:09.796 [BL] INFO  [JTS-AuthDispatcherS2-18] - Starting password Authentication
+2025-10-11 12:00:09.796 [BL] INFO  [JTS-AuthDispatcherS2-18] - ### onXyzAuthQuery
+2025-10-11 12:00:09.796 [BL] INFO  [JTS-AuthDispatcherS2-18] - sendXYZMessage: 777
+2025-10-11 12:00:09.796 [BL] INFO  [JTS-AuthDispatcherS2-18] - UserCredentials.setFrom() [this=833036903,other=833036903,old=68eaa939.01df,new=68eaa939.01df].
+2025-10-11 12:00:09.855 [BL] INFO  [JTS-AuthDispatcherS2-18] - Receiver: 777
+2025-10-11 12:00:09.855 [BL] ERROR [JTS-AuthDispatcherS2-18] - ERROR: Received twslaunch.jauthentication.N with userName NOT PRINTED in it - this is not expected
+2025-10-11 12:00:09.855 [BL] INFO  [JTS-AuthDispatcherS2-18] - processXYZMessage: 777, protocol version: 50
+2025-10-11 12:00:09.855 [BL] INFO  [JTS-AuthDispatcherS2-18] - Received AUTH_PARAMS
+2025-10-11 12:00:09.855 [BL] INFO  [JTS-AuthDispatcherS2-18] - ### onXyzAuthParams
+2025-10-11 12:00:09.857 [BL] INFO  [JTS-AuthDispatcherS2-18] - sendXYZMessage: 777
+2025-10-11 12:00:09.915 [BL] INFO  [JTS-AuthDispatcherS2-18] - Receiver: 777
+2025-10-11 12:00:09.915 [BL] ERROR [JTS-AuthDispatcherS2-18] - ERROR: Received twslaunch.jauthentication.N with userName NOT PRINTED in it - this is not expected
+2025-10-11 12:00:09.915 [BL] INFO  [JTS-AuthDispatcherS2-18] - processXYZMessage: 777, protocol version: 50
+2025-10-11 12:00:09.915 [BL] INFO  [JTS-AuthDispatcherS2-18] - Received SERVER_PARAMS
+2025-10-11 12:00:09.917 [BL] INFO  [JTS-AuthDispatcherS2-18] - Session Token received in AuthenticationMessageXYZ=81b1aXXXXX.., messageId=SERVER_KEY (4)
+2025-10-11 12:00:09.917 [BL] INFO  [JTS-AuthDispatcherS2-18] - sendXYZMessage: 777
+2025-10-11 12:00:09.976 [BL] INFO  [JTS-AuthDispatcherS2-18] - Receiver: 777
+2025-10-11 12:00:09.976 [BL] ERROR [JTS-AuthDispatcherS2-18] - ERROR: Received twslaunch.jauthentication.N with userName NOT PRINTED in it - this is not expected
+2025-10-11 12:00:09.976 [BL] INFO  [JTS-AuthDispatcherS2-18] - processXYZMessage: 777, protocol version: 50
+2025-10-11 12:00:09.976 [BL] INFO  [JTS-AuthDispatcherS2-18] - Received AUTH_RESULT
+2025-10-11 12:00:09.976 [BL] INFO  [JTS-AuthDispatcherS2-18] - ### onXyzAuthServerProof
+2025-10-11 12:00:09.976 [BL] INFO  [JTS-AuthDispatcherS2-18] - Passed pwd authentication.
+2025-10-11 12:00:09.976 [BL] INFO  [JTS-AuthDispatcherS2-18] - Authentication completed.
+2025-10-11 12:00:09.976 [BL] INFO  [JTS-AuthDispatcherS2-18] - ### onAuthenticationCompleted tokenProtocol=0; authenticated=true
+2025-10-11 12:00:09.976 [BL] INFO  [JTS-AuthDispatcherS2-18] - setting session token in AuthenticationHandler: authenticationType=MARKET_DATA_CONNECTION hashCode=2136055705 new=XYZSessionToken[type=SOFT,token=81b1aXXXXX..] old=null ctciOld=null
+2025-10-11 12:00:09.977 [BL] INFO  [JTS-AuthDispatcherS2-18] - ccp session token non-CTCI is set as XYZSessionToken[type=SOFT,token=81b1aXXXXX..]
+2025-10-11 12:00:09.977 [BL] INFO  [JTS-AuthDispatcherS2-18] - Received NS_CONNECT_RESPONSE
+2025-10-11 12:00:09.977 [BL] INFO  [JTS-AuthDispatcherS2-18] - Received CCP connect features: [TST, ONELOGON].
+2025-10-11 12:00:09.977 [BL] INFO  [JTS-AuthDispatcherS2-18] - Log encryption support is enabled [authType=MARKET_DATA_CONNECTION,logKeyId=aaa,logKey=***,logUploadKey=dkhhkbisxl].
+2025-10-11 12:00:09.978 [BL] INFO  [JTS-AuthDispatcherS2-18] - CCP sent paperUser NOT PRINTED for prodUser NOT PRINTED
+2025-10-11 12:00:09.978 [BL] INFO  [JTS-AuthDispatcherS2-18] - UserCredentials.setFrom() [this=833036903,other=833036903,old=68eaa939.01df,new=68eaa939.01df].
+2025-10-11 12:00:09.979 [BL] INFO  [JTS-AuthDispatcherS2-18] - AuthDispatcher.newCommPort()[userDirname=lkplbbanbjdnalogghoajigaiaihojdebfobonmi,restart=,authToken=null,ccpToken=XYZSessionToken[type=SOFT,token=81b1aXXXXX..]].
+2025-10-11 12:00:09.979 [BL] INFO  [JTS-AuthDispatcherS2-18] - Daily auto-restart is not enabled.
+2025-10-11 12:00:09.979 [BL] INFO  [JTS-AuthDispatcherS2-18] - Sending NSNewcommPort [tokenMask=2,tokens=XYZSessionToken[type=SOFT,token=81b1aXXXXX..]],shortTokenHashes=53d52b8b]...
+2025-10-11 12:00:10.038 [BL] INFO  [JTS-AuthDispatcherS2-18] - SPLASH 0244 step 2 AuthDispatcher.processDataItr
+2025-10-11 12:00:10.038 [BL] INFO  [JTS-AuthDispatcherS2-18] - Received NS_FIX_START
+2025-10-11 12:00:10.038 [BL] INFO  [JTS-AuthDispatcherS2-18] - ### onNsFixStart
+2025-10-11 12:00:10.039 [BL] INFO  [JTS-PostAuthenticateS2-25] - Interrupting dispatcher [sessionID=2]...
+2025-10-11 12:00:10.039 [BL] INFO  [JTS-AuthDispatcherS2-18] - Dispatcher thread terminating [sessionID=2,interrupted=true]...
+2025-10-11 12:00:10.039 [BL] INFO  [JTS-PostAuthenticateS2-25] - AuthTimeoutMonitor-CCP: deactivate
+2025-10-11 12:00:10.039 [BL] INFO  [JTS-AuthTimeoutMonitorThread-CCP-19] - Terminating auth timeout monitor thread for CCP
+2025-10-11 12:00:10.039 [BL] INFO  [JTS-PostAuthenticateS2-25] - Authentication complete
+2025-10-11 12:00:10.039 [BL] INFO  [JTS-PostAuthenticateS2-25] - Creating a FixLogonHandlerFactory instance...
+2025-10-11 12:00:10.040 [BL] INFO  [JTS-PostAuthenticateS2-25] - Instance created.
+2025-10-11 12:00:10.041 [BL] INFO  [AWT-EventQueue-0] - initPreUI() - entry
+2025-10-11 12:00:10.043 [BL] INFO  [AWT-EventQueue-0] - jtsLookAndFeel uninitialized
+2025-10-11 12:00:10.043 [BL] INFO  [AWT-EventQueue-0] - JtsLookAndFeel initialized
+2025-10-11 12:00:10.043 [BL] INFO  [JTS-PostAuthenticateS2-25] - JDOMFactory Class =interface org.jdom.JDOMFactory
+2025-10-11 12:00:10.044 [BL] INFO  [AWT-EventQueue-0] - Current LAF: TWS LAF
+2025-10-11 12:00:10.044 [BL] INFO  [AWT-EventQueue-0] - initPreUI() - exit
+2025-10-11 12:00:10.045 [BL] INFO  [JTS-PostAuthenticateS2-25] - hsqldb jdbc =class org.hsqldb.jdbcDriver 2.4
+2025-10-11 12:00:10.046 [BL] INFO  [JTS-PostAuthenticateS2-25] - Changing state for connection from PRELOGON to PRELOGON in B 1297525174: SessionSocket:2
+2025-10-11 12:00:10.046 [BL] INFO  [JTS-PostAuthenticateS2-25] - createOrRenameToNewStyleUserDirectory: no action: use existing newDir=C:\Jts\ibgateway\1039\lmleilbliecnmekfogbobmfbchpdfbmbafbgobkg
+2025-10-11 12:00:10.046 [BL] INFO  [JTS-PostAuthenticateS2-25] - performLogSwitch() [force=false]
+2025-10-11 12:00:10.050 [BL] INFO  [JTS-PostAuthenticateS2-25] - Switching to a new encrypted log...
+
+[C:\Jts\ibgateway\1040.bad_20251011_122818.disabled.disabled.disabled\launcher.20251010.log]
+2025-10-10 20:54:05.732 [DL] INFO  [JTS-AuthDispatcherS4-43] - AuthTimeoutMonitor-CCP: deactivate
+2025-10-10 20:54:05.732 [DL] INFO  [JTS-CCPListenerS4-42] - Socket or stream for connection cdc1-hb1.ibllc.com:4001 (SSL) was closed by another thread.
+2025-10-10 20:54:05.732 [DL] INFO  [JTS-AuthTimeoutMonitorThread-CCP-44] - Terminating auth timeout monitor thread for CCP
+2025-10-10 20:54:05.732 [DL] INFO  [JTS-AuthDispatcherS4-43] - SocketTracker[name=name=CCP(cdc1-hb1.ibllc.com:4001 (SSL)),usesCcpConMan=false,lastReadTimestamp=1760154845731,lastReadDateTime=2025-10-10T20:54:05.731,lastFixSendTime=].
+2025-10-10 20:54:05.732 [DL] INFO  [JTS-AuthDispatcherS4-43] - Interrupting dispatcher [sessionID=4]...
+2025-10-10 20:54:05.732 [DL] INFO  [JTS-AuthDispatcherS4-43] - Interrupting listener [sessionID=4,disconnectSocket=true]...
+2025-10-10 20:54:05.732 [DL] INFO  [JTS-DisconnectedS4-48] - IBGateway connection to ccp disconnected.
+2025-10-10 20:54:05.732 [DL] INFO  [JTS-AuthDispatcherS4-43] - Redirecting to cdc1.ibllc.com:4001 (SSL)
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-AuthDispatcherS4-43] - UserCredentials.sessionId() [this=540028635,old=68e9d4cd.00ee,new=68e9d4cd.00ee].
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-AuthDispatcherS4-43] - Prelogin delay:0
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-MiscUlrsRequester-49] - Connecting cdc1.ibllc.com:4000 timeout=10000...
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-AuthDispatcherS4-43] - Dispatcher thread terminating [sessionID=4,interrupted=true]...
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-CCPListenerS4-42] - Listener thread terminating [sessionID=4] [seen=35,totalShifted=35,moreAvailable=0]
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-Login-50] - Starting launcher login thread
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-Login-50] - LauncherLoginThread.runLoginWithUI()[hotBackupStrategy=ON,loginAttempt=3,socketDelay=30000].
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-Login-50] - SPLASH Attempt 3: connecting to server
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-Login-50] - SPLASH Attempt 3: connecting to server
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-Login-50] - ### startLogin startTime=1760154845732
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-Login-50] - ### loginAttempt loginAttempt=3
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-Login-50] - AsyncDisconnectNotifiers: 1
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-Login-50] - Connecting cdc1.ibllc.com:4001 (SSL) timeout=30000...
+2025-10-10 20:54:05.733 [DL] INFO  [JTS-Login-50] - ### onSocketOpenStart socketOpenStart=1760154845733; endPoint=cdc1.ibllc.com; port=4001
+2025-10-10 20:54:05.791 [DL] INFO  [JTS-MiscUlrsRequester-49] - Connected to cdc1.ibllc.com:4000/8.17.22.31 remote-ip on local port 0 socket local addrs:port /209.53.219.170:64034
+2025-10-10 20:54:05.791 [DL] INFO  [JTS-MiscUlrsRequester-49] - Updating machine info [connectionAddress=/209.53.219.170]...
+2025-10-10 20:54:05.791 [DL] INFO  [JTS-MiscUlrsRequester-49] - Sending MiscUrls request
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-MISC URLsListenerS5-52] - Starting listener thread [sessionID=5]...
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-AuthDispatcherS5-53] - Starting dispatcher thread [sessionID=5]...
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-MISC URLsListenerS5-52] - Initial listener buffer size is 65536.
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-MISC URLsListenerS5-52] - Listener thread [sessionID=5] is ready to process messages.
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-AuthResponseMonitor-54] - Starting auth response monitor thread
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-Login-50] - ### onSocketOpenEnd socketOpenEnd=1760154845792
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-Login-50] - Connected to cdc1.ibllc.com:4001 (SSL)/8.17.22.31 remote-ip on local port 0 socket local addrs:port /209.53.219.170:64035
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-Login-50] - Updating machine info [connectionAddress=/209.53.219.170]...
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-Login-50] - JTSAuthConnection.onConnected(): lastKnownCipherStatus=INSECURE
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-Login-50] - Changing state for connection from PRELOGON to PRELOGON in B 1651348032: SessionSocket:6
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-Login-50] - Authenticating
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-Login-50] - AuthTimeoutMonitor-CCP: deactivate
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-Login-50] - AuthTimeoutMonitor-CCP: timeout=30000
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-Login-50] - AuthTimeoutMonitor-CCP: activate
+2025-10-10 20:54:05.792 [DL] INFO  [JTS-CCPListenerS6-55] - Starting listener thread [sessionID=6]...
+2025-10-10 20:54:05.793 [DL] INFO  [JTS-Login-50] - Sending connect request
+2025-10-10 20:54:05.793 [DL] INFO  [JTS-Login-50] - AuthDispatcher.initNSMsgVersionLimits: minVersion=38, maxVersion=50
+2025-10-10 20:54:05.793 [DL] INFO  [JTS-AuthTimeoutMonitorThread-CCP-57] - Starting auth timeout monitor thread for CCP
+2025-10-10 20:54:05.793 [DL] INFO  [JTS-AuthDispatcherS6-56] - Starting dispatcher thread [sessionID=6]...
+2025-10-10 20:54:05.793 [DL] INFO  [JTS-Login-50] - AuthDispatcher.NSConnectRequest: userSessionID=68e9d4cd.00ee, beeDemoType=NULL
+2025-10-10 20:54:05.793 [DL] INFO  [JTS-Login-50] - ### onNsMsg loginMessageReq=1760154845793; brandNewUser=false
+2025-10-10 20:54:05.793 [DL] INFO  [JTS-Login-50] - mapProdToPaper: In NSConnectRequest: sending PAPER_CONNECT=0x2000
+2025-10-10 20:54:05.849 [DL] INFO  [JTS-AuthDispatcherS5-53] - Received NS_MISC_URLS
+2025-10-10 20:54:05.849 [DL] INFO  [JTS-AuthDispatcherS5-53] - IBMiscUrl.miscUrlMessage()[sslRequired=true]
+2025-10-10 20:54:05.849 [DL] INFO  [JTS-AuthDispatcherS5-53] - Misc URL: scope is blank - setting userScope to EXTERNAL
+2025-10-10 20:54:05.849 [DL] INFO  [JTS-AuthDispatcherS5-53] - Misc URL: setting userScope to EXTERNAL
+2025-10-10 20:54:05.850 [DL] INFO  [JTS-AuthDispatcherS5-53] - Disconnecting cdc1.ibllc.com:4000 [disconnectDetails=DisconnectDetails[sessionID=5,endPoint=cdc1.ibllc.com:4000,reason=DISCONNECT_BY_DESIGN,cause=null,systemMessage=null,keepSocketOpen=false]]...
+2025-10-10 20:54:05.850 [DL] INFO  [JTS-AuthDispatcherS5-53] - Socket closed.
+2025-10-10 20:54:05.850 [DL] INFO  [JTS-AuthDispatcherS5-53] - SocketTracker[name=name=MISC URLs(cdc1.ibllc.com:4000),usesCcpConMan=false,lastReadTimestamp=1760154845849,lastReadDateTime=2025-10-10T20:54:05.849,lastFixSendTime=].
+2025-10-10 20:54:05.850 [DL] INFO  [JTS-AuthDispatcherS5-53] - Interrupting dispatcher [sessionID=5]...
+2025-10-10 20:54:05.850 [DL] INFO  [JTS-AuthDispatcherS5-53] - Interrupting listener [sessionID=5,disconnectSocket=true]...
+2025-10-10 20:54:05.850 [DL] INFO  [JTS-MISC URLsListenerS5-52] - Socket or stream for connection cdc1.ibllc.com:4000 was closed by another thread.
+2025-10-10 20:54:05.850 [DL] INFO  [JTS-AuthDispatcherS5-53] - Dispatcher thread terminating [sessionID=5,interrupted=true]...
+2025-10-10 20:54:05.850 [DL] INFO  [JTS-MISC URLsListenerS5-52] - Listener thread terminating [sessionID=5] [seen=1159,totalShifted=1159,moreAvailable=0]
+2025-10-10 20:54:05.850 [DL] INFO  [JTS-AuthResponseMonitor-54] - Terminating auth response monitor thread
+2025-10-10 20:54:05.970 [DL] INFO  [JTS-Login-50] - SPLASH Attempt 3: Authenticating
+2025-10-10 20:54:05.970 [DL] INFO  [JTS-CCPListenerS6-55] - Initial listener buffer size is 65536.
+2025-10-10 20:54:05.970 [DL] INFO  [JTS-CCPListenerS6-55] - Listener thread [sessionID=6] is ready to process messages.
+2025-10-10 20:54:05.970 [DL] INFO  [JTS-Login-50] - Terminating launcher login thread
+2025-10-10 20:54:07.608 [DL] INFO  [AWT-EventQueue-0] - SPLASH Close pressed
+2025-10-10 20:54:07.608 [DL] INFO  [AWT-EventQueue-0] - SPLASH Cancel pending...
+2025-10-10 20:54:07.621 [DL] INFO  [AWT-EventQueue-0] - Disconnecting cdc1.ibllc.com:4001 (SSL) [disconnectDetails=DisconnectDetails[sessionID=6,endPoint=cdc1.ibllc.com:4001 (SSL),reason=DISCONNECT_BY_DESIGN,cause=null,systemMessage=null,keepSocketOpen=false]]...
+2025-10-10 20:54:07.622 [DL] INFO  [AWT-EventQueue-0] - Socket closed.
+2025-10-10 20:54:07.622 [DL] INFO  [JTS-CCPListenerS6-55] - Socket or stream for connection cdc1.ibllc.com:4001 (SSL) was closed by another thread.
+2025-10-10 20:54:07.622 [DL] INFO  [AWT-EventQueue-0] - AuthTimeoutMonitor-CCP: deactivate
+2025-10-10 20:54:07.622 [DL] INFO  [JTS-AuthTimeoutMonitorThread-CCP-57] - Terminating auth timeout monitor thread for CCP
+2025-10-10 20:54:07.622 [DL] INFO  [AWT-EventQueue-0] - SocketTracker[name=name=CCP(cdc1.ibllc.com:4001 (SSL)),usesCcpConMan=false,lastReadTimestamp=0,lastReadDateTime=1969-12-31T16:00,lastFixSendTime=].
+2025-10-10 20:54:07.622 [DL] INFO  [AWT-EventQueue-0] - Interrupting dispatcher [sessionID=6]...
+2025-10-10 20:54:07.622 [DL] INFO  [AWT-EventQueue-0] - Interrupting listener [sessionID=6,disconnectSocket=true]...
+2025-10-10 20:54:07.622 [DL] INFO  [AWT-EventQueue-0] - CONN CALC: Last connection attempt time is cleared!
+2025-10-10 20:54:07.622 [DL] INFO  [JTS-AuthDispatcherS6-56] - Dispatcher thread terminating [sessionID=6,interrupted=true]...
+2025-10-10 20:54:07.622 [DL] INFO  [JTS-CCPListenerS6-55] - Listener thread terminating [sessionID=6] [seen=0,totalShifted=0,moreAvailable=0]
+2025-10-10 20:54:07.622 [DL] INFO  [JTS-DisconnectedS6-62] - CONN CALC: Last connection attempt time is cleared!
+2025-10-10 20:54:07.622 [DL] INFO  [JTS-DisconnectedS6-62] - IBGateway connection to ccp disconnected.
+2025-10-10 20:54:09.155 [DL] INFO  [AWT-EventQueue-0] - called cleanupMktSrvr

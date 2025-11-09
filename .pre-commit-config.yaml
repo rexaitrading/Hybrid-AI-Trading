@@ -1,20 +1,25 @@
-exclude: '^(?:\.venv/|_safe/|archive_legacy_pkg_.*|\.backup/|build/|dist/|node_modules/)/'
+exclude: '^(?:\.venv/|_safe/|archive_legacy_pkg_.*|\.backup/|build/|dist/|node_modules/)/|(^|/)-(Fees|Headers)$'
+
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args:
+          - --markdown-linebreak-ext
+          - md,markdown
+      - id: end-of-file-fixer
+
   - repo: https://github.com/psf/black
-    rev: 24.8.0
+    rev: 25.9.0
     hooks:
       - id: black
 
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+  - repo: https://github.com/PyCQA/isort
+    rev: 7.0.0
     hooks:
       - id: isort
-
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
-    hooks:
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
+        exclude: '^_safe/|(^|/)-(Fees|Headers)$'
 
   - repo: local
     hooks:

@@ -1,0 +1,4 @@
+== EVENTS last 12 min @ 2025-11-07T15:00:21 ==
+--- Schannel (System) ---
+
+--- Application (Java/IB*) ---

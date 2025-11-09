@@ -104,3 +104,9 @@ _reports/
 .quarantine/
 .pytest_cache/
 **/__pycache__/
+
+# ignore .backup artifacts
+.backup/
+
+# ignore .backup artifacts
+.backup/
