@@ -130,3 +130,12 @@ artifacts/
 **/.venv.bak*/
 __pycache__/
 .pytest_cache/
+# === Runtime / generated ===
+/ibg_status.json
+/ibg_live_status.json
+/out/
+/state/
+/*.csv
+
+# keep sample data under tests vendor dirs tracked
+!tests/**

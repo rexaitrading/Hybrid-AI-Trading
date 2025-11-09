@@ -1,7 +1,7 @@
-﻿* text=auto eol=lf
-*.ps1 text eol=lf
-*.py  text eol=lf
-*.md  text eol=lf
-*.yml text eol=lf
-*.yaml text eol=lf
-*.csv text eol=lf
+# Normalize to LF in repo; preserve LF in working tree
+* text=auto eol=lf
+
+# PowerShell scripts explicit LF
+*.ps1  text eol=lf
+*.psm1 text eol=lf
+*.psd1 text eol=lf
