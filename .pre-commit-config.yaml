@@ -1,33 +1,15 @@
-exclude: '^(?:\.venv/|_safe/|archive_legacy_pkg_.*|\.backup/|build/|dist/|node_modules)/|(^|/)-(Fees|Headers)$'
-
-
-
-exclude: '^(?:\.venv/|_safe/|archive_legacy_pkg_.*|\.backup/|build/|dist/|node_modules/)/|(^|/)-(Fees|Headers)$'
+exclude: |-
+  ^(?:\.venv/|_safe/|archive_legacy_pkg_.*|\.backup/|build/|dist/|node_modules)/|(^|/)-(Fees|Headers)$
 
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-      - id: trailing-whitespace
-        args:
-          - --markdown-linebreak-ext
-          - md,markdown
-      - id: end-of-file-fixer
-
-  - repo: https://github.com/psf/black
-    rev: 25.9.0
-    hooks:
-      - id: black
-
-  - repo: https://github.com/PyCQA/isort
-    rev: 7.0.0
-    hooks:
-      - id: isort
-        exclude: '^_safe/|(^|/)-(Fees|Headers)$'
-- repo: local
+- repo: https://github.com/psf/black
+  rev: 24.8.0
   hooks:
-    - id: repo-sanity
-      name: repo-sanity (no nested .git / stray src/hybrid-ai-trading)
-      language: system
-      entry: python scripts/ci/ps_portable.py scripts/ci/repo_sanity.ps1
-      files: .*
+  - id: black
+    language_version: python3.12
+
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.6.0
+  hooks:
+  - id: end-of-file-fixer
+  - id: trailing-whitespace

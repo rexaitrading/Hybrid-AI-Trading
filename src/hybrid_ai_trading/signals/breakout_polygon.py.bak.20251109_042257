@@ -114,4 +114,3 @@ def breakout_signal_polygon(symbol: str, lookback: int = 3) -> str:
 
 
 __all__ = ["BreakoutPolygonSignal", "PolygonAPIError", "breakout_signal_polygon"]
-
