@@ -86,3 +86,13 @@ if ($env:SLACK_WEBHOOK_URL -and -not $env:NO_SLACK) {
     Write-Warn "Slack post failed: $_"
   }
 }
+
+# Bot token path (preferred if provided)
+if ($env:SLACK_BOT_TOKEN -and -not $env:NO_SLACK) {
+  try {
+    Send-SlackMessage -Token $env:SLACK_BOT_TOKEN `
+      -Channel '#hybrid_ai_trading_alerts' `
+      -Text ("Post-Market Export {0} {1}: listen={2} hbUp={3} uptimeSec={4}" -f $Date,$Mode,$rec.port_listen,$rec.hb_portUp,$rec.hb_uptime_sec)
+    Write-Ok "Slack summary posted (bot)."
+  } catch { Write-Warn ("Slack post (bot) failed: {0}" -f $_) }
+}
