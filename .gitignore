@@ -123,3 +123,10 @@ artifacts/
 secrets/
 out/
 artifacts/
+# venvs & backups
+.venv/
+.venv.bak*/
+**/.venv/
+**/.venv.bak*/
+__pycache__/
+.pytest_cache/

@@ -1,4 +1,4 @@
-﻿HybridAITrading Slack  Integration Notes
+HybridAITrading Slack  Integration Notes
 =========================================
 App (Risk Bot): https://api.slack.com/apps/A09Q9FLOGHK
 #all-hybridaitriding  : https://hybridaitrading.slack.com/archives/C09HPTL2F3M

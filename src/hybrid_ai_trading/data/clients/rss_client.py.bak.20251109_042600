@@ -7,10 +7,9 @@ RSS Client (Hybrid AI Quant Pro v1.0  OE Grade)
 import logging
 import time
 from typing import Any, Dict, List, Optional
-try:
-    import feedparser  # optional
-except Exception:
-    feedparser = None
+
+import feedparser
+
 logger = logging.getLogger("hybrid_ai_trading.data.clients.rss_client")
 
 
@@ -22,8 +21,7 @@ class RSSClient:
         extra_feeds: Optional[List[str]] = None,
         per_feed_max: int = 8,
     ):
-                if feedparser is None:
-            raise ImportError("feedparser not installed; RSS features optional. 'pip install feedparser'")self.google_template = google_template
+        self.google_template = google_template
         self.yahoo_template = yahoo_template
         self.extra_feeds = extra_feeds or []
         self.per_feed_max = per_feed_max
