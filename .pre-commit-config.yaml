@@ -30,5 +30,5 @@ repos:
       - id: repo-sanity
         name: repo-sanity (no nested .git / stray src/hybrid-ai-trading)
         language: system
-        entry: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ci/repo_sanity.ps1
+        entry: bash scripts/ci/Invoke-PSPortable.sh scripts/ci/repo_sanity.ps1
         files: .*
