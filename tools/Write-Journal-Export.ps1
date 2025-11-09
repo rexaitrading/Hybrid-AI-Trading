@@ -15,6 +15,22 @@ function Write-Info($m){ Write-Host $m -ForegroundColor Cyan }
 function Write-Ok($m){   Write-Host $m -ForegroundColor Green }
 function Write-Warn($m){ Write-Host $m -ForegroundColor Yellow }
 
+
+function Send-SlackMessage {
+  param(
+    [Parameter(Mandatory=$true)][string]$Token,     # xoxb-***
+    [Parameter(Mandatory=$true)][string]$Channel,   # '#hybrid_ai_trading_alerts' or channel ID
+    [Parameter(Mandatory=$true)][string]$Text
+  )
+  $uri  = 'https://slack.com/api/chat.postMessage'
+  $hdr  = @{ Authorization = "Bearer $Token"; 'Content-Type'='application/json; charset=utf-8' }
+  $body = @{ channel = $Channel; text = $Text } | ConvertTo-Json -Compress
+  try {
+    $resp = Invoke-RestMethod -Method Post -Uri $uri -Headers $hdr -Body $body -ErrorAction Stop
+    if (-not $resp.ok) { throw "Slack error: $($resp.error)" }
+    return $resp
+  } catch { throw $_ }
+}
 # Resolve heartbeat by mode (paper-first defaults)
 if ($Mode -eq 'live') {
   $hbPath = 'C:\IBC\status\ibg_live_status.json'
