@@ -1,7 +1,18 @@
-# Normalize to LF in repo; preserve LF in working tree
+﻿# Normalize line endings for scripts (LF) and text
 * text=auto eol=lf
 
-# PowerShell scripts explicit LF
+# Scripts
 *.ps1  text eol=lf
 *.psm1 text eol=lf
 *.psd1 text eol=lf
+*.sh   text eol=lf
+*.py   text eol=lf
+*.ps1  working-tree-encoding=UTF-8
+*.psm1 working-tree-encoding=UTF-8
+*.psd1 working-tree-encoding=UTF-8
+
+# Common text
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
