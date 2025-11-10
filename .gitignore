@@ -149,3 +149,6 @@ __pycache__/
 # tools/Test-TradeCsvNames.ps1
 # tools/Test-TradeCsvSchema.ps1
 # tools/TradeJournal.ps1
+
+# local test artifacts
+tests/archive/
