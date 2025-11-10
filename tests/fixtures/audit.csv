@@ -275,3 +275,15 @@ time,symbol,side,size,price,status,equity,reason
 0.0,AAPL,BUY,1,100,pending,100000.0,normalized_ok
 0.0,AAPL,BUY,1,100,blocked,100000.0,unknown
 0.0,AAPL,BUY,1,100,blocked,100000.0,unknown
+0.0,AAPL,BUY,1,100,pending,100000.0,normalized_ok
+0.0,AAPL,BUY,1,100,blocked,100000.0,unknown
+0.0,AAPL,BUY,1,100,blocked,100000.0,unknown
+0.0,AAPL,BUY,1,100,pending,100000.0,normalized_ok
+0.0,AAPL,BUY,1,100,blocked,100000.0,unknown
+0.0,AAPL,BUY,1,100,blocked,100000.0,unknown
+0.0,AAPL,BUY,1,100,pending,100000.0,normalized_ok
+0.0,AAPL,BUY,1,100,blocked,100000.0,unknown
+0.0,AAPL,BUY,1,100,blocked,100000.0,unknown
+0.0,AAPL,BUY,1,100,pending,100000.0,normalized_ok
+0.0,AAPL,BUY,1,100,blocked,100000.0,unknown
+0.0,AAPL,BUY,1,100,blocked,100000.0,unknown

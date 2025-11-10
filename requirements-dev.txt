@@ -28,3 +28,9 @@ wheel==0.45.1
 llvmlite==0.43.*
 SQLAlchemy>=2.0,<3
 greenlet>=3.0,<4
+python-dotenv==1.0.1
+openpyxl==3.1.5
+matplotlib==3.9.2
+pyparsing>=3.1.2
+feedparser==6.0.11
+ccxt==4.5.17

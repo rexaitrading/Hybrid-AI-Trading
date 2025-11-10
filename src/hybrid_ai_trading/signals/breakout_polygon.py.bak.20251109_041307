@@ -16,15 +16,10 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import requests
+from dotenv import load_dotenv
 
+load_dotenv()
 logger = logging.getLogger(__name__)
-try:
-    from dotenv import load_dotenv  # optional
-
-except Exception:
-    # no-op if dotenv is missing or misconfigured
-    def load_dotenv(*args, **kwargs):
-        return None
 
 
 class PolygonAPIError(RuntimeError):

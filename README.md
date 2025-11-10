@@ -1,4 +1,4 @@
-﻿<p align="left">
+<p align="left">
   <a href="https://github.com/rexaitrading/Hybrid-AI-Trading/actions/workflows/risk_nightly.yml">
     <img src="https://github.com/rexaitrading/Hybrid-AI-Trading/actions/workflows/risk_nightly.yml/badge.svg" alt="Risk Nightly (non-IB)">
   </a>

@@ -1,8 +1,15 @@
-﻿* text=auto eol=lf
-*.py   text eol=lf
+# Normalize text to LF
+* text=auto eol=lf
+
+# Scripts
 *.ps1  text eol=lf
+*.psm1 text eol=lf
+*.psd1 text eol=lf
+*.py   text eol=lf
+*.sh   text eol=lf
+
+# Common text
+*.md   text eol=lf
 *.yml  text eol=lf
 *.yaml text eol=lf
 *.json text eol=lf
-*.ini  text eol=lf
-*.csv  text eol=lf

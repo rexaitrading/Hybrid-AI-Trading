@@ -1,0 +1,9 @@
+HybridAITrading Slack  Integration Notes
+=========================================
+App (Risk Bot): https://api.slack.com/apps/A09Q9FLOGHK
+#all-hybridaitriding  : https://hybridaitrading.slack.com/archives/C09HPTL2F3M
+#hybrid_ai_trading_alerts : https://hybridaitriding.slack.com/archives/C09J0KVQLJY
+Selected Channel ID  : C09J0KVQLJY
+Saved Secret (name)  : SLACK_BOT_TOKEN  (stored in SecretStore)
+Saved Env Var        : SLACK_CHANNEL_ID=C09J0KVQLJY
+Timestamp            : 2025-11-08 17:07:09

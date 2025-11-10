@@ -13,7 +13,10 @@ from typing import Any, Dict, Optional
 from debug_cryptocompare import (
     fetch_prices,  # must return dict like {"BTC": {"USD": 12345.67}}
 )
-from debug_cryptocompare import daily_budget, suggested_interval_seconds
+from debug_cryptocompare import (
+    daily_budget,
+    suggested_interval_seconds,
+)
 
 # === API Key Handling =====================================================
 API_KEY: Optional[str] = os.getenv("CRYPTOCOMPARE_API_KEY")

@@ -1,81 +1,55 @@
-"""
-RSS Client (Hybrid AI Quant Pro v1.0  OE Grade)
-- Uses feedparser to pull RSS/Atom feeds for symbols
-- Normalizes to: {id, author, created, title, url, stocks:[{name}], source:"rss-*"}
+"""RSS client (optional feedparser).
+
+This client fetches RSS/Atom feeds when `feedparser` is available.
+If the dependency is missing, constructor raises ImportError,
+and `fetch` will early-return [] to allow optional usage in tests.
 """
 
-import logging
-import time
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 
-import feedparser
-
-logger = logging.getLogger("hybrid_ai_trading.data.clients.rss_client")
+try:
+    import feedparser  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    feedparser = None  # type: ignore[attr-defined]
 
 
 class RSSClient:
-    def __init__(
-        self,
-        google_template: Optional[str] = None,
-        yahoo_template: Optional[str] = None,
-        extra_feeds: Optional[List[str]] = None,
-        per_feed_max: int = 8,
-    ):
-        self.google_template = google_template
-        self.yahoo_template = yahoo_template
-        self.extra_feeds = extra_feeds or []
-        self.per_feed_max = per_feed_max
+    """Thin wrapper around `feedparser.parse` with optional dependency guard."""
 
-    def _parse(
-        self,
-        feed_url: str,
-        sym: Optional[str],
-        source_tag: str,
-        date_from: Optional[str],
-    ) -> List[Dict[str, Any]]:
-        d = feedparser.parse(feed_url)
-        out: List[Dict[str, Any]] = []
-        for e in d.entries[: self.per_feed_max]:
-            link = getattr(e, "link", "") or ""
-            title = getattr(e, "title", "") or ""
-            author = getattr(e, "author", "") if hasattr(e, "author") else ""
-            published = getattr(e, "published", "") or getattr(e, "updated", "") or ""
-            stocks = [{"name": sym, "exchange": ""}] if sym else []
-            out.append(
+    def __init__(self, user_agent: str = "HybridAITrading/1.0 (RSSClient)") -> None:
+        if feedparser is None:
+            raise ImportError(
+                "feedparser not installed; RSS features are optional. "
+                "Install with: pip install feedparser"
+            )
+        self.user_agent = user_agent
+
+    def fetch(self, url: str, timeout: int = 10) -> List[Dict[str, Any]]:
+        """Fetch and normalize entries from an RSS/Atom feed.
+
+        Returns an empty list if feedparser is unavailable or parsing fails.
+        """
+        if feedparser is None:
+            return []
+
+        try:
+            parsed = feedparser.parse(
+                url,
+                request_headers={"User-Agent": self.user_agent},
+            )
+        except Exception:
+            return []
+
+        entries: List[Dict[str, Any]] = []
+        for e in getattr(parsed, "entries", []) or []:
+            entries.append(
                 {
-                    "id": link or title,
-                    "author": author,
-                    "created": published,
-                    "updated": published,
-                    "title": title,
-                    "teaser": "",
-                    "body": "",
-                    "url": link,
-                    "image": [],
-                    "channels": [],
-                    "stocks": stocks,
-                    "tags": [],
-                    "source": source_tag,
+                    "title": getattr(e, "title", None),
+                    "link": getattr(e, "link", None),
+                    "published": getattr(e, "published", None),
+                    "summary": getattr(e, "summary", None),
                 }
             )
-        return out
-
-    def get_news(
-        self, symbols_csv: str, date_from: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
-        items: List[Dict[str, Any]] = []
-        symbols = [s.strip().upper() for s in symbols_csv.split(",") if s.strip()]
-        # per-symbol feeds
-        for sym in symbols:
-            if self.google_template:
-                items += self._parse(
-                    self.google_template.format(sym=sym), sym, "rss-google", date_from
-                )
-            if self.yahoo_template:
-                items += self._parse(
-                    self.yahoo_template.format(sym=sym), sym, "rss-yahoo", date_from
-                )
-        # extra feeds (not symbolized)
-        for u in self.extra_feeds:
-            items += self._parse(u, None, "rss-extra", date_from)
-        return items
+        return entries

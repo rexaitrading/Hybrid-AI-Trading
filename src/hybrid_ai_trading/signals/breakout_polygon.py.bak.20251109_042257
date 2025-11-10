@@ -1,4 +1,4 @@
-"""
+﻿"""
 BreakoutPolygonSignal (Hybrid AI Quant Pro v23.6 Ã¢â‚¬â€œ OE AAA Polished)
 -------------------------------------------------------------------
 - BUY if last close > max of prev highs
@@ -20,7 +20,7 @@ import requests
 logger = logging.getLogger(__name__)
 try:
     from dotenv import load_dotenv  # optional
-
+    load_dotenv()
 except Exception:
     # no-op if dotenv is missing or misconfigured
     def load_dotenv(*args, **kwargs):

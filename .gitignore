@@ -104,3 +104,51 @@ _reports/
 .quarantine/
 .pytest_cache/
 **/__pycache__/
+
+# ignore .backup artifacts
+.backup/
+
+# ignore .backup artifacts
+.backup/
+
+# secrets and transient outputs
+secrets/
+out/
+artifacts/
+
+# ignore .backup artifacts
+.backup/
+
+# secrets and transient outputs
+secrets/
+out/
+artifacts/
+# venvs & backups
+.venv/
+.venv.bak*/
+**/.venv/
+**/.venv.bak*/
+__pycache__/
+.pytest_cache/
+# === Runtime / generated ===
+/ibg_status.json
+/ibg_live_status.json
+/out/
+/state/
+/*.csv
+
+# keep sample data under tests vendor dirs tracked
+!tests/**
+# Python caches
+__pycache__/
+**/__pycache__/
+
+# Local tools not for repo (uncomment if you want to ignore)
+# tools/Notion-TradeUploader.ps1
+# tools/Patch-TradeCsvToCanonical.ps1
+# tools/Test-TradeCsvNames.ps1
+# tools/Test-TradeCsvSchema.ps1
+# tools/TradeJournal.ps1
+
+# local test artifacts
+tests/archive/
