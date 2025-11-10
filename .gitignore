@@ -139,3 +139,13 @@ __pycache__/
 
 # keep sample data under tests vendor dirs tracked
 !tests/**
+# Python caches
+__pycache__/
+**/__pycache__/
+
+# Local tools not for repo (uncomment if you want to ignore)
+# tools/Notion-TradeUploader.ps1
+# tools/Patch-TradeCsvToCanonical.ps1
+# tools/Test-TradeCsvNames.ps1
+# tools/Test-TradeCsvSchema.ps1
+# tools/TradeJournal.ps1
