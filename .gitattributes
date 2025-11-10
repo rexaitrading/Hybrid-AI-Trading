@@ -1,15 +1,12 @@
-﻿# Normalize line endings for scripts (LF) and text
+# Normalize text to LF
 * text=auto eol=lf
 
 # Scripts
 *.ps1  text eol=lf
 *.psm1 text eol=lf
 *.psd1 text eol=lf
-*.sh   text eol=lf
 *.py   text eol=lf
-*.ps1  working-tree-encoding=UTF-8
-*.psm1 working-tree-encoding=UTF-8
-*.psd1 working-tree-encoding=UTF-8
+*.sh   text eol=lf
 
 # Common text
 *.md   text eol=lf
