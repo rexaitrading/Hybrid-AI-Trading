@@ -61,7 +61,7 @@ urllib3==2.5.0
 uvicorn==0.37.0
 vaderSentiment==3.3.2
 virtualenv==20.34.0
-watchfiles==1.1.0
+watchfiles==1.1.1
 wcwidth==0.2.13
 websocket-client==1.8.0
 websockets==13.1
