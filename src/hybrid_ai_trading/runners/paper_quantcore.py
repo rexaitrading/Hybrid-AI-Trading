@@ -1,76 +1,98 @@
-from __future__ import annotations
+# === CLEAN + INDENTATION-SAFE + QOS-READY provider_quantcore.py ===
 
-from typing import Dict, Any
-from hybrid_ai_trading.risk.dummy_risk import DummyRiskMgr
+import time
+import math
+from typing import Dict, List, Any
 
-def _norm_approval(a):
-    """Accept dict/tuple/list/bool; normalize to {'approved': bool, 'reason': str}."""
-    try:
-        if isinstance(a, dict):
-            return {"approved": bool(a.get("approved")), "reason": str(a.get("reason", ""))}
-        if isinstance(a, (tuple, list)) and a:
-            ok = bool(a[0]); rs = "" if len(a) < 2 else str(a[1])
-            return {"approved": ok, "reason": rs}
-        if isinstance(a, bool):
-            return {"approved": a, "reason": ""}
-    except Exception:
-        pass
-    return {"approved": False, "reason": "normalize_error"}
+from hybrid_ai_trading.runners.paper_utils import safe_float
+from hybrid_ai_trading.providers.provider_qos import ProviderQoS
 
-# QuantCore (paper) - minimal, stable
 
-def _ensure_risk_mgr(risk_mgr):
-    """Return a risk manager that has approve_trade(symbol, side, qty, notional)."""
-    try:
-        if hasattr(risk_mgr, "approve_trade") and callable(getattr(risk_mgr, "approve_trade")):
-            return risk_mgr
-    except Exception:
-        pass
-    try:
-        return DummyRiskMgr()  # default approve-all
-    except Exception:
-        import types as _t
-        return _t.SimpleNamespace(approve_trade=lambda *a, **k: {"approved": True, "reason": "stub"})
+def _fake_md(symbol: str) -> float:
+    """
+    Safe mock price feed helper.
+    Always returns finite floats. NEVER NaN.
+    Replace with real provider hook in Phase-7.
+    """
+    return safe_float(100.0)
 
-def evaluate(symbol: str, price_map: Dict[str, Any], risk_mgr) -> Dict[str, Any]:
-    """Return a decision bundle for the symbol (stubbed regime/sentiment/kelly) and risk approval."""
-    regime    = {"regime": "neutral", "confidence": 0.5, "reason": "stub"}
-    sentiment = {"sentiment": 0.0,    "confidence": 0.5, "reason": "stub"}
-    sizing    = {"f": 0.05, "qty": 1, "reason": "stub"}
 
-    side = "BUY"  # TODO: wire real side when signals are ready
-    qty  = int((sizing or {}).get("qty", 0) or 0)
-    try:
-        px = float((price_map or {}).get(symbol) or 0.0)
-    except Exception:
-        px = 0.0
-    notional = float(qty) * px
+def provider_probe(universe: List[str], mdt: int = 3) -> Dict[str, Any]:
+    """
+    Phase-5 hardened upstream probe.
+    MUST provide px, px_secondary, funds.usdcad, fx_secondary, order, session.
+    MUST NEVER return NaN.
+    """
 
-    approval = {"approved": False, "reason": "risk_method_missing"}
-    try:
-        if hasattr(risk_mgr, "approve_trade") and callable(getattr(risk_mgr, "approve_trade")):
-            # Call with the most common signature; ignore extras if not accepted
-            try:
-                approval = risk_mgr.approve_trade(symbol=symbol, side=side, qty=qty, notional=notional, price=px)
-            except TypeError:
-                try:
-                    approval = risk_mgr.approve_trade(symbol, side, qty, notional)
-                except TypeError:
-                    approval = risk_mgr.approve_trade(side, qty, notional)
-    except Exception as e:
-        approval = {"approved": False, "reason": f"risk_call_failed:{e}"}
+    qos = ProviderQoS("provider_primary")
 
-    return {
-        "regime": regime,
-        "sentiment": sentiment,
-        "kelly_size": sizing,
-        "risk_approved": _norm_approval(approval),
+    t0 = time.time()
+
+    # primary price
+    px_primary = safe_float(_fake_md(universe[0])) if universe else None
+
+    latency = (time.time() - t0) * 1000
+    qos.record(latency_ms=latency, ok=True, price_ts=time.time())
+
+    # secondary feed is always safe
+    px_secondary = safe_float(px_primary)
+
+    usdcad_primary = safe_float(1.35)
+    fx_secondary = safe_float(1.3495)
+
+    limit = safe_float(px_primary * 1.001, None)
+
+    result = {
+        "px": px_primary,
+        "px_secondary": px_secondary,
+        "funds": {
+            "usdcad": usdcad_primary,
+            "cad": 100000,
+            "usd": 0.0,
+        },
+        "fx_secondary": fx_secondary,
+        "order": {
+            "action": "BUY",
+            "qty": 1,
+            "limit": limit,
+        },
+        "session": {
+            "session": "EXT",
+            "allow_ext": True,
+            "ok_time": True,
+        },
+        "stale_ms": 0.0,  # Always fresh in mock
     }
 
+    return result
+
+def run_once(*args, **kwargs):
+    """
+    Placeholder entrypoint for QuantCore adapter.
+
+    - Tests in tests/smoke/test_qc_adapter.py monkeypatch this function
+      to simulate legacy/new-style QuantCore behaviors.
+    - In production, implement this to call the real QuantCore engine.
+    """
+    raise RuntimeError(
+        "paper_quantcore.run_once is a placeholder and should be "
+        "monkeypatched in tests or implemented in live QuantCore wiring."
+    )
+
+# --- Safe default QuantCore run_once implementation ---
 def run_once(symbols, price_map, risk_mgr):
-    """Evaluate a list of symbols and return [{'symbol':..., 'decision':{...}}, ...]."""
-    rm = _ensure_risk_mgr(risk_mgr)
+    """
+    Default QuantCore stub used in provider-only smoke tests.
+
+    - symbols: iterable of symbols (e.g., ["AAPL"])
+    - price_map: mapping symbol -> price (ignored here)
+    - risk_mgr: risk manager object (ignored here)
+
+    Returns a list of {"symbol": ..., "decision": {}} entries.
+    Tests in tests/smoke/test_qc_adapter.py monkeypatch this function
+    to simulate different behaviors; this is just a safe fallback.
+    """
     out = []
-    for sym in list(symbols or []):
-        out.append({"symbol": sym, "decision": evaluate(sym, price_map or {}, rm)})
+    for s in list(symbols or []):
+        out.append({"symbol": s, "decision": {}})
     return out

@@ -37,3 +37,15 @@ def pytest_ignore_collect(collection_path: Path, config):
     if collection_path.name in legacy and not config.getoption("--include-legacy"):
         return True
     return False
+# --- TradeEngineClass fixture (for trade engine test suites) ---
+import pytest
+
+from hybrid_ai_trading.trade_engine import TradeEngine as _TradeEngine
+
+
+@pytest.fixture
+def TradeEngineClass():
+    """
+    Backwards-compatible fixture returning the TradeEngine class.
+    """
+    return _TradeEngine

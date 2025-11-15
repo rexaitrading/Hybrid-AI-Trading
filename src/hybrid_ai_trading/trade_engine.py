@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 class TradeEngine:
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: Optional[Dict[str, Any]] = None,
         portfolio: Optional[PortfolioTracker] = None,
         brokers: Optional[Dict[str, Any]] = None,
     ) -> None:
