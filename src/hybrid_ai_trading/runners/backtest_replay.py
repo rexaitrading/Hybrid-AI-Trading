@@ -1,19 +1,28 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-import os, argparse, json, pathlib
-from typing import List, Dict, Any
+
+import argparse
+import json
+import os
+import pathlib
+from typing import Any, Dict, List
 
 from hybrid_ai_trading.runners.paper_config import load_config
 from hybrid_ai_trading.runners.paper_logger import JsonlLogger
 from hybrid_ai_trading.runners.paper_quantcore import run_once
 from hybrid_ai_trading.utils.backtest_io import load_csv, row_to_snapshot
 
+
 def main():
     ap = argparse.ArgumentParser("Backtest Replay")
     ap.add_argument("--config", default="config/paper_runner.yaml")
-    ap.add_argument("--input", required=True, help="CSV file with ts,symbol,price/last/close/vwap,")
+    ap.add_argument(
+        "--input", required=True, help="CSV file with ts,symbol,price/last/close/vwap,"
+    )
     ap.add_argument("--log", default="logs/backtest.jsonl")
-    ap.add_argument("--batch", type=int, default=100, help="Snapshots per run_once batch")
+    ap.add_argument(
+        "--batch", type=int, default=100, help="Snapshots per run_once batch"
+    )
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -43,6 +52,7 @@ def main():
         logger.info("bt_batch", size=len(buf), decisions=n)
 
     print(json.dumps({"summary": totals}, indent=2))
+
 
 if __name__ == "__main__":
     main()

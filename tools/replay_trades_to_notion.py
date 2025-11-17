@@ -6,9 +6,11 @@ from typing import List, Dict, Any
 
 import requests
 
+from tools.notion_nvda_bplus_helpers import build_nvda_bplus_properties
+
 
 NOTION_API_URL = "https://api.notion.com/v1/pages"
-NOTION_VERSION = "2022-06-28"
+NOTION_VERSION = "2025-09-03"
 
 
 def load_trades(jsonl_path: str, limit: int) -> List[Dict[str, Any]]:
@@ -53,15 +55,20 @@ def build_properties(trade: Dict[str, Any]) -> Dict[str, Any]:
     gross_pnl_pct = float(trade.get("gross_pnl_pct", 0.0))
     r_multiple = float(trade.get("r_multiple", 0.0))
 
-    # New fields (Kelly / regime / session / bar-replay tag)
+    # New fields (Kelly / regime / session / bar-replay tag / replay_id)
     # If the JSONL already has these keys, use them; otherwise use sensible defaults.
     kelly_f = float(trade.get("kelly_f", 0.01))  # 1% risk fraction as placeholder
     regime = str(trade.get("regime", "REPLAY_TEST"))
     session = str(trade.get("session", "US_OPEN"))
     bar_replay_tag = str(trade.get("bar_replay_tag", "NVDA_BPLUS_REPLAY_V1"))
+    replay_id = str(trade.get("replay_id", "")).strip()
+    if not replay_id:
+        # Fallback replay_id if not provided in JSONL
+        replay_id = f"{symbol}_REPLAY_{entry_ts or 'UNKNOWN'}"
 
     title_txt = f"REPLAY {symbol} {entry_ts} {outcome}"
 
+    # Base Notion properties (generic trading info)
     props: Dict[str, Any] = {
         "Name": {
             "title": [
@@ -74,7 +81,8 @@ def build_properties(trade: Dict[str, Any]) -> Dict[str, Any]:
         },
         "ts_trade": {
             "date": {
-                "start": entry_ts  # ISO8601 preferred, but Notion will try to parse strings too
+                # ISO8601 preferred, but Notion will try to parse strings too
+                "start": entry_ts or None
             }
         },
         "symbol": {
@@ -102,31 +110,24 @@ def build_properties(trade: Dict[str, Any]) -> Dict[str, Any]:
                 "name": outcome,
             }
         },
-        "source": {
-            "select": {
-                "name": "REPLAY_NVDA_BPLUS"
-            }
-        },
-        # --- New Notion properties ---
-        "kelly_f": {
-            "number": kelly_f
-        },
-        "regime": {
-            "select": {
-                "name": regime
-            }
-        },
-        "session": {
-            "select": {
-                "name": session
-            }
-        },
-        "bar_replay_tag": {
-            "select": {
-                "name": bar_replay_tag
-            }
-        },
     }
+
+    # NVDA B+ / replay-specific GateScore fields via helper.
+    # This returns:
+    # - source (REPLAY_NVDA_BPLUS)
+    # - bar_replay_tag (NVDA_BPLUS_REPLAY_V1 or overridden)
+    # - kelly_f, regime, session, mode, replay_id
+    nvda_props = build_nvda_bplus_properties(
+        kelly_f=kelly_f,
+        regime=regime,
+        session=session,
+        replay_id=replay_id,
+        bar_replay_tag=bar_replay_tag,
+    )
+
+    # Merge helper-returned fields into the main props dict
+    props.update(nvda_props)
+
     return props
 
 
@@ -151,10 +152,18 @@ def push_to_notion(trades: List[Dict[str, Any]], dry_run: bool, sleep_sec: float
             "properties": props,
         }
 
-        print(f"[NOTION] Trade {idx}/{len(trades)}: {props['Name']['title'][0]['text']['content']}")
+        title = props.get("Name", {}).get("title", [])
+        if title and isinstance(title, list):
+            name_text = title[0].get("text", {}).get("content", "REPLAY TRADE")
+        else:
+            name_text = "REPLAY TRADE"
+
+        print(f"[NOTION] Trade {idx}/{len(trades)}: {name_text}")
 
         if dry_run:
             print("[NOTION] DRY-RUN payload preview (no request sent).")
+            # Uncomment if you want to see the full JSON:
+            # print(json.dumps(payload, indent=2))
             continue
 
         resp = requests.post(NOTION_API_URL, headers=headers, data=json.dumps(payload))
