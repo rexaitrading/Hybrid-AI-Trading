@@ -1,3 +1,10 @@
+import warnings as _warnings
+
+_warnings.warn(
+    "hybrid_ai_trading.execution.algos is deprecated; use hybrid_ai_trading.algos.* (top-level) instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 """
 DEPRECATED: Algo Orchestrator (Execution Layer)
 (Hybrid AI Quant Pro v3.0 – Backward-Compatible Wrapper)

@@ -75,8 +75,23 @@ class TradeLogger:
         return utc_now().replace(microsecond=0).isoformat() + "Z"
 
     def log(self, event: TradeEvent) -> None:
+        """Log a TradeEvent to JSONL and optional CSV, stripping non-serializable callables."""
+        event_dict = asdict(event)
+
+        def _strip_callables(obj):
+            if isinstance(obj, dict):
+                return {k: _strip_callables(v) for k, v in obj.items() if not callable(v)}
+            if isinstance(obj, (list, tuple)):
+                return [_strip_callables(v) for v in obj]
+            return obj
+
+        clean = _strip_callables(event_dict)
+
+        # JSONL log
         with open(self.jsonl_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(asdict(event), separators=(",", ":")) + "\n")
+            f.write(json.dumps(clean, separators=(",", ":")) + "\n")
+
+        # Optional CSV log
         if self.csv_path:
             with open(self.csv_path, "a", newline="", encoding="utf-8") as f:
                 w = csv.writer(f)
@@ -93,10 +108,11 @@ class TradeLogger:
                         event.order_id,
                         event.status,
                         event.pnl,
-                        json.dumps(event.meta or {}),
-                        json.dumps(event.risk or {}),
+                        json.dumps(clean.get("meta") or {}),
+                        json.dumps(clean.get("risk") or {}),
                     ]
                 )
+
         self._logger.info(
             "trade | %s | %s | %s | %s %.6f @ %.6f | %s | id=%s | status=%s",
             event.strategy,

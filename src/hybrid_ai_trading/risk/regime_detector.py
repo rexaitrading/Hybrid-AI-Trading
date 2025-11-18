@@ -70,6 +70,15 @@ class RegimeDetector:
             self.min_samples,
         )
 
+
+    def _get_prices(self, symbol: str, prices=None):
+        """
+        Wrapper so tests can call self._get_prices(...).
+
+        Delegates to the module-level _get_prices(self, symbol, prices)
+        defined below in this file.
+        """
+        return _get_prices(self, symbol, prices)
     # ------------------------------------------------------------------
     def detect(self, symbol: str, prices: Optional[List[float]] = None) -> str:
         """Detect regime (bull, bear, sideways, crisis, transition, neutral)."""

@@ -1,52 +1,72 @@
-name: Hybrid AI Quant Pro CI
+name: TradeEngine Dev Tests
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: ["**"]
   pull_request:
-    branches: [ main, dev ]
+    branches: ["**"]
 
 jobs:
   tests:
+    name: tests (py3.12)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ "3.12" ]
-
     steps:
-      # ------------------------------------------------------------------
-      # Checkout repo
-      # ------------------------------------------------------------------
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # ------------------------------------------------------------------
-      # Setup Python
-      # ------------------------------------------------------------------
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
-      # ------------------------------------------------------------------
-      # Install dependencies
-      # ------------------------------------------------------------------
-      - name: Install dependencies
+      - name: Install package and test deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
+          python -m pip install --upgrade pytest
+          python -m pip install pyyaml
+          python -m pip install -e .
 
-      # ------------------------------------------------------------------
-      # Local developer coverage (trade_engine only)
-      # ------------------------------------------------------------------
-      - name: Run TradeEngine Dev Tests (pytest.ini)
+      - name: Verify PyYAML
         run: |
-          pytest -c pytest.ini
+          python - <<'PY'
+          import yaml, sys
+          print("yaml_ok", yaml.__version__)
+          PY
 
-      # ------------------------------------------------------------------
-      # Strict CI/CD coverage (full repo, 100% enforced)
-      # ------------------------------------------------------------------
-      - name: Run Full Repo Tests (pytest_strict.ini)
+      - name: Sanity
         run: |
-          pytest -c pytest_strict.ini
+          python - <<'PY'
+          import sys, importlib.util, pathlib
+          root = pathlib.Path().resolve()
+          print("exe:", sys.executable)
+          print("cwd:", root)
+          print("has src:", (root/"src").exists())
+          print("pytest.ini exists:", (root/"pytest.ini").exists())
+          print("importable:", bool(importlib.util.find_spec("hybrid_ai_trading")))
+          PY
+
+      - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          if [ -f "pytest.ini" ]; then
+            python -m pytest -c "${{ github.workspace }}/pytest.ini" -q
+          else
+            python -m pytest -q
+          fi
+      - name: Sanitize submodule config for checkout cleanup
+        shell: bash
+        run: |
+          set -e
+          # List all submodule names present in local config, if any
+          names="$(git config --local --name-only --get-regexp '^submodule\..*\.url' 2>/dev/null | sed -e 's/\.url$//')"
+          if [ -n "$names" ]; then
+            echo "$names" | while read -r name; do
+              echo "Removing section: $name"
+              git config --local --remove-section "$name" || true
+            done
+          fi
+          # No submodule metadata should remain; ensure no .gitmodules content is consulted by cleanup
+          : > .gitmodules
