@@ -86,3 +86,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main(); follow-up micro-block will reposition checklist before exit for full visibility).
+- 2025-11-19 15:39:47 Block E: add tools/PreMarket-Phase5.ps1 wrapper to run tools/PreMarket-Check.ps1 and then Show-Phase5AaplPromotionChecklist.ps1, propagating the pre-market exit code (one command for core check + Phase5 review).
