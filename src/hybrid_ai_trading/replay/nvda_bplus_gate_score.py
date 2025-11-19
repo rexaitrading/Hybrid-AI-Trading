@@ -16,6 +16,7 @@ replay data. They are meant as a starting point, not a final model.
 from __future__ import annotations
 
 from typing import Dict, Any
+from hybrid_ai_trading.cost_model import CostInputs, estimate_cost
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -68,17 +69,62 @@ def compute_gate_score_v2(trade: Dict[str, Any]) -> float:
 
 def compute_ev_from_trade(trade: Dict[str, Any]) -> float:
     """
-    Compute a simple expected value estimate from a single trade.
+    Compute an expected value estimate from a single trade, adjusted for estimated
+    execution cost.
 
-    For now we just return the realized gross_pnl_pct as a proxy:
-      ev = gross_pnl_pct
+    By default we compute:
+        ev = gross_pnl_pct - cost_fraction
 
-    Later we can replace this with:
-      - A smoothed estimator across many trades,
-      - Or a model-based EV estimator conditioned on pattern/regime/session.
+    where:
+        - gross_pnl_pct is the realized gross PnL percentage (e.g. 0.008 = +0.8%)
+        - cost_fraction is total_cost / notional, using the CostInputs / estimate_cost
+          helper and env-based defaults for slippage/fees.
+
+    If we cannot infer a sensible mid_price and quantity from the trade dict,
+    we fall back to:
+        ev = gross_pnl_pct
     """
     gross_pnl_pct = _safe_float(trade.get("gross_pnl_pct", 0.0))
-    return gross_pnl_pct
+
+    try:
+        symbol = str(trade.get("symbol") or "NVDA")
+        side = (str(trade.get("side") or trade.get("direction") or "BUY")).upper()
+
+        mid_price = _safe_float(
+            trade.get("entry_px")
+            or trade.get("entry_price")
+            or trade.get("fill_px")
+            or trade.get("fill_price"),
+            0.0,
+        )
+        qty = _safe_float(
+            trade.get("qty")
+            or trade.get("quantity")
+            or trade.get("shares"),
+            0.0,
+        )
+
+        cost_fraction = 0.0
+        if mid_price > 0.0 and qty > 0.0:
+            ci = CostInputs(
+                symbol=symbol,
+                side=side,
+                mid_price=mid_price,
+                qty=qty,
+                spread=None,
+                fee_per_share=None,
+                fee_rate_bp=None,
+                expected_slippage_bp=None,
+            )
+            cb = estimate_cost(ci)
+            notional = cb.notional
+            if notional > 0.0:
+                cost_fraction = cb.total_cost / notional
+    except Exception:
+        cost_fraction = 0.0
+
+    ev = gross_pnl_pct - cost_fraction
+    return ev
 
 def passes_micro_gate(trade: Dict[str, Any], min_gate_score: float = 0.04) -> bool:
     """
@@ -107,4 +153,6 @@ def passes_micro_gate(trade: Dict[str, Any], min_gate_score: float = 0.04) -> bo
         return float(score) >= float(min_gate_score)
     except Exception:
         return False
+
+
 
