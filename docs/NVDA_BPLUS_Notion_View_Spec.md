@@ -206,3 +206,24 @@ Given the tiny sample and good EV across all cuts, we keep the working cutoff:
 
 - NVDA B+ GateScore v2 cutoff: **0.04** (g0.04)
 - This matches the NVDA B+ g0.04 EV-clean Notion view, and we treat this sweep as a sanity check, not a threshold change.
+---
+
+## 5. Extended NVDA B+ EV sweep (synthetic raw_multi_ext)
+
+On 2025-11-19 we extended the NVDA B+ replay sample via:
+
+- Input: research/nvda_bplus_replay_trades.bak_enrich.jsonl (1 base trade)
+- Extended: research/nvda_bplus_replay_trades.raw_multi_ext.jsonl (5 synthetic trades)
+- Enriched: research/nvda_bplus_replay_trades.raw_multi_ext_enriched.jsonl
+
+Sweep result on gate_score_v2:
+
+- N = 5 trades overall
+- For thresholds from -0.10 to 0.02, mean_pnl_pct  0.008, mean_ev  0.008
+- For gate_score_v2  0.04: count=3, mean_pnl_pct0.010, mean_ev0.010
+- For gate_score_v2  0.06: count=2, mean_pnl_pct0.011, mean_ev0.011
+
+Given the tiny sample and good EV across all cuts, we keep the working cutoff:
+
+- NVDA B+ GateScore v2 cutoff: **0.04** (g0.04)
+- This matches the NVDA B+ g0.04 EV-clean Notion view, and we treat this sweep as a sanity check, not a threshold change.
