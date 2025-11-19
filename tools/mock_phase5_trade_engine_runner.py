@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -60,15 +61,22 @@ def can_add_position(
     return True, "okay"
 
 
-# --- Config loader: AAPL Phase5 risk sketch ---------------------------------
+# --- Config loader: Phase5 risk sketch for AAPL/NVDA -------------------------
 
 
-def load_phase5_risk_config_from_aapl(root: Path) -> RiskConfigPhase5:
-    """Load RiskConfigPhase5 from AAPL ORB/VWAP thresholds JSON.
+def load_phase5_risk_config(root: Path, symbol: str) -> RiskConfigPhase5:
+    """Load RiskConfigPhase5 from ORB/VWAP thresholds JSON for the given symbol.
 
-    Uses the phase5_risk_sketch block added to orb_vwap_aapl_thresholds.json.
+    Uses the phase5_risk_sketch block added to orb_vwap_<symbol>_thresholds.json.
     """
-    config_path = root / "config" / "orb_vwap_aapl_thresholds.json"
+
+    symbol = symbol.upper()
+    if symbol not in {"AAPL", "NVDA"}:
+        raise SystemExit(f"[PHASE5-MOCK-RUNNER] Unsupported symbol for mock runner: {symbol}")
+
+    filename = f"orb_vwap_{symbol.lower()}_thresholds.json"
+    config_path = root / "config" / filename
+
     if not config_path.exists():
         raise SystemExit(f"[PHASE5-MOCK-RUNNER] Config not found: {config_path}")
 
@@ -77,7 +85,7 @@ def load_phase5_risk_config_from_aapl(root: Path) -> RiskConfigPhase5:
     sketch = raw.get("phase5_risk_sketch")
     if sketch is None:
         raise SystemExit(
-            "[PHASE5-MOCK-RUNNER] phase5_risk_sketch not present in orb_vwap_aapl_thresholds.json."
+            f"[PHASE5-MOCK-RUNNER] phase5_risk_sketch not present in {config_path.name}."
         )
 
     # Work on a shallow copy so we can strip out non-dataclass fields.
@@ -112,8 +120,8 @@ def build_daily_state(
     return daily
 
 
-def run_mock_scenarios(risk_cfg: RiskConfigPhase5) -> None:
-    symbol = "AAPL"
+def run_mock_scenarios(risk_cfg: RiskConfigPhase5, symbol: str) -> None:
+    symbol = symbol.upper()
 
     scenarios = [
         {
@@ -222,7 +230,7 @@ def run_mock_scenarios(risk_cfg: RiskConfigPhase5) -> None:
         },
     ]
 
-    print("[PHASE5-MOCK-RUNNER] Running mock Phase5 scenarios for AAPL...")
+    print(f"[PHASE5-MOCK-RUNNER] Running mock Phase5 scenarios for {symbol}...")
     print(f"[PHASE5-MOCK-RUNNER] RiskConfigPhase5: {risk_cfg!r}")
     print()
 
@@ -245,12 +253,29 @@ def run_mock_scenarios(risk_cfg: RiskConfigPhase5) -> None:
         print()
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Mock Phase5 TradeEngine runner (lab-only)."
+    )
+    parser.add_argument(
+        "--symbol",
+        default="AAPL",
+        choices=["AAPL", "NVDA"],
+        help="Symbol to load Phase5 config for (default: AAPL).",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    symbol = args.symbol.upper()
+
     root = Path(__file__).resolve().parents[1]
     print("[PHASE5-MOCK-RUNNER] Repo root:", root)
+    print(f"[PHASE5-MOCK-RUNNER] Symbol: {symbol}")
 
-    risk_cfg = load_phase5_risk_config_from_aapl(root)
-    run_mock_scenarios(risk_cfg)
+    risk_cfg = load_phase5_risk_config(root, symbol)
+    run_mock_scenarios(risk_cfg, symbol)
 
 
 if __name__ == "__main__":
