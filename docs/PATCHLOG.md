@@ -8,3 +8,4 @@
 - Pipelines: added test-only `hybrid_ai_trading.pipelines.export_prev_close` under `tests/src` so subprocess prev-close harness runs clean and emits an `Exported` token expected by tests.
 
 - 2025-11-19 14:32:39 Phase5-RISK: add tests/test_phase5_risk_policy.py (no averaging down, daily caps, happy path harness).
+- 2025-11-19 14:41:14 Block E: SPY/QQQ ORB/VWAP EV sweeps + Phase5 sims harness (PS-driven; thresholds currently gate-off SPY/QQQ for Phase 5 pending better EV).
