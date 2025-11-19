@@ -89,3 +89,13 @@ gitleaks_report*.json
 
 /Hybrid-AI-Trading
 
+# Local caches and analytics artifacts
+.intel/
+src/.intel/
+.pip_cache/
+charts/
+research/*.bak_*
+*.bak_20*
+__pycache__/
+tests/__pycache__/
+.backup/
