@@ -13,3 +13,4 @@
 - 2025-11-19 14:53:17 Block E: add tools/aapl_orb_phase5_risk_sketch.py to load phase5_risk_sketch from orb_vwap_aapl_thresholds.json and print the derived RiskConfigPhase5 (no engine wiring yet).
 - 2025-11-19 15:05:22 Block E: add Phase5 risk sketch to config/orb_vwap_nvda_thresholds.json (no_averaging_down, daily loss caps, symbol caps, max_open_positions) aligned with AAPL Phase5 policy; engine wiring still disabled.
 - 2025-11-19 15:08:02 Block E: add docs/PHASE5_RISK_DASHBOARD.md (AAPL/NVDA Phase5 risk sketch table; SPY/QQQ explicitly marked as Phase5-disabled due to EV).
+- 2025-11-19 15:10:32 Block E: add tools/phase5_risk_schema_validator.py to type-check and sanity-check phase5_risk_sketch configs (AAPL/NVDA OK; SPY/QQQ allowed to omit while Phase5 is disabled).
