@@ -7,3 +7,4 @@
 - Deprecation wiring: ensured `execution/algos.py` emits a DeprecationWarning; relaxed `test_algos_wrapper` assertion to tolerate environments where the warning filter behaves differently.
 - Pipelines: added test-only `hybrid_ai_trading.pipelines.export_prev_close` under `tests/src` so subprocess prev-close harness runs clean and emits an `Exported` token expected by tests.
 
+- 2025-11-19 14:32:39 Phase5-RISK: add tests/test_phase5_risk_policy.py (no averaging down, daily caps, happy path harness).
