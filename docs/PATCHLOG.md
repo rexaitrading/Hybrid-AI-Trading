@@ -18,3 +18,4 @@
 - 2025-11-19 15:17:00 Block E: add tools/mock_phase5_trade_engine_runner.py (lab-only) to load AAPL phase5_risk_sketch, build RiskConfigPhase5, and run mock can_add_position() scenarios like a tiny TradeEnginePhase5 loop (no live wiring yet).
 - 2025-11-19 15:20:25 Block E: add tests/test_phase5_risk_cli_tools.py to exercise Phase5 schema validator (all four ORB/VWAP configs) and PowerShell diff tool (AAPL vs NVDA) as CI micro-tests.
 - 2025-11-19 15:22:50 Block E: extend tools/mock_phase5_trade_engine_runner.py with --symbol (AAPL/NVDA) so Phase5 risk sketch wiring can be tested for both symbols in a mock TradeEnginePhase5 loop (lab-only).
+- 2025-11-19 15:25:43 Block E: add docs/PHASE5_TOOLS.md and .github/workflows/phase5-risk-ci.yml to document and run the dedicated Phase5 risk/tool micro-suite (policy harness + CLI tools) in CI.
