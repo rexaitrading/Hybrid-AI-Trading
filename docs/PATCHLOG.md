@@ -16,3 +16,4 @@
 - 2025-11-19 15:10:32 Block E: add tools/phase5_risk_schema_validator.py to type-check and sanity-check phase5_risk_sketch configs (AAPL/NVDA OK; SPY/QQQ allowed to omit while Phase5 is disabled).
 - 2025-11-19 15:14:14 Block E: add tools/Diff-Phase5Configs.ps1 to compare phase5_risk_sketch fields between two ORB/VWAP configs (default AAPL vs NVDA); PS 5.1-safe error handling.
 - 2025-11-19 15:17:00 Block E: add tools/mock_phase5_trade_engine_runner.py (lab-only) to load AAPL phase5_risk_sketch, build RiskConfigPhase5, and run mock can_add_position() scenarios like a tiny TradeEnginePhase5 loop (no live wiring yet).
+- 2025-11-19 15:20:25 Block E: add tests/test_phase5_risk_cli_tools.py to exercise Phase5 schema validator (all four ORB/VWAP configs) and PowerShell diff tool (AAPL vs NVDA) as CI micro-tests.
