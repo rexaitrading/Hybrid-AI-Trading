@@ -10,3 +10,4 @@
 - 2025-11-19 14:32:39 Phase5-RISK: add tests/test_phase5_risk_policy.py (no averaging down, daily caps, happy path harness).
 - 2025-11-19 14:41:14 Block E: SPY/QQQ ORB/VWAP EV sweeps + Phase5 sims harness (PS-driven; thresholds currently gate-off SPY/QQQ for Phase 5 pending better EV).
 - 2025-11-19 14:47:02 Block E: update SPY/QQQ ORB/VWAP threshold notes based on EV sweeps (5-trade samples; SPY/QQQ remain disabled for Phase 5 until EV_after_cost is clearly positive).
+- 2025-11-19 14:53:17 Block E: add tools/aapl_orb_phase5_risk_sketch.py to load phase5_risk_sketch from orb_vwap_aapl_thresholds.json and print the derived RiskConfigPhase5 (no engine wiring yet).
