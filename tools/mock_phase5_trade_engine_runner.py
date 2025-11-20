@@ -1,5 +1,12 @@
 from __future__ import annotations
+from pathlib import Path
+import sys
 
+# Ensure repo src/ is on sys.path so 'hybrid_ai_trading' is importable
+_HAT_REPO_ROOT = Path(__file__).resolve().parents[1]
+_HAT_SRC_PATH = _HAT_REPO_ROOT / "src"
+if str(_HAT_SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(_HAT_SRC_PATH))
 import argparse
 import json
 from dataclasses import dataclass

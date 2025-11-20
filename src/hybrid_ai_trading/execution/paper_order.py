@@ -213,6 +213,49 @@ def place_bracket(
     stop.outsideRth = bool(outside_rth)
     stop.orderRef = order_ref
 
+    # -------------------------------------------------------------------------
+    # Phase 5 template (NO-averaging-down + daily caps)  NOT ACTIVE YET
+    #
+    # Once your runner passes in a RiskManager and PnL/daily state, you can
+    # adapt the following sketch and call _phase5_guard_before_order(...)
+    # BEFORE sending these orders to IB.
+    #
+    # Example (pseudo-code):
+    #
+    #     # symbol = contract.symbol
+    #     # pos_unrealized_pnl_bp = ...      # from your position/PnL engine
+    #     # account_pnl_pct = ...            # today's account PnL %
+    #     # account_pnl_notional = ...       # today's PnL in USD
+    #     # open_positions = ...             # count of open positions
+    #     # symbol_pnl_bp = ...              # day's PnL in bp for this symbol
+    #     # symbol_pnl_notional = ...        # day's PnL in USD for this symbol
+    #     # trades_today = ...               # trades today for this symbol
+    #     #
+    #     # daily_state = _build_phase5_daily_state_for_symbol(
+    #     #     symbol=symbol,
+    #     #     account_pnl_pct=account_pnl_pct,
+    #     #     account_pnl_notional=account_pnl_notional,
+    #     #     open_positions=open_positions,
+    #     #     symbol_pnl_bp=symbol_pnl_bp,
+    #     #     symbol_pnl_notional=symbol_pnl_notional,
+    #     #     trades_today=trades_today,
+    #     # )
+    #     #
+    #     # allow, reason = _phase5_guard_before_order(
+    #     #     risk_manager=risk_manager,
+    #     #     symbol=symbol,
+    #     #     pos_unrealized_pnl_bp=pos_unrealized_pnl_bp,
+    #     #     daily_state=daily_state,
+    #     # )
+    #     #
+    #     # if not allow:
+    #     #     print(f"[PHASE5-GUARD] Blocked add for {symbol}: {reason}")
+    #     #     return None, None, None
+    #
+    # Until those inputs are properly wired, the bracket orders below remain
+    # ungated so that your existing behavior is unchanged.
+    # -------------------------------------------------------------------------
+
     tr_parent = ib.placeOrder(contract, parent)
     tr_take = ib.placeOrder(contract, take)
     tr_stop = ib.placeOrder(contract, stop)
@@ -372,7 +415,7 @@ def run(
         ):
             ib.waitOnUpdate(timeout=1.0)
         if tr_parent.orderStatus.status in ("PreSubmitted", "Submitted"):
-            print("Auto-reprice: canceling stale order and re-placing once…")
+            print("Auto-reprice: canceling stale order and re-placing onceÃ¢â‚¬Â¦")
             ib.cancelOrder(tr_parent.order)
             ib.sleep(0.6)
             q2 = get_quotes(ib, contract)
@@ -496,3 +539,57 @@ def main(argv: Optional[list[str]] = None) -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# === Phase 5 risk policy helpers (for normal order flow, not emergency flatten) ===
+
+def _build_phase5_daily_state_for_symbol(
+    symbol: str,
+    account_pnl_pct: float,
+    account_pnl_notional: float,
+    open_positions: int,
+    symbol_pnl_bp: float,
+    symbol_pnl_notional: float,
+    trades_today: int,
+) -> DailyRiskState:
+    """
+    Build a DailyRiskState snapshot for Phase5 policy evaluation.
+    TODO: wire real values from your PnL / position tracking.
+    """
+    daily = DailyRiskState()
+    daily.account_pnl_pct = account_pnl_pct
+    daily.account_pnl_notional = account_pnl_notional
+    daily.open_positions = open_positions
+    daily.by_symbol[symbol] = SymbolDailyState(
+        pnl_bp=symbol_pnl_bp,
+        pnl_notional=symbol_pnl_notional,
+        trades_today=trades_today,
+    )
+    return daily
+
+
+def _phase5_guard_before_order(
+    risk_manager,
+    symbol: str,
+    pos_unrealized_pnl_bp: float,
+    daily_state: DailyRiskState,
+):
+    """
+    Use this BEFORE sending any normal Phase5 order to IB.
+
+    Returns (allow: bool, reason: str).
+    If allow=False, you should NOT send the order.
+    """
+    try:
+        allow, reason = phase5_check_add_for_symbol(
+            risk_manager,
+            symbol=symbol,
+            pos_unrealized_pnl_bp=pos_unrealized_pnl_bp,
+            daily_state=daily_state,
+        )
+    except Exception as exc:
+        # Fail open but log the issue; we do not want the engine to crash here.
+        print(f"[PHASE5-GUARD] ERROR evaluating Phase5 policy: {exc!r}")
+        return True, "phase5_guard_error"
+
+    return allow, reason

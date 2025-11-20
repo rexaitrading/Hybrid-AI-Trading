@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional, Tuple, Any
@@ -660,3 +660,122 @@ try:
     RiskManager.on_fill = _rm2_on_fill
 except NameError:
     pass
+
+
+# === Phase 5 risk configuration wiring ===
+# These helpers allow the engine to pull Phase5RiskConfig from env vars
+# exported by tools/Export-Phase5RiskEnv.ps1, without changing existing
+# RiskManager constructors or call sites.
+
+try:
+    from hybrid_ai_trading.risk.phase5_config import Phase5RiskConfig, load_phase5_risk_from_env
+except Exception:  # pragma: no cover - defensive import for partial environments
+    Phase5RiskConfig = None  # type: ignore
+    load_phase5_risk_from_env = None  # type: ignore
+
+
+def get_phase5_risk_config():
+    """
+    Load Phase5RiskConfig from the current environment.
+
+    Returns
+    -------
+    Phase5RiskConfig | None
+        Parsed config, or None if the phase5_config module/env vars
+        are not available.
+    """
+    if load_phase5_risk_from_env is None:
+        return None
+    try:
+        return load_phase5_risk_from_env()
+    except Exception:
+        # Stay defensive: risk layer should fail open rather than crash
+        return None
+
+
+def attach_phase5_risk_config(risk_manager):
+    """
+    Attach Phase5RiskConfig to an existing RiskManager-like instance.
+
+    This keeps wiring non-invasive:
+      - Does not alter RiskManager.__init__ signature
+      - Does not change existing call sites
+      - Simply sets risk_manager.phase5_risk_config if config is available
+    """
+    cfg = get_phase5_risk_config()
+    if cfg is None:
+        return
+    setattr(risk_manager, "phase5_risk_config", cfg)
+
+
+# === Phase 5 positional policy helpers (mirror of mock_phase5_trade_engine_runner) ===
+
+from typing import Tuple
+from hybrid_ai_trading.risk_config_phase5 import RiskConfigPhase5, DailyRiskState
+
+
+def phase5_can_add_position(
+    risk_cfg: RiskConfigPhase5,
+    symbol: str,
+    pos_unrealized_pnl_bp: float,
+    daily_state: DailyRiskState,
+) -> Tuple[bool, str]:
+    """
+    Phase 5 risk policy: no averaging down + daily loss caps + symbol caps + max positions.
+
+    This mirrors the logic in tools/mock_phase5_trade_engine_runner.py::can_add_position,
+    but uses primitive inputs (unrealized PnL in bp) instead of a stub PositionSnapshot.
+    """
+    # 1) Account-level daily loss caps
+    if daily_state.account_pnl_pct <= risk_cfg.daily_loss_cap_pct:
+        return False, "daily_loss_cap_pct_reached"
+
+    if daily_state.account_pnl_notional <= risk_cfg.daily_loss_cap_notional:
+        return False, "daily_loss_cap_notional_reached"
+
+    # 2) Symbol-level caps
+    sym_state = daily_state.by_symbol.get(symbol)
+    if sym_state is not None:
+        if sym_state.pnl_bp <= risk_cfg.symbol_daily_loss_cap_bp:
+            return False, "symbol_daily_loss_cap_reached"
+        if sym_state.trades_today >= risk_cfg.symbol_max_trades_per_day:
+            return False, "symbol_max_trades_per_day_reached"
+
+    # 3) No averaging down
+    if risk_cfg.no_averaging_down:
+        if pos_unrealized_pnl_bp <= 0.0:
+            return False, "no_averaging_down_block"
+        if pos_unrealized_pnl_bp < risk_cfg.min_add_cushion_bp:
+            return False, "min_add_cushion_bp_not_met"
+
+    # 4) Position-count / weight caps
+    if daily_state.open_positions >= risk_cfg.max_open_positions:
+        return False, "max_open_positions_reached"
+
+    return True, "okay"
+
+
+def phase5_check_add_for_symbol(
+    risk_manager,
+    symbol: str,
+    pos_unrealized_pnl_bp: float,
+    daily_state: DailyRiskState,
+) -> Tuple[bool, str]:
+    """
+    Convenience wrapper to evaluate Phase 5 'can add' policy using an attached config.
+
+    Expected:
+      - risk_manager.phase5_risk_config is set by attach_phase5_risk_config(...)
+      - daily_state is a DailyRiskState snapshot for the current day
+      - pos_unrealized_pnl_bp is the unrealized PnL of the existing position in bp
+
+    Returns
+    -------
+    (allow: bool, reason: str)
+        If config is missing, this fails open (allow=True, reason='phase5_config_missing').
+    """
+    cfg = getattr(risk_manager, "phase5_risk_config", None)
+    if cfg is None:
+        return True, "phase5_config_missing"
+
+    return phase5_can_add_position(cfg, symbol, pos_unrealized_pnl_bp, daily_state)

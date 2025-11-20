@@ -548,3 +548,45 @@ def _cli_main():
 
 if __name__ == "__main__":
     raise SystemExit(_cli_main())
+
+
+# === Phase 5 guard helper (use before sending any real IB order) ===
+
+def phase5_guard_before_order(
+    risk_manager,
+    symbol: str,
+    pos_unrealized_pnl_bp: float,
+    daily_state,
+):
+    """
+    Use this BEFORE sending an order to IB in Phase5.
+
+    Parameters
+    ----------
+    risk_manager : RiskManager-like instance
+        Should already have Phase5RiskConfig attached via attach_phase5_risk_config(...).
+    symbol : str
+        Symbol for the order you plan to send.
+    pos_unrealized_pnl_bp : float
+        Unrealized PnL of the existing position in basis points (bp).
+    daily_state : DailyRiskState
+        Snapshot of account/symbol daily PnL, trades, and open positions.
+
+    Returns
+    -------
+    (allow: bool, reason: str)
+        If allow is False, you should NOT send the order to IB.
+    """
+    try:
+        allow, reason = phase5_check_add_for_symbol(
+            risk_manager,
+            symbol=symbol,
+            pos_unrealized_pnl_bp=pos_unrealized_pnl_bp,
+            daily_state=daily_state,
+        )
+    except Exception as exc:
+        # Fail open but log the issue; we do not want the engine to crash here.
+        print(f"[PHASE5-GUARD] ERROR evaluating Phase5 policy: {exc!r}")
+        return True, "phase5_guard_error"
+
+    return allow, reason
