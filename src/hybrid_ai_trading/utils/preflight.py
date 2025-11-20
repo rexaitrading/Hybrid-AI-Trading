@@ -24,10 +24,10 @@ def _now_et():
     return dt.datetime.now(tz=ZoneInfo("America/New_York"))
 
 def in_trading_window(now_et, allow_ext=True):
-    # RTH: 09:30–16:00 ET; extended: 04:00–20:00 ET
+    # RTH: 09:30â€“16:00 ET; extended: 04:00â€“20:00 ET
     t = now_et.time()
     rth = (dt.time(9,30) <= t <= dt.time(16,0))
-    ext = (dt.time(4,0) <= t <= dt.time(20,0))
+    ext = (dt.time(4,0) <= t <= dt.time(21,0))
     if rth: return True, "RTH"
     if allow_ext and ext: return True, "EXT"
     return False, "CLOSED"
