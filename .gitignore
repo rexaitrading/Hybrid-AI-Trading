@@ -99,3 +99,7 @@ research/*.bak_*
 __pycache__/
 tests/__pycache__/
 .backup/
+# Local intel + research artifacts (not versioned)
+intel/
+research/*.jsonl
+replay_out/*.jsonl
