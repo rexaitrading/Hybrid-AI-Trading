@@ -477,6 +477,40 @@ def _rm_allow_trade(self, notional: float, side: str = "BUY", bar_ts: int | None
         except Exception:
             pass
 
+    # ------------------------------------------------------------------
+    # Phase 5 sketch (NOT ACTIVE YET)
+    #
+    # When you are ready to enforce Phase 5 policy inside approve_trade,
+    # you can:
+    #
+    #   1) Build a DailyRiskState snapshot for this symbol:
+    #
+    #        daily_state = self.build_phase5_daily_state(symbol)
+    #
+    #   2) Compute pos_unrealized_pnl_bp from your live PnL engine
+    #      (e.g., per-symbol unrealized PnL converted into basis points):
+    #
+    #        pos_unrealized_pnl_bp = 0.0  # TODO: wire from portfolio PnL
+    #
+    #   3) Call the Phase 5 checker:
+    #
+    #        allow, reason = phase5_check_add_for_symbol(
+    #            risk_manager=self,
+    #            symbol=symbol,
+    #            pos_unrealized_pnl_bp=pos_unrealized_pnl_bp,
+    #            daily_state=daily_state,
+    #        )
+    #
+    #   4) If allow is False, block the trade:
+    #
+    #        if not allow:
+    #            return False, f"PHASE5:{reason}"
+    #
+    # This block is intentionally commented-out for now so that there
+    # is NO behavior change until pos_unrealized_pnl_bp is correctly
+    # wired from your live PnL pipeline.
+    # ------------------------------------------------------------------
+
     # if we reach here, trade is allowed; bump trades_today
     self._trades_today += 1
     return True, ""
@@ -711,7 +745,11 @@ def attach_phase5_risk_config(risk_manager):
 # === Phase 5 positional policy helpers (mirror of mock_phase5_trade_engine_runner) ===
 
 from typing import Tuple
-from hybrid_ai_trading.risk_config_phase5 import RiskConfigPhase5, DailyRiskState
+from hybrid_ai_trading.risk_config_phase5 import (
+    RiskConfigPhase5,
+    DailyRiskState,
+    SymbolDailyState,
+)
 
 
 def phase5_can_add_position(
@@ -779,3 +817,173 @@ def phase5_check_add_for_symbol(
         return True, "phase5_config_missing"
 
     return phase5_can_add_position(cfg, symbol, pos_unrealized_pnl_bp, daily_state)
+
+def _rm_build_phase5_daily_state(self, symbol: str) -> DailyRiskState:
+    """
+    Build a DailyRiskState snapshot for Phase 5 using current RiskManager/portfolio fields.
+
+    This is a Phase 5 helper; it does not perform any gating by itself.
+    You will refine symbol-level PnL/trades wiring later.
+    """
+    ds = DailyRiskState()
+
+    # Account-level daily PnL (notional)
+    pnl_today = getattr(self, "_pnl_today", 0.0)
+    try:
+        ds.account_pnl_notional = float(pnl_today)
+    except Exception:
+        ds.account_pnl_notional = 0.0
+
+    # Resolve equity from attached portfolio tracker or portfolio
+    eq = None
+    portfolio_tracker = getattr(self, "portfolio_tracker", None)
+    portfolio = getattr(self, "portfolio", None)
+
+    if portfolio_tracker is not None and hasattr(portfolio_tracker, "equity"):
+        try:
+            eq = float(getattr(portfolio_tracker, "equity", 0.0))
+        except Exception:
+            eq = None
+    elif portfolio is not None and hasattr(portfolio, "equity"):
+        try:
+            eq = float(getattr(portfolio, "equity", 0.0))
+        except Exception:
+            eq = None
+
+    if eq is not None and eq > 0:
+        ds.account_pnl_pct = ds.account_pnl_notional / eq
+    else:
+        ds.account_pnl_pct = 0.0
+
+    # Positions and open_positions
+    positions = {}
+    try:
+        if portfolio_tracker is not None and hasattr(portfolio_tracker, "get_positions"):
+            positions = portfolio_tracker.get_positions()
+        elif portfolio is not None and hasattr(portfolio, "get_positions"):
+            positions = portfolio.get_positions()
+    except Exception:
+        positions = {}
+
+    try:
+        ds.open_positions = len(positions or {})
+    except Exception:
+        ds.open_positions = 0
+
+    # Symbol-level state (stub; refine with real per-symbol PnL/trades later)
+    sym_state = SymbolDailyState()
+    sym_state.pnl_bp = 0.0
+    sym_state.pnl_notional = 0.0
+    sym_state.trades_today = getattr(self, "_trades_today", 0)
+
+    ds.by_symbol[symbol] = sym_state
+
+    return ds
+
+
+try:
+    # Attach helper as a method on RiskManager for Phase 5 usage
+    RiskManager.build_phase5_daily_state = _rm_build_phase5_daily_state
+except NameError:
+    # RiskManager not defined yet; keep module importable
+    pass
+
+# === PHASE5: No-Averaging-Down integration scaffolding ======================
+# This block was appended by tools. It defines helper wiring for the
+# no_averaging_down_policy module, but does not change existing behavior
+# until validate_no_averaging_down_for_order(..) is called from the engine.
+
+try:
+    from .no_averaging_down_policy import (
+        AveragingDownPolicy,
+        PositionState,
+        NoAveragingDownHelper,
+        NoAveragingDownViolation,
+    )
+except Exception:  # pragma: no cover - defensive import
+    AveragingDownPolicy = None
+    PositionState = None
+    NoAveragingDownHelper = None
+    NoAveragingDownViolation = Exception
+
+
+class Phase5NoAveragingDownBridge:
+    """
+    Lightweight bridge that RiskManager (or callers) can use to enforce
+    the no-averaging-down policy for a given (symbol, regime) and order.
+
+    This class is intentionally separate so that existing RiskManager code
+    does not change behavior unless it opts in.
+    """
+
+    def __init__(self) -> None:
+        if AveragingDownPolicy is None:
+            # Helper module missing or import failed; disable feature.
+            self._policy = None
+            self._helper = None
+            self._state_by_key = {}
+        else:
+            self._policy = AveragingDownPolicy()
+            self._helper = NoAveragingDownHelper()
+            self._state_by_key: dict[tuple[str, str], PositionState] = {}
+
+    def _get_state(self, symbol: str, regime: str) -> PositionState:
+        if self._policy is None or PositionState is None:
+            # Feature disabled
+            return PositionState() if PositionState is not None else None  # type: ignore[return-value]
+        key = (symbol, regime)
+        st = self._state_by_key.get(key)
+        if st is None:
+            st = PositionState()
+            self._state_by_key[key] = st
+        return st
+
+    def validate_no_averaging_down_for_order(self, order, regime: str) -> None:
+        """
+        Optionally called by RiskManager / TradeEngine BEFORE sending
+        an order to execution.
+
+        'order' is expected to have:
+          - symbol
+          - qty (signed or unsigned)
+          - price
+        """
+        if self._policy is None or self._helper is None:
+            return
+
+        symbol = getattr(order, "symbol", None)
+        qty = getattr(order, "qty", None)
+        price = getattr(order, "price", None)
+
+        if symbol is None or qty is None or price is None:
+            # If the order doesn't have the expected fields, do nothing.
+            return
+
+        side = "LONG" if qty > 0 else "SHORT"
+        abs_qty = abs(qty)
+        state = self._get_state(symbol, regime)
+
+        # NOTE: PositionState currently has no live connection to your
+        # actual position book; that wiring will be added in a later
+        # pass by updating state before validate_no_averaging_down_for_order
+        # is called.
+        self._helper.validate_order(
+            side=side,
+            qty=abs_qty,
+            price=float(price),
+            position=state,
+            policy=self._policy,
+        )
+
+
+# Convenience singleton bridge that callers may reuse.
+_phase5_no_avg_bridge: Phase5NoAveragingDownBridge | None = None
+
+
+def get_phase5_no_avg_bridge() -> Phase5NoAveragingDownBridge:
+    global _phase5_no_avg_bridge
+    if _phase5_no_avg_bridge is None:
+        _phase5_no_avg_bridge = Phase5NoAveragingDownBridge()
+    return _phase5_no_avg_bridge
+
+# End of PHASE5 scaffolding ==================================================
