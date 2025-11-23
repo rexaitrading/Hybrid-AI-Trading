@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional, Tuple, Any
@@ -987,3 +987,152 @@ def get_phase5_no_avg_bridge() -> Phase5NoAveragingDownBridge:
     return _phase5_no_avg_bridge
 
 # End of PHASE5 scaffolding ==================================================
+
+# === Phase 5: no-averaging-down convenience helper ===========================
+
+def phase5_no_averaging_down_for_symbol(self, symbol: str, pos_unrealized_pnl_bp: float) -> tuple[bool, str]:
+    """
+    Convenience wrapper around phase5_check_add_for_symbol(...) using this
+    RiskManager instance.
+
+    IMPORTANT:
+    - If the Phase5RiskConfig does not yet define daily_loss_cap_pct,
+      we treat Phase 5 deep checks as "not configured" and allow the trade.
+      This avoids noisy AttributeErrors while Phase 5 config is still being wired.
+    """
+    try:
+        cfg = get_phase5_risk_config()
+
+        # If the config does not expose daily_loss_cap_pct yet, skip deep Phase 5
+        # evaluation and allow the trade (fail-open, but clean).
+        if not hasattr(cfg, "daily_loss_cap_pct"):
+            return True, "phase5_daily_loss_cap_pct_not_configured"
+
+        # Build a DailyRiskState snapshot for this symbol from current RM state
+        daily_state = self.build_phase5_daily_state(symbol)
+
+        # Delegate to the existing helper which includes:
+        # - account daily loss caps
+        # - per-symbol trade limits
+        # - no-averaging-down logic when enabled
+        allow, reason = phase5_check_add_for_symbol(
+            risk_manager=self,
+            symbol=symbol,
+            pos_unrealized_pnl_bp=pos_unrealized_pnl_bp,
+            daily_state=daily_state,
+        )
+        return allow, reason
+    except Exception as exc:  # pragma: no cover
+        import logging as _logging
+        _logging.getLogger("hybrid_ai_trading.risk.risk_manager").error(
+            "phase5_no_averaging_down_for_symbol failed: %s", exc, exc_info=True
+        )
+        # Fail open for now; enforcement wiring will be explicit and tested later.
+        return True, "phase5_helper_failed"
+
+# Attach helper to RiskManager if available
+try:
+    RiskManager.phase5_no_averaging_down_for_symbol = phase5_no_averaging_down_for_symbol
+except NameError:
+    pass
+
+# === End Phase 5 no-averaging-down helper ====================================
+# === RiskManager compatibility shim: approve_trade ======================
+
+def _rm_approve_trade(self, symbol: str, side: str, qty: float, notional: float) -> bool:
+    """
+    Compatibility shim for older ExecutionEngine call sites and tests.
+
+    New code should use allow_trade(...) or Phase 5 helpers.
+    This wrapper delegates to allow_trade(notional=notional, side=side)
+    and returns a simple bool.
+    """
+    fn = getattr(self, "allow_trade", None)
+    if callable(fn):
+        try:
+            allow, _reason = fn(notional=notional, side=side)
+            return bool(allow)
+        except Exception:
+            # Fail-open to avoid accidental global halts on shim error.
+            return True
+    # If no allow_trade is defined, fail-open.
+    return True
+
+
+try:
+    if not hasattr(RiskManager, "approve_trade"):
+        RiskManager.approve_trade = _rm_approve_trade
+except NameError:
+    # RiskManager not defined; keep module importable.
+    pass
+
+# === End approve_trade compatibility shim ==============================
+
+# === Phase 5: no-averaging-down adapter for ExecutionEngine ===============
+
+def _phase5_no_averaging_adapter(self, symbol, side=None, entry_ts=None):
+    """
+    Adapter for ExecutionEngine.place_order_phase5:
+
+    Signature expected by engine:
+        phase5_no_averaging_down_for_symbol(symbol, side, entry_ts=None)
+
+    This implementation is intentionally simple and position-based:
+    - If there is an open long position (qty > 0) and side == "BUY"  -> block.
+    - If there is an open short position (qty < 0) and side == "SELL" -> block.
+    - Otherwise allow.
+
+    It uses:
+      - self.get_position_for_symbol(symbol) if available, else
+      - self.positions.get(symbol, 0) if available.
+    """
+    if not symbol or not side:
+        return True, "no_symbol_or_side_provided"
+
+    side_str = str(side).upper()
+    if side_str not in ("BUY", "SELL"):
+        # Unknown side -> do not block
+        return True, "unknown_side"
+
+    # Try to get current position
+    pos = None
+    pos_fn = getattr(self, "get_position_for_symbol", None)
+    if callable(pos_fn):
+        try:
+            pos = pos_fn(symbol)
+        except Exception:
+            pos = None
+
+    if pos is None:
+        positions = getattr(self, "positions", None)
+        if isinstance(positions, dict) and symbol in positions:
+            pos = positions.get(symbol)
+
+    # If still None, we fail-open (do not enforce)
+    if pos is None:
+        return True, "no_position_info"
+
+    try:
+        qty = float(pos)
+    except (TypeError, ValueError):
+        return True, "position_not_numeric"
+
+    if qty == 0:
+        return True, "flat"
+
+    if qty > 0 and side_str == "BUY":
+        return False, "no_averaging_long_block"
+
+    if qty < 0 and side_str == "SELL":
+        return False, "no_averaging_short_block"
+
+    return True, "ok"
+
+
+try:
+    # Override any previous helper with the adapter that matches the engine call.
+    RiskManager.phase5_no_averaging_down_for_symbol = _phase5_no_averaging_adapter
+except NameError:
+    pass
+
+# === End Phase 5 no-averaging-down adapter =================================
