@@ -47,7 +47,8 @@ jobs:
           python -m pip install -U pip wheel
           pip install pytest pytest-cov
 
-      - name: Run micro tests
+\ \ \ \ \ \ -\ name:\ Phase5\ Smoke\n\ \ \ \ \ \ \ \ shell:\ pwsh\n\ \ \ \ \ \ \ \ run:\ \|\n\ \ \ \ \ \ \ \ \ \ echo\ ">>>\ PYTHONPATH\ =\ \$env:PYTHONPATH"\n\ \ \ \ \ \ \ \ \ \ python\ -m\ pytest\ tests/test_phase5_no_averaging_engine_guard\.py\ -q\n\n\ \ \ \ \ \ \ \ \ \ echo\ ">>>\ NVDA\ Phase5\ mock"\n\ \ \ \ \ \ \ \ \ \ python\ tools/mock_phase5_nvda_runner\.py\n\n\ \ \ \ \ \ \ \ \ \ echo\ ">>>\ SPY\ Phase5\ mock"\n\ \ \ \ \ \ \ \ \ \ python\ tools/mock_phase5_spy_orb_runner\.py\n\n\ \ \ \ \ \ \ \ \ \ echo\ ">>>\ QQQ\ Phase5\ mock"\n\ \ \ \ \ \ \ \ \ \ python\ tools/mock_phase5_qqq_orb_runner\.py
+\ \ \ \ \ \ -\ name:\ Run\ micro\ tests
         shell: pwsh
         run: powershell -ExecutionPolicy Bypass -File .\scripts\run_full_repo_tests.ps1 -Mode Isolated
 
