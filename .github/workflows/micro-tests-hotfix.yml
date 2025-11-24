@@ -1,92 +1,11 @@
-name: Micro Tests Hotfix
+name: Micro Tests Hotfix (disabled)
 
 on:
   workflow_dispatch:
 
 jobs:
-  micro-tests-hotfix:
-    name: Micro tests (hotfix, isolated)
-    runs-on: windows-latest
-    timeout-minutes: 12
-    env:
-      SKIP: pre-commit
-      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
-      SETUPTOOLS_SCM_PRETEND_VERSION: 0.0+ci
-      HAT_PRETEND_VERSION: 0.0+ci
-
+  noop:
+    runs-on: ubuntu-latest
     steps:
-      - name: CI bootstrap (PATH/env + trust all repos)
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force .ci\bin | Out-Null
-          Set-Content .ci\bin\git.cmd @'
-@echo off
-setlocal enabledelayedexpansion
-echo [GIT-SHIM] git %* 1>&2
-"C:\Program Files\Git\bin\git.exe" %*
-set rc=%ERRORLEVEL%
-if not %rc%==0 echo [GIT-SHIM] exit code %rc% 1>&2
-exit /b %rc%
-'@
-          (Resolve-Path .ci\bin).Path | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          @(
-            'GIT_TERMINAL_PROMPT=0',
-            'GIT_ASKPASS=echo',
-            'GCM_INTERACTIVE=Never',
-            'GIT_TRACE=1',
-            'GIT_TRACE_SETUP=1'
-          ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          New-Item -ItemType Directory -Force .ci\home | Out-Null
-          @("HOME=$PWD\.ci\home","XDG_CONFIG_HOME=$PWD\.ci\home") | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          git config --global --add safe.directory '*'
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-          submodules: false
-          lfs: false
-
-      - name: Disable git LFS smudge (CI)
-        shell: pwsh
-        run: |
-          git lfs uninstall 2>$null
-          git config --global filter.lfs.required false
-          git config --global --unset-all filter.lfs.smudge 2>$null; $global:LASTEXITCODE=0
-          git config --global --unset-all filter.lfs.clean  2>$null; $global:LASTEXITCODE=0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~\AppData\Local\pip\Cache
-          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
-          restore-keys: |
-            pip-${{ runner.os }}-
-
-      - name: Install deps (tolerant)
-        shell: pwsh
-        run: |
-          python -m pip install -U pip
-          if (Test-Path 'requirements.txt') { pip install -r requirements.txt }
-          if (Test-Path 'requirements-dev.txt') { pip install -r requirements-dev.txt }
-          if (Test-Path 'pyproject.toml' -or (Test-Path 'setup.cfg') -or (Test-Path 'setup.py')) { pip install -e . }
-
-      - name: Git env sanity (early)
-        shell: pwsh
-        run: |
-          where git
-          git --version
-          git rev-parse --is-inside-work-tree | Out-Host
-          git rev-parse HEAD | Out-Host
-          git status -sb | Out-Host
-          git config --show-origin -l | Out-Host
-
-      - name: Run micro tests
-        shell: pwsh
-        run: pytest -q
+      - name: Disabled micro-tests-hotfix placeholder
+        run: echo "micro-tests-hotfix.yml temporarily disabled (CI guardrail = python-ci only)"
