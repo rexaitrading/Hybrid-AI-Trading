@@ -1,9 +1,10 @@
 name: Performance Tests
 
 on:
-  workflow_dispatch:        # ✅ Manual trigger
-  schedule:
-    - cron: "0 3 * * *"     # ✅ Run every day at 03:00 UTC
+  push:
+    branches: []
+  pull_request:
+    branches: []
 
 jobs:
   perf-tests:
@@ -12,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.12" ]   # ✅ Perf tests only on latest stable
+        python-version: [ "3.12" ]   # âœ… Perf tests only on latest stable
 
     steps:
       - name: Checkout code

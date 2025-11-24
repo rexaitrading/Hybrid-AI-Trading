@@ -2,9 +2,9 @@ name: Phase5 Micro Suite
 
 on:
   push:
-    branches: [ main, feature/phase1-bar-replay ]
+    branches: []
   pull_request:
-    branches: [ main ]
+    branches: []
 
 jobs:
   phase5-microsuite:

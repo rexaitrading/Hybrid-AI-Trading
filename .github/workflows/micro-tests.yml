@@ -2,9 +2,9 @@ name: micro-tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: []
   pull_request:
-    branches: [ main, master ]
+    branches: []
 
 jobs:
   win-py312-microtests:

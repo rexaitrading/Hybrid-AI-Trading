@@ -2,8 +2,9 @@ name: Risk Fast-Path
 
 on:
   push:
-    branches: [ main, master ]
+    branches: []
   pull_request:
+    branches: []
 
 jobs:
   risk:

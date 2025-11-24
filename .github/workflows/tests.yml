@@ -2,9 +2,9 @@ name: TradeEngine Dev Tests
 
 on:
   push:
-    branches: ["**"]
+    branches: []
   pull_request:
-    branches: ["**"]
+    branches: []
 
 jobs:
   tests:

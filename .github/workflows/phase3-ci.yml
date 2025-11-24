@@ -1,19 +1,10 @@
 name: Phase3 CI
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
-      - src/main
-      - feature/phase1-bar-replay
-
-permissions:
-  contents: read
-
-env:
-  SKIP: pre-commit
-  GIT_TERMINAL_PROMPT: 0
+    branches: []
+  pull_request:
+    branches: []
 
 jobs:
   micro-tests:

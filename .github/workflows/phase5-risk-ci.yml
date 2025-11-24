@@ -1,11 +1,10 @@
 name: Phase5 Risk Micro CI
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - feature/phase1-bar-replay
-      - main
+    branches: []
+  pull_request:
+    branches: []
 
 jobs:
   phase5-risk:
