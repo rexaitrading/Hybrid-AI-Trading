@@ -1,19 +1,17 @@
 """
-Mock Phase-5 NVDA gating runner (using shared helpers).
+Mock Phase-5 QQQ gating runner (using shared helpers).
 
-- Loads Phase-5 decisions for NVDA from logs/nvda_phase5_decisions.json
+- Loads Phase-5 decisions for QQQ from logs/qqq_phase5_decisions.json
   via tools.phase5_gating_helpers.
 - Prints PHASE5 BLOCKED lines only for blocked trades.
 - Prints a summary line at the end.
-
-This is a demo/validation runner and does NOT talk to ExecutionEngine.
 """
 
 from hybrid_ai_trading.tools.phase5_gating_helpers import load_decisions_for_symbol
 
 
 def main() -> None:
-    symbol = "NVDA"
+    symbol = "QQQ"
     decisions = load_decisions_for_symbol(symbol)
 
     total = len(decisions)
