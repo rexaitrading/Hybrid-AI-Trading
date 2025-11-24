@@ -46,7 +46,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install -U pip wheel
-          pip install pytest pytest-cov
+          pip install pytest pytest-cov requests
 
       - name: Phase5 Smoke
         shell: pwsh
@@ -105,7 +105,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install -U pip wheel
-          pip install pytest pytest-cov
+          pip install pytest pytest-cov requests
 
       - name: Run tests + coverage
         shell: pwsh
