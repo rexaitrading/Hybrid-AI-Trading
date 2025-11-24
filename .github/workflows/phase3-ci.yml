@@ -1,4 +1,4 @@
-﻿name: Phase3 CI
+name: Phase3 CI
 
 on:
   workflow_dispatch:

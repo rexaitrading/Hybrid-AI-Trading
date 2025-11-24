@@ -1,4 +1,4 @@
-﻿import os, time, json, base64, sys, requests
+import os, time, json, base64, sys, requests
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric import utils as asn1utils

@@ -1,102 +1,267 @@
+"""
+Simple QQQ ORB (Opening Range Breakout) simulator for 1-minute OHLCV data.
+
+CSV schema (expected):
+
+    timestamp,open,high,low,close,volume
+
+We simulate at most one long trade per day:
+
+- Session: RTH (09:30 - 16:00).
+- ORB window: first N minutes of RTH (via orb_minutes).
+- ORB high/low = max/min of that window.
+- Entry: first bar after ORB window where high >= ORB high.
+  - Enter long at bar.close.
+- Risk per share = entry_price - ORB_low. If <= 0 -> skip trade.
+- SL = ORB_low (approx -1R).
+- TP = entry_price + tp_r * risk_per_share.
+- If both TP and SL hit in same bar, SL is assumed first.
+- If still open at end of session, exit at last close (EOD).
+"""
+
 from __future__ import annotations
 
+import argparse
+import csv
 import json
-import os
-from typing import Any, Dict, List
-
-from tools.orb_vwap_gatescore_filter import filter_trades
-from hybrid_ai_trading.trade_engine_phase5_skeleton import (
-    TradeEnginePhase5,
-    AddDecision,
-)
-from hybrid_ai_trading.risk_manager_phase5_bridge import (
-    PositionSnapshot,
-    AddRequest,
-)
+from dataclasses import dataclass, asdict
+from datetime import datetime, time
+from typing import List, Optional
 
 
-def _load_thresholds(path: str) -> Dict[str, Any]:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+@dataclass
+class Bar:
+    ts: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
 
 
-def _load_trades(jsonl_path: str) -> List[Dict[str, Any]]:
-    trades: List[Dict[str, Any]] = []
-    with open(jsonl_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
+@dataclass
+class Trade:
+    symbol: str
+    side: str  # "long"
+    entry_ts: str
+    entry_price: float
+    exit_ts: str
+    exit_price: float
+    orb_high: float
+    orb_low: float
+    tp_price: float
+    sl_price: float
+    outcome: str  # "TP", "SL", "EOD"
+    r_multiple: float
+    gross_pnl_pct: float
+    bars_held: int
+    session: str
+    regime: str
+
+
+RTH_START = time(9, 30)
+RTH_END = time(16, 0)
+
+
+def parse_timestamp(ts_str: str) -> datetime:
+    try:
+        return datetime.fromisoformat(ts_str)
+    except Exception:
+        return datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
+
+
+def load_bars_for_date(csv_path: str, date_str: str) -> List[Bar]:
+    target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    bars: List[Bar] = []
+    with open(csv_path, "r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            ts_raw = row.get("timestamp") or row.get("ts")
+            if not ts_raw:
                 continue
-            trades.append(json.loads(line))
+            dt = parse_timestamp(str(ts_raw))
+            if dt.date() != target_date:
+                continue
+            ttime = dt.time()
+            if not (RTH_START <= ttime <= RTH_END):
+                continue
+            try:
+                bar = Bar(
+                    ts=dt,
+                    open=float(row["open"]),
+                    high=float(row["high"]),
+                    low=float(row["low"]),
+                    close=float(row["close"]),
+                    volume=float(row.get("volume", 0.0)),
+                )
+            except Exception:
+                continue
+            bars.append(bar)
+    bars.sort(key=lambda b: b.ts)
+    return bars
+
+
+def simulate_orb_for_day(
+    symbol: str,
+    bars: List[Bar],
+    orb_minutes: int = 5,
+    tp_r: float = 2.5,
+) -> List[Trade]:
+    trades: List[Trade] = []
+
+    if not bars:
+        return trades
+
+    orb_window_bars = []
+    for b in bars:
+        if len(orb_window_bars) < orb_minutes:
+            orb_window_bars.append(b)
+        else:
+            break
+
+    if len(orb_window_bars) < orb_minutes:
+        return trades
+
+    orb_high = max(b.high for b in orb_window_bars)
+    orb_low = min(b.low for b in orb_window_bars)
+
+    in_trade = False
+    entry_idx: Optional[int] = None
+    entry_price = 0.0
+    sl_price = 0.0
+    tp_price = 0.0
+
+    for i in range(len(orb_window_bars), len(bars)):
+        bar = bars[i]
+
+        if not in_trade:
+            if bar.high >= orb_high:
+                entry_idx = i
+                entry_price = bar.close
+                risk_per_share = entry_price - orb_low
+                if risk_per_share <= 0:
+                    entry_idx = None
+                    entry_price = 0.0
+                    continue
+                sl_price = orb_low
+                tp_price = entry_price + tp_r * risk_per_share
+                in_trade = True
+            continue
+
+        high = bar.high
+        low = bar.low
+
+        hit_tp = high >= tp_price
+        hit_sl = low <= sl_price
+
+        outcome: Optional[str] = None
+        exit_price: Optional[float] = None
+        exit_idx: Optional[int] = None
+
+        if hit_tp and hit_sl:
+            outcome = "SL"
+            exit_price = sl_price
+            exit_idx = i
+        elif hit_sl:
+            outcome = "SL"
+            exit_price = sl_price
+            exit_idx = i
+        elif hit_tp:
+            outcome = "TP"
+            exit_price = tp_price
+            exit_idx = i
+
+        if outcome is not None and entry_idx is not None:
+            entry_bar = bars[entry_idx]
+            exit_bar = bars[exit_idx]
+            gross_pnl_pct = (exit_price - entry_price) / entry_price
+            risk_per_share = entry_price - orb_low
+            r_multiple = (exit_price - entry_price) / risk_per_share if risk_per_share > 0 else 0.0
+
+            trade = Trade(
+                symbol=symbol,
+                side="long",
+                entry_ts=entry_bar.ts.isoformat(),
+                entry_price=entry_price,
+                exit_ts=exit_bar.ts.isoformat(),
+                exit_price=exit_price,
+                orb_high=orb_high,
+                orb_low=orb_low,
+                tp_price=tp_price,
+                sl_price=sl_price,
+                outcome=outcome,
+                r_multiple=r_multiple,
+                gross_pnl_pct=gross_pnl_pct,
+                bars_held=exit_idx - entry_idx,
+                session="RTH",
+                regime="QQQ_ORB_REPLAY",
+            )
+            trades.append(trade)
+            in_trade = False
+            break
+
+    if in_trade and entry_idx is not None:
+        entry_bar = bars[entry_idx]
+        last_bar = bars[-1]
+        exit_price = last_bar.close
+        gross_pnl_pct = (exit_price - entry_price) / entry_price
+        risk_per_share = entry_price - orb_low
+        r_multiple = (exit_price - entry_price) / risk_per_share if risk_per_share > 0 else 0.0
+
+        trade = Trade(
+            symbol=symbol,
+            side="long",
+            entry_ts=entry_bar.ts.isoformat(),
+            entry_price=entry_price,
+            exit_ts=last_bar.ts.isoformat(),
+            exit_price=exit_price,
+            orb_high=orb_high,
+            orb_low=orb_low,
+            tp_price=tp_price,
+            sl_price=sl_price,
+            outcome="EOD",
+            r_multiple=r_multiple,
+            gross_pnl_pct=gross_pnl_pct,
+            bars_held=len(bars) - 1 - entry_idx,
+            session="RTH",
+            regime="QQQ_ORB_REPLAY",
+        )
+        trades.append(trade)
+
     return trades
 
 
+def write_jsonl(trades: List[Trade], out_path: str) -> None:
+    with open(out_path, "w", encoding="utf-8", newline="") as f:
+        for t in trades:
+            f.write(json.dumps(asdict(t)))
+            f.write("\n")
+
+
 def main() -> None:
-    # 1) Read thresholds (AAPL ORB/VWAP)
-    cfg_path = os.path.join("config", "orb_vwap_qqq_thresholds.json")
-    thresholds = _load_thresholds(cfg_path)
-    print("[QQQ-PHASE5-SIM] Loaded thresholds:", thresholds)
+    ap = argparse.ArgumentParser(description="QQQ ORB 1m simulator (JSONL trades).")
+    ap.add_argument("--csv", required=True, help="Path to QQQ 1m OHLCV CSV.")
+    ap.add_argument("--date", required=True, help="Trading date (YYYY-MM-DD).")
+    ap.add_argument("--symbol", default="QQQ", help="Symbol label (default QQQ).")
+    ap.add_argument("--out", required=True, help="Output JSONL path.")
+    ap.add_argument("--orb-minutes", type=int, default=5, help="ORB window length in minutes (default 5).")
+    ap.add_argument("--tp-r", type=float, default=2.5, help="Take-profit in R multiples (default 2.5).")
+    args = ap.parse_args()
 
-    # 2) Load enriched trades
-    jsonl_path = os.path.join("research", "qqq_orb_vwap_replay_trades_enriched.jsonl")
-    trades = _load_trades(jsonl_path)
-    print(f"[QQQ-PHASE5-SIM] Loaded {len(trades)} enriched trade(s) from {jsonl_path}")
-
-    # 3) Gate signals via orb_vwap_gatescore_filter logic
-    gated = filter_trades(trades, thresholds)
-    print(f"[QQQ-PHASE5-SIM] {len(gated)} trade(s) passed GateScore + cost filters.")
-
-    if not gated:
-        print("[QQQ-PHASE5-SIM] No trades passed the gate; nothing to simulate.")
+    bars = load_bars_for_date(args.csv, args.date)
+    if not bars:
+        print(f"[QQQ_ORB] No bars found for date {args.date} in {args.csv}")
+        write_jsonl([], args.out)
         return
 
-    # 4) Wire in TradeEnginePhase5: consider_add() before simulated add
-    engine = TradeEnginePhase5()
-    print("[QQQ-PHASE5-SIM] Using RiskConfig:", engine.risk_manager.risk_cfg)
-    print("[QQQ-PHASE5-SIM] Using CostConfig:", engine.risk_manager.cost_cfg)
-
-    current_notional = 0.0
-
-    for idx, t in enumerate(gated, start=1):
-        symbol = t.get("symbol", "QQQ")
-        side = "LONG"  # ORB/VWAP AAPL = BUY in this gated sample
-        pnl_pct = float(t.get("pnl_pct", 0.0))
-        unrealized_pnl_bp = pnl_pct * 10_000.0
-
-        base_notional = float(t.get("cost_notional") or 10_000.0)
-        if current_notional == 0.0:
-            current_notional = base_notional
-        additional_notional = base_notional
-        additional_shares_round_trip = 100
-
-        pos = PositionSnapshot(
-            symbol=symbol,
-            side=side,
-            unrealized_pnl_bp=unrealized_pnl_bp,
-            notional=current_notional,
-        )
-        add_req = AddRequest(
-            additional_notional=additional_notional,
-            additional_shares_round_trip=additional_shares_round_trip,
-        )
-
-        decision: AddDecision = engine.consider_add(pos, add_req)
-
-        print(
-            f"[QQQ-PHASE5-SIM] trade #{idx} "
-            f"symbol={symbol} "
-            f"pnl_pct={pnl_pct:.4f} "
-            f"unrealized_pnl_bp={unrealized_pnl_bp:.2f} "
-            f"notional={current_notional:.0f} "
-            f"add_notional={additional_notional:.0f} "
-            f"-> can_add={decision.can_add} reason={decision.reason}"
-        )
-
-        # Simulated order: only 'add' if gate says okay
-        if decision.can_add:
-            current_notional += additional_notional
-
-    print("[QQQ-PHASE5-SIM] Final simulated notional:", current_notional)
+    trades = simulate_orb_for_day(
+        symbol=args.symbol,
+        bars=bars,
+        orb_minutes=args.orb_minutes,
+        tp_r=args.tp_r,
+    )
+    write_jsonl(trades, args.out)
+    print(f"[QQQ_ORB] Wrote {len(trades)} trades to {args.out}")
 
 
 if __name__ == "__main__":

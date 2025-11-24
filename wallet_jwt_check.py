@@ -1,4 +1,4 @@
-﻿import os,sys,requests,importlib
+import os,sys,requests,importlib
 api_key=os.environ.get("COINBASE_ADV_KEY_NAME"); api_secret=os.environ.get("COINBASE_ADV_PRIVATE_KEY")
 if not api_key or not api_secret: print("Missing env"); sys.exit(1)
 jwt_gen = importlib.import_module("coinbase.rest.jwt_generator")

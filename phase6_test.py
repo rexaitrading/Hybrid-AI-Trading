@@ -1,4 +1,4 @@
-﻿from hybrid_ai_trading.models.orb_model import ORBModel
+from hybrid_ai_trading.models.orb_model import ORBModel
 from hybrid_ai_trading.models.vwap_model import VWAPModel
 from hybrid_ai_trading.models.hybrid_gate import HybridGate
 from hybrid_ai_trading.runners.orb_vwap_replay import ORBVWAPReplay

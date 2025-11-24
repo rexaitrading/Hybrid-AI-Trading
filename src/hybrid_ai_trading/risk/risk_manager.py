@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional, Tuple, Any
@@ -1070,7 +1070,13 @@ except NameError:
 
 # === Phase 5: no-averaging-down adapter for ExecutionEngine ===============
 
-def _phase5_no_averaging_adapter(self, symbol, side=None, entry_ts=None):
+def _phase5_no_averaging_adapter(
+    self,
+    symbol,
+    side=None,
+    entry_ts=None,
+    **extra,
+):
     """
     Adapter for ExecutionEngine.place_order_phase5:
 
@@ -1136,3 +1142,103 @@ except NameError:
     pass
 
 # === End Phase 5 no-averaging-down adapter =================================
+# === Phase 5: RiskManager position helper for no-averaging adapter =========
+
+def _rm_get_position_for_symbol(self, symbol: str) -> float:
+    """
+    Generic helper to resolve the current position size for a symbol.
+
+    Priority:
+    1) portfolio_tracker.get_positions()[symbol] if available
+    2) portfolio.get_positions()[symbol] if available
+    3) self.positions[symbol] if available
+    Returns 0.0 if nothing is found or value is not numeric.
+    """
+    if not symbol:
+        return 0.0
+
+    sym_u = str(symbol).upper()
+    size = 0.0
+
+    # 1) portfolio_tracker
+    try:
+        pt = getattr(self, "portfolio_tracker", None)
+        if pt is not None and hasattr(pt, "get_positions"):
+            book = pt.get_positions()
+            if isinstance(book, dict):
+                row = book.get(sym_u) or book.get(symbol)
+                if row is not None:
+                    if isinstance(row, dict):
+                        raw = (
+                            row.get("size")
+                            or row.get("qty")
+                            or row.get("position")
+                            or row.get("shares")
+                        )
+                    else:
+                        raw = row
+                    try:
+                        return float(raw)
+                    except (TypeError, ValueError):
+                        pass
+    except Exception:
+        pass
+
+    # 2) portfolio
+    try:
+        pf = getattr(self, "portfolio", None)
+        if pf is not None and hasattr(pf, "get_positions"):
+            book = pf.get_positions()
+            if isinstance(book, dict):
+                row = book.get(sym_u) or book.get(symbol)
+                if row is not None:
+                    if isinstance(row, dict):
+                        raw = (
+                            row.get("size")
+                            or row.get("qty")
+                            or row.get("position")
+                            or row.get("shares")
+                        )
+                    else:
+                        raw = row
+                    try:
+                        return float(raw)
+                    except (TypeError, ValueError):
+                        pass
+    except Exception:
+        pass
+
+    # 3) self.positions dict
+    try:
+        positions = getattr(self, "positions", None)
+        if isinstance(positions, dict):
+            row = positions.get(sym_u) or positions.get(symbol)
+            if row is not None:
+                if isinstance(row, dict):
+                    raw = (
+                        row.get("size")
+                        or row.get("qty")
+                        or row.get("position")
+                        or row.get("shares")
+                    )
+                else:
+                    raw = row
+                try:
+                    return float(raw)
+                except (TypeError, ValueError):
+                    pass
+    except Exception:
+        pass
+
+    return 0.0
+
+
+try:
+    # Only attach if method not already defined
+    if not hasattr(RiskManager, "get_position_for_symbol"):
+        RiskManager.get_position_for_symbol = _rm_get_position_for_symbol
+except NameError:
+    # RiskManager not defined; ignore
+    pass
+
+# === End Phase 5 position helper ===========================================

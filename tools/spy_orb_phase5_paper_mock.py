@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import os
@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 from tools.orb_vwap_gatescore_filter import filter_trades
 from hybrid_ai_trading.trade_engine_phase5_skeleton import TradeEnginePhase5
 from hybrid_ai_trading.risk_manager_phase5_bridge import PositionSnapshot, AddRequest
+from hybrid_ai_trading.execution.execution_engine import place_order_phase5
 
 
 def _load_thresholds(path: str) -> Dict[str, Any]:
