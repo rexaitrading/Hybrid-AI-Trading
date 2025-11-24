@@ -1,5 +1,5 @@
 2025-11-13  Phase7: locked news_translate with macro_region + query-aware NA heuristics (SPY/TSX tests green).
-## 2025-11-14 – Phase7: TradeEngine + provider-only smoke + prev-close harness (51/51 green)
+## 2025-11-14 â€“ Phase7: TradeEngine + provider-only smoke + prev-close harness (51/51 green)
 
 - TradeEngine: made `config` optional in `TradeEngine.__init__` and restored `TradeEngineClass` pytest fixture in `tests/conftest.py`.
 - Logging: patched `JsonlLogger` via `_JsonlLoggerPatched` to safely handle `path=None` and create `logs/paper_session.jsonl` by default.
@@ -87,3 +87,23 @@ def main() -> None:
 if __name__ == "__main__":
     main(); follow-up micro-block will reposition checklist before exit for full visibility).
 - 2025-11-19 15:39:47 Block E: add tools/PreMarket-Phase5.ps1 wrapper to run tools/PreMarket-Check.ps1 and then Show-Phase5AaplPromotionChecklist.ps1, propagating the pre-market exit code (one command for core check + Phase5 review).
+## 2025-11-23 â€“ Phase-5 NVDA live smoke harness
+
+- Stabilized nvda_phase5_live_runner (dry_run=True) with dummy price for smoke tests.
+- Fixed Phase-5 risk adapter signature: _phase5_no_averaging_adapter now accepts **extra kwargs.
+- Portfolio update errors (None <= int) removed from Phase-5 live smoke path.
+- Wired optional Phase-5 double-BUY demo via HAT_PHASE5_DOUBLE_BUY_DEMO for NVDA_BPLUS_LIVE.
+- Phase-5 NVDA live risk harness is ready for future no-averaging-down enforcement (position wiring still TODO).
+
+## 2025-11-24 – Phase-5 Risk Guards (Engine + RiskManager)
+
+- Added an engine-level Phase-5 no-averaging-down guard in `ExecutionEngine.place_order`
+  that rejects a second BUY for the same symbol in the same process with
+  `reason="no_averaging_down_phase5_engine_guard"`.
+- Added focused tests for this guard:
+  - `tests/test_phase5_no_averaging_engine_guard.py`
+  - `tools/Test-Phase5NoAveragingEngineGuard.ps1`
+- Added `tools/Run-Phase5MicroSuite.ps1` to run Phase-5 sanity checks plus the no-averaging
+  engine-guard tests together as a micro suite.
+- Documented the Phase-5 risk envelope (engine-level guard, RiskManager rails, and wrappers)
+  in `docs/Phase5_RiskGuards.md`.
