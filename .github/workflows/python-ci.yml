@@ -33,7 +33,7 @@ jobs:
       - name: Run smoke tests with coverage (no hard gate yet)
         run: |
           # pytest.ini scopes to tests/smoke
-          pytest -v --cov=src --cov-report=xml
+          python -m pytest tests/smoke tests/test_phase5_* -q
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
