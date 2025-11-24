@@ -1,10 +1,7 @@
-name: CI Ã¢â‚¬â€œ Tests & Coverage
+name: CI ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Tests & Coverage
 
 on:
-  push:
-    branches: []
-  pull_request:
-    branches: []
+  workflow_dispatch:
 
 jobs:
   test:
