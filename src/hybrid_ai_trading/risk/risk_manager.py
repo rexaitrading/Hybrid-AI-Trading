@@ -1242,3 +1242,88 @@ except NameError:
     pass
 
 # === End Phase 5 position helper ===========================================
+
+
+    def check_trade_phase5(self, trade: Dict[str, Any]):
+        """
+        Phase-5 stub risk evaluation.
+
+        This is the safe placeholder wiring point for real Phase-5
+        risk rules (daily loss caps, MDD, no-averaging-down, cooldowns).
+
+        Current behavior:
+        - Always allow trades.
+        - Return a Phase5RiskDecision with allowed=True and a clear stub message.
+
+        The Phase5RiskAdapter will convert this into the flat dict:
+            {
+                "allowed": True,
+                "reason": "phase5_risk_stub_backend"
+            }
+        """
+        from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
+
+        return Phase5RiskDecision(
+            allowed=True,
+            reason="phase5_risk_stub_backend",
+            details={}
+        )
+
+def _check_trade_phase5_impl(self, trade):
+    """
+    Phase-5 daily loss integration (initial wiring).
+
+    NOTE:
+    - This implementation currently behaves like a safe stub:
+      it uses the daily_loss_gate helper but assumes new_pos_qty == pos_qty,
+      so exposure is treated as non-increasing and the gate will not block.
+    - Later, new_pos_qty should be computed from the proposed trade
+      (symbol side/qty) to enforce real daily loss behavior.
+    """
+    from hybrid_ai_trading.risk.risk_phase5_daily_loss import daily_loss_gate
+
+    # Resolve day_id and realized_pnl
+    day_id = trade.get("day_id")
+    if not day_id and hasattr(self, "_today_id"):
+        try:
+            day_id = self._today_id()
+        except Exception:
+            day_id = None
+    if not day_id:
+        day_id = "UNKNOWN"
+
+    daily_pnl = getattr(self, "daily_pnl", {}) or {}
+    realized_pnl = float(daily_pnl.get(day_id, 0.0))
+
+    # Resolve current position quantity for the symbol (if any)
+    symbol = str(trade.get("symbol", "UNKNOWN"))
+    positions = getattr(self, "positions", {}) or {}
+    pos = positions.get(symbol) if isinstance(positions, dict) else None
+    pos_qty = float(getattr(pos, "qty", 0.0) if pos is not None else 0.0)
+
+    # For now, treat new_pos_qty == pos_qty so daily_loss_gate acts
+    # as a stub (no blocking). Later this will be updated to reflect
+    # the hypothetical post-trade position.
+    new_pos_qty = pos_qty
+
+    # Resolve configured daily loss cap (if available)
+    cfg = getattr(self, "config", None)
+    daily_loss_cap = float(getattr(cfg, "phase5_daily_loss_cap", 0.0))
+
+    decision = daily_loss_gate(
+        realized_pnl=realized_pnl,
+        daily_loss_cap=daily_loss_cap,
+        pos_qty=pos_qty,
+        new_pos_qty=new_pos_qty,
+    )
+    return decision
+
+
+# Bind the implementation as a method on RiskManager if possible.
+try:
+    RiskManager  # type: ignore[name-defined]
+except NameError:
+    pass
+else:
+    if not hasattr(RiskManager, "check_trade_phase5"):
+        setattr(RiskManager, "check_trade_phase5", _check_trade_phase5_impl)
