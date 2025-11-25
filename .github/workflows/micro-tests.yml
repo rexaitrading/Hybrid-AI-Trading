@@ -1,68 +1,10 @@
-name: micro-tests
-
+name: Legacy – Disabled
 on:
   workflow_dispatch:
 
 jobs:
-  win-py312-microtests:
-    runs-on: windows-latest
+  noop:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Install pytest (quiet, UTF-8)
-        shell: pwsh
-        run: |
-          chcp 65001 > $null
-          [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-          python -m pip install --upgrade pip --disable-pip-version-check --no-color
-          python -m pip install -U pytest --disable-pip-version-check --no-color
-      - name: Run micro-tests isolated (no coverage)
-        shell: pwsh
-        run: |
-          chcp 65001 > $null
-          [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-          $env:PYTHONIOENCODING = "utf-8"
-          $env:PYTHONUTF8       = "1"
-          $env:PYTEST_ADDOPTS   = ""
-          $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = "1"
-          $env:PYTHONPATH = (Join-Path (Resolve-Path ".") "src")
-          $tmpDir = Join-Path $env:TEMP "pytest_iso_$([Guid]::NewGuid())"
-          New-Item -ItemType Directory -Path $tmpDir | Out-Null
-          $tmpIni = Join-Path $tmpDir "pytest.ini"
-          $enc = [System.Text.UTF8Encoding]::new($false)
-          [System.IO.File]::WriteAllText($tmpIni, "[pytest]`naddopts = -q --maxfail=1 --disable-warnings`ntestpaths = .`n", $enc)
-          $t1 = (Resolve-Path "tests\test_marketable_limit.py").Path
-          $t2 = (Resolve-Path "tests\test_ib_safe_unit.py").Path
-          Push-Location $tmpDir
-          try {
-            python -m pytest -c $tmpIni --rootdir $tmpDir --confcutdir $tmpDir -p no:pytest_cov "$t1" "$t2"
-          } finally {
-            Pop-Location
-            Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
-          }
-
-  win-phase1-health:
-    if: ${{ vars.RUN_PHASE1_HEALTH == 'true' }}
-    needs: win-py312-microtests
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Phase-1 health (best-effort)
-        shell: pwsh
-        continue-on-error: true
-        env:
-          PYTHONIOENCODING: utf-8
-          PYTHONUTF8: "1"
-        run: |
-          chcp 65001 > $null
-          [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-          if (Test-Path "scripts\ib_health.py") {
-            python scripts\ib_health.py
-          } else {
-            Write-Host "ib_health.py not present; skipping Phase-1 health."
-          }
+      - name: Disabled legacy workflow
+        run: echo "This workflow is disabled and kept only for history."

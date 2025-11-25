@@ -1,5 +1,4 @@
-name: Micro Tests Hotfix (disabled)
-
+name: Legacy – Disabled
 on:
   workflow_dispatch:
 
@@ -7,5 +6,5 @@ jobs:
   noop:
     runs-on: ubuntu-latest
     steps:
-      - name: Disabled micro-tests-hotfix placeholder
-        run: echo "micro-tests-hotfix.yml temporarily disabled (CI guardrail = python-ci only)"
+      - name: Disabled legacy workflow
+        run: echo "This workflow is disabled and kept only for history."

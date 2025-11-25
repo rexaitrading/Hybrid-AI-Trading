@@ -1,35 +1,10 @@
-name: Phase5 Micro Suite
-
+name: Legacy – Disabled
 on:
   workflow_dispatch:
 
 jobs:
-  phase5-microsuite:
-    runs-on: windows-latest
-
+  noop:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          python -m pip install --upgrade pip
-          if (Test-Path "requirements-dev.txt") {
-            pip install -r requirements-dev.txt
-          } elseif (Test-Path "requirements.txt") {
-            pip install -r requirements.txt
-          }
-
-      - name: Run Phase-5 micro suite
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          Set-Location "$env:GITHUB_WORKSPACE"
-          .\tools\Run-Phase5MicroSuite.ps1
+      - name: Disabled legacy workflow
+        run: echo "This workflow is disabled and kept only for history."

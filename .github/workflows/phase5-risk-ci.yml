@@ -1,37 +1,10 @@
-name: Phase5 Risk Micro CI
-
+name: Legacy – Disabled
 on:
   workflow_dispatch:
 
 jobs:
-  phase5-risk:
-    runs-on: windows-latest
-
+  noop:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if (Test-Path "requirements.txt") {
-            pip install -r requirements.txt
-          } else {
-            pip install pytest
-          }
-        shell: pwsh
-
-      - name: Run Phase5 unit tests (risk policy harness)
-        run: |
-          python -m pytest tests/test_phase5_risk_policy.py
-        shell: pwsh
-
-      - name: Run Phase5 CLI tools micro-test
-        run: |
-          python -m pytest tests/test_phase5_risk_cli_tools.py
-        shell: pwsh
+      - name: Disabled legacy workflow
+        run: echo "This workflow is disabled and kept only for history."
