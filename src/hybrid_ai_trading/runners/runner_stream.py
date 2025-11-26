@@ -64,7 +64,7 @@ async def connect_with_retry(ib: IB, host: str, port: int, cid: int,
             except Exception:
                 pass
             wait = min(5 * i, 30)
-            print(f"[connect] attempt {i}/{attempts} failed: {type(e).__name__} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â retrying in {wait}s", flush=True)
+            print(f"[connect] attempt {i}/{attempts} failed: {type(e).__name__} - retrying in {wait}s", flush=True)
             await asyncio.sleep(wait)
     return False
 
