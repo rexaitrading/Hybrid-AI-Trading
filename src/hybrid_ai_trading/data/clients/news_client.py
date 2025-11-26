@@ -1,7 +1,7 @@
 from __future__ import annotations
 from hybrid_ai_trading.utils.time_utils import utc_now
 """
-News Client (Hybrid AI Quant Pro v2.1 Ã¢â‚¬â€œ Hedge Fund OE Grade, DB-Integrated)
+News Client (Hybrid AI Quant Pro v2.1 – Hedge Fund OE Grade, DB-Integrated)
 ---------------------------------------------------------------------------
 Responsibilities:
 - Fetch normalized news from provider APIs (Polygon, Benzinga, etc.)
@@ -48,7 +48,7 @@ def _normalize_article(article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "symbols": ",".join(article.get("tickers", []) or []),
         }
     except Exception as e:
-        logger.error("Ã¢ÂÅ’ Failed to normalize article: %s", e, exc_info=True)
+        logger.error("Failed to normalize article: %s", e, exc_info=True)
         return None
 
 
@@ -68,7 +68,7 @@ def fetch_polygon_news(limit: int = 10, ticker: Optional[str] = None) -> List[Di
     """
     polygon_key = os.getenv("POLYGON_KEY")  # dynamic lookup
     if not polygon_key:
-        logger.warning("Ã¢Å¡Â Ã¯Â¸Â POLYGON_KEY not set Ã¢â€ â€™ skipping Polygon news fetch")
+        logger.warning("[WARN] POLYGON_KEY not set – skipping Polygon news fetch")
         return []
 
     url = "https://api.polygon.io/v2/reference/news"
@@ -81,10 +81,10 @@ def fetch_polygon_news(limit: int = 10, ticker: Optional[str] = None) -> List[Di
         resp.raise_for_status()
         data = resp.json()
         results = data.get("results", [])
-        logger.info("Ã¢Å“â€¦ Polygon news fetched | count=%s", len(results))
+        logger.info("Polygon news fetched | count=%s", len(results))
         return results
     except Exception as e:
-        logger.error("Ã¢ÂÅ’ Polygon news fetch failed: %s", e, exc_info=True)
+        logger.error("Polygon news fetch failed: %s", e, exc_info=True)
         return []
 
 
@@ -101,7 +101,7 @@ def fetch_benzinga_news(symbol: str, limit: int = 10) -> List[Dict[str, Any]]:
     """
     benzinga_key = os.getenv("BENZINGA_KEY")  # dynamic lookup
     if not benzinga_key:
-        logger.warning("Ã¢Å¡Â Ã¯Â¸Â BENZINGA_KEY not set Ã¢â€ â€™ skipping Benzinga news fetch")
+        logger.warning("[WARN] BENZINGA_KEY not set – skipping Benzinga news fetch")
         return []
 
     url = "https://api.benzinga.com/api/v2/news"
@@ -112,12 +112,12 @@ def fetch_benzinga_news(symbol: str, limit: int = 10) -> List[Dict[str, Any]]:
         resp.raise_for_status()
         data = resp.json()
         if isinstance(data, dict):
-            logger.info("Ã¢Å“â€¦ Benzinga news fetched | symbol=%s count=%s", symbol, len(data))
+            logger.info("Benzinga news fetched | symbol=%s count=%s", symbol, len(data))
             return data.get("articles", [])
-        logger.error("Ã¢ÂÅ’ Benzinga response invalid format: %s", type(data))
+        logger.error("Benzinga response invalid format: %s", type(data))
         return []
     except Exception as e:
-        logger.error("Ã¢ÂÅ’ Benzinga news fetch failed: %s", e, exc_info=True)
+        logger.error("Benzinga news fetch failed: %s", e, exc_info=True)
         return []
 
 
@@ -148,10 +148,10 @@ def save_articles(articles: List[Dict[str, Any]]) -> int:
                 count += 1
             except IntegrityError:
                 session.rollback()  # already exists
-        logger.info("Ã¢Å“â€¦ Saved %d new articles", count)
+        logger.info("Saved %d new articles", count)
         return count
     except Exception as e:
-        logger.error("Ã¢ÂÅ’ Failed saving articles: %s", e, exc_info=True)
+        logger.error("Failed saving articles: %s", e, exc_info=True)
         session.rollback()
         return count
     finally:
