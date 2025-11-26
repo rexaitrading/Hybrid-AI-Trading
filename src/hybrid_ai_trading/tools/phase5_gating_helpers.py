@@ -1,4 +1,4 @@
-"""
+﻿"""
 Phase-5 gating helpers.
 
 Central place for:
