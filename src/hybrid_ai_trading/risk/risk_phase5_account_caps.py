@@ -49,4 +49,93 @@ def account_daily_loss_gate(
         allowed=True,
         reason="account_daily_loss_ok",
         details=details,
+    )# --- Phase-5 override: simplified account_daily_loss_gate --------------------
+
+def account_daily_loss_gate(
+    realized_pnl: float,
+    account_daily_loss_cap: float,
+):
+    """
+    Simplified account-level daily loss gate for Phase-5.
+
+    Behavior:
+    - If account_daily_loss_cap <= 0: treat as not configured (pass-through).
+    - If realized_pnl <= -abs(account_daily_loss_cap): block with reason
+      "account_daily_loss_cap_block".
+    - Otherwise: allow with reason "account_daily_loss_cap_ok".
+    """
+    from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
+
+    rpnl = float(realized_pnl)
+    cap = float(account_daily_loss_cap)
+
+    details = {
+        "account_realized_pnl": rpnl,
+        "account_daily_loss_cap": cap,
+    }
+
+    if cap == 0.0:
+        return Phase5RiskDecision(
+            allowed=True,
+            reason="account_daily_loss_cap_not_configured",
+            details=details,
+        )
+
+    if rpnl <= -abs(cap):
+        return Phase5RiskDecision(
+            allowed=False,
+            reason="account_daily_loss_cap_block",
+            details=details,
+        )
+
+    return Phase5RiskDecision(
+        allowed=True,
+        reason="account_daily_loss_cap_ok",
+        details=details,
     )
+# --- End Phase-5 override ----------------------------------------------------
+# --- Phase-5 final override: normalized account_daily_loss_gate signature -----
+
+def account_daily_loss_gate(
+    account_realized_pnl: float,
+    account_daily_loss_cap: float,
+):
+    """
+    Normalized account-level daily loss gate for Phase-5.
+
+    Behavior:
+    - If account_daily_loss_cap <= 0: treat as not configured (pass-through).
+    - If account_realized_pnl <= -abs(account_daily_loss_cap): block with reason
+      "account_daily_loss_cap_block".
+    - Otherwise: allow with reason "account_daily_loss_cap_ok".
+    """
+    from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
+
+    rpnl = float(account_realized_pnl)
+    cap = float(account_daily_loss_cap)
+
+    details = {
+        "account_realized_pnl": rpnl,
+        "account_daily_loss_cap": cap,
+    }
+
+    if cap == 0.0:
+        return Phase5RiskDecision(
+            allowed=True,
+            reason="account_daily_loss_cap_not_configured",
+            details=details,
+        )
+
+    if rpnl <= -abs(cap):
+        return Phase5RiskDecision(
+            allowed=False,
+            reason="account_daily_loss_cap_block",
+            details=details,
+        )
+
+    return Phase5RiskDecision(
+        allowed=True,
+        reason="account_daily_loss_cap_ok",
+        details=details,
+    )
+# --- End Phase-5 final override ------------------------------------------------
