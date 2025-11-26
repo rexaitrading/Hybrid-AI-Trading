@@ -26,6 +26,48 @@ class Phase5RiskConfig:
     no_averaging_down: bool
     allowed_strategies: List[str]
 
+# ---------------------------------------------------------------------------
+# Strategy-specific EV bands for Phase-5 ORB strategies.
+#
+# These are *not* env-driven; they are data-derived from ORB EV sweeps
+# (research/spy_orb_ev_threshold_sweep.csv, research/qqq_orb_ev_threshold_sweep.csv)
+# and can be tuned as the research evolves.
+# ---------------------------------------------------------------------------
+
+SPY_ORB_EV_BAND_A = {
+    "symbol": "SPY",
+    "regime": "SPY_ORB_REPLAY",
+    "orb_minutes": 15,          # 15-minute ORB window
+    "tp_r_primary": 2.0,        # primary TP in R (from EV sweep)
+    "tp_r_fallback": 1.5,       # fallback TP in R
+    "min_trades_per_day": 1,    # observed ~1 per day in sweep
+    "min_win_rate": 0.8,        # conservative floor (observed ~1.0 so far)
+    "min_ev_r": 1.5,            # require EV >= 1.5R for band to be “valid”
+    "label": "SPY_ORB_EV_BAND_A",
+    "notes": (
+        "Based on spy_orb_multi_day_sweep.csv, orb_minutes=15, "
+        "tp_r in {1.5, 2.0} over 5 sessions "
+        "with win_rate ~1.0 and avg_ev_r = {1.5, 2.0}."
+    ),
+}
+
+
+QQQ_ORB_EV_BAND_A = {
+    "symbol": "QQQ",
+    "regime": "QQQ_ORB_REPLAY",
+    "orb_minutes": 5,           # EV-chosen ORB window
+    "tp_r_primary": 2.5,        # EV-chosen primary TP in R
+    "tp_r_fallback": 2.5,       # fallback TP in R (same band for now)
+    "min_trades_per_day": 1,    # tune as more days are added
+    "min_win_rate": 1.0,        # conservative floor from EV sweep
+    "min_ev_r": 2.5,            # conservative EV floor from EV sweep
+    "label": "QQQ_ORB_EV_BAND_A",
+    "notes": (
+        "Based on qqq_orb_ev_threshold_sweep.csv, orb_minutes=5, "
+        "tp_r in {2.5} over current sessions "
+        "with win_rate ~1.0 and ev_r = 2.5."
+    ),
+}
 
 def _get_float_env(name: str, default: float) -> float:
     val = os.getenv(name)

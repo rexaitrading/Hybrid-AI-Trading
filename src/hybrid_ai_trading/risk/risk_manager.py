@@ -1456,7 +1456,49 @@ def _check_trade_phase5_impl_v4(self, trade):
         return acct_decision
 
     # 2) Delegate to v3 (symbol-level daily_loss_gate + no_avg gate)
-    return _check_trade_phase5_impl_v3(self, trade)
+    sym_decision = _check_trade_phase5_impl_v3(self, trade)
+    if not getattr(sym_decision, "allowed", True):
+        return sym_decision
+
+    # 3) Symbol-specific EV-band gates (SPY/QQQ ORB)
+    class _Phase5Ctx:
+        pass
+
+    ctx = _Phase5Ctx()
+    ctx.symbol = str(trade.get("symbol", "UNKNOWN"))
+    ctx.regime = str(trade.get("regime", trade.get("regime_name", "")) or "")
+
+    tp_r = trade.get("tp_r")
+    if tp_r is None:
+        tp_r = trade.get("r_multiple")
+    if tp_r is not None:
+        try:
+            tp_r = float(tp_r)
+        except (TypeError, ValueError):
+            tp_r = None
+    ctx.tp_r = tp_r
+
+    ctx.session_date = trade.get("day_id") or trade.get("session_date")
+
+    # Local import to avoid module-level circular dependency:
+    # risk_phase5_engine_guard already imports RiskManager.
+    from hybrid_ai_trading.risk.risk_phase5_engine_guard import allow_trade_phase5
+
+    allowed, reason = allow_trade_phase5(ctx, risk_state=None)
+    if not allowed:
+        return Phase5RiskDecision(
+            allowed=False,
+            reason=reason,
+            details={
+                "account_daily_loss": {
+                    "account_realized_pnl": account_realized_pnl,
+                    "account_daily_loss_cap": account_daily_loss_cap,
+                },
+                "symbol_phase5": getattr(sym_decision, "details", {}),
+            },
+        )
+
+    return sym_decision
 
 
 # Re-bind the implementation as the method on RiskManager.
