@@ -110,3 +110,28 @@ try {
     Write-Host "[PHASE-5] Option A sanity threw an error: $($_.Exception.Message)" -ForegroundColor Red
 }
 # --- End Phase-5 Option A sanity hook ---
+
+# === Phase-5: microsuite pre-flight checks ===================================
+Write-Host ""
+Write-Host "[PREMARKET] Phase-5 microsuites (risk + portfolio/exec)" -ForegroundColor Cyan
+
+try {
+    Write-Host "[PREMARKET] Running Phase-5 risk microsuite..." -ForegroundColor Cyan
+    .\tools\Run-Phase5Tests.ps1
+    Write-Host "[PREMARKET] Phase-5 risk microsuite: OK" -ForegroundColor Green
+}
+catch {
+    Write-Host "[PREMARKET] Phase-5 risk microsuite: FAILED" -ForegroundColor Red
+    throw
+}
+
+try {
+    Write-Host "[PREMARKET] Running portfolio/exec microsuite..." -ForegroundColor Cyan
+    .\tools\Run-PortfolioExecTests.ps1
+    Write-Host "[PREMARKET] Portfolio/exec microsuite: OK" -ForegroundColor Green
+}
+catch {
+    Write-Host "[PREMARKET] Portfolio/exec microsuite: FAILED" -ForegroundColor Red
+    throw
+}
+# ============================================================================
