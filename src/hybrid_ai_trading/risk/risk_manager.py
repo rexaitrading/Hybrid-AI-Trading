@@ -1327,3 +1327,142 @@ except NameError:
 else:
     if not hasattr(RiskManager, "check_trade_phase5"):
         setattr(RiskManager, "check_trade_phase5", _check_trade_phase5_impl)
+
+def _check_trade_phase5_impl_v3(self, trade):
+    """
+    Phase-5 combined risk evaluation (daily loss + no-averaging-down).
+
+    This implementation:
+    - Computes a *real* hypothetical new_pos_qty using trade["side"] and trade["qty"].
+    - Applies daily_loss_gate first.
+    - If daily loss passes, applies no_averaging_down_gate.
+    - Returns a Phase5RiskDecision.
+
+    NOTE:
+    - Additional gates (MDD, cooldown) can be added later in this pipeline.
+    """
+    from hybrid_ai_trading.risk.risk_phase5_daily_loss import daily_loss_gate
+    from hybrid_ai_trading.risk.risk_phase5_no_avg import no_averaging_down_gate
+    from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
+
+    # Resolve day_id and realized_pnl
+    day_id = trade.get("day_id")
+    if not day_id and hasattr(self, "_today_id"):
+        try:
+            day_id = self._today_id()
+        except Exception:
+            day_id = None
+    if not day_id:
+        day_id = "UNKNOWN"
+
+    daily_pnl = getattr(self, "daily_pnl", {}) or {}
+    realized_pnl = float(daily_pnl.get(day_id, 0.0))
+
+    # Resolve current position quantity and avg_price for the symbol (if any)
+    symbol = str(trade.get("symbol", "UNKNOWN"))
+    positions = getattr(self, "positions", {}) or {}
+    pos = positions.get(symbol) if isinstance(positions, dict) else None
+    pos_qty = float(getattr(pos, "qty", 0.0) if pos is not None else 0.0)
+    avg_price = float(getattr(pos, "avg_price", trade.get("price", 0.0) or 0.0))
+
+    # Compute signed quantity and hypothetical new_pos_qty
+    side_raw = str(trade.get("side", "")).upper()
+    qty = float(trade.get("qty", trade.get("size", 0.0)) or 0.0)
+
+    if qty <= 0.0:
+        signed_qty = 0.0
+    elif "SELL" in side_raw or "SHORT" in side_raw:
+        signed_qty = -qty
+    else:
+        # Treat anything else as long bias (BUY/LONG).
+        signed_qty = qty
+
+    new_pos_qty = pos_qty + signed_qty
+
+    # Resolve configured daily loss cap (if available)
+    cfg = getattr(self, "config", None)
+    daily_loss_cap = float(getattr(cfg, "phase5_daily_loss_cap", 0.0))
+
+    # 1) Daily loss gate
+    dl_decision = daily_loss_gate(
+        realized_pnl=realized_pnl,
+        daily_loss_cap=daily_loss_cap,
+        pos_qty=pos_qty,
+        new_pos_qty=new_pos_qty,
+    )
+    if not dl_decision.allowed:
+        return dl_decision
+
+    # 2) No-averaging-down gate
+    na_decision = no_averaging_down_gate(
+        side=side_raw,
+        qty=qty,
+        price=float(trade.get("price", 0.0) or 0.0),
+        pos_qty=pos_qty,
+        avg_price=avg_price,
+    )
+    if not na_decision.allowed:
+        return na_decision
+
+    # 3) All Phase-5 gates passed
+    combined_details = {
+        "daily_loss": dl_decision.details,
+        "no_avg": na_decision.details,
+    }
+    return Phase5RiskDecision(
+        allowed=True,
+        reason="phase5_risk_ok",
+        details=combined_details,
+    )
+
+
+# Re-bind the implementation as the method on RiskManager.
+try:
+    RiskManager  # type: ignore[name-defined]
+except NameError:
+    pass
+else:
+    setattr(RiskManager, "check_trade_phase5", _check_trade_phase5_impl_v3)
+
+from hybrid_ai_trading.risk.risk_phase5_account_caps import account_daily_loss_gate
+
+
+def _check_trade_phase5_impl_v4(self, trade):
+    """
+    Phase-5 combined risk evaluation with account-wide daily caps.
+
+    Pipeline:
+    1) account_daily_loss_gate (account-wide)
+    2) _check_trade_phase5_impl_v3 (symbol-level daily_loss_gate + no_avg)
+    """
+    from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
+
+    # 1) Account-wide daily loss cap
+    # Try to find an account-wide realized PnL on the RiskManager.
+    account_realized_pnl = float(
+        getattr(self, "account_realized_pnl", 0.0)
+        or getattr(self, "daily_account_pnl", 0.0)
+        or 0.0
+    )
+
+    cfg = getattr(self, "config", None)
+    account_daily_loss_cap = float(getattr(cfg, "phase5_account_daily_loss_cap", 0.0))
+
+    acct_decision: Phase5RiskDecision = account_daily_loss_gate(
+        account_realized_pnl=account_realized_pnl,
+        account_daily_loss_cap=account_daily_loss_cap,
+    )
+    if not acct_decision.allowed:
+        return acct_decision
+
+    # 2) Delegate to v3 (symbol-level daily_loss_gate + no_avg gate)
+    return _check_trade_phase5_impl_v3(self, trade)
+
+
+# Re-bind the implementation as the method on RiskManager.
+try:
+    RiskManager  # type: ignore[name-defined]
+except NameError:
+    pass
+else:
+    setattr(RiskManager, "check_trade_phase5", _check_trade_phase5_impl_v4)

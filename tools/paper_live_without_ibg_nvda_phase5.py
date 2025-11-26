@@ -1,4 +1,4 @@
-﻿"""
+"""
 PaperLiveWithoutIBG NVDA Phase-5 runner.
 
 - NO broker / NO IBG; this is a pure in-process paper runner.
@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from hybrid_ai_trading.execution.execution_engine import place_order_phase5
+from hybrid_ai_trading.execution.execution_engine_phase5_guard import (place_order_phase5_with_guard as place_order_phase5)
 from hybrid_ai_trading.risk.risk_manager import RiskManager
 
 
@@ -38,6 +38,13 @@ class PaperEngine:
         # If RiskManager uses .positions, hook it up:
         if hasattr(self.risk_manager, "positions"):
             setattr(self.risk_manager, "positions", self.positions)
+        # Configure Phase-5 daily loss cap for paper runs (per docs/SPY_ORB_Phase5_Config.md).
+        import types
+        cfg = getattr(self.risk_manager, "config", None)
+        if cfg is None:
+            self.risk_manager.config = types.SimpleNamespace(phase5_daily_loss_cap=-500.0)
+        elif not hasattr(cfg, "phase5_daily_loss_cap"):
+            cfg.phase5_daily_loss_cap = -500.0
 
     def get_position_for_symbol(self, symbol: str) -> float:
         return float(self.positions.get(symbol, 0.0))
