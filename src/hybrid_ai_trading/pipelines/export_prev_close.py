@@ -1,5 +1,5 @@
 """
-Export Previous Close (Hybrid AI Quant Pro Ã¢â‚¬â€œ Hedge-Fund Grade, Timezone Aware)
+Export Previous Close (Hybrid AI Quant Pro - Hedge-Fund Grade, Timezone Aware)
 - Exports daily prev_close for Core_Stocks and Core_Crypto.
 - Writes CSV + JSON outputs under ./data/.
 - Stub fallback: if Polygon key missing, logs warning but still exits 0.
