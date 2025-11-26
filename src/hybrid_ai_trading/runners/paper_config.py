@@ -20,7 +20,7 @@ def build_parser():
     ap.add_argument("--log-file", type=str, default=None,
                     help="Optional JSONL log file path.")
     ap.add_argument("--dry-drill", action="store_true",
-                    help="DonÃ¢â‚¬â„¢t place/route orders; dry run signals only.")
+                    help="Don't place/route orders; dry run signals only.")
     ap.add_argument("--snapshots-when-closed", action="store_true",
                     help="When market is CLOSED and preflight is forced, still proceed to IB snapshots + QuantCore eval.")
     ap.add_argument("--enforce-riskhub", action="store_true",
