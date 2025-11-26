@@ -1,7 +1,7 @@
 from hybrid_ai_trading.utils.time_utils import utc_now
 
 """
-Regime Detector (Hybrid AI Quant Pro v16.13 Ã¢â‚¬â€œ Suite-Aligned, Fully Covered)
+Regime Detector (Hybrid AI Quant Pro v16.13 - Suite-Aligned, Fully Covered)
 ----------------------------------------------------------------------------
 - Classifies regimes (bull, bear, sideways, crisis, transition, neutral)
 - Configurable thresholds (return, volatility, min_samples)
@@ -59,7 +59,7 @@ class RegimeDetector:
         self.history: Dict[str, List[str]] = {}
 
         logger.info(
-            "Ã¢Å“â€¦ RegimeDetector initialized | enabled=%s | method=%s | "
+            "[OK] RegimeDetector initialized | enabled=%s | method=%s | "
             "lookback=%dd | bull>%s | bear<%s | crisis_vol>%s | min_samples=%s",
             self.enabled,
             self.method,
@@ -87,12 +87,12 @@ class RegimeDetector:
 
         closes = self._get_prices(symbol, prices)
         if closes.empty:
-            logger.warning("No data for %s Ã¢â€ â€™ returning neutral", symbol)
+            logger.warning("No data for %s - returning neutral", symbol)
             return "neutral"
 
         if len(closes) < self.min_samples:
             logger.warning(
-                "Insufficient data for %s: have %d, need Ã¢â€°Â¥ %d Ã¢â€ â€™ returning neutral",
+                "Insufficient data for %s: have %d, need >= %d - returning neutral",
                 symbol,
                 len(closes),
                 self.min_samples,
@@ -101,7 +101,7 @@ class RegimeDetector:
 
         rets = closes.pct_change().dropna()
         if rets.empty:
-            logger.warning("Empty returns for %s Ã¢â€ â€™ returning sideways", symbol)
+            logger.warning("Empty returns for %s - returning sideways", symbol)
             return "sideways"
 
         try:
@@ -109,7 +109,7 @@ class RegimeDetector:
             vol = float(rets.std())
         except Exception as e:
             logger.error(
-                "Return stats failed for %s: %s Ã¢â€ â€™ returning neutral", symbol, e
+                "Return stats failed for %s: %s - returning neutral", symbol, e
             )
             return "neutral"
 
@@ -128,7 +128,7 @@ class RegimeDetector:
         self.history.setdefault(symbol, []).append(regime)
 
         logger.info(
-            "Ã°Å¸â€œÅ  Regime calc %s | regime=%s | avg_ret=%.4f | vol=%.4f | n=%d",
+            "[INFO] Regime calc %s | regime=%s | avg_ret=%.4f | vol=%.4f | n=%d",
             symbol,
             regime,
             avg_return,
@@ -183,7 +183,7 @@ class RegimeDetector:
     # ------------------------------------------------------------------
     def reset(self) -> None:
         """Clear internal history."""
-        logger.info("Ã°Å¸â€â€ž Resetting regime history")
+        logger.info("[INFO] Resetting regime history")
         self.history.clear()
 
     # ------------------------------------------------------------------
