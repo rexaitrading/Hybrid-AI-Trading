@@ -93,3 +93,20 @@ if ($env:HAT_ENABLE_NVDA_PHASE5_LIVE -eq '1') {
 # Default scheduled pre-market runs remain unchanged unless these env vars
 # are explicitly set.
 # -----------------------------------------------------------------------------
+
+# --- Phase-5 Option A sanity hook (SPY / QQQ / NVDA) ---
+try {
+    $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $sanityPath = Join-Path $scriptRoot "Phase5-OptionA-Sanity.ps1"
+
+    if (Test-Path $sanityPath) {
+        Write-Host "" 
+        Write-Host "[PHASE-5] Running Option A ORB multi-symbol sanity..." -ForegroundColor Cyan
+        & $sanityPath
+    } else {
+        Write-Host "[PHASE-5] Skipping Option A sanity (Phase5-OptionA-Sanity.ps1 not found)." -ForegroundColor DarkYellow
+    }
+} catch {
+    Write-Host "[PHASE-5] Option A sanity threw an error: $($_.Exception.Message)" -ForegroundColor Red
+}
+# --- End Phase-5 Option A sanity hook ---
