@@ -62,7 +62,7 @@ def account_daily_loss_gate(
     - If account_daily_loss_cap <= 0: treat as not configured (pass-through).
     - If realized_pnl <= -abs(account_daily_loss_cap): block with reason
       "account_daily_loss_cap_block".
-    - Otherwise: allow with reason "account_daily_loss_cap_ok".
+    - Otherwise: allow with reason "account_daily_loss_ok".
     """
     from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
 
@@ -90,7 +90,7 @@ def account_daily_loss_gate(
 
     return Phase5RiskDecision(
         allowed=True,
-        reason="account_daily_loss_cap_ok",
+        reason="account_daily_loss_ok",
         details=details,
     )
 # --- End Phase-5 override ----------------------------------------------------
@@ -107,7 +107,7 @@ def account_daily_loss_gate(
     - If account_daily_loss_cap <= 0: treat as not configured (pass-through).
     - If account_realized_pnl <= -abs(account_daily_loss_cap): block with reason
       "account_daily_loss_cap_block".
-    - Otherwise: allow with reason "account_daily_loss_cap_ok".
+    - Otherwise: allow with reason "account_daily_loss_ok".
     """
     from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
 
@@ -135,7 +135,7 @@ def account_daily_loss_gate(
 
     return Phase5RiskDecision(
         allowed=True,
-        reason="account_daily_loss_cap_ok",
+        reason="account_daily_loss_ok",
         details=details,
     )
 # --- End Phase-5 final override ------------------------------------------------
