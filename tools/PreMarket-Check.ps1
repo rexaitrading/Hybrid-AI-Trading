@@ -135,3 +135,13 @@ catch {
     throw
 }
 # ============================================================================
+Write-Host "`n[PHASE5 CHECK] NVDA Phase-5 IB paper connectivity (dry run via live runner)" -ForegroundColor Cyan
+
+$env:HAT_IB_HOST    = "127.0.0.1"
+$env:HAT_IB_PORT    = "7497"
+$env:HAT_IB_CLIENT_ID = "42"
+$env:HAT_IB_ACCOUNT = "DUXXXXXXXX"
+$env:HAT_PHASE5_ACCOUNT_DAILY_LOSS_CAP = "50"
+
+# Here you might later add a special "check only" mode; for now it runs one small trade.
+& .\.venv\Scripts\python.exe .\src\hybrid_ai_trading\runners\nvda_phase5_live_runner.py

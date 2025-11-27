@@ -76,27 +76,34 @@ def get_account_daily_loss_cap_from_env(default: float = 50.0) -> float:
 
 def build_live_config() -> Dict[str, Any]:
     """
-    Example config enabling Phase-5 no-averaging for a live-style engine.
+    Phase-5 NVDA live config for IB paper trading.
 
     NOTE:
-    - dry_run=True keeps this SAFE (no real broker).
-    - When you wire this into a true live runner, extend with your real
-      broker / data / cost model config.
+    - dry_run=False: ExecutionEngine will use broker adapter (IB paper).
+    - Broker/account/port are read from env vars where possible.
+    - Make sure IB Gateway PAPER is up and env vars are set before running.
     """
     return {
-        # SAFE: keep dry_run=True while this is a smoke / paper runner.
-        "dry_run": True,
+        "dry_run": False,
         "phase5_no_averaging_down_enabled": True,
         "phase5": {
             "no_averaging_down_enabled": True,
-            # Account-level daily loss cap (USD). Uses env var if set.
             "account_daily_loss_cap": get_account_daily_loss_cap_from_env(50.0),
         },
-        # Extend here with your real config fields as needed:
-        # "costs": {...},
-        # "broker": {...},
-        # "universe": ["NVDA"],
-        # etc.
+        "broker": {
+            "adapter": "ib",
+            "host": os.environ.get("HAT_IB_HOST", "127.0.0.1"),
+            "port": int(os.environ.get("HAT_IB_PORT", "7497")),
+            "client_id": int(os.environ.get("HAT_IB_CLIENT_ID", "42")),
+            "account": os.environ.get("HAT_IB_ACCOUNT", "DUXXXXXXXX"),
+            "paper": True,
+        },
+        "universe": ["NVDA"],
+        "costs": {
+            "mode": "simple_bps",
+            "commission_bps": 0.5,
+            "slippage_bps": 1.0,
+        },
     }
 
 
