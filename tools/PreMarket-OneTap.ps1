@@ -78,8 +78,7 @@ if ($exitCode -ne 0) {
     exit $exitCode
 }
 
-Write-Host "[ONETAP] PreMarket-OneTap complete (exit 0)" -ForegroundColor Green
-exit 0# --- Phase-5 NVDA IB paper live -------------------------------------------------
+# --- Phase-5 NVDA IB paper live -------------------------------------------------
 Write-Host "`n[PHASE5] NVDA Phase-5 IB paper live" -ForegroundColor Cyan
 
 # IB connection env (adjust values / pull from your config if needed)
@@ -94,3 +93,6 @@ $env:HAT_PHASE5_ACCOUNT_DAILY_LOSS_CAP = "50"
 # Run NVDA Phase-5 live runner (now using IB paper broker config)
 & .\.venv\Scripts\python.exe .\src\hybrid_ai_trading\runners\nvda_phase5_live_runner.py
 # -------------------------------------------------------------------------------
+
+Write-Host "[ONETAP] PreMarket-OneTap complete (exit 0)" -ForegroundColor Green
+exit 0

@@ -146,7 +146,7 @@ def main() -> None:
     symbol = "NVDA"
     side = "BUY"
     qty = 1.0
-    price = 1.0  # dummy price for Phase-5 dry_run smoke (must be > 0)
+    price = 1.0  # dummy price for IB paper connectivity smoke (must be > 0)
     regime = "NVDA_BPLUS_LIVE"
 
     # Load IPO tags (for future IPO symbols, including HK-origin NASDAQ listings).
@@ -201,10 +201,10 @@ def main() -> None:
     print("  logs/phase5_live_events.jsonl")
     print("and, if paper_exec_logger.log_phase5_event/log_event exists,")
     print("  it will also be forwarded there.")
-    print("\nTo move from smoke -> true live:")
-    print("  - change dry_run=False in build_live_config()")
-    print("  - extend cfg['broker'] / cfg['costs'] / universe")
-    print("  - call this runner from your pre-market PowerShell pipeline.")
+    print("\nTo move from small IB paper probe -> fuller live setup:")
+    print("  - replace dummy price/qty with real signal- and Kelly-driven values")
+    print("  - extend cfg['broker'] / cfg['costs'] / universe as needed")
+    print("  - keep this runner under Phase-5 risk + PreMarket guardrails")
 
 
 if __name__ == "__main__":
