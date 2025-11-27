@@ -1,4 +1,5 @@
 param(
+    [switch]$ForceRestart,
   [string]$UserProfile = 'paper',
   [int]   $Port        = 4002,
   [string]$IbRoot      = 'C:\Jts\ibgateway\1039',
