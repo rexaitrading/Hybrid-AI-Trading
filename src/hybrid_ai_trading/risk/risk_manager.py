@@ -1507,4 +1507,116 @@ try:
 except NameError:
     pass
 else:
-    setattr(RiskManager, "check_trade_phase5", _check_trade_phase5_impl_v4)
+    setattr(RiskManager, "check_trade_phase5", _check_trade_phase5_impl_v4)# === Phase 5: SPY ORB EV metadata wiring (non-invasive) =====================
+
+def _rm_compute_spy_orb_ev_r(tp_r: float) -> float:
+    """
+    Compute design-time EV_R for SPY ORB band A using SPY_ORB_EV_BAND_A.
+
+    This mirrors tools/spy_orb_ev_model.py but is kept local and simple.
+    """
+    try:
+        from hybrid_ai_trading.risk.phase5_config import SPY_ORB_EV_BAND_A
+    except Exception:
+        return 0.0
+
+    cfg = SPY_ORB_EV_BAND_A
+    try:
+        tp_r_primary = float(cfg.get("tp_r_primary", 0.0) or 0.0)
+        tp_r_fallback = float(cfg.get("tp_r_fallback", 0.0) or 0.0)
+        min_ev_r = float(cfg.get("min_ev_r", 0.0) or 0.0)
+    except Exception:
+        return 0.0
+
+    if tp_r in {tp_r_primary, tp_r_fallback}:
+        return tp_r
+    return min_ev_r
+
+
+def _rm_attach_phase5_spy_orb_ev_details(risk_manager, trade, decision) -> None:
+    """
+    Enrich a Phase5RiskDecision with EV metadata for SPY ORB trades.
+
+    Writes into decision.details:
+      - 'ev_mu'      : EV_R in R units
+      - 'ev_band_abs': EV band half-width in R
+    """
+    try:
+        from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
+    except Exception:
+        return
+
+    if not isinstance(decision, Phase5RiskDecision):
+        return
+
+    try:
+        symbol = str(trade.get("symbol") or trade.get("sym") or "").upper()
+        regime = str(trade.get("regime") or trade.get("regime_name", "") or "")
+        tp_r = trade.get("tp_r", trade.get("r_multiple"))
+    except Exception:
+        return
+
+    if symbol != "SPY":
+        return
+    if regime not in ("SPY_ORB_REPLAY", "SPY_ORB_LIVE", "SPY_ORB_PAPER"):
+        return
+    if tp_r is None:
+        # Fallback: use conservative EV from SPY_ORB_EV_BAND_A (min_ev_r) when tp_r is missing.
+        try:
+            from hybrid_ai_trading.risk.phase5_config import SPY_ORB_EV_BAND_A
+            cfg = SPY_ORB_EV_BAND_A
+            ev_mu = float(cfg.get("min_ev_r", 0.0) or 0.0)
+        except Exception:
+            ev_mu = 0.0
+    else:
+        try:
+            tp_r_f = float(tp_r)
+        except (TypeError, ValueError):
+            return
+        ev_mu = _rm_compute_spy_orb_ev_r(tp_r_f)
+
+
+    # Band half-width from config band width
+    try:
+        from hybrid_ai_trading.risk.phase5_config import SPY_ORB_EV_BAND_A
+        cfg = SPY_ORB_EV_BAND_A
+        tp_primary = float(cfg.get("tp_r_primary", 0.0) or 0.0)
+        tp_fallback = float(cfg.get("tp_r_fallback", 0.0) or 0.0)
+        band_width = abs(tp_primary - tp_fallback)
+        ev_band_abs = band_width if band_width > 0 else 0.0
+    except Exception:
+        ev_band_abs = 0.0
+
+    details = getattr(decision, "details", {}) or {}
+    if not isinstance(details, dict):
+        details = {}
+
+    details.setdefault("ev_mu", ev_mu)
+    details.setdefault("ev_band_abs", ev_band_abs)
+    decision.details = details
+
+
+def _rm_check_trade_phase5_with_ev(self, trade):
+    """
+    Wrapper around _check_trade_phase5_impl_v4 that enriches the resulting
+    Phase5RiskDecision with EV metadata for SPY ORB trades.
+
+    It does NOT change allow/block logic.
+    """
+    decision = _check_trade_phase5_impl_v4(self, trade)
+    try:
+        _rm_attach_phase5_spy_orb_ev_details(self, trade, decision)
+    except Exception:
+        pass
+    return decision
+
+
+try:
+    RiskManager  # type: ignore[name-defined]
+except NameError:
+    pass
+else:
+    # Final binding: use EV-enriched wrapper for check_trade_phase5
+    setattr(RiskManager, "check_trade_phase5", _rm_check_trade_phase5_with_ev)
+
+# === End Phase 5: SPY ORB EV metadata wiring ===============================
