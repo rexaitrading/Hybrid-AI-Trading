@@ -1560,21 +1560,16 @@ def _rm_attach_phase5_spy_orb_ev_details(risk_manager, trade, decision) -> None:
         return
     if regime not in ("SPY_ORB_REPLAY", "SPY_ORB_LIVE", "SPY_ORB_PAPER"):
         return
+
     if tp_r is None:
         # Fallback: use conservative EV from SPY_ORB_EV_BAND_A (min_ev_r) when tp_r is missing.
-        try:
-            from hybrid_ai_trading.risk.phase5_config import SPY_ORB_EV_BAND_A
-            cfg = SPY_ORB_EV_BAND_A
-            ev_mu = float(cfg.get("min_ev_r", 0.0) or 0.0)
-        except Exception:
-            ev_mu = 0.0
+        ev_mu = _rm_compute_spy_orb_ev_r(0.0)
     else:
         try:
             tp_r_f = float(tp_r)
         except (TypeError, ValueError):
             return
         ev_mu = _rm_compute_spy_orb_ev_r(tp_r_f)
-
 
     # Band half-width from config band width
     try:
@@ -1596,16 +1591,70 @@ def _rm_attach_phase5_spy_orb_ev_details(risk_manager, trade, decision) -> None:
     decision.details = details
 
 
+def _rm_attach_phase5_qqq_orb_ev_details(risk_manager, trade, decision) -> None:
+    """
+    Enrich a Phase5RiskDecision with EV metadata for QQQ ORB trades.
+
+    Writes into decision.details:
+      - 'ev_mu'      : EV_R in R units (uses min_ev_r from QQQ_ORB_EV_BAND_A)
+      - 'ev_band_abs': EV band half-width in R
+    """
+    try:
+        from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
+    except Exception:
+        return
+
+    if not isinstance(decision, Phase5RiskDecision):
+        return
+
+    try:
+        symbol = str(trade.get("symbol") or trade.get("sym") or "").upper()
+        regime = str(trade.get("regime") or trade.get("regime_name", "") or "")
+        tp_r = trade.get("tp_r", trade.get("r_multiple"))
+    except Exception:
+        return
+
+    if symbol != "QQQ":
+        return
+    if regime not in ("QQQ_ORB_REPLAY", "QQQ_ORB_LIVE", "QQQ_ORB_PAPER"):
+        return
+
+    # For QQQ we currently use min_ev_r from the EV band as a conservative EV
+    try:
+        from hybrid_ai_trading.risk.phase5_config import QQQ_ORB_EV_BAND_A
+        cfg = QQQ_ORB_EV_BAND_A
+        ev_mu = float(cfg.get("min_ev_r", 0.0) or 0.0)
+        tp_primary = float(cfg.get("tp_r_primary", 0.0) or 0.0)
+        tp_fallback = float(cfg.get("tp_r_fallback", 0.0) or 0.0)
+        band_width = abs(tp_primary - tp_fallback)
+        ev_band_abs = band_width if band_width > 0 else 0.0
+    except Exception:
+        ev_mu = 0.0
+        ev_band_abs = 0.0
+
+    details = getattr(decision, "details", {}) or {}
+    if not isinstance(details, dict):
+        details = {}
+
+    details.setdefault("ev_mu", ev_mu)
+    details.setdefault("ev_band_abs", ev_band_abs)
+    decision.details = details
+
+
 def _rm_check_trade_phase5_with_ev(self, trade):
     """
     Wrapper around _check_trade_phase5_impl_v4 that enriches the resulting
-    Phase5RiskDecision with EV metadata for SPY ORB trades.
+    Phase5RiskDecision with EV metadata for SPY and QQQ ORB trades.
 
     It does NOT change allow/block logic.
     """
     decision = _check_trade_phase5_impl_v4(self, trade)
     try:
         _rm_attach_phase5_spy_orb_ev_details(self, trade, decision)
+    except Exception:
+        pass
+    try:
+        _rm_attach_phase5_qqq_orb_ev_details(self, trade, decision)
     except Exception:
         pass
     return decision
@@ -1616,7 +1665,4 @@ try:
 except NameError:
     pass
 else:
-    # Final binding: use EV-enriched wrapper for check_trade_phase5
     setattr(RiskManager, "check_trade_phase5", _rm_check_trade_phase5_with_ev)
-
-# === End Phase 5: SPY ORB EV metadata wiring ===============================
