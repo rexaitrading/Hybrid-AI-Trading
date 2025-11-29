@@ -1,4 +1,4 @@
-﻿"""
+"""
 NVDA Phase-5 live-style smoke runner (no IBG, no broker side-effects).
 
 - Uses real ExecutionEngine (config-only) if ctor signature matches.
@@ -67,7 +67,7 @@ def main() -> None:
     symbol = "NVDA"
     side = "BUY"
     qty = 1.0
-    price = None
+    price = 1.0  # safe dummy price for smoke (avoid portfolio_update_failed)
     regime = "NVDA_BPLUS_LIVE"
 
     print("\nCalling place_order_phase5_with_logging(...)")
