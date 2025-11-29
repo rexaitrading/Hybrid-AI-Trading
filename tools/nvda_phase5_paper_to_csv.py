@@ -25,18 +25,15 @@ FIELDS = [
     "carry_cost",
     "mode",
     "realized_pnl",
+    "ev",
+    "ev_band_abs",
 ]
 
 
 def _get_realized_pnl(obj: Dict[str, Any], orr: Dict[str, Any]) -> Optional[float]:
     """
     Try multiple locations / names for realized PnL.
-
-    We prefer explicit fields called 'realized_pnl', but will also fall back to
-    common alternatives like 'net_pnl', 'gross_pnl', or a nested 'pnl' dict
-    with keys like 'realized', 'net', 'gross'.
     """
-    # Direct realized_pnl fields
     cand = obj.get("realized_pnl")
     if cand is not None:
         return cand
@@ -44,7 +41,6 @@ def _get_realized_pnl(obj: Dict[str, Any], orr: Dict[str, Any]) -> Optional[floa
     if cand is not None:
         return cand
 
-    # Common synonyms on either obj or order_result
     for key in ("net_pnl", "gross_pnl", "realized", "net"):
         cand = obj.get(key)
         if cand is not None:
@@ -53,7 +49,6 @@ def _get_realized_pnl(obj: Dict[str, Any], orr: Dict[str, Any]) -> Optional[floa
         if cand is not None:
             return cand
 
-    # Nested pnl dict on the top-level object
     pnl = obj.get("pnl") or {}
     for key in ("realized", "net", "gross"):
         cand = pnl.get(key)
@@ -63,39 +58,53 @@ def _get_realized_pnl(obj: Dict[str, Any], orr: Dict[str, Any]) -> Optional[floa
     return None
 
 
+def _get_ev(obj: Dict[str, Any], orr: Dict[str, Any]) -> Optional[float]:
+    """
+    Try to locate an EV-style field in the log entry.
+    """
+    for key in ("ev", "ev_mu", "expected_value"):
+        cand = obj.get(key)
+        if cand is not None:
+            return cand
+        cand = orr.get(key)
+        if cand is not None:
+            return cand
+
+    ev = obj.get("ev") or {}
+    if isinstance(ev, dict):
+        cand = ev.get("mu")
+        if cand is not None:
+            return cand
+
+    return None
+
+
+def _get_ev_band_abs(obj: Dict[str, Any], orr: Dict[str, Any]) -> Optional[float]:
+    """
+    Try to locate an absolute EV band / tolerance field.
+    """
+    for key in ("ev_band_abs", "ev_band", "ev_tolerance_abs", "ev_tolerance"):
+        cand = obj.get(key)
+        if cand is not None:
+            return cand
+        cand = orr.get(key)
+        if cand is not None:
+            return cand
+
+    ev = obj.get("ev") or {}
+    if isinstance(ev, dict):
+        cand = ev.get("band_abs") or ev.get("band")
+        if cand is not None:
+            return cand
+
+    return None
+
+
 def _extract_row(obj: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
     Extract a flat row for NVDA_BPLUS_LIVE from a generic Phase-5 paper log entry.
-
-    Handles formats like:
-      {
-        "ts": ...,
-        "symbol": "NVDA",
-        "side": "BUY",
-        "qty": 1.0,
-        "price": 1.0,
-        "regime": "NVDA_BPLUS_LIVE",
-        "order_result": {...}
-      }
-    or:
-      {
-        "ts": ...,
-        "symbol": "NVDA",
-        "regime": "NVDA_BPLUS_LIVE",
-        "order_result": {
-            "symbol": "NVDA",
-            "side": "BUY",
-            "size": 1.0,
-            "fill_price": 1.0,
-            "notional": 1.0,
-            "commission": 0.0,
-            "carry_cost": 0.0,
-            "mode": "paper",
-        }
-      }
     """
 
-    # Normalize symbol/regime
     symbol = str(
         obj.get("symbol")
         or obj.get("order_result", {}).get("symbol")
@@ -111,10 +120,7 @@ def _extract_row(obj: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if symbol != "NVDA" or regime != "NVDA_BPLUS_LIVE":
         return None
 
-    # Timestamp: prefer 'ts', then 'entry_ts'
     ts = obj.get("ts") or obj.get("entry_ts")
-
-    # Flatten order_result when present
     orr = obj.get("order_result") or {}
 
     side = obj.get("side") or orr.get("side")
@@ -125,8 +131,9 @@ def _extract_row(obj: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     carry_cost = orr.get("carry_cost")
     mode = orr.get("mode") or "paper"
     realized_pnl = _get_realized_pnl(obj, orr)
+    ev = _get_ev(obj, orr)
+    ev_band_abs = _get_ev_band_abs(obj, orr)
 
-    # Basic sanity: we at least need ts, side, qty, price
     if ts is None or side is None or qty is None or price is None:
         return None
 
@@ -142,6 +149,8 @@ def _extract_row(obj: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "carry_cost": carry_cost,
         "mode": mode,
         "realized_pnl": realized_pnl,
+        "ev": ev,
+        "ev_band_abs": ev_band_abs,
     }
 
 

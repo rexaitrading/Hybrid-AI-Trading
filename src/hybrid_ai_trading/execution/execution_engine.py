@@ -478,3 +478,114 @@ def place_order_phase5(engine, symbol, entry_ts, side, qty, price=None, regime=N
             result.setdefault("entry_ts", entry_ts)
 
     return result
+
+# === Phase-5 JSONL logging wrapper (NVDA live) ================================
+
+def place_order_phase5_with_logging(engine, *args, **kwargs):
+    """
+    Phase-5 adapter used by tests and live runners.
+
+    - Delegates to place_order_phase5(...) so behavior stays the same.
+    - ALSO appends a JSONL line to logs/nvda_phase5_paperlive_results.jsonl
+      with basic PnL / EV fields used by nvda_phase5_paper_to_csv.py.
+
+    NOTE: This definition lives at the bottom of the module and overrides any
+    earlier place_order_phase5_with_logging definition in this file.
+    """
+    from pathlib import Path
+    from datetime import datetime, timezone
+    import json
+
+    # Optional Phase-5 metadata and custom log path
+    phase5_decision = kwargs.pop("phase5_decision", None) or {}
+    log_path = kwargs.pop("log_path", None)
+
+    # 1) Delegate to existing Phase-5 shim
+    result = place_order_phase5(engine, *args, **kwargs)
+
+    # 2) Recover core args for logging
+    symbol = kwargs.get("symbol")
+    entry_ts = kwargs.get("entry_ts")
+    side = kwargs.get("side")
+    qty = kwargs.get("qty")
+    price = kwargs.get("price")
+    regime = kwargs.get("regime")
+
+    try:
+        # Expected positional order: symbol, entry_ts, side, qty, price, regime
+        if symbol is None and len(args) >= 1:
+            symbol = args[0]
+        if entry_ts is None and len(args) >= 2:
+            entry_ts = args[1]
+        if side is None and len(args) >= 3:
+            side = args[2]
+        if qty is None and len(args) >= 4:
+            qty = args[3]
+        if price is None and len(args) >= 5:
+            price = args[4]
+        if regime is None and len(args) >= 6:
+            regime = args[5]
+    except Exception:
+        # Logging is best-effort only
+        pass
+
+    # 3) Phase-5 EV metadata
+    ev = phase5_decision.get("ev")
+    ev_band = phase5_decision.get("ev_band")
+    ev_band_abs = phase5_decision.get("ev_band_abs")
+    phase5_allowed = bool(phase5_decision.get("allowed", True))
+    phase5_reason = phase5_decision.get("reason", "risk_ok")
+
+    # 4) PnL field (default to 0.0 if not wired yet)
+    try:
+        realized_pnl = float(result.get("realized_pnl", 0.0)) if isinstance(result, dict) else 0.0
+    except Exception:
+        realized_pnl = 0.0
+
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    try:
+        qty_val = float(qty) if qty is not None else 0.0
+    except Exception:
+        qty_val = 0.0
+
+    record = {
+        "ts": ts,
+        "entry_ts": entry_ts,
+        "symbol": symbol,
+        "regime": regime,
+        "side": side,
+        "qty": qty_val,
+        "price": price,
+
+        # raw order result for debugging
+        "order_result": result,
+
+        # Phase-5 meta
+        "phase5_allowed": phase5_allowed,
+        "phase5_reason": phase5_reason,
+
+        # EV fields expected by nvda_phase5_paper_to_csv.py
+        "ev": ev,
+        "ev_band": ev_band,
+        "ev_band_abs": ev_band_abs,
+
+        # PnL field expected by nvda_phase5_paper_to_csv.py
+        "realized_pnl": realized_pnl,
+    }
+
+    # 5) Append JSONL line (UTF-8, no BOM)
+    try:
+        path = Path(log_path) if log_path is not None else Path("logs") / "nvda_phase5_paperlive_results.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\\n")
+    except Exception as exc:
+        try:
+            logger.error("place_order_phase5_with_logging: failed to append JSONL: %s", exc)
+        except Exception:
+            # Never let logging break trading
+            pass
+
+    # External behavior stays identical: return whatever place_order_phase5 returned.
+    return result
