@@ -1,0 +1,34 @@
+=== Notion Phase-5 Formulas (using realized_pnl_paper) ===
+
+1) EV vs realized PnL (Number)
+--------------------------------
+Recommended property name: ev_vs_realized_paper
+
+Formula:
+prop("realized_pnl_paper") - prop("ev")
+
+
+2) EV hit flag (1 = direction match, 0 = mismatch/flat) (Number)
+-----------------------------------------------------------------
+Recommended property name: ev_hit_flag
+
+Formula:
+if(
+  and(prop("ev") > 0, prop("realized_pnl_paper") > 0),
+  1,
+  if(
+    and(prop("ev") < 0, prop("realized_pnl_paper") < 0),
+    1,
+    0
+  )
+)
+
+
+3) EV gap absolute (optional, if you want a formula) (Number)
+--------------------------------------------------------------
+If you prefer to compute it instead of importing from CSV:
+
+Recommended property name: ev_gap_abs
+
+Formula:
+abs(prop("ev_vs_realized_paper"))
