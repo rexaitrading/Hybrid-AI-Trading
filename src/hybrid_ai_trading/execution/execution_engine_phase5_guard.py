@@ -7,6 +7,7 @@ which wraps the existing place_order_phase5 with Phase-5 risk checks.
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, Optional, Tuple
 
 from hybrid_ai_trading.execution.execution_engine import place_order_phase5
@@ -96,6 +97,45 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
     decision: Phase5RiskDecision = guard_phase5_trade(rm, trade)
     ev_value, ev_band_abs, gate_score_v2 = _extract_phase5_ev(decision)
 
+    # Advisory + optional hard EV-band veto.
+    # Simple heuristic:
+    #   ev is None        -> disabled
+    #   ev < 0            -> "bad" EV
+    #   ev >= 0           -> "good" EV
+    phase5_ev_band_enabled = False
+    phase5_ev_band_veto = False
+    phase5_ev_band_reason = None
+
+    if ev_value is not None:
+        phase5_ev_band_enabled = True
+        if ev_value < 0:
+            phase5_ev_band_veto = True
+            phase5_ev_band_reason = "ev_negative"
+        else:
+            phase5_ev_band_veto = False
+            phase5_ev_band_reason = "ev_non_negative"
+
+    # Hard veto flag (default = OFF, so behavior stays log-only unless enabled).
+    enable_ev_band_hard_veto = bool(
+        (os.getenv("PHASE5_ENABLE_EV_BAND_HARD_VETO") or "").strip().lower()
+        in ("1", "true", "yes", "on")
+    )
+
+    if (
+        enable_ev_band_hard_veto
+        and phase5_ev_band_enabled
+        and phase5_ev_band_veto
+        and getattr(decision, "allowed", True)
+    ):
+        # Override decision.allowed but keep Phase-5 details for logging.
+        decision.allowed = False
+        reason = getattr(decision, "reason", None) or ""
+        if reason:
+            reason = f"{reason}|ev_band_hard_veto"
+        else:
+            reason = "ev_band_hard_veto"
+        setattr(decision, "reason", reason)
+
     # --- Case 0: blocked by Phase-5 risk ------------------------------------
     if not decision.allowed:
         # Blocked by Phase-5 risk; return a synthetic result.
@@ -109,6 +149,9 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
             # EV / GateScore hooks (may be None if not provided yet)
             "ev": ev_value,
             "ev_band_abs": ev_band_abs,
+            "phase5_ev_band_enabled": phase5_ev_band_enabled,
+            "phase5_ev_band_veto": phase5_ev_band_veto,
+            "phase5_ev_band_reason": phase5_ev_band_reason,
             "gate_score_v2": gate_score_v2,
             # No fill happened -> no realized PnL
             "realized_pnl": None,
@@ -144,6 +187,11 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
             if "gate_score_v2" not in result and gate_score_v2 is not None:
                 result["gate_score_v2"] = gate_score_v2
 
+            # EV-band veto advisory fields
+            result.setdefault("phase5_ev_band_enabled", phase5_ev_band_enabled)
+            result.setdefault("phase5_ev_band_veto", phase5_ev_band_veto)
+            result.setdefault("phase5_ev_band_reason", phase5_ev_band_reason)
+
             # realized_pnl will typically come from the underlying engine's
             # order_result / PnL accounting. We don't synthesize it here,
             # but we keep the hook name consistent.
@@ -164,6 +212,9 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
         # EV / GateScore hooks (may be None)
         "ev": ev_value,
         "ev_band_abs": ev_band_abs,
+        "phase5_ev_band_enabled": phase5_ev_band_enabled,
+        "phase5_ev_band_veto": phase5_ev_band_veto,
+        "phase5_ev_band_reason": phase5_ev_band_reason,
         "gate_score_v2": gate_score_v2,
         # No real fill -> no realized PnL
         "realized_pnl": None,
