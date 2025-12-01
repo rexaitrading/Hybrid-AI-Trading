@@ -5,6 +5,8 @@ import csv
 from pathlib import Path
 from typing import Any, Dict, List
 
+from hybrid_ai_trading.risk.risk_phase5_ev_bands import get_ev_and_band, require_ev_band
+
 JSONL_PATH = Path("logs") / "SPY_phase5_paperlive_results.jsonl"
 CSV_PATH   = Path("logs") / "spy_phase5_paper_for_notion.csv"
 
@@ -15,6 +17,9 @@ FIELDS = [
     "side",
     "realized_pnl",
     "ev",
+    "ev_band_abs",
+    "ev_band_allowed",
+    "ev_band_reason",
 ]
 
 
@@ -42,6 +47,10 @@ def _load_ev_from_config() -> float:
 
 
 _SPY_EV_PER_TRADE = _load_ev_from_config()
+
+_EV_CFG_SPY, _EV_BAND_ABS_SPY = get_ev_and_band("SPY_ORB_LIVE")
+if _EV_BAND_ABS_SPY is None:
+    _EV_BAND_ABS_SPY = _SPY_EV_PER_TRADE
 
 
 def _get_realized(rec: Dict[str, Any]) -> float | None:
@@ -105,16 +114,25 @@ def convert() -> None:
             regime = rec.get("regime", "SPY_ORB_LIVE")
             side   = rec.get("side", "SELL")
 
-            realized = _get_realized(rec)
-            ev_val   = _get_ev(rec)
+            realized    = _get_realized(rec)
+            ev_val      = _get_ev(rec)
+            ev_band_abs = float(_EV_BAND_ABS_SPY)
+
+            try:
+                ev_band_allowed, ev_band_reason = require_ev_band(regime, ev_val)
+            except Exception:
+                ev_band_allowed, ev_band_reason = None, "ev_band_error"
 
             row = {
-                "ts":           ts,
-                "symbol":       symbol,
-                "regime":       regime,
-                "side":         side,
-                "realized_pnl": realized,
-                "ev":           ev_val,
+                "ts":             ts,
+                "symbol":         symbol,
+                "regime":         regime,
+                "side":           side,
+                "realized_pnl":   realized,
+                "ev":             ev_val,
+                "ev_band_abs":    ev_band_abs,
+                "ev_band_allowed": ev_band_allowed,
+                "ev_band_reason":  ev_band_reason,
             }
             rows.append(row)
 

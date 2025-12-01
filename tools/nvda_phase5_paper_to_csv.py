@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from hybrid_ai_trading.risk.risk_phase5_ev_bands import get_ev_and_band, require_ev_band
+
 JSONL_PATH = Path("logs") / "nvda_phase5_paperlive_results.jsonl"
 CSV_PATH = Path("logs") / "nvda_phase5_paper_for_notion.csv"
 
@@ -22,6 +24,8 @@ FIELDS = [
     "realized_pnl",
     "ev",
     "ev_band_abs",
+    "ev_band_allowed",
+    "ev_band_reason",
 ]
 
 
@@ -60,6 +64,12 @@ def _load_nvda_ev_from_config() -> float:
 
 
 _NVDA_EV_PER_TRADE = _load_nvda_ev_from_config()
+
+# EV band configuration from shared Phase-5 EV bands helper
+_EV_CFG_NVDA, _EV_BAND_ABS_NVDA = get_ev_and_band("NVDA_BPLUS_LIVE")
+if _EV_BAND_ABS_NVDA is None:
+    # Fallback: use EV per trade if band is not configured
+    _EV_BAND_ABS_NVDA = _NVDA_EV_PER_TRADE
 
 
 def _get_phase5_blocks(rec: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
@@ -175,9 +185,11 @@ def _get_ev(rec: Dict[str, Any]) -> float:
     return _NVDA_EV_PER_TRADE
 
 
-def _get_ev_band_abs(rec: Dict[str, Any]) -> Optional[float]:
+def _get_ev_band_abs(rec: Dict[str, Any]) -> float:
     """
     Try to locate an absolute EV band / tolerance field, including nested Phase-5.
+
+    If nothing is found on the record, fall back to the regime's configured band.
     """
     orr = rec.get("order_result") or {}
 
@@ -216,7 +228,8 @@ def _get_ev_band_abs(rec: Dict[str, Any]) -> Optional[float]:
                 except (TypeError, ValueError):
                     pass
 
-    return None
+    # 4) Fallback to configured band for NVDA_BPLUS_LIVE
+    return float(_EV_BAND_ABS_NVDA)
 
 
 def _extract_row(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -262,6 +275,12 @@ def _extract_row(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     ev_val = _get_ev(rec)
     ev_band_abs = _get_ev_band_abs(rec)
 
+    # EV-band classification using shared helper
+    try:
+        ev_band_allowed, ev_band_reason = require_ev_band(regime, ev_val)
+    except Exception:
+        ev_band_allowed, ev_band_reason = None, "ev_band_error"
+
     return {
         "ts": ts,
         "symbol": "NVDA",
@@ -276,6 +295,8 @@ def _extract_row(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "realized_pnl": realized,
         "ev": ev_val,
         "ev_band_abs": ev_band_abs,
+        "ev_band_allowed": ev_band_allowed,
+        "ev_band_reason": ev_band_reason,
     }
 
 
