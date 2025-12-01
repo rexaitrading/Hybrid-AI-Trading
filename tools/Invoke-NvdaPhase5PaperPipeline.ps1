@@ -40,6 +40,12 @@ if ($exitCode -ne 0) {
 
 Write-Host "[STEP 1] nvda_phase5_live_runner.py completed successfully." -ForegroundColor Green
 
+# --- Step 1.5: backfill PnL stub into nvda_phase5_paperlive_results.jsonl -----
+Write-Host "`n[STEP 1.5] Backfill NVDA Phase-5 live PnL stub (realized_pnl=0.0) into nvda_phase5_paperlive_results.jsonl" -ForegroundColor Cyan
+.\tools\Backfill-NvdaPhase5LivePnlStub.ps1
+
+# --- Step 2: rebuild CSV ------------------------------------------------------
+
 # --- Step 2: rebuild NVDA Phase-5 paper CSV for Notion ----------------------
 if (-not $SkipCsv) {
     Write-Host "`n[STEP 2] Rebuild NVDA Phase-5 paper CSV for Notion" -ForegroundColor Cyan

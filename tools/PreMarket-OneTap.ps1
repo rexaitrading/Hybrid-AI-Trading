@@ -16,6 +16,31 @@ if ($MyInvocation.MyCommand.Path) {
 
 Set-Location $repoRoot
 
+# --- Phase-5 EV sync gate ---------------------------------------------
+# Require a successful Run-Phase5EvSync.ps1 before launching IB paper/live.
+try {
+    $evStatusPath = Join-Path $repoRoot 'logs\phase5_ev_sync_status.json'
+    if (-not (Test-Path $evStatusPath)) {
+        Write-Host "[PHASE5-EV] ERROR: phase5_ev_sync_status.json not found. Run Run-Phase5EvSync.ps1 first." -ForegroundColor Red
+        return
+    }
+
+    $evStatusJson = Get-Content $evStatusPath -Raw
+    $evStatus     = $evStatusJson | ConvertFrom-Json
+
+    if (-not $evStatus.success) {
+        Write-Host "[PHASE5-EV] ERROR: Last Phase-5 EV sync did not succeed (success=false). Fix EV sync before trading." -ForegroundColor Red
+        return
+    }
+
+    Write-Host "[PHASE5-EV] EV sync check passed (phase5_ev_sync_status.json success=true)." -ForegroundColor Green
+}
+catch {
+    Write-Host ("[PHASE5-EV] ERROR checking EV sync status: {0}" -f $_.Exception.Message) -ForegroundColor Red
+    return
+}
+# -----------------------------------------------------------------------
+
 # Python env for OneTap
 $PythonExe      = '.\.venv\Scripts\python.exe'
 $env:PYTHONPATH = (Join-Path $repoRoot 'src')
@@ -79,19 +104,20 @@ if ($exitCode -ne 0) {
 }
 
 # --- Phase-5 NVDA IB paper live -------------------------------------------------
-Write-Host "`n[PHASE5] NVDA Phase-5 IB paper live" -ForegroundColor Cyan
+Write-Host "`n[PHASE5] NVDA Phase-5 IB paper pipeline (IB paper + CSV)" -ForegroundColor Cyan
 
 # IB connection env (adjust values / pull from your config if needed)
-$env:HAT_IB_HOST    = "127.0.0.1"
-$env:HAT_IB_PORT    = "7497"
+$env:HAT_IB_HOST      = "127.0.0.1"
+$env:HAT_IB_PORT      = "7497"
 $env:HAT_IB_CLIENT_ID = "42"
-$env:HAT_IB_ACCOUNT = "DUXXXXXXXX"   # TODO: replace with your IB PAPER account
+$env:HAT_IB_ACCOUNT   = "DUXXXXXXXX"   # TODO: replace with your IB PAPER account code
 
 # Phase-5 daily loss cap (USD)
 $env:HAT_PHASE5_ACCOUNT_DAILY_LOSS_CAP = "50"
 
-# Run NVDA Phase-5 live runner (now using IB paper broker config)
-& .\.venv\Scripts\python.exe .\src\hybrid_ai_trading\runners\nvda_phase5_live_runner.py
+# Run NVDA Phase-5 paper pipeline (live runner + CSV for Notion)
+Write-Host "[PHASE5] Running tools\\Invoke-NvdaPhase5PaperPipeline.ps1..." -ForegroundColor Cyan
+.\tools\Invoke-NvdaPhase5PaperPipeline.ps1
 # -------------------------------------------------------------------------------
 
 Write-Host "[ONETAP] PreMarket-OneTap complete (exit 0)" -ForegroundColor Green

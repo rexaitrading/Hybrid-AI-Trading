@@ -7,11 +7,49 @@ which wraps the existing place_order_phase5 with Phase-5 risk checks.
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple
 
 from hybrid_ai_trading.execution.execution_engine import place_order_phase5
 from hybrid_ai_trading.risk.risk_phase5_engine_guard import guard_phase5_trade
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
+
+
+def _extract_phase5_ev(decision: Phase5RiskDecision) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+    """
+    Best-effort extraction of EV-style metrics from a Phase-5 risk decision.
+
+    We don't enforce any particular schema here; we just look into
+    decision.details for common keys so that, once the risk engine starts
+    emitting EV metrics, they automatically flow through into the results.
+    """
+    ev_value: Optional[float] = None
+    ev_band_abs: Optional[float] = None
+    gate_score_v2: Optional[float] = None
+
+    details: Dict[str, Any] = {}
+    try:
+        details = decision.details or {}  # type: ignore[attr-defined]
+    except AttributeError:
+        details = {}
+
+    if isinstance(details, dict):
+        # EV "mu" style value
+        ev_value = (
+            details.get("ev")
+            or details.get("ev_mu")
+            or (details.get("ev_info") or {}).get("mu")
+        )
+        # Absolute EV band / tolerance
+        ev_band_abs = (
+            details.get("ev_band_abs")
+            or details.get("ev_band")
+            or (details.get("ev_info") or {}).get("band_abs")
+            or (details.get("ev_info") or {}).get("band")
+        )
+        # GateScore / EV-based score
+        gate_score_v2 = details.get("gate_score_v2") or details.get("gate_score")
+
+    return ev_value, ev_band_abs, gate_score_v2
 
 
 def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
@@ -56,7 +94,9 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
     }
 
     decision: Phase5RiskDecision = guard_phase5_trade(rm, trade)
+    ev_value, ev_band_abs, gate_score_v2 = _extract_phase5_ev(decision)
 
+    # --- Case 0: blocked by Phase-5 risk ------------------------------------
     if not decision.allowed:
         # Blocked by Phase-5 risk; return a synthetic result.
         return {
@@ -65,12 +105,16 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
             "side": side,
             "qty": qty_f,
             "reason": decision.reason,
-            "phase5_details": decision.details,
+            "phase5_details": getattr(decision, "details", None),
+            # EV / GateScore hooks (may be None if not provided yet)
+            "ev": ev_value,
+            "ev_band_abs": ev_band_abs,
+            "gate_score_v2": gate_score_v2,
+            # No fill happened -> no realized PnL
+            "realized_pnl": None,
         }
 
-    # Phase-5 risk allowed. Decide how to call the underlying engine.
-
-    # Case 1: real engine with place_order -> call full place_order_phase5
+    # --- Case 1: real engine with place_order -> call full place_order_phase5 --
     if hasattr(engine, "place_order"):
         # Ensure entry_ts exists for the underlying engine
         if "entry_ts" not in kwargs:
@@ -85,9 +129,29 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
         # Remove Phase-5-only helper key before calling the underlying engine
         kwargs.pop("day_id", None)
 
-        return place_order_phase5(engine=engine, **kwargs)
+        result: Dict[str, Any] = place_order_phase5(engine=engine, **kwargs)
 
-    # Case 2: Dummy/test engine with no place_order - return a safe stub dict
+        # Attach Phase-5 metadata and EV hooks if they are not already present.
+        if isinstance(result, dict):
+            result.setdefault("phase5_reason", decision.reason)
+            result.setdefault("phase5_details", getattr(decision, "details", None))
+
+            # EV metrics
+            if "ev" not in result and ev_value is not None:
+                result["ev"] = ev_value
+            if "ev_band_abs" not in result and ev_band_abs is not None:
+                result["ev_band_abs"] = ev_band_abs
+            if "gate_score_v2" not in result and gate_score_v2 is not None:
+                result["gate_score_v2"] = gate_score_v2
+
+            # realized_pnl will typically come from the underlying engine's
+            # order_result / PnL accounting. We don't synthesize it here,
+            # but we keep the hook name consistent.
+            result.setdefault("realized_pnl", None)
+
+        return result
+
+    # --- Case 2: Dummy/test engine with no place_order ------------------------
     return {
         "status": "ok_phase5_stub",
         "symbol": symbol,
@@ -96,5 +160,11 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
         "price": price,
         "regime": regime,
         "phase5_reason": decision.reason,
-        "phase5_details": decision.details,
+        "phase5_details": getattr(decision, "details", None),
+        # EV / GateScore hooks (may be None)
+        "ev": ev_value,
+        "ev_band_abs": ev_band_abs,
+        "gate_score_v2": gate_score_v2,
+        # No real fill -> no realized PnL
+        "realized_pnl": None,
     }

@@ -31,6 +31,57 @@ else {
     Write-Host ("Pre-market check: HALT (unexpected exit code {0})" -f $code) -ForegroundColor Red
 }
 
+# --- RouteErrors risk summary (from logs\paper_route_errors.jsonl, last 24h) ---
+try {
+    $routeLogPath  = Join-Path $repo 'logs\paper_route_errors.jsonl'
+    $lookbackHours = 24
+    $cutoff        = (Get-Date).ToUniversalTime().AddHours(-$lookbackHours)
+
+    if (-not (Test-Path $routeLogPath)) {
+        Write-Host "[Route] OK - no paper_route_errors.jsonl found; 0 route_fail event(s) in last $lookbackHours hour(s)." -ForegroundColor Green
+    } else {
+        $lines = Get-Content $routeLogPath -ErrorAction SilentlyContinue | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+        if (-not $lines -or $lines.Count -eq 0) {
+            Write-Host "[Route] OK - paper_route_errors.jsonl is empty; 0 route_fail event(s) in last $lookbackHours hour(s)." -ForegroundColor Green
+        } else {
+            $records = @()
+            foreach ($line in $lines) {
+                try {
+                    $rec = $line | ConvertFrom-Json -ErrorAction Stop
+                    $records += $rec
+                } catch {
+                    Write-Host "[Route] WARN - skipping invalid JSON line in paper_route_errors.jsonl" -ForegroundColor Yellow
+                }
+            }
+
+            if (-not $records -or $records.Count -eq 0) {
+                Write-Host "[Route] OK - no valid route_fail records; 0 event(s) in last $lookbackHours hour(s)." -ForegroundColor Green
+            } else {
+                $recent = $records | Where-Object {
+                    $_.ts_logged -and ([DateTime]::Parse($_.ts_logged) -ge $cutoff)
+                }
+
+                $countRecent = ($recent | Measure-Object).Count
+
+                if ($countRecent -gt 0) {
+                    $routeFlag  = "CAUTION"
+                    $routeColor = "Yellow"
+                } else {
+                    $routeFlag  = "OK"
+                    $routeColor = "Green"
+                }
+
+                Write-Host ("[Route] {0} - {1} route_fail event(s) in last {2} hour(s)." -f $routeFlag, $countRecent, $lookbackHours) -ForegroundColor $routeColor
+            }
+        }
+    }
+} catch {
+    Write-Host ("[Route] WARN - unable to summarize route errors: {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+}
+# -----------------------------------------------------------------------------
+
+
 exit $code
 
 # === Phase5 Notion journal day creation =====================================

@@ -1,38 +1,26 @@
-param(
-    [string]$PythonExe = ".\.venv\Scripts\python.exe"
-)
-
 $ErrorActionPreference = "Stop"
-Set-StrictMode -Version Latest
 
-# Resolve repo root from this script's folder
-$repoRoot = Split-Path $PSScriptRoot -Parent
-Push-Location $repoRoot
-try {
-    # Ensure we are in the correct (non-mojibake) path
-    Write-Host "[Phase5] Repo root:" (Get-Location) -ForegroundColor DarkCyan
+# scriptDir = tools/, repoRoot = parent of tools (actual repo root)
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot  = Split-Path -Parent $scriptDir
+Set-Location $repoRoot
 
-    # Make src/ importable for all Phase-5 tests
-    $oldPythonPath = $env:PYTHONPATH
-    $env:PYTHONPATH = "src"
+$PythonExe = ".\.venv\Scripts\python.exe"
+$env:PYTHONPATH = Join-Path $repoRoot "src"
 
-    Write-Host "`n[Phase5] Step 1: Test-Phase5Sanity.ps1 ..." -ForegroundColor Cyan
-    & "$PSScriptRoot\Test-Phase5Sanity.ps1"
+$ciListPath = Join-Path $repoRoot "config\phase5\ci_microsuite.txt"
 
-    # Test-Phase5Sanity.ps1 may change the current directory; force it back.
-    Set-Location $repoRoot
-    Write-Host "[Phase5] CWD after sanity reset to:" (Get-Location) -ForegroundColor DarkCyan
+Write-Host "`n[CI] Running Phase-5 microsuite from $ciListPath" -ForegroundColor Cyan
 
-    Write-Host "`n[Phase5] Step 2: Test-Phase5NoAveragingEngineGuard.ps1 ..." -ForegroundColor Cyan
-    & "$PSScriptRoot\Test-Phase5NoAveragingEngineGuard.ps1"
+$tests = Get-Content $ciListPath | Where-Object { $_ -and -not $_.StartsWith("#") }
 
-    Write-Host "`n[Phase5] Micro suite completed successfully." -ForegroundColor Green
-}
-finally {
-    if ($null -ne $oldPythonPath -and $oldPythonPath -ne "") {
-        $env:PYTHONPATH = $oldPythonPath
-    } else {
-        Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+foreach ($t in $tests) {
+    Write-Host "`n[CI] pytest $t" -ForegroundColor Cyan
+    & $PythonExe -m pytest $t
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[CI] FAILED: $t" -ForegroundColor Red
+        exit $LASTEXITCODE
     }
-    Pop-Location
 }
+
+Write-Host "`n[CI] Phase-5 microsuite PASSED" -ForegroundColor Green
