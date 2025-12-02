@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-NVDA Phase-5 live-style runner (no IBG side effects in this template).
+NVDA Phase-5 live-style runner for IB paper trading.
 
 - Uses real ExecutionEngine with a minimal config.
 - Calls place_order_phase5_with_logging(...) once for NVDA.
@@ -22,7 +22,9 @@ from hybrid_ai_trading.execution.execution_engine import (
     place_order_phase5_with_logging,
 )
 from hybrid_ai_trading.risk.risk_phase5_account_caps import account_daily_loss_gate
-
+from hybrid_ai_trading.risk.phase5_gating_helpers import (
+    get_phase5_decision_for_trade,
+)
 
 IPO_WATCHLIST_PATH = Path("logs") / "ipo_watchlist.jsonl"
 
@@ -73,70 +75,6 @@ def get_account_daily_loss_cap_from_env(default: float = 50.0) -> float:
     except ValueError:
         return default
 
-
-def _load_nvda_phase5_decision(entry_ts: str) -> Dict[str, Any]:
-    """
-    Load a Phase-5 decision for NVDA matching entry_ts from decisions JSONL.
-
-    Best-effort helper for live runs:
-    - Reads logs/nvda_phase5_decisions.json (adjust path if needed).
-    - Looks for a record whose 'entry_ts' or 'ts' equals entry_ts.
-    - Returns ev / ev_band_abs / allowed / reason.
-    - Falls back to a default dict if anything goes wrong.
-    """
-    decisions_path = Path("logs") / "nvda_phase5_decisions.json"
-    default_decision: Dict[str, Any] = {
-        "ev": 0.0,
-        "ev_band": None,
-        "ev_band_abs": 0.0,
-        "allowed": True,
-        "reason": "risk_ok",
-    }
-
-    try:
-        if not decisions_path.exists():
-            return default_decision
-
-        matched: Dict[str, Any] | None = None
-
-        with decisions_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    obj = json.loads(line)
-                except Exception:
-                    continue
-
-                ts_val = obj.get("entry_ts") or obj.get("ts")
-                if ts_val == entry_ts:
-                    matched = obj
-                    break
-
-        if matched is None:
-            return default_decision
-
-        ev_val = matched.get("ev")
-        if isinstance(ev_val, dict):
-            ev = ev_val.get("mu", 0.0)
-            ev_band_abs = ev_val.get("band_abs") or ev_val.get("band") or 0.0
-        else:
-            ev = ev_val if ev_val is not None else 0.0
-            ev_band_abs = matched.get("ev_band_abs") or matched.get("ev_band") or 0.0
-
-        allowed = bool(matched.get("allowed", True))
-        reason = matched.get("reason", "risk_ok")
-
-        return {
-            "ev": float(ev),
-            "ev_band": None,
-            "ev_band_abs": float(ev_band_abs),
-            "allowed": allowed,
-            "reason": reason,
-        }
-    except Exception:
-        return default_decision
 
 def build_live_config() -> Dict[str, Any]:
     """
@@ -225,8 +163,14 @@ def main() -> None:
         print("  phase5_candidate =", ipo_info.get("phase5_candidate"))
         print("  phase5_notes     =", ipo_info.get("phase5_notes"))
 
-    # Load real Phase-5 decision (best-effort) for this entry_ts
-    phase5_decision = _load_nvda_phase5_decision(entry_ts)
+    # Load Phase-5 decision using central helper:
+    # - If a decisions JSON exists and ts matches, use that.
+    # - Otherwise, fall back to ev_simple.json mapping for this regime.
+    phase5_decision = get_phase5_decision_for_trade(
+        entry_ts=entry_ts,
+        symbol=symbol,
+        regime=regime,
+    )
 
     print("\nCalling place_order_phase5_with_logging(...)")
     print("  symbol   =", symbol)
@@ -234,6 +178,7 @@ def main() -> None:
     print("  side     =", side)
     print("  qty      =", qty)
     print("  regime   =", regime)
+    print("  phase5_decision =", phase5_decision)
 
     result = place_order_phase5_with_logging(
         engine,
