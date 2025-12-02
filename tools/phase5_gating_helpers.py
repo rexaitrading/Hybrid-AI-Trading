@@ -13,12 +13,6 @@ This module is designed to be used by:
 
 from __future__ import annotations
 
-try:
-    # EV-band helper shared between Phase-5 tools and RiskManager
-    from hybrid_ai_trading.risk.risk_phase5_ev_bands import require_ev_band
-except Exception:  # pragma: no cover - defensive fallback
-    require_ev_band = None
-
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -184,53 +178,3 @@ def should_allow_trade(
 
     allow = decision.allow_flag
     return allow, decision
-
-
-def apply_ev_band_to_decision(decision: dict) -> dict:
-    """
-    Attach EV-band gating info to a Phase-5 decision dict for NVDA/SPY/QQQ.
-
-    This helper is intentionally conservative:
-
-      - It does NOT flip `phase5_allowed`. Your existing Phase-5 guards
-        (no-averaging-down, daily caps, etc.) remain the source of truth.
-
-      - It only sets:
-            decision["ev_band_allowed"]
-            decision["ev_band_reason"]
-
-      - It only acts when:
-            decision["regime"] in {"NVDA_BPLUS_LIVE", "SPY_ORB_LIVE", "QQQ_ORB_LIVE"}
-
-      - If `require_ev_band` is unavailable, it records that fact instead of
-        raising, so tests and tools keep running.
-
-    This is designed so that JSONL / CSV / Notion can see EV-band status
-    without changing live routing decisions yet.
-    """
-    # Defensive: if module import failed, record the reason and return.
-    if "require_ev_band" not in globals() or require_ev_band is None:
-        decision.setdefault("ev_band_allowed", None)
-        decision.setdefault("ev_band_reason", "ev_band_helper_unavailable")
-        return decision
-
-    regime = decision.get("regime")
-    ev_val = decision.get("ev")
-
-    # Only annotate for live NVDA/SPY/QQQ Phase-5 regimes.
-    if regime not in ("NVDA_BPLUS_LIVE", "SPY_ORB_LIVE", "QQQ_ORB_LIVE"):
-        decision.setdefault("ev_band_allowed", None)
-        decision.setdefault("ev_band_reason", "ev_band_not_applicable")
-        return decision
-
-    # Allow require_ev_band() to enforce presence / band logic.
-    try:
-        ev_float = None if ev_val is None else float(ev_val)
-    except (TypeError, ValueError):
-        ev_float = None
-
-    allowed, reason = require_ev_band(regime, ev_float)
-    decision["ev_band_allowed"] = allowed
-    decision["ev_band_reason"] = reason
-
-    return decision

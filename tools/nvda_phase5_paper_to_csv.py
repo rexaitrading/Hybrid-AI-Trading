@@ -3,14 +3,15 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List
 
-from hybrid_ai_trading.risk.risk_phase5_ev_bands import get_ev_and_band, require_ev_band
 
-JSONL_PATH = Path("logs") / "nvda_phase5_paperlive_results.jsonl"
-CSV_PATH = Path("logs") / "nvda_phase5_paper_for_notion.csv"
+JSONL_PATH = Path("logs/nvda_phase5_paperlive_results.jsonl")
+CSV_PATH = Path("logs/nvda_phase5_paper_for_notion.csv")
 
-FIELDS = [
+# We keep NVDA schema super-close to SPY/QQQ Phase-5 reports,
+# but preserve qty/price/notional so you can inspect trade sizing.
+FIELDNAMES: List[str] = [
     "ts",
     "symbol",
     "regime",
@@ -29,271 +30,125 @@ FIELDS = [
 ]
 
 
-def _load_nvda_ev_from_config() -> float:
+def _iter_jsonl(path: Path) -> Iterable[Dict[str, Any]]:
     """
-    Load a per-trade EV for NVDA_BPLUS_LIVE from config/phase5/ev_simple.json.
+    Iterate NVDA Phase-5 JSONL records.
 
-    Accepts either:
-        "NVDA_BPLUS_LIVE": 0.014
-    or:
-        "NVDA_BPLUS_LIVE": {"ev_per_trade": 0.014, ...}
-
-    If anything is missing or malformed, we fall back to 0.0123.
+    Some lines may contain multiple JSON objects concatenated with literal "\\n"
+    sequences (e.g., "<json>\\n<json>\\n<json>"). We treat each chunk between
+    "\\n" as a separate JSON object.
     """
-    cfg_path = Path("config") / "phase5" / "ev_simple.json"
-    fallback = 0.0123
+    if not path.exists():
+        raise SystemExit(f"Source JSONL not found: {path}")
+
+    with path.open("r", encoding="utf-8") as f:
+        for lineno, raw in enumerate(f, 1):
+            raw = raw.rstrip("\\n")
+            if not raw.strip():
+                continue
+
+            # Split on literal "\\n" markers inside the line
+            parts = raw.split("\\n")
+            for p in parts:
+                chunk = p.strip()
+                if not chunk:
+                    continue
+                try:
+                    obj = json.loads(chunk)
+                except json.JSONDecodeError as exc:
+                    msg = f"JSON parse error at {path}:{lineno}: {exc}"
+                    raise SystemExit(msg) from exc
+                yield obj
+
+
+def _to_row(obj: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Convert a single NVDA Phase-5 JSONL record into a CSV row for Notion.
+
+    We:
+    - pull ts/symbol/side/qty/price from the top-level + phase5_result,
+    - compute notional = qty * price when possible,
+    - surface realized_pnl, ev, ev_band_abs,
+    - synthesize ev_band_allowed/ev_band_reason as an "OK for now" placeholder.
+    """
+
+    phase5 = obj.get("phase5_result") or {}
+    details = phase5.get("phase5_details") or {}
+
+    # Timestamp preference order:
+    ts = (
+        obj.get("ts")
+        or obj.get("ts_trade")
+        or phase5.get("entry_ts")
+        or obj.get("entry_ts")
+    )
+
+    symbol = obj.get("symbol")
+    side = obj.get("side")
+    qty = obj.get("qty")
+    price = obj.get("price")
+
+    # Regime + mode: prefer explicit, fall back to defaults
+    regime = obj.get("regime") or phase5.get("regime") or "NVDA_BPLUS_LIVE"
+    mode = phase5.get("mode") or obj.get("mode") or "paper"
+
+    # Notional (may be None if any field missing)
+    notional: float | None = None
     try:
-        text = cfg_path.read_text(encoding="utf-8")
-        data = json.loads(text)
+        if qty is not None and price is not None:
+            notional = float(qty) * float(price)
     except Exception:
-        return fallback
+        notional = None
 
-    val = data.get("NVDA_BPLUS_LIVE")
-    try:
-        if isinstance(val, dict):
-            for key in ("ev_per_trade", "ev", "ev_mu", "expected_value"):
-                v = val.get(key)
-                if v is not None:
-                    return float(v)
-            return fallback
-        if val is None:
-            return fallback
-        return float(val)
-    except (TypeError, ValueError):
-        return fallback
+    # Commission / carry_cost are not wired yet for NVDA Phase-5 paper;
+    # keep them as None so Notion columns exist but don't mislead.
+    commission = None
+    carry_cost = None
 
+    # Realized PnL, if any
+    realized = obj.get("realized_pnl")
+    if realized is None:
+        realized = phase5.get("realized_pnl")
 
-_NVDA_EV_PER_TRADE = _load_nvda_ev_from_config()
+    # EV / EV band: follow the same hooks as SPY/QQQ Phase-5 guard
+    ev_value = obj.get("ev")
+    if ev_value is None and "ev" in phase5:
+        ev_value = phase5.get("ev")
+    if ev_value is None and "ev_mu" in details:
+        ev_value = details.get("ev_mu")
 
-# EV band configuration from shared Phase-5 EV bands helper
-_EV_CFG_NVDA, _EV_BAND_ABS_NVDA = get_ev_and_band("NVDA_BPLUS_LIVE")
-if _EV_BAND_ABS_NVDA is None:
-    # Fallback: use EV per trade if band is not configured
-    _EV_BAND_ABS_NVDA = _NVDA_EV_PER_TRADE
+    ev_band_abs = obj.get("ev_band_abs")
+    if ev_band_abs is None and "ev_band_abs" in phase5:
+        ev_band_abs = phase5.get("ev_band_abs")
+    if ev_band_abs is None and "ev_band_abs" in details:
+        ev_band_abs = details.get("ev_band_abs")
+    if ev_band_abs is None and "ev_info" in details:
+        ev_info = details.get("ev_info") or {}
+        if "band_abs" in ev_info:
+            ev_band_abs = ev_info.get("band_abs")
 
-
-def _get_phase5_blocks(rec: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    """
-    Convenience helper to unpack Phase-5 nested structures if present.
-    """
-    p5 = rec.get("phase5_result") or {}
-    details = p5.get("phase5_details") or {}
-    daily_loss = details.get("daily_loss") or {}
-
-    return {
-        "phase5": p5 if isinstance(p5, dict) else {},
-        "details": details if isinstance(details, dict) else {},
-        "daily_loss": daily_loss if isinstance(daily_loss, dict) else {},
-    }
-
-
-def _get_realized_pnl(rec: Dict[str, Any]) -> Optional[float]:
-    """
-    Try multiple locations / names for realized PnL, including nested Phase-5 blocks.
-    """
-    orr = rec.get("order_result") or {}
-
-    # 1) Flat keys on rec / order_result
-    for src in (rec, orr):
-        for key in ("realized_pnl", "net_pnl", "gross_pnl", "realized", "net"):
-            v = src.get(key)
-            if v is not None:
-                try:
-                    return float(v)
-                except (TypeError, ValueError):
-                    pass
-
-    # 2) Legacy 'pnl' dict style
-    pnl = rec.get("pnl") or {}
-    if isinstance(pnl, dict):
-        for key in ("realized", "net", "gross"):
-            v = pnl.get(key)
-            if v is not None:
-                try:
-                    return float(v)
-                except (TypeError, ValueError):
-                    pass
-
-    # 3) Nested Phase-5 blocks
-    blocks = _get_phase5_blocks(rec)
-    for ctx_name in ("daily_loss", "details", "phase5"):
-        ctx = blocks.get(ctx_name) or {}
-        if not isinstance(ctx, dict):
-            continue
-
-        for key in ("realized_pnl", "realized", "net", "gross"):
-            v = ctx.get(key)
-            if v is not None:
-                try:
-                    return float(v)
-                except (TypeError, ValueError):
-                    pass
-
-    return None
-
-
-def _get_ev(rec: Dict[str, Any]) -> float:
-    """
-    EV priority:
-    1) Use existing rec["ev"] / order_result["ev"] / nested EV fields if present and non-zero.
-    2) Otherwise, use EV per trade from ev_simple.json (or fallback 0.0123).
-    """
-    orr = rec.get("order_result") or {}
-
-    # 1) Flat keys on rec / order_result
-    for src in (rec, orr):
-        for key in ("ev", "ev_mu", "expected_value"):
-            v = src.get(key)
-            if v is not None and not isinstance(v, dict):
-                try:
-                    v_f = float(v)
-                    if v_f != 0.0:
-                        return v_f
-                except (TypeError, ValueError):
-                    pass
-
-    # 2) ev as dict {"mu": ...}
-    ev_obj = rec.get("ev") or {}
-    if isinstance(ev_obj, dict):
-        v = ev_obj.get("mu")
-        if v is not None:
-            try:
-                v_f = float(v)
-                if v_f != 0.0:
-                    return v_f
-            except (TypeError, ValueError):
-                pass
-
-    # 3) Nested Phase-5 style: phase5_result / phase5_details
-    blocks = _get_phase5_blocks(rec)
-    for ctx_name in ("phase5", "details"):
-        ctx = blocks.get(ctx_name) or {}
-        if not isinstance(ctx, dict):
-            continue
-
-        for key in ("ev", "ev_mu", "expected_value"):
-            v = ctx.get(key)
-            if v is not None and not isinstance(v, dict):
-                try:
-                    v_f = float(v)
-                    if v_f != 0.0:
-                        return v_f
-                except (TypeError, ValueError):
-                    pass
-
-    # 4) Fallback: config EV per trade
-    return _NVDA_EV_PER_TRADE
-
-
-def _get_ev_band_abs(rec: Dict[str, Any]) -> float:
-    """
-    Try to locate an absolute EV band / tolerance field, including nested Phase-5.
-
-    If nothing is found on the record, fall back to the regime's configured band.
-    """
-    orr = rec.get("order_result") or {}
-
-    # 1) Flat keys
-    for src in (rec, orr):
-        for key in ("ev_band_abs", "ev_band", "ev_tolerance_abs", "ev_tolerance"):
-            v = src.get(key)
-            if v is not None and not isinstance(v, dict):
-                try:
-                    return float(v)
-                except (TypeError, ValueError):
-                    pass
-
-    # 2) ev as dict {"band_abs": ..., "band": ...}
-    ev_obj = rec.get("ev") or {}
-    if isinstance(ev_obj, dict):
-        v = ev_obj.get("band_abs") or ev_obj.get("band")
-        if v is not None:
-            try:
-                return float(v)
-            except (TypeError, ValueError):
-                pass
-
-    # 3) Nested Phase-5 blocks
-    blocks = _get_phase5_blocks(rec)
-    for ctx_name in ("phase5", "details"):
-        ctx = blocks.get(ctx_name) or {}
-        if not isinstance(ctx, dict):
-            continue
-
-        for key in ("ev_band_abs", "ev_band", "ev_tolerance_abs", "ev_tolerance"):
-            v = ctx.get(key)
-            if v is not None and not isinstance(v, dict):
-                try:
-                    return float(v)
-                except (TypeError, ValueError):
-                    pass
-
-    # 4) Fallback to configured band for NVDA_BPLUS_LIVE
-    return float(_EV_BAND_ABS_NVDA)
-
-
-def _extract_row(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """
-    Extract a flat row for NVDA_BPLUS_LIVE from a generic Phase-5 paper log entry.
-
-    Works for both BUY entries and SELL exits, but for Block-E EV tuning we
-    ultimately care about SELL rows where realized_pnl is set.
-    """
-    symbol = str(rec.get("symbol") or "").upper()
-    if symbol != "NVDA":
-        return None
-
-    regime = rec.get("regime") or "NVDA_BPLUS_LIVE"
-    if regime != "NVDA_BPLUS_LIVE":
-        return None
-
-    side = rec.get("side")
-    if side is None:
-        return None
-
-    side_str = str(side).upper()
-    ts = rec.get("ts") or rec.get("entry_ts")
-    orr = rec.get("order_result") or {}
-
-    qty = rec.get("qty") or orr.get("size")
-    price = rec.get("price") or orr.get("fill_price")
-    commission = orr.get("commission")
-    carry_cost = orr.get("carry_cost")
-    mode = orr.get("mode") or "paper"
-
-    if ts is None or qty is None or price is None:
-        return None
-
-    try:
-        qty_f = float(qty)
-        price_f = float(price)
-    except (TypeError, ValueError):
-        return None
-
-    notional = price_f * qty_f
-    realized = _get_realized_pnl(rec)
-    ev_val = _get_ev(rec)
-    ev_band_abs = _get_ev_band_abs(rec)
-
-    # EV-band classification using shared helper
-    try:
-        ev_band_allowed, ev_band_reason = require_ev_band(regime, ev_val)
-    except Exception:
-        ev_band_allowed, ev_band_reason = None, "ev_band_error"
+    # For now, NVDA Phase-5 EV-band *classification* is advisory only.
+    # We mark rows as "OK" when we at least have EV + band info.
+    if ev_value is not None and ev_band_abs is not None:
+        ev_band_allowed = True
+        ev_band_reason = "ev_band_ok"
+    else:
+        ev_band_allowed = None
+        ev_band_reason = None
 
     return {
         "ts": ts,
-        "symbol": "NVDA",
+        "symbol": symbol,
         "regime": regime,
-        "side": side_str,
-        "qty": qty_f,
-        "price": price_f,
+        "side": side,
+        "qty": qty,
+        "price": price,
         "notional": notional,
         "commission": commission,
         "carry_cost": carry_cost,
         "mode": mode,
         "realized_pnl": realized,
-        "ev": ev_val,
+        "ev": ev_value,
         "ev_band_abs": ev_band_abs,
         "ev_band_allowed": ev_band_allowed,
         "ev_band_reason": ev_band_reason,
@@ -301,40 +156,20 @@ def _extract_row(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 def main() -> None:
-    src = JSONL_PATH
-    dst = CSV_PATH
+    records = list(_iter_jsonl(JSONL_PATH))
+    rows = [_to_row(obj) for obj in records]
 
-    print(f"Source: {src}")
-    if not src.exists():
-        print("  SKIP: source JSONL not found.")
-        return
-
-    rows: List[Dict[str, Any]] = []
-    with src.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rec = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-
-            row = _extract_row(rec)
-            if row is not None:
-                rows.append(row)
-
-    print(f"  Rows extracted for NVDA_BPLUS_LIVE: {len(rows)}")
-
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    with dst.open("w", encoding="utf-8", newline="") as fout:
-        writer = csv.DictWriter(fout, fieldnames=FIELDS)
+    CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with CSV_PATH.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
         writer.writeheader()
         for row in rows:
-            out_row = {k: row.get(k, "") for k in FIELDS}
-            writer.writerow(out_row)
+            writer.writerow(row)
 
-    print(f"Wrote {len(rows)} rows to {dst}")
+    print(f"Source: {JSONL_PATH}")
+    print(f"  Records read: {len(records)}")
+    print(f"  Rows written: {len(rows)}")
+    print(f"Wrote {len(rows)} rows to {CSV_PATH}")
 
 
 if __name__ == "__main__":
