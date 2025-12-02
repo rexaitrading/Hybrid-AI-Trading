@@ -173,6 +173,14 @@ function Show-Phase5PnlInternal {
         Write-Host ("`n[CSV] Rows with PnL for {0} / {1}" -f $Symbol, $Regime) -ForegroundColor Cyan
 
         $rows = Import-Csv $CsvPath
+
+        # Handle 0 / 1 / many rows robustly
+        if (-not $rows) {
+            Write-Host "[CSV] No rows in CSV: $CsvPath" -ForegroundColor Yellow
+            return
+        }
+        $rows = @($rows)
+
         if ($rows.Count -eq 0) {
             Write-Host "[CSV] No rows in CSV: $CsvPath" -ForegroundColor Yellow
             return

@@ -20,7 +20,7 @@ from hybrid_ai_trading.execution.execution_engine import (
 )
 
 # Central QQQ ORB Phase-5 config loader (JSON + EV band from YAML)
-from tools.qqq_phase5_config_loader import (
+from qqq_phase5_config_loader import (
     load_qqq_orb_phase5_config_with_ev,
 )
 

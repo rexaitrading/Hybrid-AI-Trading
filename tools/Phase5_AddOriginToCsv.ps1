@@ -1,47 +1,49 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$CsvPath,
+    [string] $CsvPath,
 
-    [Parameter(Mandatory = $true)]
-    [string]$Origin  # e.g. "LIVE" or "REPLAY"
+    [Parameter(Mandatory = $false)]
+    [string] $Origin = "LIVE"
 )
 
 $ErrorActionPreference = "Stop"
 
 if (-not (Test-Path $CsvPath)) {
-    Write-Host "[ERROR] CSV not found: $CsvPath" -ForegroundColor Red
-    exit 1
+    Write-Warning "[ORIGIN] CSV not found at path: $CsvPath"
+    return
 }
 
-Write-Host "`n[ORIGIN] Add origin=$Origin to $CsvPath" -ForegroundColor Cyan
+Write-Host "[ORIGIN] Updating origin=$Origin for $CsvPath" -ForegroundColor Cyan
 
-$rows = Import-Csv $CsvPath
+# Import rows (can be single object or array)
+$rows = Import-Csv -Path $CsvPath
 
-if ($rows.Count -eq 0) {
-    Write-Host "  [WARN] No rows in CSV." -ForegroundColor Yellow
-    exit 0
+if (-not $rows) {
+    Write-Host "[ORIGIN] No rows in CSV, nothing to update." -ForegroundColor Yellow
+    return
 }
 
-# If origin column already exists, just overwrite its values
-$hasOrigin = $rows[0].PSObject.Properties.Name -contains "origin"
+# Ensure we always treat as an array
+$rows = @($rows)
 
-foreach ($r in $rows) {
+# Check if 'origin' column already exists
+$first = $rows[0]
+$hasOrigin = $false
+if ($first -and $first.PSObject -and $first.PSObject.Properties) {
+    $hasOrigin = $first.PSObject.Properties.Name -contains 'origin'
+}
+
+foreach ($row in $rows) {
     if ($hasOrigin) {
-        $r.origin = $Origin
+        # Overwrite existing origin column
+        $row.origin = $Origin
     } else {
-        $r | Add-Member -NotePropertyName origin -NotePropertyValue $Origin -Force
+        # Add a new origin column
+        Add-Member -InputObject $row -NotePropertyName origin -NotePropertyValue $Origin
     }
 }
 
-# Re-export, preserving UTF-8 no BOM
-$tempPath = "$CsvPath.tmp"
+# Re-export, preserving CSV structure, UTF-8
+$rows | Export-Csv -Path $CsvPath -NoTypeInformation -Encoding UTF8
 
-$rows | Export-Csv -Path $tempPath -NoTypeInformation -Encoding UTF8
-
-# Remove BOM if present (Export-Csv may add it)
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-$textLines = Get-Content $tempPath
-[System.IO.File]::WriteAllLines($CsvPath, $textLines, $utf8NoBom)
-Remove-Item $tempPath -Force
-
-Write-Host "  [OK] origin column updated." -ForegroundColor Green
+Write-Host "[ORIGIN] origin column updated for $($rows.Count) row(s)." -ForegroundColor Green

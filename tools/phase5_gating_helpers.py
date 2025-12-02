@@ -178,3 +178,33 @@ def should_allow_trade(
 
     allow = decision.allow_flag
     return allow, decision
+
+
+def get_phase5_decision_for_trade(
+    symbol: Optional[str] = None,
+    entry_ts: Optional[str] = None,
+    symbol_code: Optional[str] = None,
+    ts: Optional[str] = None,
+    **_: Any,
+) -> Optional[Dict[str, Any]]:
+    """
+    Backward-compatible shim used by existing Phase-5 tools (e.g. nvda_phase5_live_smoke).
+
+    Accepts both:
+      get_phase5_decision_for_trade("NVDA", "2025-...")
+      get_phase5_decision_for_trade(symbol="NVDA", entry_ts="2025-...")
+      get_phase5_decision_for_trade(symbol_code="NVDA", ts="2025-...")
+    And ignores any extra keyword arguments (e.g. regime=...).
+
+    Returns the underlying decision dict for (symbol, ts), or None if no match.
+    """
+    sym = symbol_code or symbol
+    ts_value = entry_ts or ts
+    if sym is None or ts_value is None:
+        return None
+
+    decision = lookup_decision_by_ts(sym, entry_ts=str(ts_value))
+    if decision is None:
+        return None
+
+    return decision.raw
