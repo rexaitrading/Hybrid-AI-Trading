@@ -15,7 +15,7 @@ import datetime
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from hybrid_ai_trading.execution.execution_engine import (
     ExecutionEngine,
@@ -74,6 +74,43 @@ def get_account_daily_loss_cap_from_env(default: float = 50.0) -> float:
         return float(value)
     except ValueError:
         return default
+
+
+def ensure_phase5_decision_with_default(
+    entry_ts: str,
+    symbol: str,
+    regime: str,
+) -> Dict[str, Any]:
+    """
+    Wrapper around get_phase5_decision_for_trade() that guarantees a non-null EV.
+
+    If the central helper returns None / falsy, we fall back to a simple,
+    log-only EV decision (no extra gating effect, but useful for EV-band analysis).
+    """
+    raw: Optional[Dict[str, Any]] = get_phase5_decision_for_trade(
+        entry_ts=entry_ts,
+        symbol=symbol,
+        regime=regime,
+    )
+
+    if not raw:
+        return {
+            "ev": 0.02,
+            "ev_band_abs": 0.02,
+            "allowed": True,
+            "reason": "ev_simple_default",
+        }
+
+    ev = raw.get("ev")
+    if ev is None:
+        raw["ev"] = 0.02
+    if raw.get("ev_band_abs") is None:
+        raw["ev_band_abs"] = 0.02
+    if "allowed" not in raw:
+        raw["allowed"] = True
+    if "reason" not in raw:
+        raw["reason"] = "ev_simple_default"
+    return raw
 
 
 def build_live_config() -> Dict[str, Any]:
@@ -163,10 +200,8 @@ def main() -> None:
         print("  phase5_candidate =", ipo_info.get("phase5_candidate"))
         print("  phase5_notes     =", ipo_info.get("phase5_notes"))
 
-    # Load Phase-5 decision using central helper:
-    # - If a decisions JSON exists and ts matches, use that.
-    # - Otherwise, fall back to ev_simple.json mapping for this regime.
-    phase5_decision = get_phase5_decision_for_trade(
+    # Load Phase-5 decision using central helper + default EV fallback.
+    phase5_decision = ensure_phase5_decision_with_default(
         entry_ts=entry_ts,
         symbol=symbol,
         regime=regime,

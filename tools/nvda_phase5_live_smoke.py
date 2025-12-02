@@ -12,7 +12,7 @@ NVDA Phase-5 live-style smoke runner (no IBG, no broker side-effects).
 from __future__ import annotations
 
 import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from hybrid_ai_trading.execution.execution_engine import (
     ExecutionEngine,
@@ -39,6 +39,44 @@ def build_example_config() -> Dict[str, Any]:
         # "broker": {...},
         # etc.
     }
+
+
+def ensure_phase5_decision_with_default(
+    entry_ts: str,
+    symbol: str,
+    regime: str,
+) -> Dict[str, Any]:
+    """
+    Wrapper around get_phase5_decision_for_trade() that guarantees a non-null EV.
+
+    If the central helper returns None / falsy, we fall back to a simple,
+    log-only EV decision (no gating effect, but useful for EV-band analysis).
+    """
+    raw: Optional[Dict[str, Any]] = get_phase5_decision_for_trade(
+        entry_ts=entry_ts,
+        symbol=symbol,
+        regime=regime,
+    )
+
+    if not raw:
+        return {
+            "ev": 0.02,
+            "ev_band_abs": 0.02,
+            "allowed": True,
+            "reason": "ev_simple_default",
+        }
+
+    # If helper returned something but without EV, patch it.
+    ev = raw.get("ev")
+    if ev is None:
+        raw["ev"] = 0.02
+    if raw.get("ev_band_abs") is None:
+        raw["ev_band_abs"] = 0.02
+    if "allowed" not in raw:
+        raw["allowed"] = True
+    if "reason" not in raw:
+        raw["reason"] = "ev_simple_default"
+    return raw
 
 
 def main() -> None:
@@ -72,10 +110,8 @@ def main() -> None:
     price = 1.0  # safe dummy price for smoke (avoid portfolio_update_failed)
     regime = "NVDA_BPLUS_LIVE"
 
-    # Load Phase-5 decision using central helper:
-    # - If a decisions JSON exists and ts matches, use that.
-    # - Otherwise, fall back to ev_simple.json mapping for this regime.
-    phase5_decision = get_phase5_decision_for_trade(
+    # Load Phase-5 decision using central helper + default EV fallback.
+    phase5_decision = ensure_phase5_decision_with_default(
         entry_ts=entry_ts,
         symbol=symbol,
         regime=regime,
