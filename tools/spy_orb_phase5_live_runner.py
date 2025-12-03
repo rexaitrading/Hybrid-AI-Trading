@@ -6,7 +6,9 @@ SPY ORB Phase-5 live-style smoke runner (no IBG, no broker side-effects).
 - Exercises:
   - Phase-5 decisions gate (via phase5_gating_helpers),
   - No-averaging adapter,
-  - Logging to logs/phase5_live_events.jsonl and spy_phase5_paperlive_results.jsonl.
+  - Logging to logs/phase5_live_events.jsonl and spy_phase5_paperlive_results.jsonl,
+  - Soft EV diagnostics and EV-band hard veto *suggestion* (log-only),
+  - ORB+VWAP EV model (ev_orb_vwap_model, log-only).
 """
 
 from __future__ import annotations
@@ -31,10 +33,15 @@ from spy_phase5_config_loader import (
 # - When run as "python tools/spy_orb_phase5_live_runner.py", top-level "" includes repo root.
 # - When imported as "tools.spy_orb_phase5_live_runner", PYTHONPATH includes "src".
 try:
-    from tools.phase5_gating_helpers import get_phase5_decision_for_trade
+    from tools.phase5_gating_helpers import get_phase5_decision_for_trade, attach_ev_band_hard_veto
 except Exception:  # pragma: no cover - fallback to old relative import
-    from phase5_gating_helpers import get_phase5_decision_for_trade  # type: ignore[no-redef]
+    from phase5_gating_helpers import get_phase5_decision_for_trade, attach_ev_band_hard_veto  # type: ignore[no-redef]
 
+from hybrid_ai_trading.risk.ev_orb_vwap_model import (
+    OrbVwapFeatures,
+    compute_orb_vwap_ev,
+    compute_effective_ev,
+)
 
 SPY_PAPER_JSONL_PATH = Path("logs") / "spy_phase5_paperlive_results.jsonl"
 
@@ -43,13 +50,7 @@ def compute_soft_veto_ev_fields(ev: float, realized_pnl: float) -> Dict[str, Any
     """
     Phase-5 SPY soft EV veto diagnostics.
 
-    This is *diagnostic only*:
-    - soft_ev_veto: whether EV-vs-realized gap is large
-    - soft_ev_reason: short text reason
-    - ev_band_abs: 0/1/2 coarse band for |EV|
-    - ev_gap_abs: |EV - realized_pnl|
-    - ev_vs_realized_paper: EV - realized_pnl
-    - ev_band_veto_applied: False for now (soft only)
+    This is *diagnostic only*.
     """
     abs_ev = abs(ev)
     if abs_ev <= 0.15:
@@ -62,7 +63,6 @@ def compute_soft_veto_ev_fields(ev: float, realized_pnl: float) -> Dict[str, Any
     ev_gap_abs = abs(ev - realized_pnl)
     ev_vs_realized_paper = ev - realized_pnl
 
-    # Soft veto rule: gap >= 0.20R triggers a "hit"
     ev_hit_flag = ev_gap_abs >= 0.20
 
     return {
@@ -89,9 +89,13 @@ def append_spy_phase5_paper_entry(
     """
     Append a SPY Phase-5 soft EV diagnostic entry to spy_phase5_paperlive_results.jsonl.
 
+    Enriched with:
+    - soft EV diagnostics,
+    - EV-band hard veto suggestion (via attach_ev_band_hard_veto),
+    - ORB+VWAP EV model (ev_orb_vwap_model, log-only).
+
     This is SPY-specific and *does not* change any trade gating behavior.
     """
-    # Realized PnL not yet wired in ExecutionEngine result -> assume 0.0 for smoke.
     try:
         realized_pnl = float(result.get("realized_pnl_paper", 0.0))
     except (TypeError, ValueError):
@@ -107,6 +111,43 @@ def append_spy_phase5_paper_entry(
 
     soft_fields = compute_soft_veto_ev_fields(ev=ev, realized_pnl=realized_pnl)
 
+    # Build decision mapping for hard-veto helper
+    decision_for_hard: Dict[str, Any] = {
+        "ev": ev,
+        "phase5_allowed": phase5_allowed,
+        "phase5_reason": phase5_reason,
+        "realized_pnl_paper": realized_pnl,
+        "ev_gap_abs": soft_fields.get("ev_gap_abs"),
+    }
+    decision_for_hard = attach_ev_band_hard_veto(
+        decision=decision_for_hard,
+        realized_pnl=realized_pnl,
+        gap_threshold=0.7,
+    )
+
+    # Very simple ORB+VWAP features for now:
+    orb_strength = 0.5 if side.upper() == "BUY" else 0.3
+    above_vwap = True if side.upper() == "BUY" else False
+    trend_score = 0.0
+    vol_bucket = "medium"
+
+    features = OrbVwapFeatures(
+        orb_strength=orb_strength,
+        above_vwap=above_vwap,
+        trend_score=trend_score,
+        vol_bucket=vol_bucket,
+    )
+    ev_orb_vwap_model = compute_orb_vwap_ev(
+        symbol=symbol,
+        regime=regime,
+        features=features,
+    )
+
+    ev_effective_orb_vwap = compute_effective_ev(
+        ev_phase5=ev,
+        ev_model=ev_orb_vwap_model,
+    )\
+
     entry: Dict[str, Any] = {
         "ts": ts,
         "symbol": symbol,
@@ -120,6 +161,16 @@ def append_spy_phase5_paper_entry(
     }
     entry.update(soft_fields)
 
+    # EV hard-veto suggestion (log-only)
+    entry["ev_hard_veto"] = decision_for_hard.get("ev_hard_veto")
+    entry["ev_hard_veto_reason"] = decision_for_hard.get("ev_hard_veto_reason")
+    entry["ev_hard_veto_gap_abs"] = decision_for_hard.get("ev_hard_veto_gap_abs")
+    entry["ev_hard_veto_gap_threshold"] = decision_for_hard.get("ev_hard_veto_gap_threshold")
+
+    # ORB+VWAP model EV (log-only)
+    entry["ev_orb_vwap_model"] = ev_orb_vwap_model
+    entry["ev_effective_orb_vwap"] = ev_effective_orb_vwap
+
     SPY_PAPER_JSONL_PATH.parent.mkdir(parents=True, exist_ok=True)
     with SPY_PAPER_JSONL_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
@@ -128,8 +179,6 @@ def append_spy_phase5_paper_entry(
 def build_example_config() -> Dict[str, Any]:
     """
     Example config enabling Phase-5 no-averaging for a live-style engine.
-
-    NOTE: You may need to extend this with your real IB / data / cost config.
     """
     base: Dict[str, Any] = {
         "dry_run": True,  # SAFE: do not send real orders
@@ -137,16 +186,8 @@ def build_example_config() -> Dict[str, Any]:
         "phase5": {
             "no_averaging_down_enabled": True,
         },
-        # Extend as needed:
-        # "costs": {...},
-        # "broker": {...},
-        # etc.
     }
 
-    # Try to load SPY ORB Phase-5 config (with EV band) for observability.
-    # We do NOT currently merge it into the engine config to avoid changing
-    # existing ctor expectations; we just print it so Block-E tuning can
-    # confirm the EV band being used.
     try:
         spy_cfg = load_spy_orb_phase5_config_with_ev()
         ev_section = spy_cfg.get("ev", {})
@@ -163,29 +204,24 @@ def main() -> None:
     print("=== SPY ORB Phase-5 live-style smoke ===")
     print("Config:", cfg)
 
-    # Try to build a real ExecutionEngine with this config.
     try:
         engine = ExecutionEngine(config=cfg)
     except TypeError as e:
         print("\n[WARN] ExecutionEngine(config=...) ctor failed with TypeError:")
         print("      ", e)
-        print("      Please adjust build_example_config() / ctor usage to match your engine.")
         return
     except Exception as e:
         print("\n[WARN] ExecutionEngine ctor failed:", e)
         return
 
-    # Build a synthetic entry ts close to "now".
     entry_ts = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
-    # Dummy SPY trade params for the smoke test.
     symbol = "SPY"
     side = "BUY"
     qty = 1.0
     price = 1.0
     regime = "SPY_ORB_LIVE"
 
-    # Phase-5 decision via central helper (decisions JSON + ev_simple / EV bands).
     phase5_decision = get_phase5_decision_for_trade(
         entry_ts=entry_ts,
         symbol=symbol,
@@ -220,7 +256,6 @@ def main() -> None:
     print("\nResult from place_order_phase5_with_logging:")
     print(result)
 
-    # Append SPY-specific soft EV diagnostics (diagnostic only).
     try:
         append_spy_phase5_paper_entry(
             ts=entry_ts,
@@ -231,14 +266,14 @@ def main() -> None:
             result=result,
             phase5_decision=phase5_decision,
         )
-        print("\n[PHASE5/SPY] Appended soft EV diagnostic entry to", SPY_PAPER_JSONL_PATH)
+        print("\n[PHASE5/SPY] Appended soft+hard EV + ORB+VWAP EV entry to", SPY_PAPER_JSONL_PATH)
     except Exception as e:
-        print("\n[WARN] Failed to append SPY soft EV diagnostic entry:", e)
+        print("\n[WARN] Failed to append SPY soft/hard EV diagnostic entry:", e)
 
     print("\nIf logging is wired correctly, you should now see a new line in:")
     print("  logs/phase5_live_events.jsonl (if used)")
     print("and in logs/spy_phase5_paperlive_results.jsonl via ExecutionEngine wrapper")
-    print("plus the soft EV diagnostic entry appended by this runner.")
+    print("plus the soft + hard EV + ORB+VWAP EV diagnostic entry appended by this runner.")
 
 
 if __name__ == "__main__":

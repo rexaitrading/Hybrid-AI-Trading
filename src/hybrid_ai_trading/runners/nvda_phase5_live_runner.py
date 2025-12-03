@@ -9,6 +9,8 @@ NVDA Phase-5 live-style runner for IB paper trading.
   * Phase-5 decisions gate (should_allow_trade)
   * RiskManager.phase5_no_averaging_down_for_symbol adapter
   * Logging to logs/phase5_live_events.jsonl and optional paper_exec_logger.
+  * Soft EV diagnostics and EV-band hard veto suggestion (log-only).
+  * ORB+VWAP model EV (ev_orb_vwap_model, log-only).
 """
 
 import datetime
@@ -22,22 +24,18 @@ from hybrid_ai_trading.execution.execution_engine import (
     place_order_phase5_with_logging,
 )
 from hybrid_ai_trading.risk.risk_phase5_account_caps import account_daily_loss_gate
+from hybrid_ai_trading.risk.phase5_ev_band_hard_veto import evaluate_ev_band_hard_veto
+from hybrid_ai_trading.risk.ev_orb_vwap_model import (
+    OrbVwapFeatures,
+    compute_orb_vwap_ev,
+    compute_effective_ev,
+)
 
 IPO_WATCHLIST_PATH = Path("logs") / "ipo_watchlist.jsonl"
 NVDA_PAPER_JSONL_PATH = Path("logs") / "nvda_phase5_paperlive_results.jsonl"
 
 
 def load_ipo_tags() -> Dict[str, Dict[str, Any]]:
-    """
-    Load IPO tags from logs/ipo_watchlist.jsonl produced by tools/update_ipo_watchlist.py.
-
-    Returns: symbol -> dict with keys:
-      - origin_region
-      - is_hk_origin
-      - is_international
-      - phase5_candidate
-      - phase5_notes
-    """
     tags: Dict[str, Dict[str, Any]] = {}
     if not IPO_WATCHLIST_PATH.exists():
         return tags
@@ -60,11 +58,6 @@ def load_ipo_tags() -> Dict[str, Dict[str, Any]]:
 
 
 def get_account_daily_loss_cap_from_env(default: float = 50.0) -> float:
-    """
-    Read Phase-5 account daily loss cap from env var HAT_PHASE5_ACCOUNT_DAILY_LOSS_CAP.
-
-    Returns default (e.g. $50) if unset or invalid.
-    """
     value = os.environ.get("HAT_PHASE5_ACCOUNT_DAILY_LOSS_CAP")
     if not value:
         return default
@@ -95,12 +88,6 @@ def ensure_phase5_decision_with_default(
     symbol: str,
     regime: str,
 ) -> Dict[str, Any]:
-    """
-    Wrapper around get_phase5_decision_for_trade() that guarantees a non-null EV.
-
-    If the central helper returns None / falsy, we fall back to a simple,
-    log-only EV decision (no extra gating effect, but useful for EV-band analysis).
-    """
     raw: Optional[Dict[str, Any]] = get_phase5_decision_for_trade(
         entry_ts=entry_ts,
         symbol=symbol,
@@ -129,15 +116,7 @@ def ensure_phase5_decision_with_default(
 
 def compute_soft_veto_ev_fields(ev: float, realized_pnl: float) -> Dict[str, Any]:
     """
-    Phase-5 NVDA soft EV veto diagnostics.
-
-    This is *diagnostic only*:
-    - soft_ev_veto: whether EV-vs-realized gap is large
-    - soft_ev_reason: short text reason
-    - ev_band_abs: 0/1/2 coarse band for |EV|
-    - ev_gap_abs: |EV - realized_pnl|
-    - ev_vs_realized_paper: EV - realized_pnl
-    - ev_band_veto_applied: False for now (soft only)
+    Phase-5 NVDA soft EV veto diagnostics (diagnostic only).
     """
     abs_ev = abs(ev)
     if abs_ev <= 0.15:
@@ -149,8 +128,6 @@ def compute_soft_veto_ev_fields(ev: float, realized_pnl: float) -> Dict[str, Any
 
     ev_gap_abs = abs(ev - realized_pnl)
     ev_vs_realized_paper = ev - realized_pnl
-
-    # Soft veto rule: gap >= 0.20R triggers a "hit"
     ev_hit_flag = ev_gap_abs >= 0.20
 
     return {
@@ -172,10 +149,12 @@ def append_nvda_phase5_paper_entry(
     side: str,
     price: float,
     result: Dict[str, Any],
+    phase5_decision: Dict[str, Any],
 ) -> None:
     """
     Append a single NVDA Phase-5 paper entry to nvda_phase5_paperlive_results.jsonl,
-    enriched with soft EV diagnostics for Notion dashboards.
+    enriched with soft EV diagnostics, EV-band hard veto suggestion, and
+    ORB+VWAP model EV (ev_orb_vwap_model, log-only).
 
     This is NVDA-specific and *does not* change any trade gating behavior.
     """
@@ -185,14 +164,50 @@ def append_nvda_phase5_paper_entry(
         realized_pnl = 0.0
 
     try:
-        ev = float(result.get("ev", 0.0))
+        ev = float(phase5_decision.get("ev", 0.0))
     except (TypeError, ValueError):
         ev = 0.0
 
-    phase5_allowed = bool(result.get("phase5_allowed", True))
-    phase5_reason = result.get("phase5_reason", "unknown")
+    phase5_allowed = bool(phase5_decision.get("allowed", True))
+    phase5_reason = phase5_decision.get("reason", "unknown")
 
     soft_fields = compute_soft_veto_ev_fields(ev=ev, realized_pnl=realized_pnl)
+
+    # Hard-veto suggestion (log-only) using EV-band helper
+    hard_result = evaluate_ev_band_hard_veto(
+        ev=ev,
+        realized_pnl=realized_pnl,
+        ev_gap_abs=soft_fields.get("ev_gap_abs"),
+        gap_threshold=0.7,
+    )
+
+    # Very simple ORB+VWAP features for now:
+    # - orb_strength: slightly higher for BUY than SELL
+    # - above_vwap: assume True for BUY, False for SELL (to be refined later)
+    # - trend_score: neutral for now
+    # - vol_bucket: "medium" for now
+    orb_strength = 0.6 if side.upper() == "BUY" else 0.3
+    above_vwap = True if side.upper() == "BUY" else False
+    trend_score = 0.0
+    vol_bucket = "medium"
+
+    features = OrbVwapFeatures(
+        orb_strength=orb_strength,
+        above_vwap=above_vwap,
+        trend_score=trend_score,
+        vol_bucket=vol_bucket,
+    )
+    ev_orb_vwap_model = compute_orb_vwap_ev(
+        symbol=symbol,
+        regime=regime,
+        features=features,
+    )
+
+    # Log-only effective EV blend (Phase-5 EV + ORB+VWAP model EV)
+    ev_effective_orb_vwap = compute_effective_ev(
+        ev_phase5=ev,
+        ev_model=ev_orb_vwap_model,
+    )\
 
     entry: Dict[str, Any] = {
         "ts": ts,
@@ -207,20 +222,22 @@ def append_nvda_phase5_paper_entry(
     }
     entry.update(soft_fields)
 
+    entry["ev_hard_veto"] = hard_result.hard_veto
+    entry["ev_hard_veto_reason"] = hard_result.hard_veto_reason
+    entry["ev_hard_veto_gap_abs"] = hard_result.ev_gap_abs
+    entry["ev_hard_veto_gap_threshold"] = hard_result.gap_threshold
+
+    # ORB+VWAP model EV (log-only)
+    entry["ev_orb_vwap_model"] = ev_orb_vwap_model
+    # Effective EV blend (log-only)
+    entry["ev_effective_orb_vwap"] = ev_effective_orb_vwap
+
     NVDA_PAPER_JSONL_PATH.parent.mkdir(parents=True, exist_ok=True)
     with NVDA_PAPER_JSONL_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
 
 
 def build_live_config() -> Dict[str, Any]:
-    """
-    Phase-5 NVDA live config for IB paper trading.
-
-    NOTE:
-    - dry_run=False: ExecutionEngine will use broker adapter (IB paper).
-    - Broker/account/port are read from env vars where possible.
-    - Make sure IB Gateway PAPER is up and env vars are set before running.
-    """
     return {
         "dry_run": False,
         "phase5_no_averaging_down_enabled": True,
@@ -251,7 +268,6 @@ def main() -> None:
     print("=== nvda_phase5_live_runner ===")
     print("Config:", cfg)
 
-    # Phase-5 account daily loss gate at start of runner (assume realized PnL = 0 for this smoke).
     account_cap = cfg.get("phase5", {}).get("account_daily_loss_cap", 0.0)
     daily_gate = account_daily_loss_gate(
         account_realized_pnl=0.0,
@@ -263,34 +279,26 @@ def main() -> None:
         print("  details=", getattr(daily_gate, "details", None))
         return
 
-    # Build ExecutionEngine with config-only constructor.
     try:
-        engine = ExecutionEngine(config=cfg)  # adjust if your ctor differs
+        engine = ExecutionEngine(config=cfg)
     except TypeError as e:
         print("\n[WARN] ExecutionEngine(config=...) ctor failed with TypeError:")
         print("      ", e)
-        print("      Adjust build_live_config() / ctor usage to match your engine.")
         return
     except Exception as e:
         print("\n[WARN] ExecutionEngine ctor failed:", e)
         return
 
-    # Synthetic entry timestamp close to "now".
-    # In a real live strategy, use the actual bar/signal timestamp.
     entry_ts = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
-    # Dummy NVDA trade parameters for this runner.
-    # Real live logic will drive side/qty/price from signals + Kelly sizing.
     symbol = "NVDA"
     side = "BUY"
     qty = 1.0
-    price = 1.0  # dummy price for IB paper connectivity smoke (must be > 0)
+    price = 1.0
     regime = "NVDA_BPLUS_LIVE"
 
-    # Load IPO tags (for future IPO symbols, including HK-origin NASDAQ listings).
     ipo_tags = load_ipo_tags()
     ipo_info = ipo_tags.get(symbol.upper())
-
     if ipo_info:
         print("\n[IPO] Tags for", symbol, ":")
         print("  origin_region    =", ipo_info.get("origin_region"))
@@ -299,7 +307,6 @@ def main() -> None:
         print("  phase5_candidate =", ipo_info.get("phase5_candidate"))
         print("  phase5_notes     =", ipo_info.get("phase5_notes"))
 
-    # Load Phase-5 decision using central helper + default EV fallback.
     phase5_decision = ensure_phase5_decision_with_default(
         entry_ts=entry_ts,
         symbol=symbol,
@@ -328,7 +335,6 @@ def main() -> None:
     print("\nResult from place_order_phase5_with_logging:")
     print(result)
 
-    # Append NVDA-specific paper entry with soft EV diagnostics (diagnostic only).
     try:
         append_nvda_phase5_paper_entry(
             ts=entry_ts,
@@ -337,13 +343,12 @@ def main() -> None:
             side=side,
             price=price,
             result=result,
+            phase5_decision=phase5_decision,
         )
-        print("\n[PHASE5/NVDA] Appended paper entry to", NVDA_PAPER_JSONL_PATH)
+        print("\n[PHASE5/NVDA] Appended soft+hard EV + ORB+VWAP EV entry to", NVDA_PAPER_JSONL_PATH)
     except Exception as e:
         print("\n[WARN] Failed to append NVDA paper entry:", e)
 
-    # Optional Phase-5 no-averaging-down demo: second BUY in same process.
-    # Enabled only when HAT_PHASE5_DOUBLE_BUY_DEMO=1 to avoid changing normal behavior.
     import os as _os
     if _os.environ.get("HAT_PHASE5_DOUBLE_BUY_DEMO") == "1":
         print("\n[Phase5] Calling SECOND place_order_phase5_with_logging(...) to demo no-averaging-down")
@@ -363,7 +368,7 @@ def main() -> None:
     print("  logs/phase5_live_events.jsonl")
     print("and, if paper_exec_logger.log_phase5_event/log_event exists,")
     print("  it will also be forwarded there.")
-    print("\nAdditionally, NVDA Phase-5 soft EV diagnostics will be appended in:")
+    print("\nAdditionally, NVDA Phase-5 soft + hard EV + ORB+VWAP EV diagnostics will be appended in:")
     print(f"  {NVDA_PAPER_JSONL_PATH}")
     print("\nTo move from small IB paper probe -> fuller live setup:")
     print("  - replace dummy price/qty with real signal- and Kelly-driven values")
