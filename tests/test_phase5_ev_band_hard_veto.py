@@ -1,78 +1,27 @@
-import pytest
-
-from hybrid_ai_trading.execution import execution_engine_phase5_guard as guard
-
-
-class FakeDecision:
-    """
-    Minimal stand-in for Phase5RiskDecision for EV-band hard-veto tests.
-    """
-
-    def __init__(self, allowed: bool = True, reason: str | None = None) -> None:
-        self.allowed = allowed
-        self.reason = reason
+from hybrid_ai_trading.risk.phase5_ev_band_hard_veto import (
+    evaluate_ev_band_hard_veto,
+)
 
 
-@pytest.mark.parametrize("ev_value, expect_veto", [(-0.5, True), (0.5, False)])
-def test_ev_band_hard_veto_flag_respects_ev_sign(monkeypatch, ev_value, expect_veto):
-    """
-    With PHASE5_ENABLE_EV_BAND_HARD_VETO=1:
+def test_ev_negative_triggers_hard_veto():
+    result = evaluate_ev_band_hard_veto(ev=-0.10, realized_pnl=0.0, gap_threshold=0.7)
+    assert result.hard_veto is True
+    assert result.hard_veto_reason == "ev<0"
+    assert result.ev_gap_abs == 0.10
 
-    - ev < 0  -> guard should change decision.allowed to False and tag reason with 'ev_band_hard_veto'
-    - ev > 0  -> guard should leave decision.allowed True and not tag the reason
-    """
 
-    # Enable hard veto for this test only
-    monkeypatch.setenv("PHASE5_ENABLE_EV_BAND_HARD_VETO", "1")
+def test_large_gap_triggers_hard_veto():
+    # EV positive, but realized PnL far away: gap >= threshold
+    result = evaluate_ev_band_hard_veto(ev=0.20, realized_pnl=-0.80, gap_threshold=0.7)
+    assert result.hard_veto is True
+    assert result.hard_veto_reason == "ev_gap>=threshold"
+    # abs(0.20 - -0.80) = 1.0
+    assert result.ev_gap_abs == 1.0
 
-    class FakeEngine:
-        def __init__(self):
-            # Expose a risk_manager so the guard path is used, not the fallback.
-            self.risk_manager = fake_rm
 
-    # Fake RiskManager + trade objects (guard_phase5_trade is monkeypatched)
-    fake_rm = object()
-    fake_trade = object()  # placeholder; guard builds its own trade dict anyway
-
-    # Fake decision injected into guard_phase5_trade
-    def fake_guard_phase5_trade(rm, trade):
-        # We only care that the correct risk manager is passed; trade content is built by the guard.
-        assert rm is fake_rm
-        return FakeDecision(allowed=True, reason="base_reason")
-
-    # Force EV hooks to see the EV we want to test
-    def fake_extract_phase5_ev(decision):
-        # ev_value, ev_band_abs, gate_score_v2
-        return ev_value, 0.5, None
-
-    monkeypatch.setattr(guard, "guard_phase5_trade", fake_guard_phase5_trade, raising=False)
-    monkeypatch.setattr(guard, "_extract_phase5_ev", fake_extract_phase5_ev, raising=False)
-
-    engine = FakeEngine()
-
-    # Call the guarded wrapper. It should either block (ev < 0) or pass through (ev > 0).
-    result = guard.place_order_phase5_with_guard(
-        engine,
-        trade=fake_trade,
-        symbol="NVDA",
-        side="BUY",
-        qty=1.0,
-        regime="NVDA_BPLUS_LIVE",
-        mode="paper",
-    )
-
-    if expect_veto:
-        # Hard veto: we expect the blocked_phase5 synthetic result
-        assert result["status"] == "blocked_phase5"
-        assert result.get("phase5_ev_band_enabled") is True
-        assert result.get("phase5_ev_band_veto") is True
-        reason = result.get("reason") or ""
-        assert "ev_band_hard_veto" in reason
-    else:
-        # No veto: result should NOT be blocked, and no hard-veto tag.
-        assert result.get("status") != "blocked_phase5"
-        # Advisory fields should still be present and show no veto.
-        assert result.get("phase5_ev_band_enabled") in (True, False)
-        assert result.get("phase5_ev_band_veto") is False
-        reason = result.get("reason") or ""
-        assert "ev_band_hard_veto" not in reason
+def test_normal_case_does_not_trigger_hard_veto():
+    # EV small positive, PnL close, gap < threshold
+    result = evaluate_ev_band_hard_veto(ev=0.10, realized_pnl=0.05, gap_threshold=0.7)
+    assert result.hard_veto is False
+    assert result.hard_veto_reason is None
+    assert result.ev_gap_abs == 0.05

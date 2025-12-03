@@ -13,6 +13,8 @@ This module is designed to be used by:
 
 from __future__ import annotations
 
+from hybrid_ai_trading.risk.phase5_ev_band_hard_veto import evaluate_ev_band_hard_veto
+
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -208,3 +210,60 @@ def get_phase5_decision_for_trade(
         return None
 
     return decision.raw
+def attach_ev_band_hard_veto(decision, realized_pnl=None, gap_threshold=0.7):
+    """
+    Log-only helper to attach EV-band hard veto suggestion into a Phase-5 decision dict.
+
+    This does NOT block trades. It only enriches the decision mapping with:
+        - ev_hard_veto: bool
+        - ev_hard_veto_reason: str or None
+        - ev_hard_veto_gap_abs: float
+        - ev_hard_veto_gap_threshold: float
+
+    Callers may choose to:
+        - log these fields,
+        - push them to Notion,
+        - or, later, treat hard_veto=True as a real gate under a config flag.
+    """
+    if decision is None:
+        decision = {}
+
+    # Extract EV and realized PnL; fall back to 0.0
+    ev = float(decision.get("ev") or 0.0)
+
+    if realized_pnl is None:
+        # prefer realized_pnl_paper, then realized_pnl if present on the decision
+        if "realized_pnl_paper" in decision:
+            try:
+                realized_pnl = float(decision.get("realized_pnl_paper") or 0.0)
+            except (TypeError, ValueError):
+                realized_pnl = 0.0
+        elif "realized_pnl" in decision:
+            try:
+                realized_pnl = float(decision.get("realized_pnl") or 0.0)
+            except (TypeError, ValueError):
+                realized_pnl = 0.0
+        else:
+            realized_pnl = 0.0
+
+    # Existing ev_gap_abs if present on the decision
+    ev_gap_abs = None
+    if "ev_gap_abs" in decision and decision.get("ev_gap_abs") is not None:
+        try:
+            ev_gap_abs = float(decision.get("ev_gap_abs"))
+        except (TypeError, ValueError):
+            ev_gap_abs = None
+
+    result = evaluate_ev_band_hard_veto(
+        ev=ev,
+        realized_pnl=realized_pnl,
+        ev_gap_abs=ev_gap_abs,
+        gap_threshold=gap_threshold,
+    )
+
+    decision["ev_hard_veto"] = result.hard_veto
+    decision["ev_hard_veto_reason"] = result.hard_veto_reason
+    decision["ev_hard_veto_gap_abs"] = result.ev_gap_abs
+    decision["ev_hard_veto_gap_threshold"] = result.gap_threshold
+
+    return decision
