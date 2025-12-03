@@ -6,12 +6,16 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
+from hybrid_ai_trading.risk.risk_phase5_ev_soft_veto import (
+    phase5_ev_soft_veto_from_flags,
+)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Convert an EV-band enriched JSONL file into a flat CSV "
-            "suitable for Notion / spreadsheet import."
+            "suitable for Notion / spreadsheet import, including soft EV veto fields."
         )
     )
     parser.add_argument(
@@ -78,6 +82,18 @@ def main() -> None:
                 "locked_by_ev_band": rec.get("locked_by_ev_band"),
             }
 
+            # Derive soft EV veto flags from EV-band flags.
+            ev_flags: Dict[str, Any] = {
+                "ev_band_allowed": row["ev_band_allowed"],
+                "ev_band_reason": row["ev_band_reason"],
+                "ev_band_veto_applied": row["ev_band_veto_applied"],
+                "ev_band_veto_reason": row["ev_band_veto_reason"],
+                "locked_by_ev_band": row["locked_by_ev_band"],
+            }
+            soft = phase5_ev_soft_veto_from_flags(ev_flags)
+            row["soft_ev_veto"] = soft.get("soft_ev_veto")
+            row["soft_ev_reason"] = soft.get("soft_ev_reason")
+
             rows.append(row)
 
     # Determine CSV field order
@@ -99,6 +115,8 @@ def main() -> None:
         "ev_band_veto_applied",
         "ev_band_veto_reason",
         "locked_by_ev_band",
+        "soft_ev_veto",
+        "soft_ev_reason",
     ]
 
     with output_path.open("w", encoding="utf-8", newline="") as fout:
@@ -108,7 +126,7 @@ def main() -> None:
             writer.writerow(row)
 
     print(f"Wrote {len(rows)} rows to {output_path}")
-    
+
 
 if __name__ == "__main__":
     main()
