@@ -6,17 +6,19 @@ Quick EV research helper for Block-E.
 Reads the NVDA/SPY/QQQ Phase-5 CSVs used by Notion and prints, for each symbol:
 
 - total_rows: all rows in the CSV (excluding header)
-- bandA_rows: rows with ev_band_abs == 1
-- bandA_soft_veto: rows in Band A where soft_ev_veto is true
-- bandA_avg_ev: average EV in Band A
-- bandA_avg_model: average ev_orb_vwap_model in Band A
-- bandA_avg_effective: average ev_effective_orb_vwap in Band A
+- band0_rows: rows with ev_band_abs == 0
+- band1_rows: rows with ev_band_abs == 1 (Band A)
+- band2_rows: rows with ev_band_abs == 2
+- band1_soft_veto: rows in Band 1 where soft_ev_veto is true
+- band1_avg_ev: average EV in Band 1
+- band1_avg_model: average ev_orb_vwap_model in Band 1
+- band1_avg_effective: average ev_effective_orb_vwap in Band 1
 """
 
 import csv
 import math
 from pathlib import Path
-from typing import Dict, List, Iterable, Optional
+from typing import Dict, List, Iterable
 
 
 ROOT = Path(".").resolve()
@@ -66,12 +68,19 @@ def summarize_csv(path: Path, label: str) -> None:
 
     total_rows = len(rows)
 
-    band_a_rows: List[Dict[str, str]] = []
+    band0_rows: List[Dict[str, str]] = []
+    band1_rows: List[Dict[str, str]] = []
+    band2_rows: List[Dict[str, str]] = []
+
     for row in rows:
         band_val = row.get("ev_band_abs")
         band_str = (str(band_val) if band_val is not None else "").strip()
-        if band_str in ("1", "1.0"):
-            band_a_rows.append(row)
+        if band_str in ("0", "0.0"):
+            band0_rows.append(row)
+        elif band_str in ("1", "1.0"):
+            band1_rows.append(row)
+        elif band_str in ("2", "2.0"):
+            band2_rows.append(row)
 
     def _is_soft_veto(row: Dict[str, str]) -> bool:
         v = row.get("soft_ev_veto")
@@ -80,29 +89,35 @@ def summarize_csv(path: Path, label: str) -> None:
         text = str(v).strip().lower()
         return text in ("true", "1", "yes", "y", "checked")
 
-    band_a_soft_veto = [r for r in band_a_rows if _is_soft_veto(r)]
+    band1_soft_veto = [r for r in band1_rows if _is_soft_veto(r)]
 
-    avg_ev = _mean(_safe_float(r.get("ev")) for r in band_a_rows)
-    avg_model = _mean(_safe_float(r.get("ev_orb_vwap_model")) for r in band_a_rows)
-    avg_effective = _mean(_safe_float(r.get("ev_effective_orb_vwap")) for r in band_a_rows)
+    avg_ev = _mean(_safe_float(r.get("ev")) for r in band1_rows)
+    avg_model = _mean(_safe_float(r.get("ev_orb_vwap_model")) for r in band1_rows)
+    avg_effective = _mean(_safe_float(r.get("ev_effective_orb_vwap")) for r in band1_rows)
 
     print(f"=== {label} ===")
-    print(f"total_rows={total_rows}, bandA_rows={len(band_a_rows)}, bandA_soft_veto={len(band_a_soft_veto)}")
+    print(
+        f"total_rows={total_rows}, "
+        f"band0_rows={len(band0_rows)}, "
+        f"band1_rows={len(band1_rows)}, "
+        f"band2_rows={len(band2_rows)}, "
+        f"band1_soft_veto={len(band1_soft_veto)}"
+    )
 
     if math.isnan(avg_ev):
-        print("bandA_avg_ev=NA")
+        print("band1_avg_ev=NA")
     else:
-        print(f"bandA_avg_ev={avg_ev:.4f}")
+        print(f"band1_avg_ev={avg_ev:.4f}")
 
     if math.isnan(avg_model):
-        print("bandA_avg_model=NA")
+        print("band1_avg_model=NA")
     else:
-        print(f"bandA_avg_model={avg_model:.4f}")
+        print(f"band1_avg_model={avg_model:.4f}")
 
     if math.isnan(avg_effective):
-        print("bandA_avg_effective=NA")
+        print("band1_avg_effective=NA")
     else:
-        print(f"bandA_avg_effective={avg_effective:.4f}")
+        print(f"band1_avg_effective={avg_effective:.4f}")
 
     print()
 
