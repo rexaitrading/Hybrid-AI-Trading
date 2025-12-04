@@ -33,9 +33,17 @@ from tools.spy_phase5_config_loader import (
 # - When run as "python tools/spy_orb_phase5_live_runner.py", top-level "" includes repo root.
 # - When imported as "tools.spy_orb_phase5_live_runner", PYTHONPATH includes "src".
 try:
-    from tools.phase5_gating_helpers import get_phase5_decision_for_trade, attach_ev_band_hard_veto
+    from tools.phase5_gating_helpers import (
+        get_phase5_decision_for_trade,
+        attach_ev_band_hard_veto,
+        maybe_apply_ev_hard_veto,
+    )
 except Exception:  # pragma: no cover - fallback to old relative import
-    from phase5_gating_helpers import get_phase5_decision_for_trade, attach_ev_band_hard_veto  # type: ignore[no-redef]
+    from phase5_gating_helpers import (
+        get_phase5_decision_for_trade,
+        attach_ev_band_hard_veto,
+        maybe_apply_ev_hard_veto,  # type: ignore[no-redef]
+    )
 
 from hybrid_ai_trading.risk.ev_orb_vwap_model import (
     OrbVwapFeatures,
@@ -130,6 +138,12 @@ def append_spy_phase5_paper_entry(
         decision=decision_for_hard,
         realized_pnl=realized_pnl,
         gap_threshold=0.7,
+    )
+
+    # Optional EV hard-veto live gate; controlled by config flag.
+    decision_for_hard = maybe_apply_ev_hard_veto(
+        decision_for_hard,
+        enable=EV_HARD_VETO_LIVE_ENABLED,
     )
 
     # Very simple ORB+VWAP features for now:
@@ -285,3 +299,28 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+# === EV hard-veto live flag (config-driven) ================================
+# We keep live behaviour log-only by default; sim/dev can flip the flag
+# via config/fixtures without touching live config.
+
+from pathlib import Path
+import json
+
+
+PHASE5_SPY_CONFIG_PATH = Path(__file__).parent.parent / "config" / "phase5" / "spy_orb_phase5.json"
+
+
+def _load_spy_phase5_config() -> Dict[str, Any]:
+    try:
+        with PHASE5_SPY_CONFIG_PATH.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        # Fail-safe: if config can't be loaded, we default to log-only.
+        return {}
+
+
+SPY_PHASE5_CONFIG: Dict[str, Any] = _load_spy_phase5_config()
+EV_HARD_VETO_LIVE_ENABLED: bool = bool(
+    SPY_PHASE5_CONFIG.get("ev_hard_veto_live_enabled", False)
+)
+# ==========================================================================
