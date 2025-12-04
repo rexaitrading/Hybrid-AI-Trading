@@ -115,6 +115,12 @@ def append_qqq_phase5_paper_entry(
         gap_threshold=0.7,
     )
 
+    # Optional EV hard-veto live gate; controlled by config flag.
+    decision_for_hard = maybe_apply_ev_hard_veto(
+        decision_for_hard,
+        enable=EV_HARD_VETO_LIVE_ENABLED,
+    )
+
     orb_strength = 0.5 if side.upper() == "BUY" else 0.3
     above_vwap = True if side.upper() == "BUY" else False
     trend_score = 0.0
@@ -261,3 +267,28 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+# === EV hard-veto live flag (config-driven) ================================
+# We keep live behaviour log-only by default; sim/dev can flip the flag
+# via config/fixtures without touching live config.
+
+from pathlib import Path
+import json
+
+
+PHASE5_QQQ_CONFIG_PATH = Path(__file__).parent.parent / "config" / "phase5" / "qqq_orb_phase5.json"
+
+
+def _load_qqq_phase5_config() -> Dict[str, Any]:
+    try:
+        with PHASE5_QQQ_CONFIG_PATH.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        # Fail-safe: if config can't be loaded, we default to log-only.
+        return {}
+
+
+QQQ_PHASE5_CONFIG: Dict[str, Any] = _load_qqq_phase5_config()
+EV_HARD_VETO_LIVE_ENABLED: bool = bool(
+    QQQ_PHASE5_CONFIG.get("ev_hard_veto_live_enabled", False)
+)
+# ==========================================================================
