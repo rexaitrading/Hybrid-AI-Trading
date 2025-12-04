@@ -96,17 +96,17 @@ def ensure_phase5_decision_with_default(
 
     if not raw:
         return {
-            "ev": 0.02,
-            "ev_band_abs": 0.02,
+            "ev": 0.0123,
+            "ev_band_abs": 1.0,
             "allowed": True,
             "reason": "ev_simple_default",
         }
 
     ev = raw.get("ev")
     if ev is None:
-        raw["ev"] = 0.02
+        raw["ev"] = 0.0123
     if raw.get("ev_band_abs") is None:
-        raw["ev_band_abs"] = 0.02
+        raw["ev_band_abs"] = 1.0
     if "allowed" not in raw:
         raw["allowed"] = True
     if "reason" not in raw:
@@ -119,9 +119,14 @@ def compute_soft_veto_ev_fields(ev: float, realized_pnl: float) -> Dict[str, Any
     Phase-5 NVDA soft EV veto diagnostics (diagnostic only).
     """
     abs_ev = abs(ev)
-    if abs_ev <= 0.15:
+
+    # NVDA-specific bands based on EV per trade ~0.0123:
+    #   Band 0: |EV| <= 0.0062
+    #   Band 1: 0.0062 < |EV| <= 0.0184
+    #   Band 2: |EV| > 0.0184
+    if abs_ev <= 0.0062:
         ev_band_abs = 0
-    elif abs_ev <= 0.30:
+    elif abs_ev <= 0.0184:
         ev_band_abs = 1
     else:
         ev_band_abs = 2
