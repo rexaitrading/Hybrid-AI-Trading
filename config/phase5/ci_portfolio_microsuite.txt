@@ -1,0 +1,3 @@
+# Portfolio / Exec microsuite tests
+tests\test_portfolio_tracker_full.py
+tests\test_execution_engine_phase5_guard.py
