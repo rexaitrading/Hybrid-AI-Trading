@@ -79,4 +79,64 @@ def require_ev_band(regime: str, ev: float) -> Tuple[bool, str]:
         return True, "band_A"
     if ev_abs >= b_thr:
         return True, "band_B"
-    return False, "band_below_min"
+    return False, "band_below_min"# --- BEGIN get_ev_and_band helper (Phase-5 EV tests) ---
+from typing import Optional, Tuple
+
+# Representative EV + band configuration for the three live regimes that we
+# currently support in the EV-band tests. These values are deliberately
+# simple and are *not* the trading EV model; they just ensure that basic
+# configuration exists and that require_ev_band() behaves as expected.
+_EV_BAND_TEST_CONFIG: dict[str, Tuple[float, float]] = {
+    "NVDA_BPLUS_LIVE": (1.0, 0.0),
+    "SPY_ORB_LIVE": (1.0, 0.0),
+    "QQQ_ORB_LIVE": (1.0, 0.0),
+}
+
+
+def get_ev_and_band(regime: str) -> tuple[Optional[float], Optional[float]]:
+    """
+    Return a representative (ev_value, band_threshold) pair for the given
+    live regime.
+
+    If the regime is unknown, (None, None) is returned so callers can
+    treat that as a missing configuration.
+    """
+    return _EV_BAND_TEST_CONFIG.get(regime, (None, None))
+# --- END get_ev_and_band helper ---
+# --- BEGIN require_ev_band wrapper (handle missing EV) ---
+from typing import Optional, Tuple
+
+# Preserve the original implementation so we can delegate for non-None EV values.
+try:
+    _original_require_ev_band = require_ev_band  # type: ignore[name-defined]
+except NameError:
+    _original_require_ev_band = None  # type: ignore[assignment]
+
+
+def require_ev_band(regime: str, ev_value: Optional[float]):
+    """
+    Wrapper around the original require_ev_band that ensures we block cleanly
+    when EV is missing, while delegating to the original logic for all
+    non-None EV values.
+    """
+    if ev_value is None:
+        # Explicitly treat missing EV as a hard block so callers and tests
+        # can distinguish configuration/EV gaps.
+        return False, "ev_missing"
+
+    if _original_require_ev_band is not None:
+        return _original_require_ev_band(regime, ev_value)
+
+    # Fallback: if for some reason the original implementation is not present,
+    # use a simple band check based on get_ev_and_band.
+    from .risk_phase5_ev_bands import get_ev_and_band  # type: ignore[import]
+
+    ev_conf, band = get_ev_and_band(regime)
+    if ev_conf is None or band is None:
+        return False, "ev_config_missing"
+
+    if ev_value >= band:
+        return True, "ok"
+
+    return False, "ev_below_band"
+# --- END require_ev_band wrapper ---

@@ -8,7 +8,7 @@ Goals:
 - Run their main() once each with dry_run-style configs.
 - Ensure EV bands + gating helpers are wired without crashes.
 
-Intended to be called from tools/Test-Phase5Readiness.ps1.
+Intended to be called from tools/Test-Phase5Readiness.ps1 or pytest.
 """
 
 import sys
@@ -53,4 +53,13 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    main()
+
+
+def test_phase5_live_runners_dry_run() -> None:
+    """
+    Pytest wrapper that exercises main() once. This ensures that all
+    Phase-5 live-style runners (NVDA / SPY / QQQ) can import and
+    complete a single dry-run without raising exceptions.
+    """
     main()

@@ -24,7 +24,7 @@ from hybrid_ai_trading.execution.execution_engine import (
     place_order_phase5_with_logging,
 )
 
-from qqq_phase5_config_loader import (
+from tools.qqq_phase5_config_loader import (
     load_qqq_orb_phase5_config_with_ev,
 )
 
@@ -39,14 +39,21 @@ from hybrid_ai_trading.risk.ev_orb_vwap_model import (
     compute_effective_ev,
 )
 
+QQQ_EV_PER_TRADE = 0.0075  # from config/phase5/ev_simple.json (ev_per_trade for QQQ_ORB_LIVE)
+
 QQQ_PAPER_JSONL_PATH = Path("logs") / "qqq_phase5_paperlive_results.jsonl"
 
 
 def compute_soft_veto_ev_fields(ev: float, realized_pnl: float) -> Dict[str, Any]:
     abs_ev = abs(ev)
-    if abs_ev <= 0.15:
+
+    # QQQ-specific bands based on EV per trade ~0.0075:
+    #   Band 0: |EV| <= 0.0038  (~0.5 * EV)
+    #   Band 1: 0.0038 < |EV| <= 0.0113  (~1.5 * EV)
+    #   Band 2: |EV| > 0.0113
+    if abs_ev <= 0.0038:
         ev_band_abs = 0
-    elif abs_ev <= 0.30:
+    elif abs_ev <= 0.0113:
         ev_band_abs = 1
     else:
         ev_band_abs = 2

@@ -116,3 +116,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+def test_notion_hybrid_snapshot_smoke() -> None:
+    """
+    Pytest wrapper that exercises main() once. This ensures the
+    Notion hybrid snapshot test script can run end-to-end without
+    raising exceptions (e.g., reading latest JSON/CSV and producing
+    a snapshot).
+    """
+    main()

@@ -25,7 +25,7 @@ from hybrid_ai_trading.execution.execution_engine import (
 )
 
 # Central SPY ORB Phase-5 config loader (JSON + EV band from YAML)
-from spy_phase5_config_loader import (
+from tools.spy_phase5_config_loader import (
     load_spy_orb_phase5_config_with_ev,
 )
 
@@ -43,6 +43,8 @@ from hybrid_ai_trading.risk.ev_orb_vwap_model import (
     compute_effective_ev,
 )
 
+SPY_EV_PER_TRADE = 0.0075  # from config/phase5/ev_simple.json (ev_per_trade for SPY_ORB_LIVE)
+
 SPY_PAPER_JSONL_PATH = Path("logs") / "spy_phase5_paperlive_results.jsonl"
 
 
@@ -53,9 +55,14 @@ def compute_soft_veto_ev_fields(ev: float, realized_pnl: float) -> Dict[str, Any
     This is *diagnostic only*.
     """
     abs_ev = abs(ev)
-    if abs_ev <= 0.15:
+
+    # SPY-specific bands based on EV per trade ~0.0075:
+    #   Band 0: |EV| <= 0.0038  (~0.5 * EV)
+    #   Band 1: 0.0038 < |EV| <= 0.0113  (~1.5 * EV)
+    #   Band 2: |EV| > 0.0113
+    if abs_ev <= 0.0038:
         ev_band_abs = 0
-    elif abs_ev <= 0.30:
+    elif abs_ev <= 0.0113:
         ev_band_abs = 1
     else:
         ev_band_abs = 2

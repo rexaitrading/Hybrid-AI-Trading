@@ -19,7 +19,7 @@ from hybrid_ai_trading.execution.execution_engine import (
     place_order_phase5_with_logging,
 )
 
-from phase5_gating_helpers import get_phase5_decision_for_trade
+from tools.phase5_gating_helpers import get_phase5_decision_for_trade
 
 
 def build_example_config() -> Dict[str, Any]:
