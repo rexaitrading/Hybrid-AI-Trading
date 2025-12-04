@@ -1,0 +1,18 @@
+=== NVDA_BPLUS_LIVE ===
+total_rows=5, band0_rows=5, band1_rows=0, band2_rows=0, band1_soft_veto=0
+band1_avg_ev=NA
+band1_avg_model=NA
+band1_avg_effective=NA
+
+=== SPY_ORB_LIVE ===
+total_rows=4, band0_rows=4, band1_rows=0, band2_rows=0, band1_soft_veto=0
+band1_avg_ev=NA
+band1_avg_model=NA
+band1_avg_effective=NA
+
+=== QQQ_ORB_LIVE ===
+total_rows=4, band0_rows=4, band1_rows=0, band2_rows=0, band1_soft_veto=0
+band1_avg_ev=NA
+band1_avg_model=NA
+band1_avg_effective=NA
+

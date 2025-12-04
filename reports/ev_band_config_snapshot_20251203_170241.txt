@@ -1,0 +1,32 @@
+EV CONFIG SNAPSHOT
+Generated at: 2025-12-03 17:02:41
+
+== config\phase5\ev_simple.json ==
+
+{
+    "NVDA_BPLUS_LIVE":  0.0123,
+    "SPY_ORB_LIVE":  {
+                         "ev_per_trade":  0.0075
+                     },
+    "QQQ_ORB_LIVE":  {
+                         "ev_per_trade":  0.0075
+                     }
+}
+
+== config\phase5_ev_bands.yml ==
+
+# Phase-5 EV bands for live NVDA/SPY/QQQ regimes.
+# Design: bands are currently set to ~75% of the configured per-trade EV.
+# This makes the band an explicit design parameter, not just equal to EV.
+
+nvda_bplus_live:
+  # EV per trade â‰ˆ 0.0123 -> band â‰ˆ 0.75 * EV
+  ev_band_abs: 0.0092
+
+spy_orb_live:
+  # EV per trade â‰ˆ 0.0075 -> band â‰ˆ 0.75 * EV
+  ev_band_abs: 0.0056
+
+qqq_orb_live:
+  # EV per trade â‰ˆ 0.0075 -> band â‰ˆ 0.75 * EV
+  ev_band_abs: 0.0056

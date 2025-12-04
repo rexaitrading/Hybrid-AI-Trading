@@ -1,0 +1,14 @@
+NVDA EV Band Tuning Notes
+Generated at: 2025-12-03 17:06:11
+
+NVDA_BPLUS_LIVE EV per trade (from ev_simple.json): 0.0123
+
+Proposed NVDA soft-veto bands (based on EV):
+  Band 0: |EV| <= 0.0062
+  Band 1: 0.0062 < |EV| <= 0.0184
+  Band 2: |EV| > 0.0184
+
+These are *recommendations* only. Next micro-block will be:
+- Decide whether to:
+  (a) update NVDA compute_soft_veto_ev_fields(...) thresholds in nvda_phase5_live_runner.py,
+  (b) or make NVDA band thresholds config-driven (YAML) instead of hard-coded 0.15 / 0.30.
