@@ -102,7 +102,7 @@ def ensure_phase5_decision_with_default(
 
     if not raw:
         return {
-            "ev": 0.0123,
+            "ev": 0.008,
             "ev_band_abs": 1.0,
             "allowed": True,
             "reason": "ev_simple_default",
@@ -110,7 +110,7 @@ def ensure_phase5_decision_with_default(
 
     ev = raw.get("ev")
     if ev is None:
-        raw["ev"] = 0.0123
+        raw["ev"] = 0.008
     if raw.get("ev_band_abs") is None:
         raw["ev_band_abs"] = 1.0
     if "allowed" not in raw:
@@ -126,7 +126,7 @@ def compute_soft_veto_ev_fields(ev: float, realized_pnl: float) -> Dict[str, Any
     """
     abs_ev = abs(ev)
 
-    # NVDA-specific bands based on EV per trade ~0.0123:
+    # NVDA-specific bands based on EV per trade ~0.008:
     #   Band 0: |EV| <= 0.0062
     #   Band 1: 0.0062 < |EV| <= 0.0184
     #   Band 2: |EV| > 0.0184
