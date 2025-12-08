@@ -1,5 +1,5 @@
 2025-11-13  Phase7: locked news_translate with macro_region + query-aware NA heuristics (SPY/TSX tests green).
-## 2025-11-14 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Phase7: TradeEngine + provider-only smoke + prev-close harness (51/51 green)
+## 2025-11-14 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Phase7: TradeEngine + provider-only smoke + prev-close harness (51/51 green)
 
 - TradeEngine: made `config` optional in `TradeEngine.__init__` and restored `TradeEngineClass` pytest fixture in `tests/conftest.py`.
 - Logging: patched `JsonlLogger` via `_JsonlLoggerPatched` to safely handle `path=None` and create `logs/paper_session.jsonl` by default.
@@ -87,7 +87,7 @@ def main() -> None:
 if __name__ == "__main__":
     main(); follow-up micro-block will reposition checklist before exit for full visibility).
 - 2025-11-19 15:39:47 Block E: add tools/PreMarket-Phase5.ps1 wrapper to run tools/PreMarket-Check.ps1 and then Show-Phase5AaplPromotionChecklist.ps1, propagating the pre-market exit code (one command for core check + Phase5 review).
-## 2025-11-23 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Phase-5 NVDA live smoke harness
+## 2025-11-23 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Phase-5 NVDA live smoke harness
 
 - Stabilized nvda_phase5_live_runner (dry_run=True) with dummy price for smoke tests.
 - Fixed Phase-5 risk adapter signature: _phase5_no_averaging_adapter now accepts **extra kwargs.
@@ -95,7 +95,7 @@ if __name__ == "__main__":
 - Wired optional Phase-5 double-BUY demo via HAT_PHASE5_DOUBLE_BUY_DEMO for NVDA_BPLUS_LIVE.
 - Phase-5 NVDA live risk harness is ready for future no-averaging-down enforcement (position wiring still TODO).
 
-## 2025-11-24 Ã¢â‚¬â€œ Phase-5 Risk Guards (Engine + RiskManager)
+## 2025-11-24 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Phase-5 Risk Guards (Engine + RiskManager)
 
 - Added an engine-level Phase-5 no-averaging-down guard in `ExecutionEngine.place_order`
   that rejects a second BUY for the same symbol in the same process with
@@ -111,3 +111,13 @@ if __name__ == "__main__":
 ## 2025-12-08 - Phase-5 Block-G
 
 - Add Phase-5 Block-G NVDA playbook stub + optional checklist hook in Run-Phase5FullCI.ps1 (no trading; documentation only).
+
+## 2025-12-08 – Phase-2 microstructure + Phase-5 daily EV integration
+
+- Add CLI + wrappers for SPY/QQQ ORB microstructure enrichment:
+  - tools/spy_qqq_microstructure_enrich.py (--symbol/--dry-run)
+  - tools/Run-SpyQqqMicrostructureEnrich.ps1
+  - tools/Run-SpyQqqMicrostructureReport.ps1
+  - tools/Run-Phase2SpyQqqMicroSuite.ps1
+- Wire Run-Phase2SpyQqqMicroSuite.ps1 into tools/Run-Phase5DailyEVSuite.ps1 so SPY/QQQ ORB microstructure checks run alongside Phase-5 EV/risk daily suite.
+- Fix tools/Run-Phase5DailyEVSuite.ps1 to call tools/Build-EvHardVetoSummary.ps1 without the unused -Days parameter.
