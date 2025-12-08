@@ -1,4 +1,6 @@
-# Phase-5 Block-G – NVDA Live Playbook (Stub, 2025-12-08)
+# BLOCK-G STATUS: STUB ONLY - NO LIVE TRADING
+
+# Phase-5 Block-G - NVDA Live Playbook (Stub, 2025-12-08)
 
 > **Status**: DESIGN-ONLY / STUB.  
 > No live trading is launched by this playbook yet.  
@@ -26,9 +28,9 @@ Right now, it is **documentation + stub runner only**.
 Before *any* Block-G NVDA live session, all of the following must be satisfied:
 
 1. **Phase-5 CI / Risk Green**
-   - `tools\Run-Phase5MicroSuite.ps1` → all tests PASS
-   - `tools\Run-Phase5EvPreflight.ps1` → PASS
-   - `tools\Run-Phase5FullCI.ps1` → PASS
+   - `tools\Run-Phase5MicroSuite.ps1` Ã¢â€ â€™ all tests PASS
+   - `tools\Run-Phase5EvPreflight.ps1` Ã¢â€ â€™ PASS
+   - `tools\Run-Phase5FullCI.ps1` Ã¢â€ â€™ PASS
 
 2. **Pre-market risk OK**
    - `tools\PreMarket-Check.ps1` returns **OK_TO_TRADE (exit code 0)**.
@@ -39,12 +41,12 @@ Before *any* Block-G NVDA live session, all of the following must be satisfied:
 3. **EV + EV-bands / hard veto OK**
    - EV anchors stable:
      - `Show-Phase5EvAnchors.ps1` shows:
-       - NVDA_BPLUS_LIVE ev_orb_vwap_model ≈ 0.008
+       - NVDA_BPLUS_LIVE ev_orb_vwap_model Ã¢â€°Ë† 0.008
    - EV-bands config present:
      - `config\phase5_ev_bands.yml` has `NVDA_BPLUS_LIVE` entry.
    - EV hard-veto modes snapshot:
      - `Invoke-Phase5EvHardVetoDaily.ps1` has been run for the day,
-     - Notion EV Hard Veto Daily shows modes consistent with today’s intent
+     - Notion EV Hard Veto Daily shows modes consistent with todayÃ¢â‚¬â„¢s intent
        (e.g. NVDA may be LOG-ONLY during early Block-G).
 
 4. **IB Gateway / IB API Ready**
@@ -57,7 +59,7 @@ Before *any* Block-G NVDA live session, all of the following must be satisfied:
 
 ---
 
-## 3. Phase-5 Block-G – First Live Rules (Concept)
+## 3. Phase-5 Block-G Ã¢â‚¬â€œ First Live Rules (Concept)
 
 When Block-G is eventually **armed**, the first version must obey:
 
@@ -106,17 +108,17 @@ As of this document:
 
 ## 5. Future Work for Block-G
 
-1. **G.1 – Checklist Binding**
+1. **G.1 Ã¢â‚¬â€œ Checklist Binding**
    - Tie `NvdaPhase5_BlockGStub.ps1` into:
      - `PreMarket-OneTap.ps1`
      - or a dedicated "NVDA Block-G Session" helper.
    - For now, keep it manual: operator runs Block-G stub explicitly.
 
-2. **G.2 – Simulated Block-G Sessions (Paper Only)**
+2. **G.2 Ã¢â‚¬â€œ Simulated Block-G Sessions (Paper Only)**
    - Use paper account but treat it with Block-G discipline and journaling.
    - One trade per day maximum, tracked as if real.
 
-3. **G.3 – Full Block-G Live**
+3. **G.3 Ã¢â‚¬â€œ Full Block-G Live**
    - After sustained paper success and stable CI:
      - Allow very small real NVDA positions under Block-G rules.
      - Keep all Phase-5 risk / EV gates fully in charge.
@@ -125,4 +127,4 @@ Any change that actually sends live NVDA orders under Block-G must:
 
 - update this playbook,
 - be backed by replay / paper evidence,
-- and pass FullCI + preflight before being considered “live-ready”.
+- and pass FullCI + preflight before being considered Ã¢â‚¬Å“live-readyÃ¢â‚¬Â.

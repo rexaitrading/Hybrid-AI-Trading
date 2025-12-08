@@ -1,3 +1,5 @@
+# BLOCK-G STATUS: STUB ONLY - NO LIVE TRADING
+
 [CmdletBinding()]
 param(
     [switch] $VerboseChecklist  # if set, print extra detail
