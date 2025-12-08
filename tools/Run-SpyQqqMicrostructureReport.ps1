@@ -1,42 +1,83 @@
 [CmdletBinding()]
 param(
-    [switch] $SkipEnrich  # if set, reuse existing *_micro CSVs
+    [ValidateSet("SPY", "QQQ", "BOTH")]
+    [string] $Symbol = "BOTH",
+
+    [switch] $DryRun
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 
-$toolsDir = Split-Path -Parent $PSCommandPath
-$repoRoot = Split-Path -Parent $toolsDir
+# Script lives under repoRoot\tools -> go one level up to repo root
+$scriptDir = Split-Path -Parent $PSCommandPath
+$repoRoot  = Split-Path -Parent $scriptDir
 Set-Location $repoRoot
 
-Write-Host "`n[MICRO-REPORT] === Run SPY/QQQ microstructure EV/PnL report ===" -ForegroundColor Cyan
+Write-Host "`n[PHASE2-REPORT] SPY/QQQ ORB microstructure report" -ForegroundColor Cyan
+Write-Host "RepoRoot  = $repoRoot"
+Write-Host "Symbol    = $Symbol"
+Write-Host "DryRun    = $DryRun" -ForegroundColor Gray
 
-# 1) Optionally refresh the *_micro CSVs
-if (-not $SkipEnrich) {
-    $enrichPs = Join-Path $toolsDir "Run-SpyQqqMicrostructureEnrich.ps1"
-    if (Test-Path $enrichPs) {
-        Write-Host "[MICRO-REPORT] Refreshing SPY/QQQ microstructure-enriched CSVs..." -ForegroundColor Yellow
-        & $enrichPs
-    } else {
-        Write-Host "[MICRO-REPORT] SKIP: Run-SpyQqqMicrostructureEnrich.ps1 not found at $enrichPs" -ForegroundColor DarkYellow
+# 1) Always call the enrichment wrapper first
+$enrichScript = Join-Path $repoRoot "tools\\Run-SpyQqqMicrostructureEnrich.ps1"
+if (-not (Test-Path $enrichScript)) {
+    Write-Host "[ERROR] Enrich wrapper not found at $enrichScript" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "`n[PHASE2-REPORT] Running enrichment wrapper..." -ForegroundColor Cyan
+if ($DryRun) {
+    & $enrichScript -Symbol $Symbol -DryRun
+} else {
+    & $enrichScript -Symbol $Symbol
+}
+$exitCode = $LASTEXITCODE
+if ($exitCode -ne 0) {
+    Write-Host "[PHASE2-REPORT] Enrichment wrapper FAILED with exit code $exitCode" -ForegroundColor Red
+    exit $exitCode
+}
+
+if ($DryRun) {
+    Write-Host "`n[PHASE2-REPORT] Dry run only; skipping CSV inspection." -ForegroundColor Yellow
+    return
+}
+
+# 2) Inspect micro CSVs and print a tiny ORB-window summary
+$logsDir = Join-Path $repoRoot "logs"
+
+function Show-MicroSummary {
+    param(
+        [Parameter(Mandatory = $true)][string]$SymbolName,
+        [Parameter(Mandatory = $true)][string]$FileName
+    )
+
+    $fullPath = Join-Path $logsDir $FileName
+    if (-not (Test-Path $fullPath)) {
+        Write-Host "[PHASE2-REPORT] SKIP: $FileName not found." -ForegroundColor DarkYellow
+        return
     }
+
+    $row = Import-Csv -Path $fullPath | Select-Object -First 1
+    if (-not $row) {
+        Write-Host "[PHASE2-REPORT] SKIP: $FileName is empty." -ForegroundColor DarkYellow
+        return
+    }
+
+    $msRange = $row.ms_range_pct
+    $trend   = $row.ms_trend_flag
+
+    Write-Host ("[PHASE2-REPORT] {0}: ms_range_pct={1} ms_trend_flag={2}" -f $SymbolName, $msRange, $trend) -ForegroundColor Green
 }
 
-# 2) Run the Python report script
-$PythonExe = ".\.venv\Scripts\python.exe"
-if (-not (Test-Path $PythonExe)) {
-    Write-Host "[MICRO-REPORT] ERROR: Python executable not found at $PythonExe" -ForegroundColor Red
-    exit 1
+Write-Host "`n[PHASE2-REPORT] ORB-window microstructure summary" -ForegroundColor Cyan
+
+if ($Symbol -in @("SPY", "BOTH")) {
+    Show-MicroSummary -SymbolName "SPY" -FileName "spy_phase5_paper_for_notion_ev_diag_micro.csv"
 }
 
-$scriptPath = Join-Path $toolsDir "spy_qqq_microstructure_report.py"
-if (-not (Test-Path $scriptPath)) {
-    Write-Host "[MICRO-REPORT] ERROR: spy_qqq_microstructure_report.py not found at $scriptPath" -ForegroundColor Red
-    exit 1
+if ($Symbol -in @("QQQ", "BOTH")) {
+    Show-MicroSummary -SymbolName "QQQ" -FileName "qqq_phase5_paper_for_notion_ev_diag_micro.csv"
 }
 
-$env:PYTHONPATH = Join-Path $repoRoot 'src'
-
-& $PythonExe $scriptPath
-
-Write-Host "`n[MICRO-REPORT] === End SPY/QQQ microstructure EV/PnL report ===`n" -ForegroundColor Cyan
+Write-Host "`n[PHASE2-REPORT] Done." -ForegroundColor Cyan
