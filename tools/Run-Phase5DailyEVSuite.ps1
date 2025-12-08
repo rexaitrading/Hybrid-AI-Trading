@@ -10,7 +10,8 @@ $scriptDir = $PSScriptRoot
 $repoRoot  = Split-Path -Parent $scriptDir
 Set-Location $repoRoot
 
-Write-Host "`n[EV-SUITE] Phase-5 Daily EV Suite (last $Days days)" -ForegroundColor Cyan
+Write-Host "`n# NOTE: This suite now also calls tools\Run-Phase2SpyQqqMicroSuite.ps1 to run SPY/QQQ ORB microstructure checks.
+[EV-SUITE] Phase-5 Daily EV Suite (last $Days days)" -ForegroundColor Cyan
 
 # 1) Soft/Hard EV summary
 if (Test-Path ".\tools\Build-EvHardVetoSummary.ps1") {
