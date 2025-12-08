@@ -1,3 +1,18 @@
+# --- Phase-5 microsuite gate (auto-added) ---
+Write-Host "[PREMARKET] Running Phase-5 microsuite..." -ForegroundColor Yellow
+try {
+    .\tools\Run-Phase5MicroSuite.ps1
+} catch {
+    Write-Host "[PREMARKET] Phase-5 microsuite threw an exception:" -ForegroundColor Red
+    Write-Host $_ -ForegroundColor Red
+    exit 1
+}
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[PREMARKET] Phase-5 microsuite FAILED, aborting PreMarket-Check." -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+Write-Host "[PREMARKET] Phase-5 microsuite PASSED, continuing PreMarket-Check..." -ForegroundColor Green
+# --- End Phase-5 microsuite gate ---
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
@@ -196,3 +211,7 @@ $env:HAT_PHASE5_ACCOUNT_DAILY_LOSS_CAP = "50"
 
 # Here you might later add a special "check only" mode; for now it runs one small trade.
 & .\.venv\Scripts\python.exe .\src\hybrid_ai_trading\runners\nvda_phase5_live_runner.py
+
+# Phase-5 EV hard-veto configuration summary
+Write-Host "`n[EV-HARD] Phase-5 EV hard-veto summary (SPY/QQQ):" -ForegroundColor Cyan
+& (Join-Path $PSScriptRoot 'Build-EvHardVetoSummary.ps1')
