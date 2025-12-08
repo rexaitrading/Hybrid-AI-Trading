@@ -24,33 +24,6 @@ from hybrid_ai_trading.execution.execution_engine_phase5_guard import (
 )
 from hybrid_ai_trading.risk.risk_manager import RiskManager
 
-_NVDA_MODEL_EV_CACHE: float | None = None
-
-
-def load_nvda_orb_model_ev() -> float:
-    """
-    Load the NVDA ORB/VWAP model EV from config/phase5/nvda_orb_ev_model.json.
-
-    This is used for paper JSONL logging only (no gating changes).
-    """
-    global _NVDA_MODEL_EV_CACHE
-    if _NVDA_MODEL_EV_CACHE is not None:
-        return _NVDA_MODEL_EV_CACHE
-
-    repo_root = Path(__file__).resolve().parent.parent
-    model_path = repo_root / "config" / "phase5" / "nvda_orb_ev_model.json"
-
-    try:
-        with model_path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-        ev_value = float(data.get("ev_orb_vwap_model", 0.0))
-    except Exception:
-        # Fallback to 0.0 so pipeline still runs even if config is missing.
-        ev_value = 0.0
-
-    _NVDA_MODEL_EV_CACHE = ev_value
-    return ev_value
-
 
 class PaperEngine:
     """
@@ -196,16 +169,6 @@ def _make_log_record(
         or (result.get("ev_info") or {}).get("band_abs")
         or (result.get("ev_info") or {}).get("band")
     )
-
-    # If Phase-5 engine did not populate EV for this paper run,
-    # fall back to the calibrated NVDA ORB/VWAP model EV so JSONL
-    # is EV-complete (log-only, no gating change).
-    if ev_value is None:
-        ev_value = load_nvda_orb_model_ev()
-
-    # Keep EV-band semantics neutral in paper logs for now.
-    if ev_band_abs is None:
-        ev_band_abs = 1.0
 
     order_result = result.get("order_result") or {}
 
