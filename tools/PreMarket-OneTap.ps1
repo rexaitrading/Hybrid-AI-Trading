@@ -16,6 +16,16 @@ if ($MyInvocation.MyCommand.Path) {
 
 Set-Location $repoRoot
 
+# STEP 0: Phase-5 EV + Risk preflight (optional but recommended)
+$toolsDir   = Join-Path $repoRoot 'tools'
+$evPreflight = Join-Path $toolsDir "Run-Phase5EvPreflight.ps1"
+if (Test-Path $evPreflight) {
+    Write-Host "`n[STEP 0] Phase-5 EV + Risk Preflight" -ForegroundColor Yellow
+    & $evPreflight
+} else {
+    Write-Host "[STEP 0] Skipping Phase-5 EV preflight (Run-Phase5EvPreflight.ps1 not found at $evPreflight)" -ForegroundColor DarkYellow
+}
+
 # --- Phase-5 microsuite gate (auto-added) ---
 Write-Host "[ONETAP] Running Phase-5 microsuite..." -ForegroundColor Yellow
 try {

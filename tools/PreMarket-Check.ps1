@@ -20,6 +20,16 @@ Set-StrictMode -Version Latest
 $repo = Split-Path $PSScriptRoot -Parent
 Set-Location $repo
 
+# STEP 0: Phase-5 EV + Risk preflight (optional but recommended)
+$toolsDir   = Join-Path $repo 'tools'
+$evPreflight = Join-Path $toolsDir "Run-Phase5EvPreflight.ps1"
+if (Test-Path $evPreflight) {
+    Write-Host "`n[STEP 0] Phase-5 EV + Risk Preflight" -ForegroundColor Yellow
+    & $evPreflight
+} else {
+    Write-Host "[STEP 0] Skipping Phase-5 EV preflight (Run-Phase5EvPreflight.ps1 not found at $evPreflight)" -ForegroundColor DarkYellow
+}
+
 # Allow override via HAT_PYTHON; default to "python"
 $py = $env:HAT_PYTHON
 if (-not $py) {
