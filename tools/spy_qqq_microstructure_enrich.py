@@ -127,4 +127,43 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Phase-2 microstructure enrichment for SPY/QQQ Phase-5 ORB CSVs."
+    )
+    parser.add_argument(
+        "--symbol",
+        choices=["SPY", "QQQ", "BOTH"],
+        default="BOTH",
+        help="Which symbol(s) to process. Default: BOTH."
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="If set, only print what would be done without writing files."
+    )
+    args = parser.parse_args()
+
+    # Assume script lives under tools/, repo root is two levels up
+    repo_root = Path(__file__).resolve().parents[2]
+    logs_dir = repo_root / "logs"
+
+    targets = []
+    if args.symbol in ("SPY", "BOTH"):
+        targets.append(logs_dir / "spy_phase5_paper_for_notion_ev_diag.csv")
+    if args.symbol in ("QQQ", "BOTH"):
+        targets.append(logs_dir / "qqq_phase5_paper_for_notion_ev_diag.csv")
+
+    print("[MICRO-ENRICH] === SPY/QQQ microstructure enrichment (ORB-window) start ===")
+    for src in targets:
+        rel = src.relative_to(repo_root)
+        print(f"[MICRO-ENRICH] Target: {rel}")
+        if args.dry_run:
+            if not src.exists():
+                print(f"[MICRO-ENRICH] DRY RUN: {rel} not found.")
+            else:
+                print(f"[MICRO-ENRICH] DRY RUN: would enrich {rel}")
+            continue
+        enrich_file(src)
+    print("[MICRO-ENRICH] === SPY/QQQ microstructure enrichment (ORB-window) complete ===")
