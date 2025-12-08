@@ -4,6 +4,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Config: estimated Phase-5 account equity for ROI (%). Set to your paper/live size.
+$Phase5AccountEquity = 0.0  # e.g. 10000.0
 $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $repoRoot
 Set-Location $repoRoot
@@ -72,6 +74,16 @@ if (($records | Measure-Object).Count -eq 0) {
     Write-Host "[EV-HARD] Phase-5 EV hard-veto summary (SPY/QQQ):" -ForegroundColor Cyan
     & (Join-Path $PSScriptRoot 'Build-EvHardVetoSummary.ps1')
 
+    # Phase-5 5-day PnL / ROI snapshot (even on no-trade days)
+    try {
+        Write-Host ""
+        Write-Host "[PHASE5] Last 5-day Phase-5 PnL / ROI snapshot:" -ForegroundColor Cyan
+        & (Join-Path $repoRoot 'tools\Show-Phase5PnlLast5Days.ps1') -EndDay $dayDate.ToString("yyyy-MM-dd") -LookbackDays 5 -AccountEquity $Phase5AccountEquity
+    }
+    catch {
+        Write-Host "[PHASE5] WARN: Show-Phase5PnlLast5Days.ps1 failed: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+
     return
 }
 
@@ -114,3 +126,20 @@ Write-Host ("  avg/trade:    {0:N4}" -f $avgTradePnl)
 Write-Host ""
 Write-Host "[EV-HARD] Phase-5 EV hard-veto summary (SPY/QQQ):" -ForegroundColor Cyan
 & (Join-Path $PSScriptRoot 'Build-EvHardVetoSummary.ps1')
+
+# Export EV hard-veto mode snapshot for Notion daily journal
+try {
+    & (Join-Path $PSScriptRoot 'Export-Phase5EvHardVetoDailySnapshot.ps1') -Day $dayDate.ToString("yyyy-MM-dd")
+} catch {
+    Write-Host "[EV-HARD-EXPORT] WARN: Failed to export EV hard-veto snapshot: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+# === Phase-5 5-day PnL / ROI snapshot =========================================
+try {
+    Write-Host ""
+    Write-Host "[PHASE5] Last 5-day Phase-5 PnL / ROI snapshot:" -ForegroundColor Cyan
+    & (Join-Path $repoRoot 'tools\Show-Phase5PnlLast5Days.ps1') -EndDay $dayDate.ToString("yyyy-MM-dd") -LookbackDays 5 -AccountEquity $Phase5AccountEquity
+}
+catch {
+    Write-Host "[PHASE5] WARN: Show-Phase5PnlLast5Days.ps1 failed: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+# ============================================================================

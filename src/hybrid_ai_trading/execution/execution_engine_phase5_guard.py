@@ -98,28 +98,82 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
     ev_value, ev_band_abs, gate_score_v2 = _extract_phase5_ev(decision)
 
     # Advisory + optional hard EV-band veto.
-    # Simple heuristic:
-    #   ev is None        -> disabled
-    #   ev < 0            -> "bad" EV
-    #   ev >= 0           -> "good" EV
+    #
+    # For SPY/QQQ we prefer config-driven EV-band diagnostics using the
+    # Phase-5 JSON configs (ev_bands.*). For other symbols (e.g. NVDA),
+    # we keep the simpler EV<0 heuristic for now.
     phase5_ev_band_enabled = False
     phase5_ev_band_veto = False
     phase5_ev_band_reason = None
 
-    if ev_value is not None:
+    ev_band_info_for_veto = None
+
+    # Config-driven EV-band veto for SPY / QQQ (paper and live).
+    if symbol in ("SPY", "QQQ") and ev_value is not None:
+        try:
+            from hybrid_ai_trading.risk.phase5_ev_band_helpers import compute_ev_bands_from_config  # type: ignore
+        except Exception:
+            ev_band_info_for_veto = None
+        else:
+            # At entry time, realized PnL is typically zero; we still want to
+            # use the config thresholds as a banding / tolerance guide.
+            ev_band_info_for_veto = compute_ev_bands_from_config(
+                symbol=symbol,
+                ev=ev_value,
+                realized_pnl=0.0,
+            )
+
+    if ev_band_info_for_veto is not None:
         phase5_ev_band_enabled = True
-        if ev_value < 0:
+        if ev_band_info_for_veto["ev_hard_veto"]:
             phase5_ev_band_veto = True
-            phase5_ev_band_reason = "ev_negative"
+            phase5_ev_band_reason = "ev_band_hard_veto"
         else:
             phase5_ev_band_veto = False
-            phase5_ev_band_reason = "ev_non_negative"
+            phase5_ev_band_reason = "ev_band_ok"
+    else:
+        # Fallback: original EV<0 heuristic (e.g. NVDA or missing config).
+        if ev_value is not None:
+            phase5_ev_band_enabled = True
+            if ev_value < 0:
+                phase5_ev_band_veto = True
+                phase5_ev_band_reason = "ev_negative"
+            else:
+                phase5_ev_band_veto = False
+                phase5_ev_band_reason = "ev_non_negative"
 
-    # Hard veto flag (default = OFF, so behavior stays log-only unless enabled).
-    enable_ev_band_hard_veto = bool(
-        (os.getenv("PHASE5_ENABLE_EV_BAND_HARD_VETO") or "").strip().lower()
-        in ("1", "true", "yes", "on")
-    )
+    # Synthetic test hook (guarded by explicit debug flag):
+    # Only when PHASE5_DEBUG_ENABLE_TEST_HOOKS is true AND
+    # PHASE5_FORCE_TEST_EV_VETO is set do we force an EV-band veto
+    # for SPY/QQQ paper trades. Default behavior = no synthetic forcing.
+    debug_flag = (os.getenv("PHASE5_DEBUG_ENABLE_TEST_HOOKS") or "").strip().lower()
+    if debug_flag in ("1", "true", "yes", "on"):
+        if symbol in ("SPY", "QQQ") and regime.endswith("_PAPER"):
+            test_flag = (os.getenv("PHASE5_FORCE_TEST_EV_VETO") or "").strip().lower()
+            if test_flag in ("1", "true", "yes", "on"):
+                phase5_ev_band_enabled = True
+                phase5_ev_band_veto = True
+                phase5_ev_band_reason = "test_forced_ev_band_veto"
+
+    # Hard veto flag.
+    #
+    # For SPY/QQQ ORB regimes (paper + live), use config-driven gating via
+    # enable_ev_band_gating in the per-symbol Phase-5 JSON config.
+    # For other regimes (e.g. NVDA live), keep the existing env-var toggle.
+    enable_ev_band_hard_veto = False
+
+    if symbol in ("SPY", "QQQ"):
+        try:
+            from hybrid_ai_trading.risk.phase5_ev_band_helpers import is_ev_band_gating_enabled  # type: ignore
+        except Exception:
+            enable_ev_band_hard_veto = False
+        else:
+            enable_ev_band_hard_veto = is_ev_band_gating_enabled(symbol)
+    else:
+        enable_ev_band_hard_veto = bool(
+            (os.getenv("PHASE5_ENABLE_EV_BAND_HARD_VETO") or "").strip().lower()
+            in ("1", "true", "yes", "on")
+        )
 
     if (
         enable_ev_band_hard_veto
@@ -190,12 +244,8 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
             # EV-band veto advisory fields
             result.setdefault("phase5_ev_band_enabled", phase5_ev_band_enabled)
             result.setdefault("phase5_ev_band_veto", phase5_ev_band_veto)
-            result.setdefault("phase5_ev_band_reason", phase5_ev_band_reason)
-
-            # realized_pnl will typically come from the underlying engine's
-            # order_result / PnL accounting. We don't synthesize it here,
-            # but we keep the hook name consistent.
-            result.setdefault("realized_pnl", None)
+        # Config-driven EV-band diagnostics for SPY/QQQ (log-only)
+        _attach_ev_band_diag_to_result(symbol, ev_value, decision, result)
 
         return result
 
@@ -219,3 +269,62 @@ def place_order_phase5_with_guard(engine: Any, **kwargs: Any) -> Dict[str, Any]:
         # No real fill -> no realized PnL
         "realized_pnl": None,
     }
+
+def _attach_ev_band_diag_to_result(symbol, ev_value, decision, result):
+    """
+    Attach config-driven EV-band diagnostics for SPY/QQQ into the result dict
+    and decision.details. This is log-only and does not change allowed/blocked
+    behavior.
+
+    Parameters
+    ----------
+    symbol : str
+        Trade symbol, e.g. "SPY", "QQQ", "NVDA".
+    ev_value : Optional[float]
+        Per-trade EV estimate extracted from the Phase-5 risk decision.
+    decision : Phase5RiskDecision
+        Phase-5 risk decision object that carries .details.
+    result : Dict[str, Any]
+        Order result dict returned by place_order_phase5.
+    """
+    # Only apply to SPY / QQQ ORB strategies for now.
+    if symbol not in ("SPY", "QQQ"):
+        return
+
+    if ev_value is None:
+        # No EV -> nothing to compute/log yet.
+        return
+
+    # Local import to avoid any potential import cycles at module load time.
+    from hybrid_ai_trading.risk.phase5_ev_band_helpers import compute_ev_bands_from_config  # type: ignore
+
+    realized_pnl = None
+    if isinstance(result, dict):
+        realized_pnl = result.get("realized_pnl")
+
+    ev_band_info = compute_ev_bands_from_config(
+        symbol=symbol,
+        ev=ev_value,
+        realized_pnl=realized_pnl,
+    )
+
+    # 1) Attach to result dict (for JSONL/CSV/Notion)
+    if isinstance(result, dict):
+        result.setdefault("ev_band_abs", ev_band_info["ev_band_abs"])
+        result.setdefault("ev_gap_abs", ev_band_info["ev_gap_abs"])
+        result.setdefault("ev_hit_flag", ev_band_info["ev_hit_flag"])
+        result.setdefault("ev_hard_veto", ev_band_info["ev_hard_veto"])
+        result.setdefault("ev_hard_veto_gap_abs", ev_band_info["ev_hard_veto_gap_abs"])
+        result.setdefault("soft_veto_gap_threshold", ev_band_info["soft_veto_gap_threshold"])
+        result.setdefault("hard_veto_gap_threshold", ev_band_info["hard_veto_gap_threshold"])
+
+    # 2) Attach to decision.details (Phase-5 details)
+    details = getattr(decision, "details", None)
+    if isinstance(details, dict):
+        details.setdefault("ev_band_abs", ev_band_info["ev_band_abs"])
+        details.setdefault("ev_gap_abs", ev_band_info["ev_gap_abs"])
+        details.setdefault("ev_hit_flag", ev_band_info["ev_hit_flag"])
+        details.setdefault("ev_hard_veto", ev_band_info["ev_hard_veto"])
+        details.setdefault("ev_hard_veto_gap_abs", ev_band_info["ev_hard_veto_gap_abs"])
+        details.setdefault("soft_veto_gap_threshold", ev_band_info["soft_veto_gap_threshold"])
+        details.setdefault("hard_veto_gap_threshold", ev_band_info["hard_veto_gap_threshold"])

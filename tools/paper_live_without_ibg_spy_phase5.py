@@ -12,10 +12,13 @@ PaperLiveWithoutIBG SPY Phase-5 runner.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, List
 
-from hybrid_ai_trading.execution.execution_engine_phase5_guard import (place_order_phase5_with_guard as place_order_phase5)
+from hybrid_ai_trading.execution.execution_engine_phase5_guard import (
+    place_order_phase5_with_guard as place_order_phase5,
+)
 from hybrid_ai_trading.risk.risk_manager import RiskManager
 
 
@@ -176,6 +179,51 @@ def main() -> None:
             ev = details.get("ev_mu")
             ev_band_abs = details.get("ev_band_abs")
 
+        # --- SPY EV-diagnostics + Kelly (log-only) ---
+
+        # For now, SPY paper runner has no true realized PnL; use 0.0 placeholder.
+        realized_pnl_paper = 0.0
+
+        # Safe EV value
+        try:
+            ev_val = float(ev) if ev is not None else 0.0
+        except (TypeError, ValueError):
+            ev_val = 0.0
+
+        # EV-gap vs realized (placeholder)
+        ev_gap_abs = abs(ev_val - realized_pnl_paper)
+        ev_hit_flag = ev_gap_abs >= 0.20  # same soft-veto threshold as NVDA
+
+        # Price and Kelly-style suggestion (log-only, does NOT change behaviour)
+        price_val = row.get("price")
+        try:
+            price_f = float(price_val) if price_val is not None else 0.0
+        except (TypeError, ValueError):
+            price_f = 0.0
+
+        try:
+            risk_per_trade = float(os.environ.get("HAT_PHASE5_SPY_RISK_PER_TRADE", "50.0"))
+        except (TypeError, ValueError):
+            risk_per_trade = 50.0
+
+        if price_f > 0.0:
+            stop_fraction = 0.01
+            stop_dollars = max(price_f * stop_fraction, 0.01)
+            kelly_suggested_qty = risk_per_trade / stop_dollars
+        else:
+            kelly_suggested_qty = 1.0
+
+        # Clamp to a safe band
+        if kelly_suggested_qty < 1.0:
+            kelly_suggested_qty = 1.0
+        if kelly_suggested_qty > 100.0:
+            kelly_suggested_qty = 100.0
+
+        # For now, keep the original qty as the used quantity
+        try:
+            qty_used = float(qty)
+        except (TypeError, ValueError):
+            qty_used = 0.0
 
         out = {
             "idx": idx,
@@ -186,6 +234,11 @@ def main() -> None:
             "price": row.get("price"),
             "ev": ev,
             "ev_band_abs": ev_band_abs,
+            "realized_pnl_paper": realized_pnl_paper,
+            "ev_gap_abs": ev_gap_abs,
+            "ev_hit_flag": ev_hit_flag,
+            "qty_used": qty_used,
+            "kelly_suggested_qty": kelly_suggested_qty,
             "phase5_result": result,
             "position_after": engine.positions.get("SPY", 0.0),
         }

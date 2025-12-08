@@ -267,3 +267,34 @@ def attach_ev_band_hard_veto(decision, realized_pnl=None, gap_threshold=0.7):
     decision["ev_hard_veto_gap_threshold"] = result.gap_threshold
 
     return decision
+
+# --- BEGIN maybe_apply_ev_hard_veto helper (optional gate) ---
+from typing import Dict, Any
+
+def maybe_apply_ev_hard_veto(decision: Dict[str, Any], enable: bool = False) -> Dict[str, Any]:
+    """
+    Optionally apply EV hard-veto to the Phase-5 decision.
+
+    - If enable is False, this is log-only and returns the decision unchanged.
+    - If enable is True and decision["ev_hard_veto"] is truthy, this will:
+      - flip phase5_allowed to False
+      - update phase5_reason to the EV hard-veto reason (or a default).
+
+    This helper allows us to transition from log-only to real gating
+    in a controlled way, guarded by tests.
+    """
+    # Log-only path: no change.
+    if not enable:
+        return decision
+
+    # If hard-veto flag is not set, leave decision unchanged.
+    if not decision.get("ev_hard_veto"):
+        return decision
+
+    # Derive a reason; prefer explicit EV hard-veto reason if present.
+    reason = decision.get("ev_hard_veto_reason") or "ev_hard_veto_block"
+
+    decision["phase5_allowed"] = False
+    decision["phase5_reason"] = reason
+    return decision
+# --- END maybe_apply_ev_hard_veto helper ---

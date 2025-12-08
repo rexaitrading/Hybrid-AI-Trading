@@ -36,7 +36,7 @@ Source of truth: `config/phase5/ev_simple.json`.
 ## 2. EV bands (`ev_band_abs`) used by Phase-5 gating
 
 EV bands are kept in *fractional PnL* units and currently equal the
-per-trade EVs above (simple 1× band for this checkpoint).
+per-trade EVs above (simple 1Ãƒâ€” band for this checkpoint).
 
 They live in `config/phase5_ev_bands.yml` and are loaded via
 `config.phase5_config_loader.load_phase5_ev_bands()` /
@@ -90,3 +90,49 @@ This is a **paper / replay tuning checkpoint**, not live-capital PnL.
 2. Update `ev_band_abs` in `config/phase5_ev_bands.yml`.
 3. Re-run the EV sanity helpers (e.g. `Invoke-Phase5EvSanity`).
 4. Append a new section to this file and create a new checkpoint tag.
+
+## TODO: EV â†’ Gate Policy (to be finalized)
+
+Planned structure (not yet enforced in code):
+
+- For each regime (NVDA_BPLUS_LIVE, SPY_ORB_LIVE, QQQ_ORB_LIVE):
+  - Define EV bands in terms of |EV| and/or EV_PER_TRADE.
+  - Define when EV alone can:
+    - Soft veto (log-only),
+    - Raise band from 0 â†’ 1 â†’ 2,
+    - Trigger a hard veto suggestion for the risk layer.
+
+- Align thresholds with:
+  - ev_gap_sweep.py thresholds (0.02, 0.03, 0.05, 0.07, 0.10, 0.15, 0.20),
+  - Notion \"All Band-1 EV\" cross-symbol view.
+
+Implementation will be done via:
+- risk_phase5_ev_bands.py
+- phase5_gating_helpers.py
+- live runner EV logging (ev_orb_vwap_model, ev_effective_orb_vwap)## Authoritative EV band thresholds (Block-E, ORB+VWAP micro-mode)
+
+These values summarize the current working assumptions for EV per trade
+and the minimum EV needed to pass the EV-band gate (Band-0 → Band-1)
+for our three live regimes:
+
+- NVDA_BPLUS_LIVE:
+  - ev_per_trade ≈ 0.02
+  - band_min_ev (Band-1 threshold) ≈ 0.01
+
+- SPY_ORB_LIVE:
+  - ev_per_trade ≈ 0.0075
+  - band_min_ev (Band-1 threshold) ≈ 0.0038
+
+- QQQ_ORB_LIVE:
+  - ev_per_trade ≈ 0.0075
+  - band_min_ev (Band-1 threshold) ≈ 0.0038
+
+These thresholds are currently encoded in:
+
+- Python helper: `risk_phase5_ev_bands._EV_BAND_TEST_CONFIG`
+- EV tuning snapshot: `docs/Phase5_EvTuning_Snapshot.md`
+- (Planned) YAML: `config/phase5_ev_bands.yml`
+
+Going forward, Phase-5 EV gating code (risk_phase5_ev_bands.py +
+phase5_gating_helpers.py) should treat these as the single source of truth
+for Band-0/Band-1 boundaries when evaluating EV-based gates.

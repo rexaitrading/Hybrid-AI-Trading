@@ -34,6 +34,12 @@ from hybrid_ai_trading.risk.ev_orb_vwap_model import (
 IPO_WATCHLIST_PATH = Path("logs") / "ipo_watchlist.jsonl"
 NVDA_PAPER_JSONL_PATH = Path("logs") / "nvda_phase5_paperlive_results.jsonl"
 
+# NVDA Phase-5 EV bands + thresholds (tuned via replay/paper)
+NVDA_EV_BAND0_MAX = 0.0062
+NVDA_EV_BAND1_MAX = 0.0184
+NVDA_SOFT_VETO_GAP_THRESHOLD = 0.20
+NVDA_HARD_VETO_GAP_THRESHOLD = 0.7
+
 
 def load_ipo_tags() -> Dict[str, Dict[str, Any]]:
     tags: Dict[str, Dict[str, Any]] = {}
@@ -124,16 +130,16 @@ def compute_soft_veto_ev_fields(ev: float, realized_pnl: float) -> Dict[str, Any
     #   Band 0: |EV| <= 0.0062
     #   Band 1: 0.0062 < |EV| <= 0.0184
     #   Band 2: |EV| > 0.0184
-    if abs_ev <= 0.0062:
+    if abs_ev <= NVDA_EV_BAND0_MAX:
         ev_band_abs = 0
-    elif abs_ev <= 0.0184:
+    elif abs_ev <= NVDA_EV_BAND1_MAX:
         ev_band_abs = 1
     else:
         ev_band_abs = 2
 
     ev_gap_abs = abs(ev - realized_pnl)
     ev_vs_realized_paper = ev - realized_pnl
-    ev_hit_flag = ev_gap_abs >= 0.20
+    ev_hit_flag = ev_gap_abs >= NVDA_SOFT_VETO_GAP_THRESHOLD
 
     return {
         "soft_ev_veto": ev_hit_flag,
@@ -145,6 +151,96 @@ def compute_soft_veto_ev_fields(ev: float, realized_pnl: float) -> Dict[str, Any
         "ev_band_veto_applied": False,
         "ev_band_veto_reason": None,
     }
+
+
+def infer_trend_and_vol_regimes_from_regime_tag(regime: str) -> Dict[str, Any]:
+    """
+    Lightweight parser for regime string to extract trend + volatility regime.
+
+    Expected tags in regime (case-insensitive):
+      - "TREND_UP", "TREND_DOWN", "CHOP"/"RANGE"
+      - "HIGHVOL", "LOWVOL"
+    Anything else falls back to neutral/medium.
+    """
+    regime_up = (regime or "").upper()
+
+    trend = "neutral"
+    if "TREND_UP" in regime_up:
+        trend = "up"
+    elif "TREND_DOWN" in regime_up:
+        trend = "down"
+    elif "CHOP" in regime_up or "RANGE" in regime_up:
+        trend = "chop"
+
+    vol = "medium"
+    if "HIGHVOL" in regime_up:
+        vol = "high"
+    elif "LOWVOL" in regime_up:
+        vol = "low"
+
+    return {
+        "trend": trend,
+        "vol": vol,
+    }
+
+
+def build_orb_vwap_features_for_nvda(
+    symbol: str,
+    regime: str,
+    side: str,
+    realized_pnl: float,
+) -> OrbVwapFeatures:
+    """
+    NVDA-specific ORB+VWAP feature builder that:
+      - Boosts orb_strength when trend + side align.
+      - Penalizes orb_strength in chop.
+      - Uses regime tags for vol_bucket.
+    """
+    side_u = side.upper()
+    regime_info = infer_trend_and_vol_regimes_from_regime_tag(regime)
+    trend = regime_info["trend"]
+    vol = regime_info["vol"]
+
+    # Base orb strength by side
+    base_orb = 0.6 if side_u == "BUY" else 0.3
+
+    # Trend-aligned boost / chop penalty
+    if trend == "up" and side_u == "BUY":
+        orb_strength = base_orb + 0.1
+    elif trend == "down" and side_u == "SELL":
+        orb_strength = base_orb + 0.1
+    elif trend == "chop":
+        orb_strength = base_orb - 0.1
+    else:
+        orb_strength = base_orb
+
+    # Clamp into a reasonable band
+    if orb_strength < 0.1:
+        orb_strength = 0.1
+    if orb_strength > 0.9:
+        orb_strength = 0.9
+
+    # Still stubby, but structured:
+    above_vwap = True if side_u == "BUY" else False
+
+    if trend == "up":
+        trend_score = 0.5
+    elif trend == "down":
+        trend_score = -0.5
+    elif trend == "chop":
+        trend_score = -0.2
+    else:
+        trend_score = 0.0
+
+    # vol_bucket is a string as expected by OrbVwapFeatures
+    vol_bucket = vol  # "low" | "medium" | "high"
+
+    return OrbVwapFeatures(
+        orb_strength=orb_strength,
+        above_vwap=above_vwap,
+        trend_score=trend_score,
+        vol_bucket=vol_bucket,
+    )
 
 
 def append_nvda_phase5_paper_entry(
@@ -175,6 +271,14 @@ def append_nvda_phase5_paper_entry(
 
     phase5_allowed = bool(phase5_decision.get("allowed", True))
     phase5_reason = phase5_decision.get("reason", "unknown")
+    kelly_suggested_qty = compute_phase5_nvda_kelly_qty(
+        price=price,
+        ev=ev,
+    )
+    try:
+        qty_used = float(result.get("size", result.get("qty", 0.0)) or 0.0)
+    except (TypeError, ValueError):
+        qty_used = 0.0
 
     soft_fields = compute_soft_veto_ev_fields(ev=ev, realized_pnl=realized_pnl)
 
@@ -183,7 +287,7 @@ def append_nvda_phase5_paper_entry(
         ev=ev,
         realized_pnl=realized_pnl,
         ev_gap_abs=soft_fields.get("ev_gap_abs"),
-        gap_threshold=0.7,
+        gap_threshold=NVDA_HARD_VETO_GAP_THRESHOLD,
     )
 
     # Very simple ORB+VWAP features for now:
@@ -212,7 +316,7 @@ def append_nvda_phase5_paper_entry(
     ev_effective_orb_vwap = compute_effective_ev(
         ev_phase5=ev,
         ev_model=ev_orb_vwap_model,
-    )\
+    )
 
     entry: Dict[str, Any] = {
         "ts": ts,
@@ -220,6 +324,8 @@ def append_nvda_phase5_paper_entry(
         "regime": regime,
         "side": side,
         "price": price,
+        "qty_used": qty_used,
+        "kelly_suggested_qty": kelly_suggested_qty,
         "realized_pnl_paper": realized_pnl,
         "ev": ev,
         "phase5_allowed": phase5_allowed,
@@ -240,6 +346,38 @@ def append_nvda_phase5_paper_entry(
     NVDA_PAPER_JSONL_PATH.parent.mkdir(parents=True, exist_ok=True)
     with NVDA_PAPER_JSONL_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
+
+
+def compute_phase5_nvda_kelly_qty(
+    price: float,
+    ev: float,
+) -> float:
+    """
+    Simple R-based position sizing helper for NVDA Phase-5.
+
+    - Uses env HAT_PHASE5_RISK_PER_TRADE as $ risk per trade (default 50.0).
+    - Assumes a 1% stop (can be refined later).
+    - Does NOT change behavior unless HAT_PHASE5_USE_KELLY_QTY=1 is set.
+    """
+    try:
+        risk_per_trade = float(os.environ.get("HAT_PHASE5_RISK_PER_TRADE", "50.0"))
+    except (TypeError, ValueError):
+        risk_per_trade = 50.0
+
+    # Basic guardrails
+    if price <= 0:
+        return 1.0
+    stop_fraction = 0.01
+    stop_dollars = max(price * stop_fraction, 0.01)
+
+    qty = risk_per_trade / stop_dollars
+
+    # Clamp qty into a small, safe band for now
+    if qty < 1.0:
+        qty = 1.0
+    if qty > 100.0:
+        qty = 100.0
+    return qty
 
 
 def build_live_config() -> Dict[str, Any]:
@@ -379,7 +517,5 @@ def main() -> None:
     print("  - replace dummy price/qty with real signal- and Kelly-driven values")
     print("  - extend cfg['broker'] / cfg['costs'] / universe as needed")
     print("  - keep this runner under Phase-5 risk + PreMarket guardrails")
-
-
 if __name__ == "__main__":
     main()

@@ -87,9 +87,10 @@ from typing import Optional, Tuple
 # simple and are *not* the trading EV model; they just ensure that basic
 # configuration exists and that require_ev_band() behaves as expected.
 _EV_BAND_TEST_CONFIG: dict[str, Tuple[float, float]] = {
-    "NVDA_BPLUS_LIVE": (1.0, 0.0),
-    "SPY_ORB_LIVE": (1.0, 0.0),
-    "QQQ_ORB_LIVE": (1.0, 0.0),
+    # ev_for_test, band_threshold (minimum acceptable EV)
+    "NVDA_BPLUS_LIVE": (1.0, 0.01),
+    "SPY_ORB_LIVE":    (1.0, 0.0038),
+    "QQQ_ORB_LIVE":    (1.0, 0.0038),
 }
 
 
