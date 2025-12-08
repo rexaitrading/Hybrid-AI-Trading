@@ -1,33 +1,72 @@
 """
 Phase-2 microstructure enrichment for SPY/QQQ Phase-5 ORB CSVs.
 
-- Uses hybrid_ai_trading.microstructure.compute_microstructure_features
-- Computes:
-    - ms_range_pct   := abs(window_ret)
-    - ms_trend_flag  := sign(last_ret) in { -1, 0, +1 }
-- Enriches:
-    - logs/spy_phase5_paper_for_notion_ev_diag.csv
-    - logs/qqq_phase5_paper_for_notion_ev_diag.csv
+This version makes ms_range_pct and ms_trend_flag explicitly
+ORB-window based:
 
-Log-only: no gating changes, no config writes.
+- ms_range_pct  := abs(orb_ret)
+    orb_ret = (last_close - first_close) / first_close
+
+- ms_trend_flag := sign(orb_ret) in { -1, 0, +1 }
+
+Input (as before):
+    logs/spy_phase5_paper_for_notion_ev_diag.csv
+    logs/qqq_phase5_paper_for_notion_ev_diag.csv
+
+Output:
+    logs/spy_phase5_paper_for_notion_ev_diag_micro.csv
+    logs/qqq_phase5_paper_for_notion_ev_diag_micro.csv
+
+Log-only diagnostics. No gating or risk behaviour changes.
 """
 
 from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Sequence
-
-from hybrid_ai_trading.microstructure import compute_microstructure_features
+from typing import List
 
 
 def _float_or_default(val, default: float) -> float:
     try:
         if val is None:
             return default
+        if val == "":
+            return default
         return float(val)
     except (TypeError, ValueError):
         return default
+
+
+def compute_orb_window_features(closes: List[float]) -> tuple[float, int]:
+    """
+    Compute a simple ORB-window return based microstructure pair:
+
+    - ms_range_pct  = abs(orb_ret)
+    - ms_trend_flag = sign(orb_ret) in { -1, 0, +1 }
+
+    where orb_ret = (last_close - first_close) / first_close
+    """
+    if not closes:
+        return 0.0, 0
+
+    first = closes[0]
+    last = closes[-1]
+
+    if first == 0:
+        return 0.0, 0
+
+    orb_ret = (last - first) / first
+
+    if orb_ret > 0:
+        trend_flag = 1
+    elif orb_ret < 0:
+        trend_flag = -1
+    else:
+        trend_flag = 0
+
+    ms_range_pct = abs(orb_ret)
+    return ms_range_pct, trend_flag
 
 
 def enrich_file(path: Path) -> None:
@@ -44,34 +83,16 @@ def enrich_file(path: Path) -> None:
         print(f"[MICRO-ENRICH] SKIP: {path} is empty.")
         return
 
-    # Use 'price' as close proxy, and qty/qty_used as volume proxy.
+    # Use 'price' as a close proxy.
     closes = [_float_or_default(r.get("price"), 0.0) for r in rows]
-    volumes = [
-        _float_or_default(
-            r.get("qty_used", r.get("qty", 1.0)),
-            1.0,
-        )
-        for r in rows
-    ]
 
-    features = compute_microstructure_features(closes=closes, volumes=volumes)
-
-    window_ret = getattr(features, "window_ret", 0.0)
-    last_ret = getattr(features, "last_ret", 0.0)
-
-    ms_range_pct = abs(window_ret)
-
-    if last_ret > 0:
-        ms_trend_flag = 1
-    elif last_ret < 0:
-        ms_trend_flag = -1
-    else:
-        ms_trend_flag = 0
+    # ORB-window features based on first/last price
+    ms_range_pct, ms_trend_flag = compute_orb_window_features(closes)
 
     print(
-        "[MICRO-ENRICH] Derived features:"
-        f" window_ret={window_ret:.6f}, last_ret={last_ret:.6f},"
-        f" ms_range_pct={ms_range_pct:.6f}, ms_trend_flag={ms_trend_flag}"
+        "[MICRO-ENRICH] ORB-window features:"
+        f" first_close={closes[0]:.6f} last_close={closes[-1]:.6f} "
+        f"ms_range_pct={ms_range_pct:.6f} ms_trend_flag={ms_trend_flag}"
     )
 
     fieldnames = list(rows[0].keys())
@@ -94,7 +115,7 @@ def enrich_file(path: Path) -> None:
 
 
 def main() -> None:
-    print("[MICRO-ENRICH] === SPY/QQQ microstructure enrichment start ===")
+    print("[MICRO-ENRICH] === SPY/QQQ microstructure enrichment (ORB-window) start ===")
     base = Path("logs")
     spy = base / "spy_phase5_paper_for_notion_ev_diag.csv"
     qqq = base / "qqq_phase5_paper_for_notion_ev_diag.csv"
@@ -102,7 +123,7 @@ def main() -> None:
     enrich_file(spy)
     enrich_file(qqq)
 
-    print("[MICRO-ENRICH] === SPY/QQQ microstructure enrichment complete ===")
+    print("[MICRO-ENRICH] === SPY/QQQ microstructure enrichment (ORB-window) complete ===")
 
 
 if __name__ == "__main__":

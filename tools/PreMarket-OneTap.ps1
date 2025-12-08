@@ -1,3 +1,4 @@
+# BLOCK-G NOTE: For NVDA Block-G, run tools\NvdaPhase5_BlockGStub.ps1 manually (stub only, no live trading).
 param(
     [Parameter(Mandatory = $false)][string] $Symbol,
     [Parameter(Mandatory = $false)][string] $Session,
