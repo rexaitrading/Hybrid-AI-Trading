@@ -1,9 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import asdict
 from typing import Any, Dict
 
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
+from hybrid_ai_trading.blockg_status import ensure_nvda_live_allowed
 from hybrid_ai_trading.execution.blockg_contract import (
     ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready,
 )
@@ -142,3 +143,16 @@ def ensure_nvda_live_allowed_by_blockg() -> None:
     except BlockGNotReadyError as exc:
         # Raise a clear error so guard tests and execution engine can intercept.
         raise RuntimeError(f"NVDA live order blocked by Block-G contract: {exc}") from exc
+def ensure_symbol_blockg_ready(symbol: str) -> None:
+    """
+    Wrapper that enforces Block-G contract ONLY for NVDA.
+    Called by tests via monkeypatch.
+    """
+    if symbol == "NVDA":
+        ensure_nvda_live_allowed()
+
+
+    # --- BLOCK-G ENFORCEMENT ---
+    # LIVE order for NVDA must pass Block-G contract
+    if regime.upper().endswith("_LIVE") and symbol == "NVDA":
+        ensure_symbol_blockg_ready(symbol)
