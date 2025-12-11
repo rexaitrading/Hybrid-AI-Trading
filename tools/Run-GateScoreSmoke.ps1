@@ -29,8 +29,8 @@ Write-Host "[PHASE3-SMOKE] Running _nvda_gate_score_smoke.py via $pythonExe" -Fo
 $code = $LASTEXITCODE
 
 if ($code -ne 0) {
-    Write-Host "[PHASE3-SMOKE] WARN: GateScore smoke FAILED (exit=$code). Treating as non-fatal until replay module is wired." -ForegroundColor Yellow
-    exit 0
+    Write-Host "[PHASE3-SMOKE] ERROR: GateScore smoke FAILED (exit=$code)" -ForegroundColor Red
+    exit $code
 }
 
 Write-Host "[PHASE3-SMOKE] GateScore smoke PASSED" -ForegroundColor Green
