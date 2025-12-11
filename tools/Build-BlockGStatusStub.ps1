@@ -1,5 +1,106 @@
-[CmdletBinding()]
-param()
+﻿function Get-BgTodayString {
+    (Get-Date -Format 'yyyy-MM-dd')
+}
+
+function Get-BgLogsPath {
+    $toolsDir = Split-Path -Parent $PSCommandPath
+    $repoRoot = Split-Path -Parent $toolsDir
+    Join-Path $repoRoot 'logs'
+}
+
+function Get-Phase23HealthOkToday {
+    $logsPath = Get-BgLogsPath
+    $path = Join-Path $logsPath 'phase23_health_daily.csv'
+    if (-not (Test-Path $path)) { return $false }
+
+    $rows = Import-Csv $path
+    if (-not $rows) { return $false }
+
+    $last = $rows[-1]
+    $today = Get-BgTodayString
+
+    $dateProp = @('as_of_date','date','day_id') | Where-Object {
+        $last.PSObject.Properties.Name -contains $_
+    } | Select-Object -First 1
+
+    if (-not $dateProp) { return $false }
+
+    $rowDate = ($last.$dateProp).Split(' ')[0]
+    if ($rowDate -ne $today) { return $false }
+
+    # Optional stricter flag if present
+    if ($last.PSObject.Properties.Name -contains 'phase23_ok') {
+        $val = [string]$last.phase23_ok
+        if ($val -eq '') { return $false }
+        return ($val -eq 'True' -or $val -eq 'true' -or $val -eq '1')
+    }
+
+    return $true
+}
+
+function Get-EvHardDailyOkToday {
+    $logsPath = Get-BgLogsPath
+    $path = Join-Path $logsPath 'phase5_ev_hard_veto_daily.csv'
+    if (-not (Test-Path $path)) { return $false }
+
+    $rows = Import-Csv $path
+    if (-not $rows) { return $false }
+
+    $today = Get-BgTodayString
+
+    foreach ($row in $rows) {
+        $dateProp = @('date','as_of_date','day_id') | Where-Object {
+            $row.PSObject.Properties.Name -contains $_
+        } | Select-Object -First 1
+
+        if (-not $dateProp) { continue }
+
+        $rowDate = ($row.$dateProp).Split(' ')[0]
+        if ($rowDate -eq $today) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Get-GateScoreFreshToday {
+    $logsPath = Get-BgLogsPath
+    $path = Join-Path $logsPath 'gatescore_daily_summary.csv'
+    if (-not (Test-Path $path)) { return $false }
+
+    $rows = Import-Csv $path
+    if (-not $rows) { return $false }
+
+    $today = Get-BgTodayString
+
+    # Look for NVDA row for today with basic sample counts
+    $candidate = $rows | Where-Object {
+        ($_.symbol -eq 'NVDA') -and
+        ($_.as_of_date -like "$today*")
+    } | Select-Object -First 1
+
+    if (-not $candidate) { return $false }
+
+    $countSignals = 0
+    $pnlSamples = 0
+    [void][int]::TryParse([string]$candidate.count_signals, [ref]$countSignals)
+    [void][int]::TryParse([string]$candidate.pnl_samples, [ref]$pnlSamples)
+
+    if ($countSignals -lt 1) { return $false }
+    if ($pnlSamples -lt 1) { return $false }
+
+    return $true
+}
+
+function Get-NvdaBlockGReadyToday {
+    $p23 = Get-Phase23HealthOkToday
+    $evHard = Get-EvHardDailyOkToday
+    $gsFresh = Get-GateScoreFreshToday
+
+    return ($p23 -and $evHard -and $gsFresh)
+}
+# [CmdletBinding()]param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -180,10 +281,14 @@ $gsFreshQqq  = Get-GateScoreFreshForSymbol -CsvPath $gsCsv -Symbol "QQQ"
 # For backward compatibility, keep gatescore_fresh_today as NVDA's freshness
 $gsFresh = $gsFreshNvda
 
-# 4) Per-symbol readiness
-$nvdaReady = $phase23Ok -and $evHardOk -and $gsFreshNvda
-$spyReady  = $phase23Ok -and $evHardOk -and $gsFreshSpy
-$qqqReady  = $phase23Ok -and $evHardOk -and $gsFreshQqq
+# 4) Per-symbol readiness (require EV-band samples as well)
+$nvdaEvOk = Get-EvBandSamplesOkTodayForSymbol -Symbol "NVDA" -MinTrades 3
+$spyEvOk  = Get-EvBandSamplesOkTodayForSymbol -Symbol "SPY"  -MinTrades 3
+$qqqEvOk  = Get-EvBandSamplesOkTodayForSymbol -Symbol "QQQ"  -MinTrades 3
+
+$nvdaReady = $phase23Ok -and $evHardOk -and $gsFreshNvda -and $nvdaEvOk
+$spyReady  = $phase23Ok -and $evHardOk -and $gsFreshSpy  -and $spyEvOk
+$qqqReady  = $phase23Ok -and $evHardOk -and $gsFreshQqq -and $qqqEvOk
 
 # 5) Build JSON payload
 $payload = [ordered]@{
@@ -204,3 +309,8 @@ $payloadJson | Set-Content -Path $statusPath -Encoding UTF8
 
 Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
+
+
+
+
+
