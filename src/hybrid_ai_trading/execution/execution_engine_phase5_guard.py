@@ -4,6 +4,9 @@ from dataclasses import asdict
 from typing import Any, Dict
 
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
+from hybrid_ai_trading.execution.blockg_contract import (
+    ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready,
+)
 
 
 def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
@@ -20,15 +23,15 @@ def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
 
 def ensure_symbol_blockg_ready(symbol: str) -> None:
     """
-    Stub for Block-G contract enforcement.
+    Block-G contract enforcement for live NVDA / SPY / QQQ.
 
-    Tests monkeypatch this function to simulate Block-G failures. The default
-    implementation is a no-op so that normal code paths are not blocked.
+    In production, this delegates to hybrid_ai_trading.execution.blockg_contract.ensure_symbol_blockg_ready,
+    which reads logs/blockg_status_stub.json written by Build-BlockGStatusStub.ps1.
 
-    Later: read blockg_status_stub.json and enforce per-symbol readiness
-    (nvda_blockg_ready, spy_blockg_ready, qqq_blockg_ready, GateScore freshness, etc.).
+    Tests may monkeypatch this function to simulate Block-G failures without touching
+    the underlying contract helper.
     """
-    return None
+    contract_ensure_symbol_blockg_ready(symbol)
 
 
 def place_order_phase5(
