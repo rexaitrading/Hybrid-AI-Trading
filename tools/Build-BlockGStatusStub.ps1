@@ -65,6 +65,79 @@ function Get-TodayRow {
     return $null
 }
 
+function Get-GateScoreFreshForSymbol {
+    param(
+        [Parameter(Mandatory = $true)][string]$CsvPath,
+        [Parameter(Mandatory = $true)][string]$Symbol
+    )
+
+    if (-not (Test-Path $CsvPath)) {
+        return $false
+    }
+
+    $rows = Import-Csv -Path $CsvPath
+    $rowArray = @($rows)
+    if ($rowArray.Count -eq 0) {
+        return $false
+    }
+
+    $today = (Get-Date).ToString("yyyy-MM-dd")
+    $targetRow = $null
+
+    foreach ($row in $rowArray) {
+        $props = $row.PSObject.Properties
+
+        $symProp = $props["symbol"]
+        $symVal  = $null
+        if ($symProp -ne $null -and $symProp.Value -ne $null) {
+            $symVal = [string]$symProp.Value
+        }
+
+        if ($symVal -ne $Symbol) {
+            continue
+        }
+
+        $asOf = $null
+        $propAsOf = $props["as_of_date"]
+        if ($propAsOf -ne $null -and $propAsOf.Value -ne $null -and $propAsOf.Value -ne "") {
+            $asOf = [string]$propAsOf.Value
+            if ($asOf.Length -ge 10) {
+                $asOf = $asOf.Substring(0,10)
+            }
+        }
+
+        if ($asOf -eq $today) {
+            $targetRow = $row
+            break
+        }
+    }
+
+    if ($targetRow -eq $null) {
+        return $false
+    }
+
+    $props = $targetRow.PSObject.Properties
+    $countSignals = 0
+    $pnlSamples   = 0
+
+    $csProp = $props["count_signals"]
+    if ($csProp -ne $null -and $csProp.Value -ne $null -and $csProp.Value -ne "") {
+        [void][int]::TryParse([string]$csProp.Value, [ref]$countSignals)
+    }
+
+    $psProp = $props["pnl_samples"]
+    if ($psProp -ne $null -and $psProp.Value -ne $null -and $psProp.Value -ne "") {
+        [void][int]::TryParse([string]$psProp.Value, [ref]$pnlSamples)
+    }
+
+    # Simple freshness / sample-count rule (tunable later)
+    if ($countSignals -ge 3 -and $pnlSamples -ge 1) {
+        return $true
+    }
+
+    return $false
+}
+
 # 1) Phase-23 health -> phase23_health_ok_today
 $phase23Csv = Join-Path $logsDir "phase23_health_daily.csv"
 $phase23Row = Get-TodayRow -CsvPath $phase23Csv
@@ -97,67 +170,20 @@ if ($evRow -ne $null) {
     }
 }
 
-# 3) GateScore daily summary -> gatescore_fresh_today
-$gsCsv     = Join-Path $logsDir "gatescore_daily_summary.csv"
-$gsRow     = $null
-$gsFresh   = $false
+# 3) GateScore daily summary -> gatescore_fresh_today (NVDA)
+$gsCsv = Join-Path $logsDir "gatescore_daily_summary.csv"
 
-if (Test-Path $gsCsv) {
-    $rows = Import-Csv -Path $gsCsv
-    $rowArray = @($rows)
-    if ($rowArray.Count -gt 0) {
-        $today = (Get-Date).ToString("yyyy-MM-dd")
-        foreach ($row in $rowArray) {
-            $props = $row.PSObject.Properties
-            $asOf  = $null
-            $propAsOf = $props["as_of_date"]
-            if ($propAsOf -ne $null -and $propAsOf.Value -ne $null -and $propAsOf.Value -ne "") {
-                $asOf = [string]$propAsOf.Value
-                if ($asOf.Length -ge 10) {
-                    $asOf = $asOf.Substring(0,10)
-                }
-            }
+$gsFreshNvda = Get-GateScoreFreshForSymbol -CsvPath $gsCsv -Symbol "NVDA"
+$gsFreshSpy  = Get-GateScoreFreshForSymbol -CsvPath $gsCsv -Symbol "SPY"
+$gsFreshQqq  = Get-GateScoreFreshForSymbol -CsvPath $gsCsv -Symbol "QQQ"
 
-            $symProp = $props["symbol"]
-            $symVal  = $null
-            if ($symProp -ne $null -and $symProp.Value -ne $null) {
-                $symVal = [string]$symProp.Value
-            }
-
-            if ($asOf -eq $today -and $symVal -eq "NVDA") {
-                $gsRow = $row
-                break
-            }
-        }
-    }
-}
-
-if ($gsRow -ne $null) {
-    $props = $gsRow.PSObject.Properties
-
-    $countSignals = 0
-    $pnlSamples   = 0
-
-    $csProp = $props["count_signals"]
-    if ($csProp -ne $null -and $csProp.Value -ne $null -and $csProp.Value -ne "") {
-        [void][int]::TryParse([string]$csProp.Value, [ref]$countSignals)
-    }
-
-    $psProp = $props["pnl_samples"]
-    if ($psProp -ne $null -and $psProp.Value -ne $null -and $psProp.Value -ne "") {
-        [void][int]::TryParse([string]$psProp.Value, [ref]$pnlSamples)
-    }
-
-    # Simple freshness / sample-count rule (tunable later)
-    if ($countSignals -ge 3 -and $pnlSamples -ge 1) {
-        $gsFresh = $true
-    }
-}
+# For backward compatibility, keep gatescore_fresh_today as NVDA's freshness
+$gsFresh = $gsFreshNvda
 
 # 4) Per-symbol readiness
-$nvdaReady = $phase23Ok -and $evHardOk -and $gsFresh
-$spyReady  = $false   # conservative v1
-$qqqReady  = $false   # conservative v1
+$nvdaReady = $phase23Ok -and $evHardOk -and $gsFreshNvda
+$spyReady  = $phase23Ok -and $evHardOk -and $gsFreshSpy
+$qqqReady  = $phase23Ok -and $evHardOk -and $gsFreshQqq
 
 # 5) Build JSON payload
 $payload = [ordered]@{
