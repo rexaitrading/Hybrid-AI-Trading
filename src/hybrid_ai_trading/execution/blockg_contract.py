@@ -39,7 +39,6 @@ class BlockGStatus:
     nvda_blockg_ready: bool
     spy_blockg_ready: bool
     qqq_blockg_ready: bool
-
     raw: Dict[str, Any]
 
     @property
@@ -72,13 +71,14 @@ def load_blockg_status(path: Optional[Path] = None) -> BlockGStatus:
     Raises FileNotFoundError if the JSON does not exist.
     """
     status_path = path or DEFAULT_STATUS_PATH
-    text = status_path.read_text(encoding="utf-8")
-# Strip UTF-8 BOM if present (PowerShell writers may include it)
-if text.startswith("\ufeff"):
-    text = text.lstrip("\ufeff")
-data = json.loads(text)
 
-    # Use dict.get with sensible defaults; PS builder is the source of truth.
+    # BOM-safe read: some writers may include UTF-8 BOM.
+    text = status_path.read_text(encoding="utf-8")
+    if text.startswith("\ufeff"):
+        text = text.lstrip("\ufeff")
+
+    data = json.loads(text)
+
     return BlockGStatus(
         ts_utc=str(data.get("ts_utc", "")),
         as_of_date=str(data.get("as_of_date", "")),
@@ -172,5 +172,4 @@ def ensure_symbol_blockg_ready(symbol: str, status: Optional[BlockGStatus] = Non
     Raises BlockGNotReadyError if Block-G does not allow the symbol
     to trade live today.
     """
-    # Reuse the main assertion helper so contract semantics stay unified.
     assert_symbol_ready_for_live(symbol, status=status)
