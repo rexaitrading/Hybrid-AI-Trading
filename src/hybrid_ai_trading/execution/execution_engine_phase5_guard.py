@@ -121,3 +121,24 @@ def place_order_phase5_with_guard(
         day_id=day_id,
         **kwargs,
     )
+
+def ensure_nvda_live_allowed_by_blockg() -> None:
+    """
+    Hard Block-G contract enforcement for NVDA live orders.
+
+    This MUST be called before any live NVDA order is sent.
+
+    Contract:
+    - Uses logs/blockg_status_stub.json built by Run-BlockGReadiness.ps1
+    - Enforces:
+        - status.is_today
+        - phase23_health_ok_today
+        - ev_hard_daily_ok_today
+        - gatescore_fresh_today
+        - nvda_blockg_ready
+    """
+    try:
+        assert_symbol_ready_for_live("NVDA")
+    except BlockGNotReadyError as exc:
+        # Raise a clear error so guard tests and execution engine can intercept.
+        raise RuntimeError(f"NVDA live order blocked by Block-G contract: {exc}") from exc
