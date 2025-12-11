@@ -20,11 +20,25 @@ if (-not (Test-Path $oneTap)) {
     exit 1
 }
 
+# Optional debug path: bypass Block-G only if explicitly requested
 if ($SkipBlockG) {
     Write-Host "[NVDA-PREMKT] WARNING: -SkipBlockG specified -> BYPASSING NVDA Block-G contract check." -ForegroundColor Yellow
     Write-Host "[NVDA-PREMKT] Calling PreMarket-OneTap.ps1 directly (for debugging only)." -ForegroundColor Yellow
     & $oneTap
     exit $LASTEXITCODE
+}
+
+# ---- Phase-5 Safety Snapshot (RunContext + Block-G + CSV + dashboard) ----
+$phase5SafetyRunner = Join-Path $repoRoot "tools\Run-Phase5SafetySnapshot.ps1"
+if (-not (Test-Path $phase5SafetyRunner)) {
+    Write-Host "[NVDA-PREMKT] WARN: Run-Phase5SafetySnapshot.ps1 not found; skipping full safety snapshot." -ForegroundColor Yellow
+} else {
+    Write-Host "[NVDA-PREMKT] Running Run-Phase5SafetySnapshot.ps1 (Phase-5 safety stack)..." -ForegroundColor Cyan
+    & $phase5SafetyRunner
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[NVDA-PREMKT] ERROR: Phase-5 safety snapshot failed. Aborting NVDA pre-market one-tap." -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
 }
 
 # Normal path: enforce Block-G contract before arming anything NVDA-related
