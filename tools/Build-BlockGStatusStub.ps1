@@ -42,7 +42,18 @@ function Main {
   $gsRows      = Try-LoadCsv -Path $gsDailyPath
 
   # Conservative: require today rows to exist
-  $phase23_ok = Has-TodayRow -Rows $phase23Rows -DateField "date" -Today $today
+  # Phase23 health: accept either 'date' or 'as_of_date' column (robust)
+$phase23_ok = $false
+if ($phase23Rows.Count -gt 0) {
+  $cols = $phase23Rows[0].PSObject.Properties.Name
+  if ($cols -contains "date") {
+    $phase23_ok = Has-TodayRow -Rows $phase23Rows -DateField "date" -Today $today
+  } elseif ($cols -contains "as_of_date") {
+    $phase23_ok = Has-TodayRow -Rows $phase23Rows -DateField "as_of_date" -Today $today
+  } else {
+    $phase23_ok = $false
+  }
+}
   $evhard_ok  = Has-TodayRow -Rows $evHardRows  -DateField "date" -Today $today
 
   # Phase-4 stamp (must be present and today)
