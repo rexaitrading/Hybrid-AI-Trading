@@ -69,30 +69,26 @@ FIELDS: List[str] = [
 ]
 
 
-def read_all_json_objects(path):
-    """
-    Strict JSONL reader: 1 JSON object per line.
-    Returns list[dict]. Skips blank lines. Skips corrupt lines.
-    """
-    import json
-    from pathlib import Path
-
-    p = Path(path)
-    if not p.exists():
+def read_all_json_objects(path: Path) -> List[Dict[str, Any]]:
+    if not path.exists():
         return []
 
-    rows = []
-    for ln in p.read_text(encoding="utf-8", errors="replace").splitlines():
-        ln = ln.strip()
-        if not ln:
+    text = path.read_text(encoding="utf-8")
+    rows: List[Dict[str, Any]] = []
+
+    for match in re.finditer(r"\{.*?\}", text, flags=re.DOTALL):
+        fragment = match.group(0).strip()
+        if not fragment:
             continue
         try:
-            obj = json.loads(ln)
-        except Exception:
+            obj = json.loads(fragment)
+        except json.JSONDecodeError:
             continue
-        if isinstance(obj, dict):
-            rows.append(obj)
+        rows.append(obj)
+
     return rows
+
+
 def main() -> None:
     rows = read_all_json_objects(SRC_JSONL)
     if not rows:
