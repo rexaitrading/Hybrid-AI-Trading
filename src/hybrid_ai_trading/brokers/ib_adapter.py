@@ -2,7 +2,6 @@ from __future__ import annotations
 from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
 
 from typing import Any, Dict, List, Optional, Tuple
-from hybrid_ai_trading.execution.blockg_guard import require_blockg_ready
 
 from .base import Broker
 
@@ -76,15 +75,7 @@ class IBAdapter(Broker):
         except Exception as _exc:
             raise
         
-        trade = self.ib        # --- Block-G hard gate (IB adapter): NVDA live must be READY today ---
-        try:
-            symu = str(symbol).upper()
-        except Exception:
-            symu = ""
-        if symu == "NVDA":
-            require_blockg_ready("NVDA")
-        # --- end Block-G gate ---
-.placeOrder(contract, order)
+        trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)
         st = trade.orderStatus
