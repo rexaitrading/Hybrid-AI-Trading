@@ -124,13 +124,3 @@ archive_phase5_bak/
 
 # stray
 None
-
-# --- HAT: local backups / snapshots ---
-*.bak
-*.bak.*
-*.bak_*
-*.bak-*
-*.bak2*
-*.fullbak*
-*.repatch*
-*.legacy*
