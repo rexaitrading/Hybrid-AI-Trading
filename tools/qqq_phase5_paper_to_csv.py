@@ -97,7 +97,9 @@ def main() -> None:
         for r in rows:
             if not isinstance(r, dict):
             continue
-        pr: Mapping[str, Any] = r.get("phase5_result") or {}
+        if not isinstance(r, dict):
+            continue
+        pr: Mapping[str, Any] = r.get(""phase5_result"") or {}
             details: Mapping[str, Any] = pr.get("phase5_details") or {}
 
             ts = r.get("ts_trade") or pr.get("entry_ts")
