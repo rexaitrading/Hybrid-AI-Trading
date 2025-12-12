@@ -20,6 +20,7 @@ import logging
 import uuid
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
+from hybrid_ai_trading.blockg_status import ensure_nvda_live_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -478,6 +479,20 @@ class OrderManager:
         # LIVE PATH
         if not self.dry_run and self.live_client is not None:
             try:
+                # --- Block-G hard gate: NVDA live must be explicitly READY today ---
+                if str(symbol).upper() == "NVDA":
+                    try:
+                        ensure_nvda_live_allowed()
+                    except Exception as e:
+                        return {
+                            "symbol": symbol,
+                            "side": side,
+                            "qty": qty,
+                            "notional": notional,
+                            "status": "blocked",
+                            "reason": f"BLOCKG_NOT_READY: {e}",
+                        }
+                # --- end Block-G gate ---
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
