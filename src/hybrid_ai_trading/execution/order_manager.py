@@ -20,6 +20,7 @@ import logging
 import uuid
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
+from hybrid_ai_trading.execution.blockg_guard import require_blockg_ready
 from hybrid_ai_trading.blockg_status import ensure_nvda_live_allowed
 
 logger = logging.getLogger(__name__)
