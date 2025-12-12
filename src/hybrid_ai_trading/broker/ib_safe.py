@@ -13,6 +13,7 @@ from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_rea
 import random
 import time
 from typing import Any, Callable, List, Optional, Tuple
+from hybrid_ai_trading.execution.blockg_guard import require_blockg_ready
 
 try:
     from ib_insync import IB, LimitOrder, Stock  # type: ignore
@@ -107,7 +108,7 @@ def connect_ib(
 def account_snapshot(
     ib: IB, acct: Optional[str] = None, wait_sec: float = 3.0
 ) -> List[Tuple[str, str, str]]:
-    """Version-proof snapshot via low-level subscribe ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ accountValues."""
+    """Version-proof snapshot via low-level subscribe ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ accountValues."""
     if acct is None:
         ma = getattr(ib, "managedAccounts", lambda: [])() or []
         acct = ma[0] if ma else ""
@@ -213,7 +214,15 @@ def flatten_symbol_limit(
 
     
 
-    tr = ib.placeOrder(c, o)
+    tr =     # --- Block-G hard gate (IBKR low-level): NVDA live must be READY today ---
+    try:
+        symu = str(symbol).upper()
+    except Exception:
+        symu = ""
+    if symu == "NVDA":
+        require_blockg_ready("NVDA")
+    # --- end Block-G gate ---
+ib.placeOrder(c, o)
     deadline = time.time() + max_wait_sec
     while time.time() < deadline and tr.isActive():
         ib.waitOnUpdate(timeout=1.0)
