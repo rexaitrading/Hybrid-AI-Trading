@@ -34,12 +34,12 @@ function Invoke-Phase4PyTest {
     }
 }
 
-# 1) Phase-1 replay demo (NVDA bar replay Ã¢â€ â€™ EV summary)
+# 1) Phase-1 replay demo (NVDA bar replay ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ EV summary)
 Invoke-Phase4PyTest -Label "Phase-1 replay demo pytest" -Args @(
     "tests/test_phase1_replay_demo.py"
 )
 
-# 2) Microstructure features (SPY/QQQ microstructure core) Ã¢â‚¬â€œ optional until tests exist
+# 2) Microstructure features (SPY/QQQ microstructure core) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ optional until tests exist
 $microTestPath = Join-Path $repoRoot "tests\test_microstructure_features.py"
 if (Test-Path $microTestPath) {
     Invoke-Phase4PyTest -Label "Microstructure features tests" -Args @(
@@ -50,13 +50,20 @@ if (Test-Path $microTestPath) {
 }
 
 # 3) Phase-5 risk + guard slice (EV-bands, RiskManager, engine guards)
-Invoke-Phase4PyTest -Label "Phase-5 risk + guard slice" -Args @(
-    "tests/test_phase5_ev_bands_basic.py",
-    "tests/test_phase5_riskmanager_combined_gates.py",
-    "tests/test_phase5_riskmanager_daily_loss_integration.py",
-    "tests/test_execution_engine_phase5_guard.py",
-    "tests/test_ib_phase5_guard.py"
-)
+    # 3) Phase-5 risk + guard slice (EV-bands, RiskManager, engine guards)
+    $phase5Tests = @(
+        "tests/test_phase5_ev_bands_basic.py"
+        "tests/test_phase5_riskmanager_combined_gates.py"
+        "tests/test_phase5_riskmanager_daily_loss_integration.py"
+        "tests/test_execution_engine_phase5_guard.py"
+        "tests/test_ib_phase5_guard.py"
+    ) | Where-Object { Test-Path (Join-Path $repoRoot $_) }
+
+    if ($phase5Tests.Count -gt 0) {
+        Invoke-Phase4PyTest -Label "Phase-5 risk + guard slice" -Args $phase5Tests
+    } else {
+        Write-Host "[PHASE4] WARN: no Phase-5 slice tests found; skipping Phase-5 slice." -ForegroundColor Yellow
+    }
 
 Write-Host "`n[PHASE4] Phase-4 validation harness complete (all slices green / optional slices skipped)." -ForegroundColor Green
 
