@@ -34,12 +34,12 @@ function Invoke-Phase4PyTest {
     }
 }
 
-# 1) Phase-1 replay demo (NVDA bar replay Ã¢â€ â€™ EV summary)
+# 1) Phase-1 replay demo (NVDA bar replay â†’ EV summary)
 Invoke-Phase4PyTest -Label "Phase-1 replay demo pytest" -Args @(
     "tests/test_phase1_replay_demo.py"
 )
 
-# 2) Microstructure features (SPY/QQQ microstructure core) Ã¢â‚¬â€œ optional until tests exist
+# 2) Microstructure features (SPY/QQQ microstructure core) â€“ optional until tests exist
 $microTestPath = Join-Path $repoRoot "tests\test_microstructure_features.py"
 if (Test-Path $microTestPath) {
     Invoke-Phase4PyTest -Label "Microstructure features tests" -Args @(
@@ -59,29 +59,9 @@ Invoke-Phase4PyTest -Label "Phase-5 risk + guard slice" -Args @(
 )
 
 Write-Host "`n[PHASE4] Phase-4 validation harness complete (all slices green / optional slices skipped)." -ForegroundColor Green
+exit 0
 
-function Write-Phase4Stamp {
-    try {
-        $toolsDir2 = Split-Path -Parent $PSCommandPath
-        $repoRoot2 = Split-Path -Parent $toolsDir2
-        $logsDir2  = Join-Path $repoRoot2 "logs"
-        if (-not (Test-Path $logsDir2)) { New-Item -ItemType Directory -Path $logsDir2 | Out-Null }
-
-        $stampObj = [ordered]@{
-            ts_utc          = (Get-Date).ToUniversalTime().ToString("o")
-            as_of_date      = (Get-Date).ToString("yyyy-MM-dd")
-            phase4_ok_today = $true
-        }
-
-        ($stampObj | ConvertTo-Json -Depth 5) | Out-File -FilePath (Join-Path $logsDir2 "phase4_validation_passed.json") -Encoding utf8
-        Write-Host "[PHASE4] Wrote logs\phase4_validation_passed.json" -ForegroundColor DarkGray
-    } catch {
-        Write-Host "[PHASE4] WARN: could not write phase4 stamp: $($_.Exception.Message)" -ForegroundColor Yellow
-    }
-}
-
-Write-Phase4Stamp
-exit 0# --- Block-G: Phase-4 "passed today" stamp (contract input) ---
+# --- Block-G: Phase-4 "passed today" stamp (contract input) ---
 try {
   $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
   $logsDir  = Join-Path $repoRoot "logs"
