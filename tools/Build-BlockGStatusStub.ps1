@@ -1,4 +1,40 @@
-﻿function Get-BgTodayString {
+﻿function Get-EvBandSamplesOkTodayForSymbol {
+    param(
+        [Parameter(Mandatory = $true)][string]$Symbol,
+        [Parameter()][int]$MinTrades = 3
+    )
+
+    $toolsDir = Split-Path -Parent $PSCommandPath
+    $repoRoot = Split-Path -Parent $toolsDir
+    $logsPath = Join-Path $repoRoot "logs"
+    $path = Join-Path $logsPath "phase5_ev_band_daily_summary.csv"
+
+    if (-not (Test-Path $path)) {
+        return $false
+    }
+
+    $rows = Import-Csv $path
+    if (-not $rows) { return $false }
+
+    $today = (Get-Date).ToString("yyyy-MM-dd")
+
+    $row = $rows | Where-Object {
+        ($_.symbol -eq $Symbol) -and
+        ($_.date -like "$today*")
+    } | Select-Object -First 1
+
+    if (-not $row) { return $false }
+
+    $n = 0
+    if ($row.PSObject.Properties.Name -contains "n_trades") {
+        [void][int]::TryParse([string]$row.n_trades, [ref]$n)
+    }
+
+    if ($n -ge $MinTrades) { return $true }
+
+    return $false
+}
+function Get-BgTodayString {
     (Get-Date -Format 'yyyy-MM-dd')
 }
 
@@ -309,6 +345,7 @@ $payloadJson | Set-Content -Path $statusPath -Encoding UTF8
 
 Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
+
 
 
 
