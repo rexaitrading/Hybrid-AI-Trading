@@ -134,9 +134,3 @@ None
 *.fullbak*
 *.repatch*
 *.legacy*
-
-# --- HAT: tools build junk ---
-tools/**/__pycache__/
-tools/**/*.pyc
-tools/**/*.pyo
-tools/**/*.pyd
