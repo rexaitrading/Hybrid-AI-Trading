@@ -34,6 +34,7 @@ if (Test-Path $phase3Daily) {
 }
 
 Write-Host "`n[PHASE23] Phase-2/3 quick diagnostics complete (snapshot stub)." -ForegroundColor Green
+exit 0
 
 # --- Phase23: write daily health row (Block-G input) ---
 try {
@@ -93,5 +94,3 @@ try {
     Write-Host "[PHASE23] WARN: could not write phase23 health daily row: $($_.Exception.Message)" -ForegroundColor Yellow
 }
 # --- end Phase23 health row ---
-
-exit 0
