@@ -104,3 +104,23 @@ _reports/
 .quarantine/
 .pytest_cache/
 **/__pycache__/
+
+# ---- local artifacts / backups ----
+*.bak
+*.bak_*
+*.broken_*
+*.repatch_*
+tmp_*
+test_cli_write.txt
+coverage.xml
+.gitignore.bak_*
+
+# venv backups
+.venv.bak_*/
+
+# reports / exports
+reports/
+archive_phase5_bak/
+
+# stray
+None
