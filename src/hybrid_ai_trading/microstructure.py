@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import os
@@ -241,8 +241,33 @@ def record_microstructure(
     if _is_enabled():
         writer = MicrostructureTelemetryWriter()
         writer.write(symbol, feats)
-    return feats
 
+    return feats
+    """
+    Classify microstructure regime as 'GREEN', 'CAUTION', or 'RED'.
+    """
+    try:
+        r = float(ms_range_pct)
+    except (TypeError, ValueError):
+        r = 0.0
+
+    try:
+        spread = float(est_spread_bps)
+    except (TypeError, ValueError):
+        spread = 0.0
+
+    try:
+        fee = float(est_fee_bps)
+    except (TypeError, ValueError):
+        fee = 0.0
+
+    total_cost = spread + fee
+
+    if total_cost <= 1.0 and r <= 0.003:
+        return "GREEN"
+    if total_cost <= 2.0 and r <= 0.007:
+        return "CAUTION"
+    return "RED"
 def classify_micro_regime(ms_range_pct: float, est_spread_bps: float, est_fee_bps: float) -> str:
     """
     Classify microstructure regime as 'GREEN', 'CAUTION', or 'RED'.
@@ -269,3 +294,4 @@ def classify_micro_regime(ms_range_pct: float, est_spread_bps: float, est_fee_bp
     if total_cost <= 2.0 and r <= 0.007:
         return "CAUTION"
     return "RED"
+
