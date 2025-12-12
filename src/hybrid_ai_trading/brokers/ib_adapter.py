@@ -1,4 +1,5 @@
 from __future__ import annotations
+from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -63,6 +64,17 @@ class IBAdapter(Broker):
             order = LimitOrder(side.upper(), qty, limit_price)
         else:
             order = MarketOrder(side.upper(), qty)
+        # --- HARD BLOCK-G ENFORCEMENT (last-mile) ---
+        # No live NVDA order may reach IBKR unless contract says READY.
+        try:
+            # 'symbol' may not be in scope; prefer contract symbol if available.
+            _sym = (locals().get("symbol") or "").upper()
+            _c = locals().get("c", None) or locals().get("contract", None)
+            if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
+                assert_symbol_ready("NVDA")
+        except Exception as _exc:
+            raise
+        
         trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)

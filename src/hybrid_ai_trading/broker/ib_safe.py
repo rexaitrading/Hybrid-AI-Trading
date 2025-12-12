@@ -8,6 +8,7 @@ IB utils (Phase-2, Step-1): hardened & version-proof
 - human error mapping (best-effort)
 - marketable_limit helper
 """
+from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
 
 import random
 import time
@@ -106,7 +107,7 @@ def connect_ib(
 def account_snapshot(
     ib: IB, acct: Optional[str] = None, wait_sec: float = 3.0
 ) -> List[Tuple[str, str, str]]:
-    """Version-proof snapshot via low-level subscribe Ã¢â€ â€™ accountValues."""
+    """Version-proof snapshot via low-level subscribe ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ accountValues."""
     if acct is None:
         ma = getattr(ib, "managedAccounts", lambda: [])() or []
         acct = ma[0] if ma else ""
@@ -190,6 +191,28 @@ def flatten_symbol_limit(
     o.outsideRth = True
     o.tif = "DAY"
 
+    # --- HARD BLOCK-G ENFORCEMENT (last-mile) ---
+
+    # No live NVDA order may reach IBKR unless contract says READY.
+
+    try:
+
+        # 'symbol' may not be in scope; prefer contract symbol if available.
+
+        _sym = (locals().get("symbol") or "").upper()
+
+        _c = locals().get("c", None) or locals().get("contract", None)
+
+        if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
+
+            assert_symbol_ready("NVDA")
+
+    except Exception as _exc:
+
+        raise
+
+    
+
     tr = ib.placeOrder(c, o)
     deadline = time.time() + max_wait_sec
     while time.time() < deadline and tr.isActive():
@@ -203,6 +226,17 @@ def flatten_symbol_limit(
             new_ref * (1 + reprice_pct) if s == "BUY" else new_ref * (1 - reprice_pct),
             2,
         )
+        # --- HARD BLOCK-G ENFORCEMENT (last-mile) ---
+        # No live NVDA order may reach IBKR unless contract says READY.
+        try:
+            # 'symbol' may not be in scope; prefer contract symbol if available.
+            _sym = (locals().get("symbol") or "").upper()
+            _c = locals().get("c", None) or locals().get("contract", None)
+            if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
+                assert_symbol_ready("NVDA")
+        except Exception as _exc:
+            raise
+        
         ib.placeOrder(c, o)
         for _ in range(8):
             ib.waitOnUpdate(timeout=1.0)
