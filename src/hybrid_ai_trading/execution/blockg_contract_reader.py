@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 
+# Repo root: .../src/hybrid_ai_trading/execution/blockg_contract_reader.py
 REPO_ROOT = Path(__file__).resolve().parents[3]
-_DEFAULT_CONTRACT = REPO_ROOT / "logs" / "blockg_status_stub.json"
-# Optional override (useful for tests / CI): set BLOCKG_CONTRACT_PATH
-DEFAULT_CONTRACT_PATH = Path(__import__("os").environ.get("BLOCKG_CONTRACT_PATH", str(_DEFAULT_CONTRACT)))
+DEFAULT_CONTRACT_PATH = Path(
+    os.environ.get("BLOCKG_CONTRACT_PATH", str(REPO_ROOT / "logs" / "blockg_status_stub.json"))
+)
 
 
 @dataclass(frozen=True)
@@ -29,12 +31,24 @@ class BlockGDecision:
 
 
 def _load_contract(path: Path) -> Optional[Dict[str, Any]]:
+    """
+    Load Block-G contract JSON.
+
+    - BOM tolerant: decode with utf-8-sig (strips EF BB BF automatically)
+    - Conservative: any read/parse failure returns None
+    """
     try:
         if not path.exists():
             return None
-        txt = path.read_text(encoding="utf-8", errors="replace").strip()
+
+        raw = path.read_bytes()
+        if not raw:
+            return None
+
+        txt = raw.decode("utf-8-sig", errors="replace").strip()
         if not txt:
             return None
+
         obj = json.loads(txt)
         return obj if isinstance(obj, dict) else None
     except Exception:
@@ -45,27 +59,30 @@ def is_symbol_ready(symbol: str, contract_path: Path = DEFAULT_CONTRACT_PATH) ->
     sym = (symbol or "").strip().upper()
     obj = _load_contract(contract_path)
 
-    # Conservative default: if we cannot read contract -> BLOCK
     if obj is None:
         return BlockGDecision(
             symbol=sym,
             ready=False,
             reason="BLOCKG_CONTRACT_MISSING_OR_UNREADABLE",
-            contract_path=str(contract_path.as_posix()),
+            contract_path=str(contract_path),
         )
 
     key = f"{sym.lower()}_blockg_ready"
-    v = obj.get(key, None)
+    v = obj.get(key)
 
     if isinstance(v, bool):
-        return BlockGDecision(symbol=sym, ready=v, reason=("BLOCKG_READY" if v else "BLOCKG_NOT_READY"), contract_path=str(contract_path.as_posix()))
+        return BlockGDecision(
+            symbol=sym,
+            ready=v,
+            reason=("BLOCKG_READY" if v else "BLOCKG_NOT_READY"),
+            contract_path=str(contract_path),
+        )
 
-    # Missing field -> BLOCK
     return BlockGDecision(
         symbol=sym,
         ready=False,
         reason=f"BLOCKG_FIELD_MISSING:{key}",
-        contract_path=str(contract_path.as_posix()),
+        contract_path=str(contract_path),
     )
 
 
