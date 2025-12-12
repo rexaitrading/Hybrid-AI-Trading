@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [Parameter()]
     [string]$Symbol = "NVDA"
@@ -22,6 +22,16 @@ if (-not (Test-Path $contractPath)) {
 
 try {
     $status = Get-Content $contractPath -Raw | ConvertFrom-Json
+
+$today = (Get-Date).ToString("yyyy-MM-dd")
+if (-not ($status.PSObject.Properties.Name -contains "as_of_date")) {
+    Write-Host "[BLOCK-G] ERROR: Contract missing required field: as_of_date" -ForegroundColor Red
+    exit 3
+}
+if (("$($status.as_of_date)" -ne $today)) {
+    Write-Host "[BLOCK-G] ERROR: Contract stale (as_of_date=$($status.as_of_date), today=$today)" -ForegroundColor Red
+    exit 3
+}
 } catch {
     Write-Host "[BLOCK-G] ERROR: Failed to parse contract JSON: $_" -ForegroundColor Red
     exit 1
@@ -30,19 +40,17 @@ try {
 # Look for per-symbol readiness key, e.g. nvda_blockg_ready, spy_blockg_ready, qqq_blockg_ready
 $symbolKey = ($Symbol.ToLower() + "_blockg_ready")
 
-$ready = $false
-
-if ($status.PSObject.Properties.Name -contains $symbolKey) {
-    $val = $status.$symbolKey
-    $ready = [bool]$val
-} elseif ($Symbol -eq "NVDA" -and $status.PSObject.Properties.Name -contains "nvda_blockg_ready") {
-    $ready = [bool]$status.nvda_blockg_ready
+if (-not ($status.PSObject.Properties.Name -contains $symbolKey)) {
+    Write-Host "[BLOCK-G] ERROR: Contract missing required field: $symbolKey" -ForegroundColor Red
+    exit 3
 }
+
+$ready = [bool]($status.$symbolKey)
 
 if ($ready) {
     Write-Host "[BLOCK-G] $Symbol Block-G READY (contract $symbolKey = True)." -ForegroundColor Green
     exit 0
 } else {
-    Write-Host "[BLOCK-G] $Symbol Block-G NOT READY (contract $symbolKey False or missing)." -ForegroundColor Yellow
+    Write-Host "[BLOCK-G] $Symbol Block-G NOT READY (contract $symbolKey = False)." -ForegroundColor Yellow
     exit 1
 }
