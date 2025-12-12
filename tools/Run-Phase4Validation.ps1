@@ -34,12 +34,12 @@ function Invoke-Phase4PyTest {
     }
 }
 
-# 1) Phase-1 replay demo (NVDA bar replay → EV summary)
+# 1) Phase-1 replay demo (NVDA bar replay â†’ EV summary)
 Invoke-Phase4PyTest -Label "Phase-1 replay demo pytest" -Args @(
     "tests/test_phase1_replay_demo.py"
 )
 
-# 2) Microstructure features (SPY/QQQ microstructure core) – optional until tests exist
+# 2) Microstructure features (SPY/QQQ microstructure core) â€“ optional until tests exist
 $microTestPath = Join-Path $repoRoot "tests\test_microstructure_features.py"
 if (Test-Path $microTestPath) {
     Invoke-Phase4PyTest -Label "Microstructure features tests" -Args @(
@@ -60,3 +60,22 @@ Invoke-Phase4PyTest -Label "Phase-5 risk + guard slice" -Args @(
 
 Write-Host "`n[PHASE4] Phase-4 validation harness complete (all slices green / optional slices skipped)." -ForegroundColor Green
 exit 0
+
+# --- Block-G: Phase-4 "passed today" stamp (contract input) ---
+try {
+  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+  $logsDir  = Join-Path $repoRoot "logs"
+  if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir | Out-Null }
+
+  $stamp = [ordered]@{
+    ts_utc      = (Get-Date).ToUniversalTime().ToString("o")
+    as_of_date  = (Get-Date).ToString("yyyy-MM-dd")
+    phase4_ok_today = $true
+  }
+
+  ($stamp | ConvertTo-Json -Depth 5) | Out-File -FilePath (Join-Path $logsDir "phase4_validation_passed.json") -Encoding utf8
+  Write-Host "[PHASE4] Wrote logs\phase4_validation_passed.json" -ForegroundColor DarkGray
+} catch {
+  Write-Host "[PHASE4] WARN: could not write phase4 stamp: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+# --- end stamp ---
