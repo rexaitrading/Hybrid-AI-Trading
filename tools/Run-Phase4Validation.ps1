@@ -34,12 +34,12 @@ function Invoke-Phase4PyTest {
     }
 }
 
-# 1) Phase-1 replay demo (NVDA bar replay ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ EV summary)
+# 1) Phase-1 replay demo (NVDA bar replay ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ EV summary)
 Invoke-Phase4PyTest -Label "Phase-1 replay demo pytest" -Args @(
     "tests/test_phase1_replay_demo.py"
 )
 
-# 2) Microstructure features (SPY/QQQ microstructure core) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ optional until tests exist
+# 2) Microstructure features (SPY/QQQ microstructure core) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ optional until tests exist
 $microTestPath = Join-Path $repoRoot "tests\test_microstructure_features.py"
 if (Test-Path $microTestPath) {
     Invoke-Phase4PyTest -Label "Microstructure features tests" -Args @(
@@ -80,7 +80,9 @@ function Write-Phase4Stamp {
             phase4_ok_today = $true
         }
 
-        ($stampObj | ConvertTo-Json -Depth 5) | Out-File -FilePath (Join-Path $logsDir2 "phase4_validation_passed.json") -Encoding utf8
+        $json = ($stampObj | ConvertTo-Json -Depth 5)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText((Join-Path $logsDir2 "phase4_validation_passed.json"), $json, $utf8NoBom)
         Write-Host "[PHASE4] Wrote logs\phase4_validation_passed.json" -ForegroundColor DarkGray
     } catch {
         Write-Host "[PHASE4] WARN: could not write phase4 stamp: $($_.Exception.Message)" -ForegroundColor Yellow
@@ -100,7 +102,9 @@ try {
     phase4_ok_today = $true
   }
 
-  ($stamp | ConvertTo-Json -Depth 5) | Out-File -FilePath (Join-Path $logsDir "phase4_validation_passed.json") -Encoding utf8
+  $json = ($stamp | ConvertTo-Json -Depth 5)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText((Join-Path $logsDir "phase4_validation_passed.json"), $json, $utf8NoBom)
   Write-Host "[PHASE4] Wrote logs\phase4_validation_passed.json" -ForegroundColor DarkGray
 } catch {
   Write-Host "[PHASE4] WARN: could not write phase4 stamp: $($_.Exception.Message)" -ForegroundColor Yellow

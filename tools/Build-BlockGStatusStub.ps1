@@ -118,7 +118,9 @@ function Main {
     qqq_blockg_ready           = $false
   }
 
-  ($obj | ConvertTo-Json -Depth 6) | Out-File -FilePath $outJson -Encoding utf8
+  $json = ($obj | ConvertTo-Json -Depth 6)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($outJson, $json, $utf8NoBom)
   Write-Host "[BLOCK-G] Wrote $outJson" -ForegroundColor Green
   Write-Host ("[BLOCK-G] today={0} phase4_ok={1} phase23_ok={2} evhard_ok={3} gs_ok={4} nvda_ready={5}" -f $today,$phase4_ok,$phase23_ok,$evhard_ok,$gs_ok,$nvda_ready)
 }
