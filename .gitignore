@@ -94,4 +94,15 @@ ib_insync_*.log
 None
 # market data dumps
 market_logs/
-
+# -----------------------------
+# Local project scratch (do not commit)
+# -----------------------------
+archive/
+archive_phase5_bak/
+archive_legacy_pkg_*/
+config/
+src/.intel/
+src/hybrid_ai_trading.egg-info/
+test_cli_write.txt
+tmp_*.py
+tmp_*.txt
