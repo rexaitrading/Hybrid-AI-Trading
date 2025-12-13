@@ -1,5 +1,17 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
+@dataclass
+class RiskConfig:
+    """
+    Minimal config object required by tests.
+
+    Defaults are conservative (fail-closed).
+    """
+    phase5_daily_loss_cap: float = -500.0
+    halt_on_daily_loss: bool = True
+    max_position_size: float | None = None
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Any, Dict

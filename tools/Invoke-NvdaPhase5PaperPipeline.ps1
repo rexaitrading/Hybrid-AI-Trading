@@ -40,6 +40,13 @@ if ($exitCode -ne 0) {
 
 Write-Host "[STEP 1] nvda_phase5_live_runner.py completed successfully." -ForegroundColor Green
 
+Write-Host "`n[STEP 1.25] Remove BOM from nvda_phase5_paperlive_results.jsonl (optional harden)" -ForegroundColor Cyan
+if (Test-Path ".\tools\Fix-NvdaJsonlBom.ps1") {
+    .\tools\Fix-NvdaJsonlBom.ps1
+} else {
+    Write-Host "[STEP 1.25] Fix-NvdaJsonlBom.ps1 missing -> skipped" -ForegroundColor Yellow
+}
+
 # --- Step 1.5: backfill PnL stub into nvda_phase5_paperlive_results.jsonl -----
 Write-Host "`n[STEP 1.5] Backfill NVDA Phase-5 live PnL stub (realized_pnl=0.0) into nvda_phase5_paperlive_results.jsonl" -ForegroundColor Cyan
 if (Test-Path ".\tools\Backfill-NvdaPhase5LivePnlStub.ps1") {
@@ -52,7 +59,13 @@ if (Test-Path ".\tools\Backfill-NvdaPhase5LivePnlStub.ps1") {
 
 # --- Step 2: rebuild NVDA Phase-5 paper CSV for Notion ----------------------
 if (-not $SkipCsv) {
-    Write-Host "`n[STEP 2] Rebuild NVDA Phase-5 paper CSV for Notion" -ForegroundColor Cyan
+    Write-Host "`n[STEP 1.75] Remove BOM from nvda_phase5_paperlive_results.jsonl (final harden)" -ForegroundColor Cyan
+if (Test-Path ".\tools\Fix-NvdaJsonlBom.ps1") {
+    .\tools\Fix-NvdaJsonlBom.ps1
+} else {
+    Write-Host "[STEP 1.75] Fix-NvdaJsonlBom.ps1 missing -> skipped" -ForegroundColor Yellow
+}
+Write-Host "`n[STEP 2] Rebuild NVDA Phase-5 paper CSV for Notion" -ForegroundColor Cyan
 
     & $PythonExe .\tools\nvda_phase5_paper_to_csv.py
     $exitCode = $LASTEXITCODE

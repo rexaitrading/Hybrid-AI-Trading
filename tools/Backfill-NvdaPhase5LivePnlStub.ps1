@@ -51,6 +51,8 @@ foreach ($ln in $lines) {
 }
 
 # Write back (UTF-8 no BOM not critical for JSONL, but keep stable)
-$outLines | Set-Content -Path $inPath -Encoding utf8
+# Write back UTF-8 NO-BOM (PowerShell 5.1: -Encoding utf8 writes BOM)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($inPath, ($outLines -join "`n") + "`n", $utf8NoBom)
 Write-Host "[NVDA-PNL] Backfilled realized_pnl=0.0 where missing" -ForegroundColor Green
 return
