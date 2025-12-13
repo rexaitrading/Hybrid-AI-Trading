@@ -8,8 +8,7 @@ IB utils (Phase-2, Step-1): hardened & version-proof
 - human error mapping (best-effort)
 - marketable_limit helper
 """
-from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
-
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 import random
 import time
 from typing import Any, Callable, List, Optional, Tuple
@@ -36,6 +35,10 @@ def _is_live_mode() -> bool:
     if os.getenv("IBKR_LIVE", "0") == "1":
         return True
     return False
+
+
+
+
 def retry(
     exc_types: Tuple[type, ...] = (Exception,),
     attempts: int = 3,
@@ -116,7 +119,7 @@ def connect_ib(
 def account_snapshot(
     ib: IB, acct: Optional[str] = None, wait_sec: float = 3.0
 ) -> List[Tuple[str, str, str]]:
-    """Version-proof snapshot via low-level subscribe ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ accountValues."""
+    """Version-proof snapshot via low-level subscribe ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ accountValues."""
     if acct is None:
         ma = getattr(ib, "managedAccounts", lambda: [])() or []
         acct = ma[0] if ma else ""
@@ -215,7 +218,7 @@ def flatten_symbol_limit(
         if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
 
             if _is_live_mode():
-                ensure_symbol_blockg_ready("NVDA")
+                if _is_live_mode():`n                    ensure_symbol_blockg_ready("NVDA")
     except Exception as _exc:
 
         raise
@@ -243,7 +246,7 @@ def flatten_symbol_limit(
             _c = locals().get("c", None) or locals().get("contract", None)
             if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
                 if _is_live_mode():
-                    ensure_symbol_blockg_ready("NVDA")
+                    if _is_live_mode():`n                        ensure_symbol_blockg_ready("NVDA")
         except Exception as _exc:
             raise
         
