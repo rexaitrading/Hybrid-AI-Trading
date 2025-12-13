@@ -11,6 +11,7 @@ PaperLiveWithoutIBG NVDA Phase-5 runner.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 from typing import Any, Dict, List
@@ -25,6 +26,8 @@ from hybrid_ai_trading.execution.execution_engine_phase5_guard import (
 from hybrid_ai_trading.risk.risk_manager import RiskManager
 
 
+def now_utc_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 class PaperEngine:
     """
     Minimal in-process engine for paper trading without IBG.
@@ -184,6 +187,10 @@ def main() -> None:
         out["ts_trade"] = ts
         out["position_after"] = engine.positions.get("NVDA", 0.0)
 
+                # Ensure ISO timestamps for downstream GateScore daily filters
+        out["ts_trade"] = now_utc_iso()
+        if not out.get("entry_ts"):
+            out["entry_ts"] = out["ts_trade"]
         out_f.write(json.dumps(out) + "\n")
 
     out_f.close()
