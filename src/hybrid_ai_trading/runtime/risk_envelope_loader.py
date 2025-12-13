@@ -158,6 +158,56 @@ def effective_size_multiplier(repo_root: Path = Path(".")) -> float:
     return m
 
 
+
+def effective_caps(repo_root: Path, equity: Optional[float] = None) -> dict:
+    """
+    Return dict of cap overrides if Special-Mode is armed; else {}.
+
+    This is the ONLY function OrderManager needs for envelope caps.
+    Must be:
+      - explicitly armed (HAT_SPECIAL_MODE=1)
+      - today's UTC contract
+      - not expired
+    """
+    if not is_special_mode_armed(repo_root=repo_root):
+        return {}
+
+    env = load_risk_envelope(repo_root=repo_root)
+    if env is None:
+        return {}
+
+    # Institutional hard ceilings (never allow runaway)
+    hard_max_leverage = 3.0
+    hard_max_exposure = 0.75
+
+    out: dict = {}
+
+    if env.max_leverage is not None:
+        try:
+            out["max_leverage"] = float(min(float(env.max_leverage), hard_max_leverage))
+        except Exception:
+            pass
+
+    if env.max_portfolio_exposure is not None:
+        try:
+            out["max_portfolio_exposure"] = float(min(float(env.max_portfolio_exposure), hard_max_exposure))
+        except Exception:
+            pass
+
+    if env.per_trade_notional_cap is not None:
+        try:
+            cap = float(env.per_trade_notional_cap)
+            # Optional equity-relative sanity if equity supplied
+            if equity is not None:
+                eq = float(equity)
+                if eq > 0:
+                    cap = min(cap, eq * 0.50)  # never > 50% equity in one trade via envelope
+            out["per_trade_notional_cap"] = cap
+        except Exception:
+            pass
+
+    return out
+
 def _write_disarm(repo_root: Path, reason: str) -> None:
     """
     Best-effort write-back to logs/risk_envelope.json marking armed=false (UTF-8 no BOM).
