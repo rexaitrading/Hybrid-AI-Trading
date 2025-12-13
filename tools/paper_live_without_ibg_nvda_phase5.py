@@ -158,7 +158,7 @@ def main() -> None:
     trades = load_nvda_paper_trades()
 
     dst = Path("logs") / "nvda_phase5_paperlive_results.jsonl"
-    out_f = dst.open("wb")
+    out_f = dst.open("a", encoding="utf-8", newline="\n")
 
     print(f"Loaded {len(trades)} NVDA paper trade candidates.")
 
@@ -187,8 +187,14 @@ def main() -> None:
         out["ts_trade"] = ts
         out["position_after"] = engine.positions.get("NVDA", 0.0)
 
+        # GateScore fields (copied from signal row if available)
+        if "edge_ratio" in row:
+            out["edge_ratio"] = row.get("edge_ratio")
+        if "micro_score" in row:
+            out["micro_score"] = row.get("micro_score")
+
                 # Ensure ISO timestamps for downstream GateScore daily filters
-        out["ts_trade"] = now_utc_iso()
+# out["ts_trade"] preserved from paper_trades ts (do not overwrite)
         if not out.get("entry_ts"):
             out["entry_ts"] = out["ts_trade"]
         out_f.write((json.dumps(out) + "\n").encode("utf-8"))
