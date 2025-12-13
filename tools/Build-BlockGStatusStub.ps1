@@ -75,9 +75,8 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
       break
     }
   }
-
-  $min_signals = 5
-  $min_pnl_samples = 4
+$min_signals = 10
+$min_pnl_samples = 20
   $min_edge_ratio = 0.01    # conservative: must be meaningfully positive
   $min_micro_score = -0.05  # avoid severely negative micro quality
 
