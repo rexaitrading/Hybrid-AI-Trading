@@ -53,4 +53,42 @@ Write-Host "[PHASE6] OK: $sym readiness satisfied (Phase4 + BlockG contract)." -
 exit 0
 # runtime artifacts
 logs/*.json
+# -----------------------------
+# Runtime artifacts / scratch
+# -----------------------------
+logs/
+.logs/
+replay_out/
+reports/
+.coverage
+coverage.xml
+htmlcov/
+pytest_cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
+# venv / local python installs
+.venv/
+.venv.*/
+venv/
+
+# local backups / scratch (do not commit)
+*.bak_*
+*.bak[0-9]_*
+*_bak_*
+*.importfix_*
+.backup/
+local_backups/
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
+
+# IB logs
+ib_insync_*.log
+
+# accidental files
+None
