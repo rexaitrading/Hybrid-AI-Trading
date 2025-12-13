@@ -36,6 +36,7 @@ class PaperEngine:
     """
 
     def __init__(self) -> None:
+        self.is_paper = True
         self.positions: Dict[str, float] = {}
         self._logger = None  # you can swap in a real logger later
 
@@ -97,7 +98,8 @@ def load_nvda_paper_trades() -> List[Dict[str, Any]]:
     """
     src = Path("logs") / "paper_trades.jsonl"
     if not src.exists():
-        raise SystemExit(f"{src} not found")
+        print(f"{src} not found")
+        return []
 
     rows: List[Dict[str, Any]] = []
     with src.open("r", encoding="utf-8-sig") as f:
@@ -145,6 +147,10 @@ def infer_side_and_qty(row: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def main() -> None:
+    # FAIL-CLOSED: ensure results JSONL always exists
+    out_path = Path("logs") / "nvda_phase5_paperlive_results.jsonl"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.touch(exist_ok=True)
     engine = PaperEngine()
     trades = load_nvda_paper_trades()
 
