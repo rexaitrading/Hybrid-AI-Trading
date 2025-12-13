@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory=$true)][string]$Symbol = "NVDA"
+    [Parameter(Mandatory=$true)]
+    [ValidateSet("NVDA","SPY","QQQ")]
+    [string]$Symbol
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,47 +12,66 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
-function Fail([string]$msg, [int]$code = 2) {
-  Write-Host "[BLOCK-G] FAIL: $msg" -ForegroundColor Red
-  exit $code
-}
-
-function Read-Json([string]$path) {
-  if (-not (Test-Path $path)) { Fail "Missing required file: $path" 2 }
-  try {
-    $raw = Get-Content -LiteralPath $path -Raw
-    return ($raw | ConvertFrom-Json)
-  } catch {
-    Fail "JSON parse error in $path : $($_.Exception.Message)" 3
-  }
-}
-
-$today    = (Get-Date).ToString("yyyy-MM-dd")
-$symUpper = (($Symbol + "")).Trim().ToUpper()
-if (-not $symUpper) { Fail "Symbol is empty." 2 }
-
 $contractPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
-$contract     = Read-Json $contractPath
-
-Write-Host "[BLOCK-G] Check-BlockGReady.ps1 -Symbol $symUpper"
-Write-Host "[BLOCK-G] Today = $today"
-Write-Host "[BLOCK-G] Contract path: $contractPath"
-
-if ((($contract.as_of_date + "")) -ne $today) {
-  Fail "Contract not for today ($today). as_of_date=$($contract.as_of_date)" 4
+if (-not (Test-Path $contractPath)) {
+    Write-Host "[BLOCKG] Missing contract: logs\blockg_status_stub.json" -ForegroundColor Red
+    exit 2
 }
 
-# Contract-only semantics (no recomputing)
-$key = ($symUpper.ToLower() + "_blockg_ready")
-$val = $contract.$key
+$raw = Get-Content $contractPath -Raw -Encoding utf8
+# BOM-safe
+if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 65279) { $raw = $raw.TrimStart([char]65279) }
 
-if ($null -eq $val) {
-  Fail "Missing contract field: $key" 5
+try {
+    $c = $raw | ConvertFrom-Json -ErrorAction Stop
+} catch {
+    Write-Host "[BLOCKG] Contract JSON parse failed" -ForegroundColor Red
+    exit 2
 }
 
-if (-not [bool]$val) {
-  Fail "$symUpper Block-G NOT READY (contract $key=false)." 6
+$today = (Get-Date).ToString("yyyy-MM-dd")
+$asOf  = [string]$c.as_of_date
+
+if ($asOf -ne $today) {
+    Write-Host "[BLOCKG] as_of_date is not today: as_of_date=$asOf today=$today" -ForegroundColor Red
+    exit 2
 }
 
-Write-Host "[BLOCK-G] $symUpper Block-G READY (contract $key=true)." -ForegroundColor Green
-exit 0
+function Get-Bool($v) {
+    if ($v -is [bool]) { return $v }
+    if ($v -is [string]) {
+        $t = $v.Trim().ToLowerInvariant()
+        if ($t -in @("true","1","yes","y")) { return $true }
+        if ($t -in @("false","0","no","n")) { return $false }
+    }
+    if ($v -is [int] -or $v -is [double]) { return [bool]$v }
+    return $false
+}
+
+$phase23 = Get-Bool $c.phase23_health_ok_today
+$evhard  = Get-Bool $c.ev_hard_daily_ok_today
+$gscore  = Get-Bool $c.gatescore_fresh_today
+
+$nvdaFlag = Get-Bool $c.nvda_blockg_ready
+$spyFlag  = Get-Bool $c.spy_blockg_ready
+$qqqFlag  = Get-Bool $c.qqq_blockg_ready
+
+switch ($Symbol) {
+    "NVDA" {
+        $ok = ($phase23 -and $evhard -and $gscore -and $nvdaFlag)
+    }
+    "SPY" {
+        $ok = $spyFlag
+    }
+    "QQQ" {
+        $ok = $qqqFlag
+    }
+}
+
+if ($ok) {
+    Write-Host "[BLOCKG] READY Symbol=$Symbol as_of_date=$asOf" -ForegroundColor Green
+    exit 0
+}
+
+Write-Host "[BLOCKG] NOT READY Symbol=$Symbol as_of_date=$asOf phase23=$phase23 ev_hard=$evhard gatescore_fresh=$gscore nvda=$nvdaFlag spy=$spyFlag qqq=$qqqFlag" -ForegroundColor Yellow
+exit 2
