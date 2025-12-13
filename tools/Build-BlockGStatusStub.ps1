@@ -11,10 +11,11 @@ function Try-LoadCsv {
 
 function Has-TodayRow {
   param(
-    [Parameter(Mandatory=$true)]$Rows,
+    [Parameter()]$Rows,
     [Parameter(Mandatory=$true)][string]$DateField,
     [Parameter(Mandatory=$true)][string]$Today
   )
+  if (-not $Rows) { return $false }
   foreach ($r in $Rows) {
     if ($null -eq $r) { continue }
     $v = $r.$DateField
@@ -37,10 +38,9 @@ function Main {
   $phase4Stamp = Join-Path $logs "phase4_validation_passed.json"
   $outJson     = Join-Path $logs "blockg_status_stub.json"
 
-  $phase23Rows = Try-LoadCsv -Path $phase23Path
-  $evHardRows  = Try-LoadCsv -Path $evHardPath
-  $gsRows      = Try-LoadCsv -Path $gsDailyPath
-
+  $phase23Rows = (@(Try-LoadCsv -Path $phase23Path))
+  $evHardRows  = (@(Try-LoadCsv -Path $evHardPath))
+$gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   # Conservative: require today rows to exist
   $phase23_ok = Has-TodayRow -Rows $phase23Rows -DateField "date" -Today $today
   $evhard_ok  = Has-TodayRow -Rows $evHardRows  -DateField "date" -Today $today

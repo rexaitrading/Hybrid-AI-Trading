@@ -26,7 +26,11 @@ if (-not $sym) { Write-Host "[PREMARKET] FAIL: Symbol empty" -ForegroundColor Re
 Step "GuardSuite (compile + guard/risk tests)" { powershell -NoProfile -ExecutionPolicy Bypass -File tools\Run-GuardSuite.ps1 }
 
 Step "Phase-4 validation" { powershell -NoProfile -ExecutionPolicy Bypass -File tools\Run-Phase4Validation.ps1 }
-
+Step "Phase23 health daily (stub)" { powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Phase23HealthDaily.ps1 }
+Step "EV-hard daily (stub)" { powershell -NoProfile -ExecutionPolicy Bypass -File tools\Export-Phase5EvHardVetoDaily.ps1 }
+Step "GateScore daily summary (REAL, fail-closed)" {
+  powershell -NoProfile -ExecutionPolicy Bypass -File tools\Run-GateScoreDailySuite.ps1
+}
 Step "Build Block-G contract JSON" { powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-BlockGStatusStub.ps1 }
 
 Step "Check Block-G ready (contract-only) -Symbol $sym" { powershell -NoProfile -ExecutionPolicy Bypass -File tools\Check-BlockGReady.ps1 -Symbol $sym }

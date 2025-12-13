@@ -1,42 +1,54 @@
 [CmdletBinding()]
 param()
 
+$ErrorActionPreference="Stop"
 Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
+Set-Location $repoRoot
 
-$srcPath = Join-Path $repoRoot "logs\\gatescore_pnl_summary.csv"
-$outPath = Join-Path $repoRoot "logs\\gatescore_daily_summary.csv"
-
-if (-not (Test-Path $srcPath)) {
-    Write-Host "GateScore daily summary: source CSV not found at $srcPath" -ForegroundColor Yellow
-    return
-}
-
-Write-Host "GateScore daily summary: loading $srcPath" -ForegroundColor Cyan
-$rows = Import-Csv -Path $srcPath
-
-# Normalize to array to avoid StrictMode issues on Count
-$rowArray = @($rows)
-
-if ($rowArray.Count -eq 0) {
-    Write-Host "GateScore daily summary: no rows found in $srcPath" -ForegroundColor Yellow
-    return
-}
+$logs = Join-Path $repoRoot "logs"
+if (-not (Test-Path $logs)) { New-Item -ItemType Directory -Path $logs | Out-Null }
 
 $today = (Get-Date).ToString("yyyy-MM-dd")
+$out   = Join-Path $logs "gatescore_daily_summary.csv"
 
-# Attach as_of_date to each row
-$rowArray | ForEach-Object {
-    $_ | Add-Member -NotePropertyName "as_of_date" -NotePropertyValue $today -Force
+# Fail-closed: we prefer real inputs. If none found, we write HEADER ONLY (no today row).
+$candidates = @(
+  (Join-Path $logs "gatescore_events.jsonl"),
+  (Join-Path $logs "nvda_gatescore_events.jsonl"),
+  (Join-Path $logs "gatescore_samples.csv"),
+  (Join-Path $logs "nvda_gatescore_samples.csv")
+)
+
+$input = $null
+foreach($c in $candidates){
+  if(Test-Path $c){ $input = $c; break }
 }
 
-Write-Host "GateScore daily summary: writing $outPath" -ForegroundColor Cyan
-$rowArray | Export-Csv -Path $outPath -NoTypeInformation -Encoding UTF8
+if (-not $input) {
+  # Header only -> Build-BlockGStatusStub will set gatescore_fresh_today=false => nvda_blockg_ready=false
+  "as_of_date,samples,score" | Out-File -FilePath $out -Encoding ascii
+  Write-Host "[GATESCORE] WARN: no GateScore input found; wrote header-only logs\gatescore_daily_summary.csv (fail-closed)." -ForegroundColor Yellow
+  exit 0
+}
 
-Write-Host "GateScore daily summary: sample rows:" -ForegroundColor Yellow
-$rowArray |
-    Select-Object -First 5 symbol, count_signals, mean_edge_ratio, mean_micro_score, pnl_samples, mean_pnl, as_of_date |
-    Format-Table -AutoSize
+$py = Join-Path $repoRoot ".\.venv\Scripts\python.exe"
+if (-not (Test-Path $py)) { Write-Host "[GATESCORE] ERROR: missing .venv python at $py" -ForegroundColor Red; exit 2 }
+
+$calc = Join-Path $repoRoot "tools\compute_gatescore_daily_summary.py"
+if (-not (Test-Path $calc)) { Write-Host "[GATESCORE] ERROR: missing $calc" -ForegroundColor Red; exit 3 }
+
+Write-Host "[GATESCORE] Using input: $input" -ForegroundColor Cyan
+& $py $calc $input $out
+$code = $LASTEXITCODE
+if ($code -ne 0) {
+  Write-Host "[GATESCORE] ERROR: calculator failed (exit=$code). Fail-closed." -ForegroundColor Red
+  exit $code
+}
+
+# Visibility: show top 2 lines
+Write-Host "[GATESCORE] Wrote logs\gatescore_daily_summary.csv" -ForegroundColor Green
+Get-Content $out -TotalCount 2
+exit 0
