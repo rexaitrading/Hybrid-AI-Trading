@@ -9,8 +9,9 @@ param(
   [double]$MaxLeverage = 2.0,
   [double]$MaxPortfolioExposure = 0.40,
   [double]$PerTradeNotionalCap = 2000.0,
-
   [double]$SizeMultiplier = 1.5,
+  [double]$MaxDrawdownPct = 0.03,  # 3% default tripwire
+
   [int]$MaxTradesPerDay = 6,
 
   [int]$ExpiresHours = 6
@@ -55,6 +56,8 @@ if ($Disarm) {
 
     size_multiplier = [double]$SizeMultiplier
     max_trades_per_day = [int]$MaxTradesPerDay
+    max_drawdown_pct = [double]$MaxDrawdownPct
+
   }
 }
 

@@ -17,12 +17,12 @@ OrderManager (minimal, test-friendly)
 """
 
 import logging
+from pathlib import Path
 import uuid
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
 from hybrid_ai_trading.execution.blockg_guard import require_blockg_ready
 from hybrid_ai_trading.blockg_status import ensure_nvda_live_allowed
-from hybrid_ai_trading.runtime.risk_envelope_loader import effective_caps
 
 logger = logging.getLogger(__name__)
 
@@ -379,15 +379,17 @@ class OrderManager:
             }
         # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)
         try:
-            # SPECIAL-MODE ENVELOPE (explicitly armed risk budget overlay)
-            # Applies ONLY when HAT_SPECIAL_MODE=1 AND logs/risk_envelope.json is valid for today.
-            _repo_root = Path(".")
-            _eq_probe = None
-            try:
-                _eq_probe = float(getattr(getattr(self, "risk_mgr", None), "equity", None) or 0.0)
-            except Exception:
-                _eq_probe = None
-            _env_caps = effective_caps(_repo_root, equity=_eq_probe)            rm = getattr(self, "risk_mgr", None)
+        # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)    # SPECIAL-MODE ENVELOPE (explicitly armed risk budget overlay)
+        # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)    # Applies ONLY when HAT_SPECIAL_MODE=1 AND logs/risk_envelope.json is valid for today.
+        # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)    _repo_root = Path(".")
+        # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)    _eq_probe = None
+        # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)    try:
+        # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)        _eq_probe = float(getattr(getattr(self, "risk_mgr", None), "equity", None) or 0.0)
+        # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)    except Exception:
+        # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)        _eq_probe = None
+        # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)    _env_caps = effective_caps(_repo_root, equity=_eq_probe)
+
+            rm = getattr(self, "risk_mgr", None)
             cfg = getattr(rm, "cfg", None) if rm is not None else None
 
             def _to_float(x):

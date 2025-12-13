@@ -447,6 +447,16 @@ class RiskManager:
             key = dt.strftime("%Y-%m-%d")
             prev = float(self.daily_pnl.get(key, 0.0) or 0.0)
             self.daily_pnl[key] = prev + float(realized_pnl)
+            # SPECIAL-MODE auto-dearm (expiry / drawdown tripwire) - best effort, never raises
+            try:
+                from pathlib import Path
+                from hybrid_ai_trading.runtime.risk_envelope_loader import check_and_auto_disarm
+                eq_now = getattr(self, "equity", None)
+                eq_pk  = getattr(self, "equity_peak", None)
+                check_and_auto_disarm(Path("."), eq_now, eq_pk)
+            except Exception:
+                pass
+
         except Exception:
             # Never crash strategy runners
             return
