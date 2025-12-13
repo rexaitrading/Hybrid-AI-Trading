@@ -92,3 +92,6 @@ ib_insync_*.log
 
 # accidental files
 None
+# market data dumps
+market_logs/
+
