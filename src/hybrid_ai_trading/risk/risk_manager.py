@@ -327,10 +327,24 @@ class RiskManager:
     # Phase-5 API (keep existing semantics used by your Phase-5 guard tests)
     # ---------------------------
     def _get_daily_pnl_phase5(self, day_id: str) -> float:
+        """
+        Phase-5 daily PnL reader (compat):
+          1) self.daily_pnl_by_day[day_id] if present
+          2) legacy tests: self.daily_pnl[day_id] when daily_pnl is a dict
+        """
         try:
-            return float(self.daily_pnl_by_day.get(day_id, 0.0))
+            if isinstance(getattr(self, "daily_pnl_by_day", None), dict) and day_id in self.daily_pnl_by_day:
+                return float(self.daily_pnl_by_day.get(day_id, 0.0) or 0.0)
         except Exception:
-            return 0.0
+            pass
+
+        try:
+            if isinstance(getattr(self, "daily_pnl", None), dict) and day_id in self.daily_pnl:
+                return float(self.daily_pnl.get(day_id, 0.0) or 0.0)
+        except Exception:
+            pass
+
+        return 0.0
 
     def _get_daily_loss_cap_phase5(self) -> Optional[float]:
         return _as_float(self.config.phase5_daily_loss_cap)
