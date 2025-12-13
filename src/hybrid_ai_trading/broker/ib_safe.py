@@ -27,6 +27,15 @@ except Exception:
 
 
 # ----------------------------- Retry / Backoff ----------------------------- #
+def _is_live_mode() -> bool:
+    """Return True only when we are explicitly in LIVE mode."""
+    import os
+    m = (os.getenv("HAT_RUN_MODE", "") or "").strip().lower()
+    if m == "live":
+        return True
+    if os.getenv("IBKR_LIVE", "0") == "1":
+        return True
+    return False
 def retry(
     exc_types: Tuple[type, ...] = (Exception,),
     attempts: int = 3,
@@ -107,7 +116,7 @@ def connect_ib(
 def account_snapshot(
     ib: IB, acct: Optional[str] = None, wait_sec: float = 3.0
 ) -> List[Tuple[str, str, str]]:
-    """Version-proof snapshot via low-level subscribe ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ accountValues."""
+    """Version-proof snapshot via low-level subscribe ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ accountValues."""
     if acct is None:
         ma = getattr(ib, "managedAccounts", lambda: [])() or []
         acct = ma[0] if ma else ""
@@ -205,8 +214,8 @@ def flatten_symbol_limit(
 
         if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
 
-            assert_symbol_ready("NVDA")
-
+            if _is_live_mode():
+                ensure_symbol_blockg_ready("NVDA")
     except Exception as _exc:
 
         raise
@@ -233,7 +242,8 @@ def flatten_symbol_limit(
             _sym = (locals().get("symbol") or "").upper()
             _c = locals().get("c", None) or locals().get("contract", None)
             if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
-                assert_symbol_ready("NVDA")
+                if _is_live_mode():
+                    ensure_symbol_blockg_ready("NVDA")
         except Exception as _exc:
             raise
         

@@ -1,5 +1,15 @@
 from __future__ import annotations
-from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+
+def _is_live_mode() -> bool:
+    """Return True only when we are explicitly in LIVE mode."""
+    import os
+    m = (os.getenv("HAT_RUN_MODE", "") or "").strip().lower()
+    if m == "live":
+        return True
+    if os.getenv("IBKR_LIVE", "0") == "1":
+        return True
+    return False
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -71,7 +81,8 @@ class IBAdapter(Broker):
             _sym = (locals().get("symbol") or "").upper()
             _c = locals().get("c", None) or locals().get("contract", None)
             if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
-                assert_symbol_ready("NVDA")
+                if _is_live_mode():
+                    ensure_symbol_blockg_ready("NVDA")
         except Exception as _exc:
             raise
         
