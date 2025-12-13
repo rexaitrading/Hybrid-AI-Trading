@@ -392,3 +392,61 @@ class RiskManager:
             reason=f"daily_loss_ok(current={daily_pnl})",
             details={"symbol": symbol, "day_id": day_id, "daily_pnl": daily_pnl, "cap": cap, "pos_qty": pos_qty},
         )
+    def snapshot(self) -> dict:
+        """
+        Lightweight, JSON-serializable risk snapshot for trade logging.
+
+        Must never raise.
+        """
+        try:
+            # Common fields used across the system (best-effort)
+            daily_pnl = getattr(self, "daily_pnl", None)
+            positions = getattr(self, "positions", None)
+            config = getattr(self, "config", None)
+
+            # Avoid non-serializable objects
+            pos_count = 0
+            try:
+                if isinstance(positions, dict):
+                    pos_count = len(positions)
+            except Exception:
+                pos_count = 0
+
+            out = {
+                "risk_manager": "RiskManager",
+                "pos_count": int(pos_count),
+                "has_daily_pnl": bool(isinstance(daily_pnl, dict)),
+                "mode": getattr(config, "mode", None) if config is not None else None,
+                "phase5_daily_loss_cap": getattr(config, "phase5_daily_loss_cap", None) if config is not None else None,
+            }
+            return out
+        except Exception:
+            # Fail-closed for logging (never crash runner)
+            return {"risk_manager": "RiskManager", "snapshot_error": True}
+    def record_close_pnl(self, realized_pnl: float, bar_ts_ms: int | None = None) -> None:
+        """
+        Record realized PnL for a closed trade.
+
+        Minimal implementation for runners/tests:
+        - Updates self.daily_pnl[today] += realized_pnl
+        - Never raises.
+        """
+        try:
+            from datetime import datetime, timezone
+
+            # Ensure dict exists
+            if not hasattr(self, "daily_pnl") or not isinstance(getattr(self, "daily_pnl", None), dict):
+                self.daily_pnl = {}
+
+            # Prefer bar_ts_ms if provided (ms since epoch), else use now
+            if isinstance(bar_ts_ms, int) and bar_ts_ms > 0:
+                dt = datetime.fromtimestamp(bar_ts_ms / 1000.0, tz=timezone.utc)
+            else:
+                dt = datetime.now(tz=timezone.utc)
+
+            key = dt.strftime("%Y-%m-%d")
+            prev = float(self.daily_pnl.get(key, 0.0) or 0.0)
+            self.daily_pnl[key] = prev + float(realized_pnl)
+        except Exception:
+            # Never crash strategy runners
+            return

@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import os
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+
+def _is_live_mode() -> bool:
+    return os.getenv("HAT_MODE", "").strip().upper() == "LIVE"
 from typing import Any, Dict, Optional, Tuple
 
 
@@ -76,6 +81,14 @@ class IBKRClient(BrokerClient):
             if order_type.upper() == "MARKET"
             else LimitOrder(side, abs(qty), limit_px)
         )
+        # BLOCK-G: enforce NVDA LIVE only (fail-closed)
+        try:
+            sym = getattr(c, "symbol", None)
+            if sym and str(sym).upper() == "NVDA" and _is_live_mode():
+                ensure_symbol_blockg_ready("NVDA")
+        except Exception:
+            if _is_live_mode():
+                raise
         t = self.ib.placeOrder(c, o)
         self.ib.sleep(0.5)
         order_id = str(t.order.orderId)
