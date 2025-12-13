@@ -15,9 +15,17 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 
-ROOT = Path(".").resolve()
+ROOT = Path(__file__).resolve().parents[1]
 SRC_JSONL = ROOT / "logs" / "nvda_phase5_paperlive_results.jsonl"
 OUT_CSV  = ROOT / "logs" / "nvda_phase5_paper_for_notion.csv"
+
+def _debug_paths() -> None:
+    try:
+        sz = SRC_JSONL.stat().st_size if SRC_JSONL.exists() else 0
+        print(f"[NVDA-CSV][DEBUG] SRC_JSONL={SRC_JSONL} exists={SRC_JSONL.exists()} size={sz}")
+        print(f"[NVDA-CSV][DEBUG] OUT_CSV ={OUT_CSV}")
+    except Exception as e:
+        print(f"[NVDA-CSV][DEBUG] path debug failed: {e}")
 
 
 FIELDS: List[str] = [
@@ -70,6 +78,7 @@ def _get(d: Dict[str, Any], k: str, default: Any = "") -> Any:
 
 
 def main() -> None:
+    _debug_paths()
     rows = _read_jsonl(SRC_JSONL)
     if not rows:
         print(f"[NVDA-CSV] No JSON objects found in {SRC_JSONL}")
