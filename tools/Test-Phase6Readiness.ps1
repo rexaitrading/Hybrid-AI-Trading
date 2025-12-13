@@ -48,6 +48,12 @@ $key = ($sym.ToLower() + "_blockg_ready")
 $val = $contract.$key
 if ($null -eq $val) { Fail "Missing contract field: $key" 11 }
 if (-not [bool]$val) { Fail "$sym not ready by contract ($key=false)" 12 }
+$portfolioPath = Join-Path $repoRoot "logs\portfolio_snapshot_daily.json"
+$pf = Read-Json $portfolioPath
 
-Write-Host "[PHASE6] OK: $sym readiness satisfied (Phase4 + BlockG contract)." -ForegroundColor Green
+if ((($pf.as_of_date + "")) -ne $today) { Fail "Portfolio snapshot not for today ($today). as_of_date=$($pf.as_of_date)" 20 }
+if (-not [bool]$pf.portfolio_ok_today)  { Fail "Portfolio not OK today." 21 }
+Write-Host "\[PHASE6\] OK: $sym readiness satisfied (Phase4 + BlockG contract)." -ForegroundColor Green
+if ((($pf.as_of_date + "")) -ne $today) { Fail "Portfolio snapshot not for today ($today). as_of_date=$($pf.as_of_date)" 20 }
+if (-not [bool]$pf.portfolio_ok_today)  { Fail "Portfolio not OK today." 21 }
 exit 0
