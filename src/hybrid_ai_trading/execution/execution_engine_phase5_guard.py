@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import asdict
 from typing import Any, Dict
@@ -95,9 +95,9 @@ def place_order_phase5_with_guard(
         **kwargs,
     }
 
-    # 1) Block-G for NVDA (tests monkeypatch ensure_symbol_blockg_ready)
-    if symbol.upper() == "NVDA":
-        ensure_symbol_blockg_ready(symbol.upper())
+    # 1) Block-G for NVDA LIVE only (tests monkeypatch ensure_symbol_blockg_ready)
+    if symbol.upper() == "NVDA" and "LIVE" in (regime or "").upper():
+        ensure_symbol_blockg_ready("NVDA")
 
     # 2) RiskManager Phase-5 guard
     rm = getattr(engine, "risk_manager", None)
