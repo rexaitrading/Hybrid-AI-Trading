@@ -21,7 +21,7 @@ $out = Join-Path $logs "gatescore_daily_summary.csv"
 $today = (Get-Date).ToString("yyyy-MM-dd")
 
 # Header expected by Build-BlockGStatusStub.ps1
-$header = "as_of_date,symbol,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score"
+$header = "as_of_date,symbol,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score,source"
 
 $needRewrite = $true
 if (Test-Path $out) {
@@ -41,7 +41,7 @@ if ($needRewrite) {
 }
 
 # Append today row
-("$today,$Symbol,$CountSignals,$PnlSamples,$MeanEdgeRatio,$MeanMicroScore") | Out-File -FilePath $out -Append -Encoding ascii
+("$today,$Symbol,$CountSignals,$PnlSamples,$MeanEdgeRatio,$MeanMicroScore,STUB") | Out-File -FilePath $out -Append -Encoding ascii
 
 Write-Host "[GATESCORE] Wrote/updated $out with today row for $Symbol" -ForegroundColor Green
 return

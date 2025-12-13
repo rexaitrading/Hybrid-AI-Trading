@@ -11,14 +11,14 @@ LOGS = ROOT / "logs"
 IN_JSONL = LOGS / "nvda_phase5_paperlive_results.jsonl"
 OUT_CSV  = LOGS / "gatescore_daily_summary.csv"
 
-HEADER = "as_of_date,symbol,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score"
+HEADER = "as_of_date,symbol,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score,source"
 
 
 def main() -> int:
     today = date.today().isoformat()
 
     if not IN_JSONL.exists():
-        print("[GATESCORE] Missing input JSONL – fail-closed")
+        print("[GATESCORE] Missing input JSONL â€“ fail-closed")
         return 0
 
     rows = []
@@ -40,7 +40,7 @@ def main() -> int:
     ]
 
     if not rows:
-        print("[GATESCORE] No rows for today – fail-closed")
+        print("[GATESCORE] No rows for today â€“ fail-closed")
         return 0
 
     realized = [r.get("realized_pnl", 0.0) for r in rows]
@@ -69,7 +69,7 @@ def main() -> int:
 
     with OUT_CSV.open("a", encoding="ascii") as f:
         f.write(
-            f"{today},NVDA,{count_signals},{pnl_samples},{mean_edge:.6f},{mean_micro:.6f}\n"
+            f"{today},NVDA,{count_signals},{pnl_samples},{mean_edge:.6f},{mean_micro:.6f},REAL\n"
         )
 
     print(

@@ -57,7 +57,24 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   }
 
   # GateScore checks (fresh + samples + threshold)
-  $gs_fresh = Has-TodayRow -Rows $gsRows -DateField "as_of_date" -Today $today
+    # GateScore freshness is REAL-only (prevents stub arming)
+  $gs_fresh = $false
+  if ($gsRows -and ($gsRows[0].PSObject.Properties.Name -contains "as_of_date") -and ($gsRows[0].PSObject.Properties.Name -contains "source")) {
+    foreach ($r in $gsRows) {
+      if ($null -eq $r) { continue }
+      $d = "$($r.as_of_date)"
+      if ($d.Length -ge 10) { $d = $d.Substring(0,10) }
+      if ($d -ne $today) { continue }
+      if ("$($r.source)".Trim().ToUpperInvariant() -ne "REAL") { continue }
+      # If symbol column exists, require NVDA for NVDA gating
+      if ($r.PSObject.Properties.Name -contains "source") { if ("$($r.source)".Trim().ToUpperInvariant() -ne "REAL") { continue } }
+      if ($r.PSObject.Properties.Name -contains "symbol") {
+        if ("$($r.symbol)".Trim().ToUpperInvariant() -ne "NVDA") { continue }
+      }
+      $gs_fresh = $true
+      break
+    }
+  }
 
   $min_signals = 5
   $min_pnl_samples = 4
@@ -73,6 +90,7 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
     foreach ($r in $gsRows) {
       if ($null -eq $r) { continue }
       if ("$($r.as_of_date)".Substring(0,10) -ne $today) { continue }
+      if ($r.PSObject.Properties.Name -contains "source") { if ("$($r.source)".Trim().ToUpperInvariant() -ne "REAL") { continue } }
       if ($r.PSObject.Properties.Name -contains "symbol") {
         if ("$($r.symbol)" -ne "NVDA") { continue }
       }
