@@ -70,24 +70,33 @@ class IBAdapter(Broker):
         meta: Optional[Dict[str, Any]] = None,
     ) -> Tuple[int, Dict[str, Any]]:
         contract = Stock(symbol, "SMART", "USD")
+                        # --- HARD BLOCK-G ENFORCEMENT (early, fail-closed) ---
+        # Rules:
+        #   - LIVE mode: enforce NVDA Block-G
+        #   - Contract override set (BLOCKG_CONTRACT_PATH): enforce NVDA Block-G (test last-mile)
+        import os as _os
+        _force_contract = bool((_os.getenv("BLOCKG_CONTRACT_PATH", "") or "").strip())
+        if (symbol or "").strip().upper() == "NVDA" and (_is_live_mode() or _force_contract):
+            try:
+                ensure_symbol_blockg_ready("NVDA")
+            except Exception as _exc:
+                raise RuntimeError(f"[BLOCK-G] NVDA not ready: {_exc}")
+
         if order_type.upper() == "LIMIT":
             if limit_price is None:
                 raise ValueError("limit_price required for LIMIT orders")
             order = LimitOrder(side.upper(), qty, limit_price)
         else:
             order = MarketOrder(side.upper(), qty)
-        # --- HARD BLOCK-G ENFORCEMENT (last-mile) ---
-        # No live NVDA order may reach IBKR unless contract says READY.
-        try:
-            # 'symbol' may not be in scope; prefer contract symbol if available.
-            _sym = (locals().get("symbol") or "").upper()
-            _c = locals().get("c", None) or locals().get("contract", None)
-            if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
-                if _is_live_mode():
-                    ensure_symbol_blockg_ready("NVDA")
-        except Exception as _exc:
-            raise
-        
+                        # --- HARD BLOCK-G ENFORCEMENT (last-mile) ---
+        import os as _os2
+        _force_contract2 = bool((_os2.getenv("BLOCKG_CONTRACT_PATH", "") or "").strip())
+        if (symbol or "").strip().upper() == "NVDA" and (_is_live_mode() or _force_contract2):
+            try:
+                ensure_symbol_blockg_ready("NVDA")
+            except Exception as _exc:
+                raise RuntimeError(f"[BLOCK-G] NVDA not ready: {_exc}")
+
         trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)
