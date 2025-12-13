@@ -109,3 +109,13 @@ tmp_*.txt
 # extra backup naming variants
 *.bak2.ps1
 *.fullbak_*
+# -----------------------------
+# Backup / patch scratch (do not commit)
+# -----------------------------
+*.bak
+*.bak.*
+*.broken_*
+*.RESTORE_*
+*.PRE_REWRITE.bak
+*.converter*.bak
+*.fullrewrite*.bak
