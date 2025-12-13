@@ -197,7 +197,7 @@ def main() -> None:
 # out["ts_trade"] preserved from paper_trades ts (do not overwrite)
         if not out.get("entry_ts"):
             out["entry_ts"] = out["ts_trade"]
-        out_f.write((json.dumps(out) + "\n").encode("utf-8"))
+        out_f.write(json.dumps(out) + "\n")
 
     out_f.close()
     print(f"Wrote NVDA Phase-5 paper-live results to {dst}")
