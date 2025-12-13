@@ -42,7 +42,11 @@ Write-Host "[STEP 1] nvda_phase5_live_runner.py completed successfully." -Foregr
 
 # --- Step 1.5: backfill PnL stub into nvda_phase5_paperlive_results.jsonl -----
 Write-Host "`n[STEP 1.5] Backfill NVDA Phase-5 live PnL stub (realized_pnl=0.0) into nvda_phase5_paperlive_results.jsonl" -ForegroundColor Cyan
-.\tools\Backfill-NvdaPhase5LivePnlStub.ps1
+if (Test-Path ".\tools\Backfill-NvdaPhase5LivePnlStub.ps1") {
+    .\tools\Backfill-NvdaPhase5LivePnlStub.ps1
+} else {
+    Write-Host "[STEP 1.5] Backfill script missing -> skipped (fail-closed)" -ForegroundColor Yellow
+}
 
 # --- Step 2: rebuild CSV ------------------------------------------------------
 
