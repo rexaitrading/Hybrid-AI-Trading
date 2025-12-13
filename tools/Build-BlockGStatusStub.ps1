@@ -104,7 +104,8 @@ $min_pnl_samples = 20
         $edge_ratio    = [double]("$($row.mean_edge_ratio)")
         $micro_score   = [double]("$($row.mean_micro_score)")
 
-        $gs_samples_ok   = ($count_signals -ge $min_signals -and $pnl_samples -ge $min_pnl_samples)
+Write-Host ("[BLOCK-G] GS_PARSE date={0} sym=[{1}] signals={2} pnl={3} edge={4} micro={5} minSig={6} minPnl={7} minEdge={8} minMicro={9}" -f `
+  $today, "$($row.symbol)", $count_signals, $pnl_samples, $edge_ratio, $micro_score, $min_signals, $min_pnl_samples, $min_edge_ratio, $min_micro_score) -ForegroundColor Cyan$gs_samples_ok   = ($count_signals -ge $min_signals -and $pnl_samples -ge $min_pnl_samples)
         $gs_threshold_ok = ($edge_ratio -ge $min_edge_ratio -and $micro_score -ge $min_micro_score)
       } catch {
         $gs_samples_ok = $false
