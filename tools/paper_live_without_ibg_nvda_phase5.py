@@ -158,7 +158,7 @@ def main() -> None:
     trades = load_nvda_paper_trades()
 
     dst = Path("logs") / "nvda_phase5_paperlive_results.jsonl"
-    out_f = dst.open("w", encoding="utf-8")
+    out_f = dst.open("wb")
 
     print(f"Loaded {len(trades)} NVDA paper trade candidates.")
 
@@ -191,7 +191,7 @@ def main() -> None:
         out["ts_trade"] = now_utc_iso()
         if not out.get("entry_ts"):
             out["entry_ts"] = out["ts_trade"]
-        out_f.write(json.dumps(out) + "\n")
+        out_f.write((json.dumps(out) + "\n").encode("utf-8"))
 
     out_f.close()
     print(f"Wrote NVDA Phase-5 paper-live results to {dst}")
