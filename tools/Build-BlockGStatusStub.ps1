@@ -106,7 +106,8 @@ $min_pnl_samples = 20
 
 
         Write-Host ("[BLOCK-G] GS_PICKED date={0} sym={1} src={2} signals={3} pnl={4} edge={5} micro={6}" -f `
-          $today, "$($row.symbol)", "$($row.source)", $count_signals, $pnl_samples, $edge_ratio, $micro_score) -ForegroundColor Cyan        $gs_samples_ok   = ($count_signals -ge $min_signals -and $pnl_samples -ge $min_pnl_samples)
+          $today, "$($row.symbol)", "$($row.source)", $count_signals, $pnl_samples, $edge_ratio, $micro_score) -ForegroundColor Cyan
+        $gs_samples_ok   = ($count_signals -ge $min_signals -and $pnl_samples -ge $min_pnl_samples)
         $gs_threshold_ok = ($edge_ratio -ge $min_edge_ratio -and $micro_score -ge $min_micro_score)
       } catch {
         $gs_samples_ok = $false
