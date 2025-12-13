@@ -23,7 +23,20 @@ $today = (Get-Date).ToString("yyyy-MM-dd")
 # Header expected by Build-BlockGStatusStub.ps1
 $header = "as_of_date,symbol,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score"
 
-if (-not (Test-Path $out) -or (Get-Item $out).Length -eq 0) {
+$needRewrite = $true
+if (Test-Path $out) {
+  try {
+    $first = (Get-Content $out -TotalCount 1 -ErrorAction Stop).Trim()
+    if ($first -eq $header) { $needRewrite = $false }
+  } catch { $needRewrite = $true }
+}
+
+if ($needRewrite) {
+  if (Test-Path $out) {
+    $backup = "$out.bak_$(Get-Date -Format yyyyMMdd_HHmmss)"
+    Copy-Item $out $backup -Force
+    Write-Host "[GATESCORE] Backed up old schema -> $backup" -ForegroundColor Yellow
+  }
   $header | Out-File -FilePath $out -Encoding ascii
 }
 
