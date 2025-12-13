@@ -103,7 +103,7 @@ def place_order_phase5_with_guard(
     # 1) Block-G for NVDA LIVE only (tests monkeypatch ensure_symbol_blockg_ready)
     if symbol.upper() == "NVDA" and "LIVE" in (regime or "").upper():
         if not getattr(engine, "is_paper", False):
-            ensure_symbol_blockg_ready("NVDA", engine=engine)
+            contract_ensure_symbol_blockg_ready("NVDA")
 
     # 2) RiskManager Phase-5 guard
     rm = getattr(engine, "risk_manager", None)

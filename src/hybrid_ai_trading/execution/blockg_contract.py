@@ -92,6 +92,12 @@ def load_blockg_status(path: Optional[Path] = None) -> BlockGStatus:
     )
 
 
+def nvda_blockg_ready(status: Optional[BlockGStatus] = None) -> bool:
+    """Convenience getter: return computed NVDA readiness (today-ness + all required flags)."""
+    status = status or load_blockg_status()
+    return _is_nvda_ready(status)
+
+
 def _is_nvda_ready(status: BlockGStatus) -> bool:
     """
     NVDA contract readiness:
