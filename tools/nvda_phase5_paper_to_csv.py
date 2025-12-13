@@ -59,7 +59,7 @@ def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
     if not path.exists():
         return []
     rows: List[Dict[str, Any]] = []
-    for ln in path.read_text(encoding="utf-8", errors="replace").splitlines():
+    for ln in path.read_text(encoding="utf-8-sig", errors="replace").splitlines():
         ln = ln.strip()
         if not ln:
             continue
