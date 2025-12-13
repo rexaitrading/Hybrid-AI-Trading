@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("NVDA","SPY","QQQ")]
-  [string]$Symbol = "NVDA"
+  [ValidateSet("NVDA","SPY","QQQ")][string]$Symbol = "NVDA",
+  [switch]$InfoOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,7 +54,13 @@ if (Test-Path $contractPath) {
 }
 
 # Fail smoke unless READY
-if ($rc -ne 0) { exit $rc }
+if ($rc -ne 0) {
+  if ($InfoOnly) {
+    Write-Host "[SMOKE] InfoOnly: Block-G not ready (exit=$rc) but not failing the smoke." -ForegroundColor Yellow
+    exit 0
+  }
+  exit $rc
+}
 
 Write-Host "`n[SMOKE] PASS (combined gates + Phase-4 + Block-G READY)" -ForegroundColor Green
 exit 0
