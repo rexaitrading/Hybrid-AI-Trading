@@ -106,3 +106,6 @@ src/hybrid_ai_trading.egg-info/
 test_cli_write.txt
 tmp_*.py
 tmp_*.txt
+# extra backup naming variants
+*.bak2.ps1
+*.fullbak_*
