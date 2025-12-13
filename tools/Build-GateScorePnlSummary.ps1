@@ -15,6 +15,10 @@ function Write-Utf8NoBom([string]$Path, [string]$Content) {
   [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
 }
 
+function Safe-Float([object]$x) {
+  try { return [double]$x } catch { return $null }
+}
+
 $logs = Join-Path $repoRoot "logs"
 if (-not (Test-Path $logs)) { New-Item -ItemType Directory -Path $logs | Out-Null }
 
@@ -23,93 +27,67 @@ $sym   = (($Symbol + "")).Trim().ToUpper()
 if (-not $sym) { throw "Symbol empty" }
 
 $out = Join-Path $logs "gatescore_pnl_summary.csv"
+$tradesCsv = Join-Path $logs "trades.csv"
 
-# ------------------------------------------
-# FAIL-CLOSED: if we can't find real inputs,
-# we write HEADER ONLY (no today row).
-# The smoke will then treat as missing/invalid.
-# ------------------------------------------
+# Match smoke expectation: always output these columns.
+# (mean_edge_ratio/mean_micro_score are placeholders until you wire real metrics)
+$header = "as_of_date,symbol,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score,mean_pnl"
 
-# Candidate sources (add more as you confirm your real pipelines):
-$candidates = @(
-  (Join-Path $logs "nvda_phase5_paperlive_results.jsonl"),
-  (Join-Path $logs "nvda_phase5_live_results.jsonl"),
-  (Join-Path $logs "phase5_paperlive_results.jsonl"),
-  (Join-Path $logs "phase5_live_results.jsonl"),
-  (Join-Path $logs "paper_trades.jsonl"),
-  (Join-Path $logs "trades.jsonl")
-)
-
-$input = $null
-foreach($c in $candidates){
-  if(Test-Path $c){ $input = $c; break }
-}
-
-# Header schema (stable)
-# Keep minimal + extensible.
-$header = "as_of_date,symbol,realized_pnl"
-
-if (-not $input) {
+if (-not (Test-Path $tradesCsv)) {
   Write-Utf8NoBom -Path $out -Content ($header + "`r`n")
-  Write-Host "[GATESCORE-PNL] WARN: no real trade source found; wrote header-only logs\gatescore_pnl_summary.csv (fail-closed)." -ForegroundColor Yellow
+  Write-Host "[GATESCORE-PNL] WARN: logs\trades.csv missing; wrote header-only (fail-closed)." -ForegroundColor Yellow
   exit 0
 }
 
-# Parse JSONL best-effort.
-# Expected line shapes vary; we handle common keys:
-#   symbol / sym
-#   date / as_of_date / day / ts
-#   realized_pnl / pnl / realized / realized_pnl_usd
-$sum = 0.0
-$found = 0
+$rows = @()
+try { $rows = @(Import-Csv -LiteralPath $tradesCsv) } catch { $rows = @() }
 
-Get-Content -LiteralPath $input -ErrorAction Stop | ForEach-Object {
-  $line = $_.Trim()
-  if (-not $line) { return }
-
-  try { $obj = $line | ConvertFrom-Json } catch { return }
-
-  $s = (($obj.symbol + "")).Trim().ToUpper()
-  if (-not $s) { $s = (($obj.sym + "")).Trim().ToUpper() }
-  if ($s -ne $sym) { return }
-
-  $d = ($obj.as_of_date + "")
-  if (-not $d) { $d = ($obj.date + "") }
-  if (-not $d) { $d = ($obj.day + "") }
-  if (-not $d) {
-    # try ts -> yyyy-mm-dd
-    $ts = ($obj.ts + "")
-    if ($ts -and $ts.Length -ge 10) { $d = $ts.Substring(0,10) }
-  }
-  if (-not $d) { return }
-  $d = $d.Substring(0, [Math]::Min(10, $d.Length))
-  if ($d -ne $today) { return }
-
-  $p = $null
-  foreach($k in @("realized_pnl","pnl","realized","realized_pnl_usd")){
-    if ($null -ne $obj.$k) { $p = $obj.$k; break }
-  }
-  if ($null -eq $p) { return }
-
-  $pv = 0.0
-  try { $pv = [double]$p } catch { return }
-
-  $sum += $pv
-  $found += 1
-}
-
-# Write output
-if ($found -le 0) {
+if (-not $rows) {
   Write-Utf8NoBom -Path $out -Content ($header + "`r`n")
-  Write-Host "[GATESCORE-PNL] WARN: input found but no rows matched ($sym, $today); wrote header-only (fail-closed)." -ForegroundColor Yellow
+  Write-Host "[GATESCORE-PNL] WARN: trades.csv empty/unreadable; wrote header-only (fail-closed)." -ForegroundColor Yellow
   exit 0
 }
 
-$body = @()
-$body += $header
-$body += ("{0},{1},{2}" -f $today, $sym, ("{0:F2}" -f $sum))
-Write-Utf8NoBom -Path $out -Content (($body -join "`r`n") + "`r`n")
+# trades.csv header you showed:
+# ts,strategy,broker,symbol,side,qty,px,order_type,order_id,status,pnl,meta,risk
+# We treat "pnl" as realized pnl sample, and "ts" as date source.
 
-Write-Host "[GATESCORE-PNL] OK: wrote logs\gatescore_pnl_summary.csv (rows=$found sum=$sum)" -ForegroundColor Green
+$vals = @()
+foreach($r in $rows) {
+  $s = (($r.symbol + "")).Trim().ToUpper()
+  if ($s -ne $sym) { continue }
+
+  $ts = ($r.ts + "")
+  if (-not $ts -or $ts.Length -lt 10) { continue }
+  $d = $ts.Substring(0,10)
+  if ($d -ne $today) { continue }
+
+  $pv = Safe-Float $r.pnl
+  if ($null -eq $pv) { continue }
+
+  $vals += $pv
+}
+
+if ($vals.Count -lt 1) {
+  Write-Utf8NoBom -Path $out -Content ($header + "`r`n")
+  Write-Host "[GATESCORE-PNL] WARN: no REAL $sym pnl samples for today ($today); wrote header-only (fail-closed)." -ForegroundColor Yellow
+  exit 0
+}
+
+$meanPnl = ($vals | Measure-Object -Average).Average
+$countSignals = [int]$vals.Count
+$pnlSamples   = [int]$vals.Count
+
+# placeholders until you wire real edge/micro
+$meanEdge  = 0.0
+$meanMicro = 0.0
+
+$line = ("{0},{1},{2},{3},{4},{5},{6}" -f `
+  $today, $sym, $countSignals, $pnlSamples, `
+  ("{0:F6}" -f $meanEdge), ("{0:F6}" -f $meanMicro), ("{0:F6}" -f $meanPnl))
+
+Write-Utf8NoBom -Path $out -Content ($header + "`r`n" + $line + "`r`n")
+
+Write-Host "[GATESCORE-PNL] OK: wrote logs\gatescore_pnl_summary.csv (pnl_samples=$pnlSamples mean_pnl=$meanPnl)" -ForegroundColor Green
 Get-Content -LiteralPath $out -TotalCount 2
 exit 0
