@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from hybrid_ai_trading.runtime.context_loader import is_live_env
 import os
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 
 def _is_live_mode() -> bool:
-    return os.getenv("HAT_MODE", "").strip().upper() == "LIVE"
-from typing import Any, Dict, Optional, Tuple
+    """
+    Unified LIVE-mode check via RunContext loader.
+    """
+    return bool(is_live_env())
 
 
 class BrokerError(Exception):

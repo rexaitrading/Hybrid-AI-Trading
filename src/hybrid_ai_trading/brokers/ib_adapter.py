@@ -1,15 +1,19 @@
 from __future__ import annotations
+
+from hybrid_ai_trading.runtime.context_loader import is_live_env
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 
 def _is_live_mode() -> bool:
-    """Return True only when we are explicitly in LIVE mode."""
+    """
+    Unified LIVE-mode check via RunContext loader.
+
+    - Primary authority: runtime.context_loader.is_live_env()
+    - Hard override: IBKR_LIVE=1
+    """
     import os
-    m = (os.getenv("HAT_RUN_MODE", "") or "").strip().lower()
-    if m == "live":
-        return True
     if os.getenv("IBKR_LIVE", "0") == "1":
         return True
-    return False
+    return bool(is_live_env())
 
 from typing import Any, Dict, List, Optional, Tuple
 
