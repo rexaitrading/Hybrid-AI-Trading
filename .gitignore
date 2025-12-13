@@ -119,3 +119,8 @@ tmp_*.txt
 *.PRE_REWRITE.bak
 *.converter*.bak
 *.fullrewrite*.bak
+# -----------------------------
+# Variant suffix scratch (do not commit)
+# -----------------------------
+*.legacy_*
+*.repatch_*
