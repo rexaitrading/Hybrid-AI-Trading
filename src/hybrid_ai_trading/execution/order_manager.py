@@ -423,6 +423,11 @@ class OrderManager:
                 v = _to_float(getattr(obj, "per_trade_notional_cap", None))
                 if v is not None:
                     capN = v
+                    try:
+                        if "per_trade_notional_cap" in _env_caps:
+                            capN = float(_env_caps["per_trade_notional_cap"])
+                    except Exception:
+                        pass
             if (
                 capN is not None
                 and _to_float(notional) is not None
@@ -445,6 +450,11 @@ class OrderManager:
                 v = _to_float(getattr(obj, "max_portfolio_exposure", None))
                 if v is not None:
                     exp = v
+                    try:
+                        if "max_portfolio_exposure" in _env_caps:
+                            exp = float(_env_caps["max_portfolio_exposure"])
+                    except Exception:
+                        pass
             if exp is not None and eq is not None and _to_float(notional) is not None:
                 if float(notional) > float(eq) * float(exp):
                     return {
@@ -464,6 +474,11 @@ class OrderManager:
                 v = _to_float(getattr(obj, "max_leverage", None))
                 if v is not None:
                     lev = v
+                    try:
+                        if "max_leverage" in _env_caps:
+                            lev = float(_env_caps["max_leverage"])
+                    except Exception:
+                        pass
             if lev is not None and eq is not None and _to_float(notional) is not None:
                 if float(notional) > float(eq) * float(lev):
                     return {
