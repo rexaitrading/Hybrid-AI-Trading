@@ -33,8 +33,8 @@ $today = (Get-Date).ToString("yyyy-MM-dd")
 $asOf  = [string]$c.as_of_date
 
 if ($asOf -ne $today) {
-    Write-Host "[BLOCKG] as_of_date is not today: as_of_date=$asOf today=$today" -ForegroundColor Red
-    exit 2
+    Write-Host "[BLOCKG] INVALID CONTRACT: stale as_of_date=$asOf today=$today" -ForegroundColor Red
+    exit 3
 }
 
 function Get-Bool($v) {
@@ -55,6 +55,16 @@ $gscore  = Get-Bool $c.gatescore_fresh_today
 $nvdaFlag = Get-Bool $c.nvda_blockg_ready
 $spyFlag  = Get-Bool $c.spy_blockg_ready
 $qqqFlag  = Get-Bool $c.qqq_blockg_ready
+# required per-symbol readiness field
+$required = switch ($Symbol) {
+  "NVDA" { "nvda_blockg_ready" }
+  "SPY"  { "spy_blockg_ready" }
+  "QQQ"  { "qqq_blockg_ready" }
+}
+if (-not ($c.PSObject.Properties.Name -contains $required)) {
+  Write-Host "[BLOCKG] INVALID CONTRACT: missing $required" -ForegroundColor Red
+  exit 3
+}
 
 switch ($Symbol) {
     "NVDA" {
