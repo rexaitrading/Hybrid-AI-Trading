@@ -239,29 +239,28 @@ class IBAdapter(Broker):
                 }
             )
         return pos
-def marketable_limit(last: float, side: str, limit_px: float, max_slip_bps: float = 10.0) -> bool:
-    """
-    Return True if a limit order is immediately marketable vs last price within a slip band.
+def marketable_limit(side: str, ref: float, after_hours: bool) -> float:
+    """Return a marketable limit price around a reference price.
 
-    Conservative default: small band.
+    Rules (tests):
+      - side must be BUY or SELL (case-insensitive) else ValueError
+      - ref must be > 0 else ValueError
+      - AH True : BUY=ref*1.01, SELL=ref*0.99
+      - AH False: BUY=ref*1.001, SELL=ref*0.999
     """
+    s = str(side).upper().strip()
+    if s not in ("BUY", "SELL"):
+        raise ValueError("invalid side")
     try:
-        last_f = float(last)
-        lim_f = float(limit_px)
+        r = float(ref)
     except Exception:
-        return False
+        raise ValueError("invalid ref")
+    if r <= 0.0:
+        raise ValueError("invalid ref")
+    if bool(after_hours):
+        return r * (1.01 if s == "BUY" else 0.99)
+    return r * (1.001 if s == "BUY" else 0.999)
 
-    if last_f <= 0 or lim_f <= 0:
-        return False
-
-    s = (side or "").strip().upper()
-    band = max_slip_bps / 10000.0
-
-    if s == "BUY":
-        return lim_f >= last_f * (1.0 - band)
-    if s == "SELL":
-        return lim_f <= last_f * (1.0 + band)
-    return False
 def account_snapshot(
     account: str | None = None,
     net_liquidation: float | None = None,
@@ -430,18 +429,26 @@ def force_refresh_positions(ib, settle_sec=1.0):
     return list(ib.positions())
 
 
-def marketable_limit(side, ref_price, after_hours):
-    """
-    Return a marketable limit price (used by tests).
-    """
-    ref = float(ref_price)
-    side = side.upper()
+def marketable_limit(side: str, ref: float, after_hours: bool) -> float:
+    """Return a marketable limit price around a reference price (test contract).
 
-    if after_hours:
-        return ref * (1.01 if side == "BUY" else 0.99)
-    else:
-        return ref * (1.001 if side == "BUY" else 0.999)
-
+    - side must be BUY or SELL (case-insensitive) else ValueError
+    - ref must be > 0 else ValueError
+    - after_hours True : BUY=ref*1.01, SELL=ref*0.99
+    - after_hours False: BUY=ref*1.001, SELL=ref*0.999
+    """
+    s = str(side).upper().strip()
+    if s not in ("BUY", "SELL"):
+        raise ValueError("invalid side")
+    try:
+        r = float(ref)
+    except Exception:
+        raise ValueError("invalid ref")
+    if r <= 0.0:
+        raise ValueError("invalid ref")
+    if bool(after_hours):
+        return r * (1.01 if s == "BUY" else 0.99)
+    return r * (1.001 if s == "BUY" else 0.999)
 
 def map_ib_error(err: Exception) -> str:
     """
