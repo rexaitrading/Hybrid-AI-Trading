@@ -50,8 +50,16 @@ function Get-Bool($v) {
 
 $phase23 = Get-Bool $c.phase23_health_ok_today
 $evhard  = Get-Bool $c.ev_hard_daily_ok_today
-$gscore  = Get-Bool $c.gatescore_fresh_today
-
+# GateScore field: accept either gatescore_fresh_today or gatescore_ok_today (schema compatibility)
+$gscore = $false
+if ($c.PSObject.Properties.Name -contains "gatescore_fresh_today") {
+    $gscore = Get-Bool $c.gatescore_fresh_today
+} elseif ($c.PSObject.Properties.Name -contains "gatescore_ok_today") {
+    $gscore = Get-Bool $c.gatescore_ok_today
+} else {
+    Write-Host "[BLOCKG] INVALID CONTRACT: missing GateScore field (gatescore_fresh_today / gatescore_ok_today)" -ForegroundColor Red
+    exit 3
+}
 $nvdaFlag = Get-Bool $c.nvda_blockg_ready
 $spyFlag  = Get-Bool $c.spy_blockg_ready
 $qqqFlag  = Get-Bool $c.qqq_blockg_ready
