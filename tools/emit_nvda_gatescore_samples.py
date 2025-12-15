@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import os
 import csv
 from datetime import datetime
 from pathlib import Path
 
 
 def main() -> int:
+    # HARD SAFETY: never allow replay sampling in LIVE
+    run_mode = (os.environ.get("HAT_RUN_MODE") or "").lower()
+    if run_mode == "live":
+        raise SystemExit("Replay GateScore sampling disabled in LIVE mode")
+
     repo_root = Path(__file__).resolve().parents[1]
     logs = repo_root / "logs"
     logs.mkdir(parents=True, exist_ok=True)
@@ -13,6 +19,7 @@ def main() -> int:
     today = datetime.now().strftime("%Y-%m-%d")
 
     # Fail-closed defaults
+    score = 0.0
     count_signals = 0
     pnl_samples = 0
 
@@ -20,9 +27,10 @@ def main() -> int:
         from hybrid_ai_trading.replay.nvda_bplus_gate_score import compute_nvda_gatescore_today
         score = float(compute_nvda_gatescore_today(repo_root))
         count_signals = int(globals().get("_NVDA_GS_COUNT_SIGNALS", 1))
-        pnl_samples = int(globals().get("_NVDA_GS_PNL_SAMPLES", 1))
+        pnl_samples   = int(globals().get("_NVDA_GS_PNL_SAMPLES", 1))
     except Exception:
-        score = 0.0
+        # remain fail-closed
+        pass
 
     need_header = not out.exists()
     mode = "a" if out.exists() else "w"
