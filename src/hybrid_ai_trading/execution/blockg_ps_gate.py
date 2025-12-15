@@ -29,7 +29,7 @@ def enforce_blockg_via_powershell(symbol: str, where: str) -> None:
     if (os.getenv("HAT_ALLOW_BLOCKG_BYPASS", "") or "").strip() == "1":
         return
 
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = Path(__file__).resolve().parents[3]
     ps1 = repo_root / "tools" / "Check-BlockGReady.ps1"
     if not ps1.exists():
         raise RuntimeError(f"[BLOCKG-MISSING] {ps1} not found; blocked at {where}")
@@ -51,3 +51,4 @@ def enforce_blockg_via_powershell(symbol: str, where: str) -> None:
         if err:
             msg += f" stderr={err}"
         raise RuntimeError(msg)
+
