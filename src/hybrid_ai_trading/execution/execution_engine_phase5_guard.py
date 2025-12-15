@@ -11,21 +11,25 @@ from hybrid_ai_trading.blockg_contract import require_blockg_ready
 
 
 def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
-        # BLOCK-G: fail-closed readiness enforcement (no live orders may bypass)
+    """
+    Thin shim so tests and callers have a single place to hook Phase-5 guards.
+    """
+
+    # BLOCK-G: fail-closed readiness enforcement (no live orders may bypass)
     symbol = str(trade.get("symbol", "") or "").strip().upper()
     d = require_blockg_ready(symbol)
     if not d.ready:
         raise RuntimeError(
             f"BLOCK-G NOT READY: symbol={d.symbol} as_of_date={d.as_of_date} reason={d.reason}"
         )
-"""
-    Thin shim so tests and callers have a single place to hook Phase-5 guards.
-    """
+
     if rm is None:
         raise RuntimeError("RiskManager is required for Phase-5 guard")
+
     decision = rm.check_trade_phase5(trade)
     if not isinstance(decision, Phase5RiskDecision):
         raise TypeError("check_trade_phase5 must return Phase5RiskDecision")
+
     return decision
 
 
@@ -174,4 +178,5 @@ def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None) -> Non
     # LIVE order for NVDA must pass Block-G contract
     if regime.upper().endswith("_LIVE") and symbol == "NVDA":
         ensure_symbol_blockg_ready(symbol)
+
 
