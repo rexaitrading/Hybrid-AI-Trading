@@ -134,8 +134,8 @@ $min_pnl_samples = 20
     gatescore_ok_today         = [bool]$gs_ok
 
     nvda_blockg_ready          = [bool]$nvda_ready
-    spy_blockg_ready           = $false
-    qqq_blockg_ready           = $false
+    spy_blockg_ready           = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $false)
+    qqq_blockg_ready           = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $false)
   }
 
   $json = ($obj | ConvertTo-Json -Depth 6)
