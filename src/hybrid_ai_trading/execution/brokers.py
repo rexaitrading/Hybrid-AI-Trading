@@ -76,7 +76,7 @@ class IBKRClient(BrokerClient):
         limit_px: Optional[float] = None,
         meta: Optional[Dict[str, Any]] = None,
     ):
-        # ðŸ”’ B4: HARD LIVE SAFETY GATE
+        # Ã°Å¸â€â€™ B4: HARD LIVE SAFETY GATE
         ctx = load_run_context_from_env()
         ctx.require_live_safe()
 
@@ -89,12 +89,12 @@ class IBKRClient(BrokerClient):
             else LimitOrder(side, abs(qty), limit_px)
         )
 
-        # ðŸ”’ Block-G NVDA enforcement
+        # Ã°Å¸â€â€™ Block-G NVDA enforcement
         sym = getattr(c, "symbol", None)
         if sym and str(sym).upper() == "NVDA" and ctx.is_live:
             ensure_symbol_blockg_ready("NVDA")
 
-        enforce_blockg_via_powershell(locals().get("symbol") or getattr(locals().get("contract", None), "symbol", ""), "execution/brokers.py:send")
+        enforce_blockg_via_powershell(getattr(c, "symbol", "") or "", "execution/brokers.py:place_order")
         t = self.ib.placeOrder(c, o)
         self.ib.sleep(0.5)
 
@@ -199,3 +199,4 @@ class KrakenClient(BrokerClient):
             resp.get("id") or resp.get("txid") or resp.get("clientOrderId") or "unknown"
         )
         return oid, {"raw": resp}
+
