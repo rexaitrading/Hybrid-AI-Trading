@@ -32,7 +32,7 @@ def _load_phase4_today(trading_date: date, logs_dir: Path) -> bool:
         p = logs_dir / "phase4_validation_passed.json"
         if not p.exists():
             return False
-        j = json.loads(p.read_text(encoding="utf-8"))
+        j = json.loads(p.read_text(encoding="utf-8-sig"))
         return (
             str(j.get("as_of_date", "")) == trading_date.isoformat()
             and bool(j.get("phase4_ok_today"))
@@ -46,7 +46,7 @@ def _load_blockg_today(trading_date: date, logs_dir: Path) -> bool:
         p = logs_dir / "blockg_status_stub.json"
         if not p.exists():
             return False
-        j = json.loads(p.read_text(encoding="utf-8"))
+        j = json.loads(p.read_text(encoding="utf-8-sig"))
         return (
             str(j.get("as_of_date", "")) == trading_date.isoformat()
             and bool(j.get("nvda_blockg_ready"))
@@ -61,7 +61,7 @@ def _load_run_context_json(trading_date: date, logs_dir: Path) -> dict | None:
         p = logs_dir / "run_context.json"
         if not p.exists():
             return None
-        j = json.loads(p.read_text(encoding="utf-8"))
+        j = json.loads(p.read_text(encoding="utf-8-sig"))
         if str(j.get("as_of_date", "")) != trading_date.isoformat():
             return None
         return j if isinstance(j, dict) else None
@@ -72,14 +72,8 @@ def load_run_context_from_env() -> RunContext:
     """
     Canonical RunContext loader (fail-safe default = PAPER).
 
-    Precedence:
-      1) HAT_RUN_MODE
-      2) HAT_MODE
-      3) default: paper
-
-    Accepted: live, paper, premarket
-
-    Phase-0: prefer logs/run_context.json if present for today, else fall back to legacy files.
+    Phase-1B: hydrate Phase-1A safety flags from logs/run_context.json when present.
+    Missing fields are FAIL-SAFE defaults (False).
     """
     m = _norm_mode(os.getenv("HAT_RUN_MODE", ""))
     if not m:
@@ -96,26 +90,34 @@ def load_run_context_from_env() -> RunContext:
     repo_root = Path(".")
     logs_dir = repo_root / "logs"
 
-    # Prefer schema-locked run_context.json (Phase-0)
-    jctx = _load_run_context_json(trading_date, logs_dir)
+    # Prefer schema-locked run_context.json (Phase-0/1A)
+    jctx = _load_run_context_json(trading_date, logs_dir) if "_load_run_context_json" in globals() else None
 
-    # Phase4
+    # Phase4 (legacy fallback)
     if jctx is not None and "phase4_ok_today" in jctx:
         phase4_ok = bool(jctx.get("phase4_ok_today"))
     else:
         phase4_ok = _load_phase4_today(trading_date, logs_dir)
 
-    # BlockG: if run_context.json exists, use nvda_blockg_ready as Phase-0 default
+    # BlockG (Phase-0 default: nvda readiness)
     if jctx is not None and "nvda_blockg_ready" in jctx:
         blockg_ok = bool(jctx.get("nvda_blockg_ready"))
     else:
         blockg_ok = _load_blockg_today(trading_date, logs_dir)
+
+    # Phase-1A flags (hydrate from run_context.json only; fail-safe defaults)
+    phase23_ok = bool(jctx.get("phase23_health_ok_today")) if jctx is not None else False
+    ev_hard_ok = bool(jctx.get("ev_hard_daily_ok_today")) if jctx is not None else False
+    gatescore_fresh = bool(jctx.get("gatescore_fresh_today")) if jctx is not None else False
 
     return RunContext(
         mode=mode,
         trading_date=trading_date,
         phase4_passed=phase4_ok,
         blockg_ready=blockg_ok,
+        phase23_ok=phase23_ok,
+        ev_hard_ok=ev_hard_ok,
+        gatescore_fresh=gatescore_fresh,
         repo_root=repo_root,
         logs_dir=logs_dir,
     )
@@ -125,3 +127,4 @@ def is_live_env() -> bool:
     Legacy-friendly check: True only when env resolves to LIVE.
     """
     return load_run_context_from_env().is_live
+

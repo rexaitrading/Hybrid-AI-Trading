@@ -74,7 +74,10 @@ $payload = [ordered]@{
 $payloadJson = $payload | ConvertTo-Json -Depth 4
 
 Write-Host "[RUNCTX] Writing Phase-5 RunContext stub to $runCtxPath" -ForegroundColor Cyan
-$payloadJson | Set-Content -Path $runCtxPath -Encoding UTF8
-
+# Write UTF-8 NO-BOM + LF (PS 5.1 Set-Content UTF8 writes BOM)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$payloadJsonLf = ($payloadJson -replace "`r`n","`n") + "`n"
+[IO.File]::WriteAllText($runCtxPath, $payloadJsonLf, $utf8NoBom)
 Write-Host "[RUNCTX] RunContext snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
+
