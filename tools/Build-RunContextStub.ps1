@@ -49,7 +49,9 @@ if (-not $asOf) { $asOf = Get-StatusFieldSafe -Status $status -Name "trading_day
 
 $phase23  = Get-StatusFieldSafe -Status $status -Name "phase23_health_ok_today"
 $evHard   = Get-StatusFieldSafe -Status $status -Name "ev_hard_daily_ok_today"
-$gsFresh  = Get-StatusFieldSafe -Status $status -Name "gatescore_fresh_today"
+# GateScore schema lock: prefer gatescore_ok_today; fallback gatescore_fresh_today
+$gsFresh = Get-StatusFieldSafe -Status $status -Name "gatescore_ok_today"
+if ($null -eq $gsFresh) { $gsFresh = Get-StatusFieldSafe -Status $status -Name "gatescore_fresh_today" }
 
 $nvdaReady = Get-StatusFieldSafe -Status $status -Name "nvda_blockg_ready"
 $spyReady  = Get-StatusFieldSafe -Status $status -Name "spy_blockg_ready"
