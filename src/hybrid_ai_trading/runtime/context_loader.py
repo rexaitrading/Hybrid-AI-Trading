@@ -54,6 +54,20 @@ def _load_blockg_today(trading_date: date, logs_dir: Path) -> bool:
     except Exception:
         return False
 
+
+def _load_run_context_json(trading_date: date, logs_dir: Path) -> dict | None:
+    """Load logs/run_context.json if present and stamped for trading_date. Return dict or None."""
+    try:
+        p = logs_dir / "run_context.json"
+        if not p.exists():
+            return None
+        j = json.loads(p.read_text(encoding="utf-8"))
+        if str(j.get("as_of_date", "")) != trading_date.isoformat():
+            return None
+        return j if isinstance(j, dict) else None
+    except Exception:
+        return None
+
 def load_run_context_from_env() -> RunContext:
     """
     Canonical RunContext loader (fail-safe default = PAPER).
@@ -64,6 +78,8 @@ def load_run_context_from_env() -> RunContext:
       3) default: paper
 
     Accepted: live, paper, premarket
+
+    Phase-0: prefer logs/run_context.json if present for today, else fall back to legacy files.
     """
     m = _norm_mode(os.getenv("HAT_RUN_MODE", ""))
     if not m:
@@ -80,8 +96,20 @@ def load_run_context_from_env() -> RunContext:
     repo_root = Path(".")
     logs_dir = repo_root / "logs"
 
-    phase4_ok = _load_phase4_today(trading_date, logs_dir)
-    blockg_ok = _load_blockg_today(trading_date, logs_dir)
+    # Prefer schema-locked run_context.json (Phase-0)
+    jctx = _load_run_context_json(trading_date, logs_dir)
+
+    # Phase4
+    if jctx is not None and "phase4_ok_today" in jctx:
+        phase4_ok = bool(jctx.get("phase4_ok_today"))
+    else:
+        phase4_ok = _load_phase4_today(trading_date, logs_dir)
+
+    # BlockG: if run_context.json exists, use nvda_blockg_ready as Phase-0 default
+    if jctx is not None and "nvda_blockg_ready" in jctx:
+        blockg_ok = bool(jctx.get("nvda_blockg_ready"))
+    else:
+        blockg_ok = _load_blockg_today(trading_date, logs_dir)
 
     return RunContext(
         mode=mode,
@@ -91,7 +119,6 @@ def load_run_context_from_env() -> RunContext:
         repo_root=repo_root,
         logs_dir=logs_dir,
     )
-
 
 def is_live_env() -> bool:
     """
