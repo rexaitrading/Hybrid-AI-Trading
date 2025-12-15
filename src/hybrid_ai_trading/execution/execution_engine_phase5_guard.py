@@ -4,10 +4,7 @@ from dataclasses import asdict
 from typing import Any, Dict
 
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
-from hybrid_ai_trading.blockg_status import ensure_nvda_live_allowed
 from hybrid_ai_trading.blockg_contract import require_blockg_ready
-    ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready,
-)
 
 
 def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
@@ -15,7 +12,7 @@ def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
     Thin shim so tests and callers have a single place to hook Phase-5 guards.
     """
 
-    # BLOCK-G: fail-closed readiness enforcement (no live orders may bypass)
+    # --- BLOCK-G: fail-closed readiness enforcement ---
     symbol = str(trade.get("symbol", "") or "").strip().upper()
     d = require_blockg_ready(symbol)
     if not d.ready:
@@ -34,21 +31,22 @@ def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
 
 
 def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None) -> None:
-    # Paper-only bypass:
-    # - Paper runners must be able to simulate + produce logs even when Block-G is fail-closed.
-    # - Live order paths MUST still enforce Block-G.
+    """
+    Enforce Block-G contract for LIVE orders.
+
+    - Paper engines bypass.
+    - Live engines MUST pass Block-G.
+    - Delegates to require_blockg_ready(), which reads blockg_status_stub.json.
+    """
+
     if engine is not None and getattr(engine, "is_paper", False):
         return
-    """
-    Block-G contract enforcement for live NVDA / SPY / QQQ.
 
-    In production, this delegates to hybrid_ai_trading.blockg_contract.ensure_symbol_blockg_ready,
-    which reads logs/blockg_status_stub.json written by Build-BlockGStatusStub.ps1.
-
-    Tests may monkeypatch this function to simulate Block-G failures without touching
-    the underlying contract helper.
-    """
-    contract_ensure_symbol_blockg_ready(symbol)
+    d = require_blockg_ready(symbol)
+    if not d.ready:
+        raise RuntimeError(
+            f"BLOCK-G NOT READY: symbol={d.symbol} as_of_date={d.as_of_date} reason={d.reason}"
+        )
 
 
 def place_order_phase5(
@@ -62,10 +60,7 @@ def place_order_phase5(
     **kwargs: Any,
 ) -> Dict[str, Any]:
     """
-    Underlying Phase-5 order placement hook.
-
-    For tests we keep this as a simple stub that returns a dict.
-    Real implementation can call into the full execution engine / IB wrapper.
+    Underlying Phase-5 order placement hook (stub for tests).
     """
     return {
         "status": "ok_stub_engine",
@@ -90,17 +85,9 @@ def place_order_phase5_with_guard(
     **kwargs: Any,
 ) -> Dict[str, Any]:
     """
-    Phase-5 wrapper used by tests:
-
-    1) For NVDA, enforce Block-G readiness via ensure_symbol_blockg_ready.
-    2) If engine.risk_manager exists, run guard_phase5_trade:
-       - if blocked -> synthesize a blocked result.
-       - if allowed -> call place_order_phase5.
-
-    Tests only assert:
-      - function returns a dict when risk is allowed
-      - Block-G failure for NVDA raises and place_order_phase5 is never called.
+    Phase-5 guarded order entry used by tests and live runners.
     """
+
     trade = {
         "symbol": symbol,
         "side": side,
@@ -111,24 +98,22 @@ def place_order_phase5_with_guard(
         **kwargs,
     }
 
-    # 1) Block-G for NVDA LIVE only (tests monkeypatch ensure_symbol_blockg_ready)
-    if symbol.upper() == "NVDA" and "LIVE" in (regime or "").upper():
-        if not getattr(engine, "is_paper", False):
-            ensure_symbol_blockg_ready("NVDA")
+    # 1) Block-G enforcement for LIVE orders
+    if "LIVE" in (regime or "").upper():
+        ensure_symbol_blockg_ready(symbol, engine=engine)
 
-    # 2) RiskManager Phase-5 guard
+    # 2) Phase-5 RiskManager guard
     rm = getattr(engine, "risk_manager", None)
     if rm is not None:
         decision = guard_phase5_trade(rm, trade)
         if not decision.allowed:
-            # Synthesized blocked result
             return {
                 "status": "blocked_by_phase5_risk",
                 "reason": decision.reason,
                 "decision": asdict(decision),
             }
 
-    # 3) Call underlying order function
+    # 3) Place order
     return place_order_phase5(
         engine=engine,
         symbol=symbol,
@@ -139,44 +124,3 @@ def place_order_phase5_with_guard(
         day_id=day_id,
         **kwargs,
     )
-
-def ensure_nvda_live_allowed_by_blockg() -> None:
-    """
-    Hard Block-G contract enforcement for NVDA live orders.
-
-    This MUST be called before any live NVDA order is sent.
-
-    Contract:
-    - Uses logs/blockg_status_stub.json built by Run-BlockGReadiness.ps1
-    - Enforces:
-        - status.is_today
-        - phase23_health_ok_today
-        - ev_hard_daily_ok_today
-        - gatescore_fresh_today
-        - nvda_blockg_ready
-    """
-    try:
-        assert_symbol_ready_for_live("NVDA")
-    except BlockGNotReadyError as exc:
-        # Raise a clear error so guard tests and execution engine can intercept.
-        raise RuntimeError(f"NVDA live order blocked by Block-G contract: {exc}") from exc
-def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None) -> None:
-    # Paper-only bypass:
-    # - Paper runners must be able to simulate + produce logs even when Block-G is fail-closed.
-    # - Live order paths MUST still enforce Block-G.
-    if engine is not None and getattr(engine, "is_paper", False):
-        return
-    """
-    Wrapper that enforces Block-G contract ONLY for NVDA.
-    Called by tests via monkeypatch.
-    """
-    if symbol == "NVDA":
-        ensure_nvda_live_allowed()
-
-
-    # --- BLOCK-G ENFORCEMENT ---
-    # LIVE order for NVDA must pass Block-G contract
-    if regime.upper().endswith("_LIVE") and symbol == "NVDA":
-        ensure_symbol_blockg_ready(symbol)
-
-
