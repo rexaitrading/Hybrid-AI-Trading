@@ -64,7 +64,10 @@ class RunContext:
 
     def require_live_safe(self) -> None:
         """
-        Hard safety assertion for LIVE mode.
+        Hard safety assertion for LIVE mode (fail-closed).
+
+        Phase-1C rule:
+          LIVE requires: Phase4 + BlockG + Phase23 + EV-hard + GateScore freshness.
         """
         if not self.is_live:
             return
@@ -72,4 +75,10 @@ class RunContext:
             raise RuntimeError("RunContext: Phase-4 not passed for LIVE run")
         if not self.blockg_ready:
             raise RuntimeError("RunContext: Block-G not ready for LIVE run")
+        if not getattr(self, "phase23_ok", False):
+            raise RuntimeError("RunContext: Phase23 health not OK for LIVE run")
+        if not getattr(self, "ev_hard_ok", False):
+            raise RuntimeError("RunContext: EV-hard daily not OK for LIVE run")
+        if not getattr(self, "gatescore_fresh", False):
+            raise RuntimeError("RunContext: GateScore not fresh/valid for LIVE run")
 
