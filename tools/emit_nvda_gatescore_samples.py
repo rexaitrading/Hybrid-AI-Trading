@@ -149,10 +149,10 @@ def main() -> int:
     pnl_samples = 0
 
     try:
-        from hybrid_ai_trading.replay.nvda_bplus_gate_score import compute_nvda_gatescore_today
-        score = float(compute_nvda_gatescore_today(repo_root))
-        count_signals = int(globals().get("_NVDA_GS_COUNT_SIGNALS", 1))
-        pnl_samples = int(globals().get("_NVDA_GS_PNL_SAMPLES", 1))
+        import hybrid_ai_trading.replay.nvda_bplus_gate_score as gs
+        score = float(gs.compute_nvda_gatescore_today(repo_root))
+        count_signals = int(getattr(gs, "_NVDA_GS_COUNT_SIGNALS", 1))
+        pnl_samples = int(getattr(gs, "_NVDA_GS_PNL_SAMPLES", 1))
     except Exception:
         # remain fail-closed
         pass
@@ -174,3 +174,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
