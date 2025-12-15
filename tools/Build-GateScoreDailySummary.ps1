@@ -29,7 +29,7 @@ foreach($c in $candidates){
 
 if (-not $input) {
   # Header only -> Build-BlockGStatusStub will set gatescore_fresh_today=false => nvda_blockg_ready=false
-  "as_of_date,samples,score" | Out-File -FilePath $out -Encoding ascii
+  "as_of_date,symbol,source,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score" | Out-File -FilePath $out -Encoding ascii
   Write-Host "[GATESCORE] WARN: no GateScore input found; wrote header-only logs\gatescore_daily_summary.csv (fail-closed)." -ForegroundColor Yellow
   exit 0
 }
@@ -46,6 +46,34 @@ $code = $LASTEXITCODE
 if ($code -ne 0) {
   Write-Host "[GATESCORE] ERROR: calculator failed (exit=$code). Fail-closed." -ForegroundColor Red
   exit $code
+}
+
+
+# Convert daily summary schema (as_of_date,samples,score) -> BlockG schema expected by Build-BlockGStatusStub
+try {
+  $rows = @(Import-Csv -LiteralPath $out)
+} catch { $rows = @() }
+
+# Rewrite output with BlockG schema
+$header2 = "as_of_date,symbol,source,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score"
+if (-not $rows) {
+  $header2 | Out-File -FilePath $out -Encoding ascii
+} else {
+  $sym = ""
+  if ($input -match "nvda") { $sym = "NVDA" }
+  $src = "REAL"
+  $lines = @($header2)
+  foreach($r in $rows) {
+    $d = "$($r.as_of_date)"
+    if ($d.Length -ge 10) { $d = $d.Substring(0,10) }
+    $n = 0
+    try { $n = [int]("$($r.samples)") } catch { $n = 0 }
+    $sc = 0.0
+    try { $sc = [double]("$($r.score)") } catch { $sc = 0.0 }
+    # mean_micro_score placeholder 0.0 until real metric wired
+    $lines += ("{0},{1},{2},{3},{4},{5},{6}" -f $d,$sym,$src,$n,$n,("{0:F6}" -f $sc),("{0:F6}" -f 0.0))
+  }
+  $lines | Out-File -FilePath $out -Encoding ascii
 }
 
 # Visibility: show top 2 lines
