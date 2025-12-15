@@ -36,6 +36,10 @@ class RunContext:
     phase4_passed: bool = False
     blockg_ready: bool = False
 
+    # Phase-1A: additional safety flags (defaults fail-safe)
+    phase23_ok: bool = False
+    ev_hard_ok: bool = False
+    gatescore_fresh: bool = False
     # io roots
     repo_root: Path = Path(".")
     logs_dir: Path = Path("logs")
@@ -51,6 +55,12 @@ class RunContext:
     @property
     def is_premarket(self) -> bool:
         return self.mode == RunMode.PREMARKET
+    def norm_symbol(self) -> Optional[str]:
+        """Return normalized symbol (upper/trim) or None."""
+        if self.symbol is None:
+            return None
+        s = str(self.symbol).strip().upper()
+        return s if s else None
 
     def require_live_safe(self) -> None:
         """
@@ -62,3 +72,4 @@ class RunContext:
             raise RuntimeError("RunContext: Phase-4 not passed for LIVE run")
         if not self.blockg_ready:
             raise RuntimeError("RunContext: Block-G not ready for LIVE run")
+
