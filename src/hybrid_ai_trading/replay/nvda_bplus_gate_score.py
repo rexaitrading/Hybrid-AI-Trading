@@ -71,21 +71,63 @@ def load_nvda_gatescore_health(repo_root: Optional[Path] = None) -> GateScoreHea
 
 def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
     """
-    Compute a REAL GateScore for today for NVDA.
+    Compute a deterministic GateScore for today from Phase-1 replay data.
 
-    Current implementation is conservative:
-    - Reads logs/gatescore_pnl_summary.csv via load_nvda_gatescore_health()
-    - Uses mean_edge_ratio as the score proxy (bounded)
-    - Raises on missing data (caller will fail-closed)
+    Data source:
+      data/nvda_1min_sample.csv
 
-    Upgrade later: compute from Phase-1 replay + GateScore model outputs.
+    Score proxy (bounded):
+      mean of minute returns over last N bars, scaled and clipped to [-1, +1].
+
+    Fail-closed:
+      raises if replay data missing or unreadable.
     """
-    h = load_nvda_gatescore_health(repo_root=repo_root)
-    # mean_edge_ratio is the most direct "edge quality" proxy currently available
-    score = float(getattr(h, "mean_edge_ratio", 0.0) or 0.0)
-    # bound score to avoid extreme values
+    from pathlib import Path
+    import csv
+
+    rr = repo_root or Path(__file__).resolve().parents[3]
+    csv_path = rr / "data" / "nvda_1min_sample.csv"
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Replay NVDA CSV not found at {csv_path}")
+
+    closes = []
+    with csv_path.open("r", encoding="utf-8", newline="") as f:
+        r = csv.DictReader(f)
+        # try common column names
+        for row in r:
+            if not row:
+                continue
+            v = row.get("close") or row.get("c") or row.get("Close") or row.get("C")
+            if v is None:
+                continue
+            try:
+                closes.append(float(v))
+            except Exception:
+                continue
+
+    if len(closes) < 50:
+        raise ValueError("Not enough replay closes to compute score")
+
+    N = 200  # last N minutes
+    xs = closes[-N:]
+    rets = []
+    for i in range(1, len(xs)):
+        p0 = xs[i-1]
+        p1 = xs[i]
+        if p0 <= 0:
+            continue
+        rets.append((p1 - p0) / p0)
+
+    if not rets:
+        raise ValueError("No valid returns computed")
+
+    mean_ret = sum(rets) / float(len(rets))
+
+    # scale tiny mean returns into a usable score range, then clamp
+    score = mean_ret * 100.0
     if score > 1.0:
         score = 1.0
     if score < -1.0:
         score = -1.0
-    return score
+    return float(score)
+
