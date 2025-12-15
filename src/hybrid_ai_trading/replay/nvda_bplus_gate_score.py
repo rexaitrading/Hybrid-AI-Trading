@@ -131,3 +131,4 @@ def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
         score = -1.0
     return float(score)
 
+
