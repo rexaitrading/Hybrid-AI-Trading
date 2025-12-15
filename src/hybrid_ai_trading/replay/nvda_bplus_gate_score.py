@@ -88,13 +88,12 @@ def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
       _NVDA_GS_COUNT_SIGNALS = number of post bars that hit either trigger
       _NVDA_GS_PNL_SAMPLES   = number of post bars
     """
-    from pathlib import Path
-import os
-from datetime import datetime
+    import os
     import csv
+    from pathlib import Path
 
     rr = repo_root or Path(__file__).resolve().parents[3]
-        fixture = (os.environ.get("HAT_NVDA_REPLAY_CSV") or "").strip()
+    fixture = (os.environ.get("HAT_NVDA_REPLAY_CSV") or "").strip()
     if fixture:
         csv_path = Path(fixture)
     else:
@@ -102,7 +101,6 @@ from datetime import datetime
     if not csv_path.exists():
         raise FileNotFoundError(f"Replay NVDA CSV not found at {csv_path}")
 
-    # Load bars (sorted by timestamp)
     rows = []
     with csv_path.open("r", encoding="utf-8", newline="") as f:
         r = csv.DictReader(f)
@@ -111,8 +109,10 @@ from datetime import datetime
                 ts = row.get("timestamp")
                 if not ts:
                     continue
-                # keep as string for sorting fallback; parse best-effort
-                o = float(row["open"]); h = float(row["high"]); l = float(row["low"]); c = float(row["close"])
+                o = float(row["open"])
+                h = float(row["high"])
+                l = float(row["low"])
+                c = float(row["close"])
                 v = float(row.get("volume") or 0.0)
             except Exception:
                 continue
@@ -121,10 +121,9 @@ from datetime import datetime
     if len(rows) < 3:
         raise ValueError("Not enough replay bars for ORB+VWAP (need >=3)")
 
-    # sort by timestamp string (ISO ordering works for your sample)
     rows.sort(key=lambda x: x[0])
 
-    # Build VWAP cumulatively
+    # VWAP cumulative (typical price * vol)
     vwap_list = []
     num = 0.0
     den = 0.0
@@ -135,18 +134,15 @@ from datetime import datetime
         den += w
         vwap_list.append(num / max(1e-9, den))
 
-    # Strict ORB bar window
     orb_n = min(15, len(rows) - 1)
     orb = rows[:orb_n]
     orh = max(x[2] for x in orb)
     orl = min(x[3] for x in orb)
 
-    # Post-ORB scanning
     post_rows = rows[orb_n:]
     post_vwaps = vwap_list[orb_n:]
     pnl_samples = len(post_rows)
 
-    # Count trigger opportunities ("signals")
     count_signals = 0
     long_hits = []
     short_hits = []
@@ -165,7 +161,6 @@ from datetime import datetime
     globals()["_NVDA_GS_COUNT_SIGNALS"] = int(count_signals)
     globals()["_NVDA_GS_PNL_SAMPLES"] = int(pnl_samples)
 
-    # First confirmed breakout (time order), tie-break: earlier index wins
     first_long = long_hits[0] if long_hits else None
     first_short = short_hits[0] if short_hits else None
 
@@ -176,5 +171,4 @@ from datetime import datetime
     if first_long is None:
         return -1.0
     return 1.0 if first_long <= first_short else -1.0
-
 
