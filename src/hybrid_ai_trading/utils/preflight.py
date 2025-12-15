@@ -10,6 +10,7 @@ except Exception:
     ZoneInfo = None
 
 from ib_insync import Forex, LimitOrder, Stock
+from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
 
 from hybrid_ai_trading.utils.ib_conn import ib_session
 
@@ -33,7 +34,7 @@ def _now_et():
 
 
 def in_trading_window(now_et, allow_ext=True):
-    # RTH: 09:30Ã¢â‚¬â€œ16:00 ET; extended: 04:00Ã¢â‚¬â€œ20:00 ET
+    # RTH: 09:30ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ16:00 ET; extended: 04:00ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ20:00 ET
     t = now_et.time()
     rth = dt.time(9, 30) <= t <= dt.time(16, 0)
     ext = dt.time(4, 0) <= t <= dt.time(20, 0)
@@ -132,6 +133,7 @@ def sanity_probe(
         o = LimitOrder("BUY", qty, safe_px)
         o.outsideRth = bool(allow_ext)
         o.tif = "DAY"
+        forbid_direct_ib_live("utils/preflight.py:sanity_probe")
         trade = ib.placeOrder(c, o)
         ib.sleep(2.0)
         _cancel_if_active(ib, trade)
