@@ -52,11 +52,11 @@ $phase23 = Get-Bool $c.phase23_health_ok_today
 $evhard  = Get-Bool $c.ev_hard_daily_ok_today
 # GateScore field:
 # Prefer gatescore_ok_today (fresh + samples + thresholds), fallback to gatescore_fresh_today for old contracts.
-$gscore = $false
+$gs_ok = $false
 if ($c.PSObject.Properties.Name -contains "gatescore_ok_today") {
-    $gscore = Get-Bool $c.gatescore_ok_today
+$gs_ok = Get-Bool $c.gatescore_ok_today
 } elseif ($c.PSObject.Properties.Name -contains "gatescore_fresh_today") {
-    $gscore = Get-Bool $c.gatescore_fresh_today
+$gs_ok = Get-Bool $c.gatescore_fresh_today
 } else {
     Write-Host "[BLOCKG] INVALID CONTRACT: missing GateScore field (gatescore_ok_today / gatescore_fresh_today)" -ForegroundColor Red
     exit 3
@@ -66,9 +66,9 @@ $spyFlag  = Get-Bool $c.spy_blockg_ready
 $qqqFlag  = Get-Bool $c.qqq_blockg_ready
 # required per-symbol readiness field
 $required = switch ($Symbol) {
-    "NVDA" { $ok = ($phase23 -and $evhard -and $gscore -and $nvdaFlag) }
-    "SPY"  { $ok = ($phase23 -and $evhard -and $gscore -and $spyFlag) }
-    "QQQ"  { $ok = ($phase23 -and $evhard -and $gscore -and $qqqFlag) }
+    "NVDA" { $ok = ($phase23 -and $evhard -and $gs_ok -and $nvdaFlag) }
+    "SPY"  { $ok = ($phase23 -and $evhard -and $gs_ok -and $spyFlag) }
+    "QQQ"  { $ok = ($phase23 -and $evhard -and $gs_ok -and $qqqFlag) }
 }
 
 if ($ok) {
@@ -76,5 +76,5 @@ if ($ok) {
     exit 0
 }
 
-Write-Host "[BLOCKG] NOT READY Symbol=$Symbol as_of_date=$asOf phase23=$phase23 ev_hard=$evhard gatescore_fresh=$gscore nvda=$nvdaFlag spy=$spyFlag qqq=$qqqFlag" -ForegroundColor Yellow
+Write-Host "[BLOCKG] NOT READY Symbol=$Symbol as_of_date=$asOf phase23=$phase23 ev_hard=$evhard gatescore_ok=$gs_ok nvda=$nvdaFlag spy=$spyFlag qqq=$qqqFlag" -ForegroundColor Yellow
 exit 2
