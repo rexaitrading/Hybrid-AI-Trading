@@ -46,3 +46,7 @@ tmp_*.txt
 tmp_*
 
 test_cli_write.txt
+
+
+# Allow deterministic replay fixtures
+!tests/fixtures/*.csv

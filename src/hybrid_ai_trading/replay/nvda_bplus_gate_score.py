@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import os
 import csv
 from typing import Optional
 
@@ -88,11 +89,16 @@ def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
       _NVDA_GS_PNL_SAMPLES   = number of post bars
     """
     from pathlib import Path
-    from datetime import datetime
+import os
+from datetime import datetime
     import csv
 
     rr = repo_root or Path(__file__).resolve().parents[3]
-    csv_path = rr / "data" / "nvda_1min_sample.csv"
+        fixture = (os.environ.get("HAT_NVDA_REPLAY_CSV") or "").strip()
+    if fixture:
+        csv_path = Path(fixture)
+    else:
+        csv_path = rr / "data" / "nvda_1min_sample.csv"
     if not csv_path.exists():
         raise FileNotFoundError(f"Replay NVDA CSV not found at {csv_path}")
 
@@ -170,4 +176,5 @@ def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
     if first_long is None:
         return -1.0
     return 1.0 if first_long <= first_short else -1.0
+
 
