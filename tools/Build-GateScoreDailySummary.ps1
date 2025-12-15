@@ -4,6 +4,14 @@ param()
 $ErrorActionPreference="Stop"
 Set-StrictMode -Version Latest
 
+
+function Get-GateScoreSourceFromInput([string]$InputPath) {
+  # DEV_REPLAY must never arm LIVE.
+  $name = ([IO.Path]::GetFileName(($InputPath + ""))).ToLowerInvariant()
+  if ($name -match 'gatescore_samples' -or $name -match 'nvda_gatescore_samples\.csv') { return "DEV_REPLAY" }
+  return "REAL"
+}
+
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
@@ -61,7 +69,12 @@ if (-not $rows) {
 } else {
   $sym = ""
   if ($input -match "nvda") { $sym = "NVDA" }
-  $src = "REAL"
+  $inPath = $null
+  foreach($vn in @("input","Input","InputCsv","inputCsv","inputPath","InputPath","samplesCsv","SamplesCsv")) {
+    $v = Get-Variable -Name $vn -ErrorAction SilentlyContinue
+    if ($v -and $v.Value) { $inPath = ($v.Value + ""); break }
+  }
+  $src = Get-GateScoreSourceFromInput $inPath
   $lines = @($header2)
   foreach($r in $rows) {
     $d = "$($r.as_of_date)"
@@ -92,4 +105,6 @@ if (-not $rows) {
 Write-Host "[GATESCORE] Wrote logs\gatescore_daily_summary.csv" -ForegroundColor Green
 Get-Content $out -TotalCount 2
 exit 0
+
+
 
