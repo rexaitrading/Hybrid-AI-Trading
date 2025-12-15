@@ -42,6 +42,7 @@ class IBAdapter(Broker):
         self.timeout = timeout
         self.ib = IB()
 
+        self.run_context = load_run_context_from_env()
     def connect(self) -> bool:
         ok = self.ib.connect(
             self.host, self.port, clientId=self.client_id, timeout=self.timeout
