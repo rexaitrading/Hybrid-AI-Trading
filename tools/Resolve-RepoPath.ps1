@@ -11,3 +11,5 @@ if (-not (Test-Path (Join-Path $repoRoot "src"))) { throw "Not in repo root: src
 
 $abs = Join-Path $repoRoot $RelativePath
 Write-Output $abs
+Write-Output ("SAFE_URI=" + [System.Uri]::EscapeUriString($abs))
+
