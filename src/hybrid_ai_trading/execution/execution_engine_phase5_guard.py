@@ -5,13 +5,20 @@ from typing import Any, Dict
 
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
 from hybrid_ai_trading.blockg_status import ensure_nvda_live_allowed
-from hybrid_ai_trading.execution.blockg_contract import (
+from hybrid_ai_trading.blockg_contract import require_blockg_ready
     ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready,
 )
 
 
 def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
-    """
+        # BLOCK-G: fail-closed readiness enforcement (no live orders may bypass)
+    symbol = str(trade.get("symbol", "") or "").strip().upper()
+    d = require_blockg_ready(symbol)
+    if not d.ready:
+        raise RuntimeError(
+            f"BLOCK-G NOT READY: symbol={d.symbol} as_of_date={d.as_of_date} reason={d.reason}"
+        )
+"""
     Thin shim so tests and callers have a single place to hook Phase-5 guards.
     """
     if rm is None:
@@ -31,7 +38,7 @@ def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None) -> Non
     """
     Block-G contract enforcement for live NVDA / SPY / QQQ.
 
-    In production, this delegates to hybrid_ai_trading.execution.blockg_contract.ensure_symbol_blockg_ready,
+    In production, this delegates to hybrid_ai_trading.blockg_contract.ensure_symbol_blockg_ready,
     which reads logs/blockg_status_stub.json written by Build-BlockGStatusStub.ps1.
 
     Tests may monkeypatch this function to simulate Block-G failures without touching
@@ -167,3 +174,4 @@ def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None) -> Non
     # LIVE order for NVDA must pass Block-G contract
     if regime.upper().endswith("_LIVE") and symbol == "NVDA":
         ensure_symbol_blockg_ready(symbol)
+

@@ -74,7 +74,7 @@ if (-not $rows) {
     $v = Get-Variable -Name $vn -ErrorAction SilentlyContinue
     if ($v -and $v.Value) { $inPath = ($v.Value + ""); break }
   }
-  $src = Get-GateScoreSourceFromInput $inPath
+  $src = Get-GateScoreSourceFromInput $input
   $lines = @($header2)
   foreach($r in $rows) {
     $d = "$($r.as_of_date)"
@@ -105,6 +105,7 @@ if (-not $rows) {
 Write-Host "[GATESCORE] Wrote logs\gatescore_daily_summary.csv" -ForegroundColor Green
 Get-Content $out -TotalCount 2
 exit 0
+
 
 
 
