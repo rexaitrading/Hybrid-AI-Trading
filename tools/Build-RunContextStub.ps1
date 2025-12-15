@@ -13,7 +13,7 @@ if (-not (Test-Path $logsDir)) {
 }
 
 $statusPath   = Join-Path $logsDir "blockg_status_stub.json"
-$runCtxPath   = Join-Path $logsDir "runcontext_phase5_stub.json"
+$runCtxPath   = Join-Path $logsDir "run_context.json"
 
 if (-not (Test-Path $statusPath)) {
     Write-Host "[RUNCTX] ERROR: Block-G status JSON not found at $statusPath" -ForegroundColor Red

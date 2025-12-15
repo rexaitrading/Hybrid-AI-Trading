@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import json
 import os
+import json
 from datetime import date, datetime
 from pathlib import Path
-
 from hybrid_ai_trading.runtime.run_context import RunContext, RunMode
 
 
@@ -25,6 +24,7 @@ def _env_trading_date() -> date:
         except Exception:
             pass
     return date.today()
+
 
 
 def _load_phase4_today(trading_date: date, logs_dir: Path) -> bool:
@@ -54,7 +54,6 @@ def _load_blockg_today(trading_date: date, logs_dir: Path) -> bool:
     except Exception:
         return False
 
-
 def load_run_context_from_env() -> RunContext:
     """
     Canonical RunContext loader (fail-safe default = PAPER).
@@ -64,9 +63,8 @@ def load_run_context_from_env() -> RunContext:
       2) HAT_MODE
       3) default: paper
 
-    LIVE is fail-closed (phase4_passed + blockg_ready must be true).
+    Accepted: live, paper, premarket
     """
-    # Resolve mode (default PAPER)
     m = _norm_mode(os.getenv("HAT_RUN_MODE", ""))
     if not m:
         m = _norm_mode(os.getenv("HAT_MODE", ""))
@@ -78,14 +76,10 @@ def load_run_context_from_env() -> RunContext:
     else:
         mode = RunMode.PAPER
 
-    # Resolve trading date FIRST (prevents UnboundLocalError)
     trading_date = _env_trading_date()
-
-    # Resolve repo/log roots
     repo_root = Path(".")
     logs_dir = repo_root / "logs"
 
-    # Hydrate safety (fail-closed)
     phase4_ok = _load_phase4_today(trading_date, logs_dir)
     blockg_ok = _load_blockg_today(trading_date, logs_dir)
 
