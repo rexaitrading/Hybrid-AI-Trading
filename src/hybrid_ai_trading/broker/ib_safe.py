@@ -87,6 +87,8 @@ class IBAdapter(Broker):
         except Exception as _exc:
             raise
         
+        from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
+        forbid_direct_ib_live("broker/ib_safe.py:direct_send")
         trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)
@@ -201,6 +203,8 @@ class IBAdapter(Broker):
         except Exception as _exc:
             raise
         
+        from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
+        forbid_direct_ib_live("broker/ib_safe.py:direct_send")
         trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)

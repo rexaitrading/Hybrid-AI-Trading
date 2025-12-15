@@ -97,6 +97,8 @@ class IBAdapter(Broker):
             except Exception as _exc:
                 raise RuntimeError(f"[BLOCK-G] NVDA not ready: {_exc}")
 
+        from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
+        forbid_direct_ib_live("brokers/ib_adapter.py:direct_send")
         trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)

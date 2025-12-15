@@ -377,7 +377,7 @@ def run(
         ):
             ib.waitOnUpdate(timeout=1.0)
         if tr_parent.orderStatus.status in ("PreSubmitted", "Submitted"):
-            print("Auto-reprice: canceling stale order and re-placing onceÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦")
+            print("Auto-reprice: canceling stale order and re-placing onceÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦")
             ib.cancelOrder(tr_parent.order)
             ib.sleep(0.6)
             q2 = get_quotes(ib, contract)
