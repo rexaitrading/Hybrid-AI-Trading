@@ -1,4 +1,5 @@
 from __future__ import annotations
+from hybrid_ai_trading.execution.blockg_ps_gate import enforce_blockg_via_powershell
 
 from typing import Any, Dict, Optional, Tuple
 from pathlib import Path
@@ -75,7 +76,7 @@ class IBKRClient(BrokerClient):
         limit_px: Optional[float] = None,
         meta: Optional[Dict[str, Any]] = None,
     ):
-        # 🔒 B4: HARD LIVE SAFETY GATE
+        # ðŸ”’ B4: HARD LIVE SAFETY GATE
         ctx = load_run_context_from_env()
         ctx.require_live_safe()
 
@@ -88,11 +89,12 @@ class IBKRClient(BrokerClient):
             else LimitOrder(side, abs(qty), limit_px)
         )
 
-        # 🔒 Block-G NVDA enforcement
+        # ðŸ”’ Block-G NVDA enforcement
         sym = getattr(c, "symbol", None)
         if sym and str(sym).upper() == "NVDA" and ctx.is_live:
             ensure_symbol_blockg_ready("NVDA")
 
+        enforce_blockg_via_powershell(locals().get("symbol") or getattr(locals().get("contract", None), "symbol", ""), "execution/brokers.py:send")
         t = self.ib.placeOrder(c, o)
         self.ib.sleep(0.5)
 
