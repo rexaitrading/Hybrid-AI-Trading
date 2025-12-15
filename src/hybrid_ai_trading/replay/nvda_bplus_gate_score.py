@@ -105,7 +105,7 @@ def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
             except Exception:
                 continue
 
-    if len(closes) < 50:
+    if len(closes) < 3:
         raise ValueError("Not enough replay closes to compute score")
 
     N = 200  # last N minutes
