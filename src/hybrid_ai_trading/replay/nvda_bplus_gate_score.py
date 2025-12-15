@@ -71,7 +71,7 @@ def load_nvda_gatescore_health(repo_root: Optional[Path] = None) -> GateScoreHea
 
 def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
     """
-    GO REPLAY SCORE – ORB
+    GO REPLAY SCORE â€“ ORB
 
     Deterministic GateScore from Phase-1 replay CSV (no trades dependency).
     Works with small replay sets by using min() windows (reduced confidence).
@@ -159,6 +159,11 @@ def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
 
     # Combine (ORB dominates; VWAP confirms; trend stabilizes)
     score = (0.60 * orb_strength) + (8.0 * vwap_dev) + (0.20 * trend_sign)
+    # Diagnostics (for downstream daily summary)
+    count_signals = max(0, len(bars) - orb_n)
+    pnl_samples = len(rets)
+    globals()["_NVDA_GS_COUNT_SIGNALS"] = count_signals
+    globals()["_NVDA_GS_PNL_SAMPLES"] = pnl_samples
     score *= vol_penalty
 
     if score > 1.0: score = 1.0
