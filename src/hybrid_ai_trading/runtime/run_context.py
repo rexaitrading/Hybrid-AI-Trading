@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from .blockg_types import load_blockg_status
 from .blockg_types import BlockGStatus, load_blockg_status
 from datetime import date
 from enum import Enum
@@ -120,7 +119,7 @@ def load_default_run_context(
 
     b = load_blockg_status(stub)
 
-    # Map JSON → RunContext safety flags (fail-closed)
+    # Map JSON â†’ RunContext safety flags (fail-closed)
     sym = (symbol or "").strip().upper() or None
 
     # per-symbol ready flag
