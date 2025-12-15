@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
 from hybrid_ai_trading.blockg_contract import require_blockg_ready
+from hybrid_ai_trading.runtime.run_context import RunContext
 
 
 def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
@@ -30,7 +31,7 @@ def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
     return decision
 
 
-def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None) -> None:
+def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None, ctx: RunContext | None = None) -> None:
     """
     Enforce Block-G contract for LIVE orders.
 
@@ -40,6 +41,11 @@ def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None) -> Non
     """
 
     if engine is not None and getattr(engine, "is_paper", False):
+        return
+
+    if ctx is not None:
+        # Canonical live safety gate (RunContext is the single authority)
+        ctx.require_live_safe()
         return
 
     d = require_blockg_ready(symbol)
