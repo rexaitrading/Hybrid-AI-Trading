@@ -21,7 +21,7 @@ def main() -> int:
     def write_header_only() -> None:
         with out.open("w", encoding="utf-8", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["as_of_date","score","count_signals","pnl_samples"])
+            w.writerow(["as_of_date", "score"])
 
     print("DEBUG: emit_nvda_gatescore_samples starting")
     print(f"DEBUG: repo_root={repo_root}")
@@ -35,8 +35,6 @@ def main() -> int:
 
     try:
         score = float(compute_nvda_gatescore_today(repo_root))
-count_signals = int(globals().get("_NVDA_GS_COUNT_SIGNALS", 1))
-pnl_samples   = int(globals().get("_NVDA_GS_PNL_SAMPLES", 1))
     except Exception as e:
         print(f"DEBUG: compute failed: {e!r}")
         write_header_only()
@@ -44,8 +42,8 @@ pnl_samples   = int(globals().get("_NVDA_GS_PNL_SAMPLES", 1))
 
     with out.open("w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["as_of_date","score","count_signals","pnl_samples"])
-        w.writerow([today, f"{score:.6f}", count_signals, pnl_samples])
+        w.writerow(["as_of_date", "score"])
+        w.writerow([today, f"{score:.6f}"])
 
     print(f"DEBUG: wrote {out}")
     return 0
@@ -53,4 +51,3 @@ pnl_samples   = int(globals().get("_NVDA_GS_PNL_SAMPLES", 1))
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
