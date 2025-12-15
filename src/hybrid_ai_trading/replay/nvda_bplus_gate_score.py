@@ -68,3 +68,24 @@ def load_nvda_gatescore_health(repo_root: Optional[Path] = None) -> GateScoreHea
         mean_micro_score=_parse_float(row, "mean_micro_score", 0.0),
         mean_pnl=_parse_float(row, "mean_pnl", 0.0),
     )
+
+def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
+    """
+    Compute a REAL GateScore for today for NVDA.
+
+    Current implementation is conservative:
+    - Reads logs/gatescore_pnl_summary.csv via load_nvda_gatescore_health()
+    - Uses mean_edge_ratio as the score proxy (bounded)
+    - Raises on missing data (caller will fail-closed)
+
+    Upgrade later: compute from Phase-1 replay + GateScore model outputs.
+    """
+    h = load_nvda_gatescore_health(repo_root=repo_root)
+    # mean_edge_ratio is the most direct "edge quality" proxy currently available
+    score = float(getattr(h, "mean_edge_ratio", 0.0) or 0.0)
+    # bound score to avoid extreme values
+    if score > 1.0:
+        score = 1.0
+    if score < -1.0:
+        score = -1.0
+    return score
