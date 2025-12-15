@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from .blockg_types import BlockGStatus, load_blockg_status
 from datetime import date
 from enum import Enum
 from pathlib import Path
