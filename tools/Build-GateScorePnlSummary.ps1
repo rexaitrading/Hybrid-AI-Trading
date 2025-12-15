@@ -29,6 +29,9 @@ if (-not $sym) { throw "Symbol empty" }
 $out = Join-Path $logs "gatescore_pnl_summary.csv"
 $tradesCsv = Join-Path $logs "trades.csv"
 
+Write-Host ("[GATESCORE-PNL] repoRoot={0}" -f $repoRoot) -ForegroundColor DarkCyan
+Write-Host ("[GATESCORE-PNL] logs={0}" -f $logs) -ForegroundColor DarkCyan
+Write-Host ("[GATESCORE-PNL] tradesCsv={0} exists={1}" -f $tradesCsv, (Test-Path $tradesCsv)) -ForegroundColor DarkCyan
 # Match smoke expectation: always output these columns.
 # (mean_edge_ratio/mean_micro_score are placeholders until you wire real metrics)
 $header = "as_of_date,symbol,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score,mean_pnl"

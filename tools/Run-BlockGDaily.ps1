@@ -42,6 +42,33 @@ Assert-Exists $evhard
 Step "GateScore NVDA events -> logs\nvda_gatescore_events.jsonl" {
   powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Write-NvdaGateScoreEventsFromTrades.ps1
 }
+
+# 2.6) Phase-3 GateScore REAL producer (must generate nvda_gatescore_events.jsonl or nvda_gatescore_samples.csv)
+Step "Phase-3 GateScore REAL producer -> logs\\nvda_gatescore_events.jsonl / nvda_gatescore_samples.csv" {
+  if (Test-Path .\tools\Run-Phase3GateScoreDaily.ps1) {
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-Phase3GateScoreDaily.ps1
+  } elseif (Test-Path .\tools\Run-GateScoreDailySuite.ps1) {
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-GateScoreDailySuite.ps1
+  } else {
+    Write-Host "[GATESCORE] WARN: no Phase-3 GateScore runner found; remain fail-closed." -ForegroundColor Yellow
+  }
+}
+
+# Validate GateScore inputs exist (fail-closed; do not throw)
+$gsInputs = @(
+  (Join-Path $logs "nvda_gatescore_events.jsonl"),
+  (Join-Path $logs "nvda_gatescore_samples.csv"),
+  (Join-Path $logs "gatescore_events.jsonl"),
+  (Join-Path $logs "gatescore_samples.csv")
+)
+$hasGs = $false
+foreach($p in $gsInputs){ if(Test-Path $p){ $hasGs = $true; break } }
+if (-not $hasGs) { Write-Host "[GATESCORE] NO REAL INPUT produced; daily summary will remain header-only (NO-GO)." -ForegroundColor Yellow }
+
+# 2.55) GateScore NVDA samples (REAL producer target)
+Step "GateScore NVDA samples -> logs\nvda_gatescore_samples.csv" {
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Write-NvdaGateScoreSamplesFromReplay.ps1
+}
 # 3) GateScore daily summary
 Step "GateScore daily summary -> logs\gatescore_daily_summary.csv" {
   powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-GateScoreDailySummary.ps1
