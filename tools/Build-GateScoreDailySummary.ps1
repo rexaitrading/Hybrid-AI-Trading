@@ -68,10 +68,22 @@ if (-not $rows) {
     if ($d.Length -ge 10) { $d = $d.Substring(0,10) }
     $n = 0
     try { $n = [int]("$($r.samples)") } catch { $n = 0 }
+
     $sc = 0.0
     try { $sc = [double]("$($r.score)") } catch { $sc = 0.0 }
+
+    # Prefer real counts if present (single-pass deterministic), else fallback to samples proxy
+    $cs = $n
+    $ps = $n
+    if ($r.PSObject.Properties.Name -contains "count_signals") {
+      try { $cs = [int]("$($r.count_signals)") } catch { $cs = $n }
+    }
+    if ($r.PSObject.Properties.Name -contains "pnl_samples") {
+      try { $ps = [int]("$($r.pnl_samples)") } catch { $ps = $n }
+    }
+
     # mean_micro_score placeholder 0.0 until real metric wired
-    $lines += ("{0},{1},{2},{3},{4},{5},{6}" -f $d,$sym,$src,$n,$n,("{0:F6}" -f $sc),("{0:F6}" -f 0.0))
+    $lines += ("{0},{1},{2},{3},{4},{5},{6}" -f $d,$sym,$src,$cs,$ps,("{0:F6}" -f $sc),("{0:F6}" -f 0.0))
   }
   $lines | Out-File -FilePath $out -Encoding ascii
 }
@@ -80,3 +92,4 @@ if (-not $rows) {
 Write-Host "[GATESCORE] Wrote logs\gatescore_daily_summary.csv" -ForegroundColor Green
 Get-Content $out -TotalCount 2
 exit 0
+
