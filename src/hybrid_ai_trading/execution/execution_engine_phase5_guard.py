@@ -43,6 +43,9 @@ def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None, ctx: R
     if engine is not None and getattr(engine, "is_paper", False):
         return
 
+    if ctx is None and engine is not None:
+        ctx = getattr(engine, "run_context", None)
+
     if ctx is not None:
         # Canonical live safety gate (RunContext is the single authority)
         ctx.require_live_safe()
