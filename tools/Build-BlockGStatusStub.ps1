@@ -38,6 +38,12 @@ function Main {
   $phase4Stamp = Join-Path $logs "phase4_validation_passed.json"
   $outJson     = Join-Path $logs "blockg_status_stub.json"
 
+  # Diagnostics: show missing inputs (log-only)
+  if (-not (Test-Path $phase23Path)) { Write-Host "[BLOCK-G] MISSING $phase23Path" -ForegroundColor Yellow }
+  if (-not (Test-Path $evHardPath))  { Write-Host "[BLOCK-G] MISSING $evHardPath" -ForegroundColor Yellow }
+  if (-not (Test-Path $gsDailyPath)) { Write-Host "[BLOCK-G] MISSING $gsDailyPath" -ForegroundColor Yellow }
+  if (-not (Test-Path $phase4Stamp)) { Write-Host "[BLOCK-G] MISSING $phase4Stamp" -ForegroundColor Yellow }
+
   $phase23Rows = (@(Try-LoadCsv -Path $phase23Path))
   $evHardRows  = (@(Try-LoadCsv -Path $evHardPath))
 $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
