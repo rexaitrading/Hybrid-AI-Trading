@@ -71,125 +71,103 @@ def load_nvda_gatescore_health(repo_root: Optional[Path] = None) -> GateScoreHea
 
 def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
     """
-    TRUE ORB+VWAP GateScore (deterministic, replay-driven).
+    TRUE ORB+VWAP GateScore (deterministic, replay-driven, NO GUESSING).
 
-    - ORB window: strict minutes but bounded by available bars (min(15, available-1))
-    - VWAP deviation bands
-    - Regime hook (use existing module if present; else deterministic fallback)
-    - Exports honest diagnostics: _NVDA_GS_COUNT_SIGNALS / _NVDA_GS_PNL_SAMPLES
+    Strict ORB: orb_n = min(15, len(bars)-1)  (always leaves >=1 post bar)
+    VWAP confirm:
+      - Long trigger: high >= ORH and close >= vwap
+      - Short trigger: low  <= ORL and close <= vwap
+
+    Score mapping (locked to decision rules):
+      +1.0 = first confirmed LONG breakout
+      -1.0 = first confirmed SHORT breakout
+       0.0 = no confirmed breakout
+
+    Exports honest diagnostics:
+      _NVDA_GS_COUNT_SIGNALS = number of post bars that hit either trigger
+      _NVDA_GS_PNL_SAMPLES   = number of post bars
     """
     from pathlib import Path
-    import math
-    import pandas as pd
+    from datetime import datetime
+    import csv
 
     rr = repo_root or Path(__file__).resolve().parents[3]
     csv_path = rr / "data" / "nvda_1min_sample.csv"
     if not csv_path.exists():
         raise FileNotFoundError(f"Replay NVDA CSV not found at {csv_path}")
 
-    df = pd.read_csv(csv_path)
-    if df.empty:
-        raise ValueError("Replay NVDA CSV empty")
+    # Load bars (sorted by timestamp)
+    rows = []
+    with csv_path.open("r", encoding="utf-8", newline="") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            try:
+                ts = row.get("timestamp")
+                if not ts:
+                    continue
+                # keep as string for sorting fallback; parse best-effort
+                o = float(row["open"]); h = float(row["high"]); l = float(row["low"]); c = float(row["close"])
+                v = float(row.get("volume") or 0.0)
+            except Exception:
+                continue
+            rows.append((ts, o, h, l, c, v))
 
-    # normalize columns
-    need_cols = {"timestamp","open","high","low","close","volume"}
-    if not need_cols.issubset(set(df.columns)):
-        raise ValueError(f"Replay NVDA CSV missing cols: {sorted(list(need_cols - set(df.columns)))}")
-
-    # index
-    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
-    df = df.dropna(subset=["timestamp"]).copy()
-    df = df.set_index("timestamp").sort_index()
-    if len(df) < 3:
+    if len(rows) < 3:
         raise ValueError("Not enough replay bars for ORB+VWAP (need >=3)")
 
-    # VWAP
-    tp = (df["high"] + df["low"] + df["close"]) / 3.0
-    vol = df["volume"].fillna(0.0).astype(float)
-    w = vol.where(vol > 0.0, 1.0)
-    df["vwap"] = (tp * w).cumsum() / w.cumsum().clip(lower=1e-9)
+    # sort by timestamp string (ISO ordering works for your sample)
+    rows.sort(key=lambda x: x[0])
 
-    # Strict ORB minutes, bounded by available bars
-    from hybrid_ai_trading.strategies.orb_vwap import ORBVWAPStrategy, ORBVWAPConfig
-    orb_minutes = int(min(15, max(1, len(df)-1)))
-    cfg = ORBVWAPConfig(open_range_minutes=orb_minutes, vwap_confirm=True)
-    strat = ORBVWAPStrategy(cfg)
+    # Build VWAP cumulatively
+    vwap_list = []
+    num = 0.0
+    den = 0.0
+    for (_, o, h, l, c, v) in rows:
+        w = v if v > 0 else 1.0
+        tp = (h + l + c) / 3.0
+        num += tp * w
+        den += w
+        vwap_list.append(num / max(1e-9, den))
 
-    session_open = df.index.min()
-    sigdf = strat.generate_signals(df[["open","high","low","close","vwap"]], session_open=session_open)
+    # Strict ORB bar window
+    orb_n = min(15, len(rows) - 1)
+    orb = rows[:orb_n]
+    orh = max(x[2] for x in orb)
+    orl = min(x[3] for x in orb)
 
-    # Honest diagnostics
-    # count_signals: number of post-ORB bars that touch ORH/ORL (potential triggers)
-    end_or = session_open + pd.Timedelta(minutes=orb_minutes)
-    post = sigdf.index >= end_or
-    orh = float(sigdf.attrs.get("orb_high", float("nan")))
-    orl = float(sigdf.attrs.get("orb_low", float("nan")))
-    touches = 0
-    if not math.isnan(orh) and not math.isnan(orl):
-        touches = int(((post) & ((sigdf["high"] >= orh) | (sigdf["low"] <= orl))).sum())
-    count_signals = max(0, touches)
-    pnl_samples = int(max(0, post.sum()))
+    # Post-ORB scanning
+    post_rows = rows[orb_n:]
+    post_vwaps = vwap_list[orb_n:]
+    pnl_samples = len(post_rows)
+
+    # Count trigger opportunities ("signals")
+    count_signals = 0
+    long_hits = []
+    short_hits = []
+    for i in range(len(post_rows)):
+        (_, o, h, l, c, v) = post_rows[i]
+        vw = post_vwaps[i]
+        long_ok = (h >= orh) and (c >= vw)
+        short_ok = (l <= orl) and (c <= vw)
+        if long_ok or short_ok:
+            count_signals += 1
+        if long_ok:
+            long_hits.append(i)
+        if short_ok:
+            short_hits.append(i)
+
     globals()["_NVDA_GS_COUNT_SIGNALS"] = int(count_signals)
     globals()["_NVDA_GS_PNL_SAMPLES"] = int(pnl_samples)
 
-    # Determine signal direction (first breakout only per strategy)
-    if "signal" not in sigdf.columns:
+    # First confirmed breakout (time order), tie-break: earlier index wins
+    first_long = long_hits[0] if long_hits else None
+    first_short = short_hits[0] if short_hits else None
+
+    if first_long is None and first_short is None:
         return 0.0
-    sidx = sigdf.index[sigdf["signal"] != 0]
-    if len(sidx) < 1:
-        return 0.0
-    entry_ts = sidx[0]
-    direction = int(sigdf.loc[entry_ts, "signal"])
-
-    # VWAP deviation at entry
-    entry_close = float(sigdf.loc[entry_ts, "close"])
-    entry_vwap  = float(sigdf.loc[entry_ts, "vwap"])
-    vwap_dev = (entry_close - entry_vwap) / max(1e-9, entry_vwap)
-
-    # Breakout strength band (normalized to OR range)
-    orb_range = max(1e-9, (orh - orl))
-    orb_mid = (orh + orl) / 2.0
-    orb_strength = (entry_close - orb_mid) / orb_range
-
-    # VWAP deviation bands
-    # band0: |dev| < 0.10% ; band1: 0.10%-0.25% ; band2: >0.25%
-    adev = abs(vwap_dev)
-    if adev < 0.001:
-        dev_band = 0.25
-    elif adev < 0.0025:
-        dev_band = 0.60
-    else:
-        dev_band = 1.00
-
-    # Regime hook (best-effort). Fallback: trend+vol penalty.
-    regime_mult = 1.0
-    try:
-        # If you have a regime detector, map it to a multiplier deterministically
-        from hybrid_ai_trading.regime.regime_detector import RegimeDetector
-        rd = RegimeDetector()
-        reg = rd.detect(sigdf)  # expected to be deterministic on df
-        # example mapping
-        if str(reg).lower().find("trend") >= 0:
-            regime_mult = 1.05
-        elif str(reg).lower().find("chop") >= 0:
-            regime_mult = 0.85
-    except Exception:
-        # fallback vol penalty
-        closes = sigdf["close"].astype(float).tolist()
-        xs = closes[-min(20, len(closes)):]
-        rets = []
-        for i in range(1, len(xs)):
-            if xs[i-1] > 0:
-                rets.append((xs[i]-xs[i-1]) / xs[i-1])
-        if len(rets) >= 2:
-            m = sum(rets) / len(rets)
-            var = sum((x-m)*(x-m) for x in rets) / max(1, (len(rets)-1))
-            vol = math.sqrt(max(0.0, var))
-            if vol > 0.02:
-                regime_mult = 0.5
-
-    # Score combine (directional)
-    raw = (0.60 * orb_strength) + (2.00 * dev_band) + (0.20 * (1.0 if direction > 0 else -1.0))
-    score = float(max(-1.0, min(1.0, raw * regime_mult)))
-    return score
+    if first_short is None:
+        return 1.0
+    if first_long is None:
+        return -1.0
+    return 1.0 if first_long <= first_short else -1.0
 
