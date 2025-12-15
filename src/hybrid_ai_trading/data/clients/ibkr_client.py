@@ -12,6 +12,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from ib_insync import IB, LimitOrder, MarketOrder, Stock
+from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
 
 
 def connect_ib(
@@ -96,6 +97,7 @@ def place_market_stock(
 ) -> Dict[str, Any]:
     contract = Stock(symbol, "SMART", "USD")
     order = MarketOrder(action.upper(), abs(shares))
+    forbid_direct_ib_live("data/clients/ibkr_client.py:direct_send")
     trade = ib.placeOrder(contract, order)
     ib.sleep(1.0)
     return {"orderId": trade.order.orderId, "status": trade.orderStatus.status}
@@ -106,6 +108,7 @@ def place_limit_stock(
 ) -> Dict[str, Any]:
     contract = Stock(symbol, "SMART", "USD")
     order = LimitOrder(action.upper(), abs(shares), float(limit_price))
+    forbid_direct_ib_live("data/clients/ibkr_client.py:direct_send")
     trade = ib.placeOrder(contract, order)
     ib.sleep(1.0)
     return {"orderId": trade.order.orderId, "status": trade.orderStatus.status}

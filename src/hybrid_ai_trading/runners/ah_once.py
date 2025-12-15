@@ -4,6 +4,7 @@ import os
 import sys
 
 from ib_insync import IB, LimitOrder, MarketOrder, Stock
+from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
 
 
 def parse_args():
@@ -66,6 +67,7 @@ def main():
             side, args.qty, lmtPrice=lmt, outsideRth=args.outside_rth, tif=args.tif
         )
 
+    forbid_direct_ib_live("runners/ah_once.py:direct_send")
     tr = ib.placeOrder(contract, order)
     for _ in range(max(1, int(args.wait_sec))):
         ib.sleep(1.0)

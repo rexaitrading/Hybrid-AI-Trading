@@ -10,6 +10,7 @@ from typing import Dict, Optional, Tuple
 
 # ib_insync
 from ib_insync import IB, Contract, LimitOrder, Stock, StopLimitOrder, TagValue, Trade
+from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
 
 # ---------- paths / audit ----------
 ROOT = Path.cwd()
@@ -138,6 +139,7 @@ def whatif_validate(
     trial.algoStrategy = getattr(order, "algoStrategy", None)
     trial.algoParams = getattr(order, "algoParams", None)
     trial.whatIf = True
+    forbid_direct_ib_live("execution/paper_order.py:direct_send")
     tr = ib.placeOrder(contract, trial)
     ib.sleep(0.6)
     err = None
@@ -213,8 +215,11 @@ def place_bracket(
     stop.outsideRth = bool(outside_rth)
     stop.orderRef = order_ref
 
+    forbid_direct_ib_live("execution/paper_order.py:direct_send")
     tr_parent = ib.placeOrder(contract, parent)
+    forbid_direct_ib_live("execution/paper_order.py:direct_send")
     tr_take = ib.placeOrder(contract, take)
+    forbid_direct_ib_live("execution/paper_order.py:direct_send")
     tr_stop = ib.placeOrder(contract, stop)
     ib.sleep(0.8)
     return tr_parent, tr_take, tr_stop
@@ -372,7 +377,7 @@ def run(
         ):
             ib.waitOnUpdate(timeout=1.0)
         if tr_parent.orderStatus.status in ("PreSubmitted", "Submitted"):
-            print("Auto-reprice: canceling stale order and re-placing onceÃ¢â‚¬Â¦")
+            print("Auto-reprice: canceling stale order and re-placing onceÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦")
             ib.cancelOrder(tr_parent.order)
             ib.sleep(0.6)
             q2 = get_quotes(ib, contract)
