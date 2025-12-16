@@ -8,6 +8,11 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
+# STRICT GateScore REAL-OK:
+# Default ON (fail-closed). Set HAT_GATESCORE_STRICT_REAL=0 to disable (NOT recommended for live).
+$STRICT_GS_REAL = ($env:HAT_GATESCORE_STRICT_REAL -ne "0")
+
+
 function Get-TodayStr { (Get-Date).ToString("yyyy-MM-dd") }
 
 function Read-JsonSafe([string]$p) {
@@ -48,6 +53,12 @@ function Eval-GateScoreForSymbol([string]$sym, [string]$today) {
   $logs = Join-Path $repoRoot "logs"
   $gsDaily = Join-Path $logs ("gatescore_daily_summary_{0}.csv" -f $symU.ToLowerInvariant())
   if (-not (Test-Path $gsDaily)) { return @{ fresh=$false; samples_ok=$false; th_ok=$false; ok=$false } }
+
+  # STRICT: require authoritative event file to exist for this symbol
+  if ($STRICT_GS_REAL) {
+    $evt = Join-Path $logs ("{0}_gatescore_events.jsonl" -f $symU.ToLowerInvariant())
+    if (-not (Test-Path $evt)) { return @{ fresh=$false; samples_ok=$false; th_ok=$false; ok=$false } }
+  }
 
   $rows = @(Try-LoadCsv $gsDaily)
 
@@ -151,3 +162,4 @@ Write-Host "[BLOCK-G] Wrote $outJson" -ForegroundColor Green
 Write-Host ("[BLOCK-G] today={0} phase4={1} phase23={2} evhard={3} nvda_ok={4} spy_ok={5} qqq_ok={6}" -f `
   $today,$phase4_ok,$phase23_ok,$evhard_ok,$obj.nvda_blockg_ready,$obj.spy_blockg_ready,$obj.qqq_blockg_ready) -ForegroundColor Cyan
 exit 0
+
