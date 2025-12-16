@@ -1,3 +1,7 @@
+param(
+  [Parameter(Mandatory=$false)][ValidateSet("NVDA","SPY","QQQ")][string]$Symbol = "NVDA"
+)
+
 function As-Array {
   param([Parameter(ValueFromPipeline=$true)]$InputObject)
   if ($null -eq $InputObject) { return @() }
@@ -32,6 +36,18 @@ function Has-TodayRow {
     [Parameter(Mandatory=$true)][string]$DateField,
     [Parameter(Mandatory=$true)][string]$Today
   )
+
+# Normalize symbol param (StrictMode-safe)
+if (Get-Variable -Name Symbol -ErrorAction SilentlyContinue) {
+  # ok: already $Symbol
+} elseif (Get-Variable -Name symbol -ErrorAction SilentlyContinue) {
+  $Symbol = $symbol
+} else {
+  throw "[BLOCK-G] Missing -Symbol parameter (no $Symbol/$symbol variable found)."
+}
+if ([string]::IsNullOrWhiteSpace("$Symbol")) { throw "[BLOCK-G] -Symbol is empty." }
+$Symbol = ("$Symbol").Trim().ToUpperInvariant()
+
   if (-not $Rows) { return $false }
   foreach ($r in $Rows) {
     if ($null -eq $r) { continue }
@@ -45,9 +61,15 @@ function Has-TodayRow {
 }
 
 function Main {
+  param([Parameter(Mandatory=$true)][string]$Symbol)
   $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
   $logs = Join-Path $repoRoot "logs"
   $today = Get-TodayStr
+
+  # Normalize Symbol (StrictMode-safe)
+  $Symbol = ("$Symbol").Trim().ToUpperInvariant()
+  if ([string]::IsNullOrWhiteSpace($Symbol)) { throw "[BLOCK-G] -Symbol is empty." }
+
 
   $phase23Path = Join-Path $logs "phase23_health_daily.csv"
   $evHardPath  = Join-Path $logs "phase5_ev_hard_veto_daily.csv"
@@ -68,7 +90,7 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   $phase23_ok = Has-TodayRow -Rows $phase23Rows -DateField "date" -Today $today
   $evhard_ok  = Has-TodayRow -Rows $evHardRows  -DateField "date" -Today $today
 
-  # Phase-4 stamp (must be present and today) — BOM-safe + fail-closed
+  # Phase-4 stamp (must be present and today) ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â BOM-safe + fail-closed
   $phase4_ok = $false
   if (Test-Path $phase4Stamp) {
     try {
@@ -179,5 +201,4 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
   Write-Host "[BLOCK-G] Wrote $outJson" -ForegroundColor Green
   Write-Host ("[BLOCK-G] today={0} phase4_ok={1} phase23_ok={2} evhard_ok={3} gs_ok={4} nvda_ready={5}" -f $today,$phase4_ok,$phase23_ok,$evhard_ok,$gs_ok,$nvda_ready)
 }
-
-Main
+Main -Symbol $Symbol
