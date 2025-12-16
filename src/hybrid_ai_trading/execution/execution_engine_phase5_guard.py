@@ -56,6 +56,28 @@ def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None, ctx: R
         raise RuntimeError(
             f"BLOCK-G NOT READY: symbol={d.symbol} as_of_date={d.as_of_date} reason={d.reason}"
         )
+def _require_engine_live_gate(engine: object, symbol: str) -> None:
+    """
+    Canonical Phase-5 live gate (fail-closed).
+
+    Enforces:
+      - engine.run_context exists
+      - run_context.require_live_safe(...)
+      - Block-G symbol readiness
+    """
+    ctx = getattr(engine, "run_context", None)
+    if ctx is None:
+        raise RuntimeError("[PHASE5] Missing RunContext on engine (fail-closed).")
+
+    # Prefer symbol-aware gate when supported
+    try:
+        ctx.require_live_safe(symbol=symbol)
+    except TypeError:
+        ctx.require_live_safe()
+
+    # Block-G gate (contract truth)
+    ensure_symbol_blockg_ready(symbol, engine=engine, ctx=ctx)
+
 
 
 def place_order_phase5(
