@@ -14,12 +14,13 @@ Set-Location $repoRoot
 $logs  = Join-Path $repoRoot "logs"
 $today = (Get-Date).ToString("yyyy-MM-dd")
 
-$inJsonl  = Join-Path $logs "spy_phase5_paperlive_results.jsonl"
+$inJsonl  = Join-Path $logs "spy_phase5_paperlive_results_with_micro.jsonl"
+if (-not (Test-Path $inJsonl)) { $inJsonl = Join-Path $logs "spy_phase5_paperlive_results.jsonl" }
 $outJsonl = Join-Path $logs "spy_gatescore_events.jsonl"
 
 if (-not (Test-Path $inJsonl)) { throw "Missing input: $inJsonl" }
 
-# overwrite daily (deterministic) â€” ensure empty file, no blank first line JSONL issues
+# overwrite daily (deterministic) Ã¢â‚¬â€ ensure empty file, no blank first line JSONL issues
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($outJsonl, "", $utf8NoBom)
 

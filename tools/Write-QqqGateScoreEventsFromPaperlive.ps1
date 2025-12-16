@@ -14,7 +14,8 @@ Set-Location $repoRoot
 $logs  = Join-Path $repoRoot "logs"
 $today = (Get-Date).ToString("yyyy-MM-dd")
 
-$inJsonl  = Join-Path $logs "qqq_phase5_paperlive_results.jsonl"
+$inJsonl  = Join-Path $logs "qqq_phase5_paperlive_results_with_micro.jsonl"
+if (-not (Test-Path $inJsonl)) { $inJsonl = Join-Path $logs "qqq_phase5_paperlive_results.jsonl" }
 $outJsonl = Join-Path $logs "qqq_gatescore_events.jsonl"
 
 if (-not (Test-Path $inJsonl)) { throw "Missing input: $inJsonl" }
