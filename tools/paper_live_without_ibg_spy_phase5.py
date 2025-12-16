@@ -12,6 +12,7 @@ PaperLiveWithoutIBG SPY Phase-5 runner.
 from __future__ import annotations
 
 import json
+from hybrid_ai_trading.risk.risk_phase5_ev_bands import get_ev_and_band
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -162,6 +163,7 @@ def main() -> None:
             regime="SPY_ORB_REPLAY",
         )
 
+        ev, ev_band_abs = get_ev_and_band("SPY_ORB_REPLAY")
         out = {
             "idx": idx,
             "ts_trade": ts,
@@ -169,6 +171,8 @@ def main() -> None:
             "side": side,
             "qty": qty,
             "price": row.get("price"),
+            "ev": ev,
+            "ev_band_abs": ev_band_abs,
             "phase5_result": result,
             "position_after": engine.positions.get("SPY", 0.0),
         }
