@@ -21,10 +21,15 @@ $today = if ([string]::IsNullOrWhiteSpace($AsOfDate)) { (Get-Date).ToString("yyy
 $in  = Join-Path $repoRoot $InputPath
 $out = Join-Path $repoRoot $OutputPath
 
+
+# Normalize in-place safety: always write to temp then replace
+$tmp = $out + ".tmp_normalize_" + (Get-Date).ToString("yyyyMMdd_HHmmss")
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($tmp, "", $utf8NoBom)
 if (-not (Test-Path $in)) { throw "Missing input: $in" }
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($out, "", $utf8NoBom)
+[System.IO.File]::WriteAllText($tmp, "", $utf8NoBom)
 
 $rowsIn = 0
 $rowsOut = 0
@@ -46,9 +51,12 @@ Get-Content $in -Encoding utf8 | ForEach-Object {
     } catch { }
   }
 
-  ($o | ConvertTo-Json -Compress) | Add-Content -Path $out -Encoding utf8
+  ($o | ConvertTo-Json -Compress) | Add-Content -Path $tmp -Encoding utf8
   $rowsOut++
 }
+
+# Replace output atomically
+Move-Item -Force -LiteralPath $tmp -Destination $out
 
 Write-Host ("[PAPER-TRADES] Normalized: in_rows={0} out_rows={1} as_of={2} out={3}" -f $rowsIn,$rowsOut,$today,$out) -ForegroundColor Green
 exit 0

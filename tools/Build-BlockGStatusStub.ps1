@@ -92,8 +92,7 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   # Conservative: require today rows to exist
   $phase23_ok = Has-TodayRow -Rows $phase23Rows -DateField "date" -Today $today
   $evhard_ok  = Has-TodayRow -Rows $evHardRows  -DateField "date" -Today $today
-
-  # Phase-4 stamp (must be present and today) ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â BOM-safe + fail-closed
+# Phase-4 stamp (must be present and today) (BOM-safe, fail-closed)
   $phase4_ok = $false
   if (Test-Path $phase4Stamp) {
     try {
@@ -133,7 +132,7 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
       break
     }
   }
-  # Thresholds (symbol-specific) — fail-closed defaults
+# Thresholds (symbol-specific) fail-closed defaults
   $min_signals = 10
   $min_pnl_samples = 20
   $min_edge_abs = 0.50
@@ -192,27 +191,27 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   $nvda_ready = ($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok)
 
   $obj = [ordered]@{
-    ts_utc                     = (Get-Date).ToUniversalTime().ToString("o")
-    as_of_date                 = $today
+    ts_utc                       = (Get-Date).ToUniversalTime().ToString("o")
+    as_of_date                   = $today
 
-    phase4_ok_today            = [bool]$phase4_ok
-    phase23_health_ok_today    = [bool]$phase23_ok
-    ev_hard_daily_ok_today     = [bool]$evhard_ok
+    phase4_ok_today              = [bool]$phase4_ok
+    phase23_health_ok_today      = [bool]$phase23_ok
+    ev_hard_daily_ok_today       = [bool]$evhard_ok
 
-    gatescore_fresh_today      = [bool]$gs_fresh
-    gatescore_samples_ok_today = [bool]$gs_samples_ok
+    gatescore_fresh_today        = [bool]$gs_fresh
+    gatescore_samples_ok_today   = [bool]$gs_samples_ok
     gatescore_threshold_ok_today = [bool]$gs_threshold_ok
-    gatescore_ok_today         = [bool]$gs_ok
+    gatescore_ok_today           = [bool]$gs_ok
 
-    nvda_blockg_ready          = [bool]$nvda_ready
-    spy_blockg_ready           = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $false)
-    qqq_blockg_ready           = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $false)
+    nvda_blockg_ready            = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok -and ($Symbol -eq "NVDA"))
+    spy_blockg_ready             = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok -and ($Symbol -eq "SPY"))
+    qqq_blockg_ready             = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok -and ($Symbol -eq "QQQ"))
   }
 
   $json = ($obj | ConvertTo-Json -Depth 6)
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($outJson, $json, $utf8NoBom)
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText($outJson, $json, $utf8NoBom)
   Write-Host "[BLOCK-G] Wrote $outJson" -ForegroundColor Green
-  Write-Host ("[BLOCK-G] today={0} phase4_ok={1} phase23_ok={2} evhard_ok={3} gs_ok={4} nvda_ready={5}" -f $today,$phase4_ok,$phase23_ok,$evhard_ok,$gs_ok,$nvda_ready)
+  Write-Host ("[BLOCK-G] today={0} phase4_ok={1} phase23_ok={2} evhard_ok={3} gs_ok={4} nvda_ready={5}" -f $today,$phase4_ok,$phase23_ok,$evhard_ok,$gs_ok,($obj.nvda_blockg_ready))
 }
 Main -Symbol $Symbol
