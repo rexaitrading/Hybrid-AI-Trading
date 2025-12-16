@@ -73,7 +73,10 @@ function Main {
 
   $phase23Path = Join-Path $logs "phase23_health_daily.csv"
   $evHardPath  = Join-Path $logs "phase5_ev_hard_veto_daily.csv"
-  $gsDailyPath = Join-Path $logs "gatescore_daily_summary.csv"
+  $gsDailyPath = Join-Path $logs ("gatescore_daily_summary_{0}.csv" -f $Symbol.ToLowerInvariant())
+  if (-not (Test-Path $gsDailyPath)) {
+    $gsDailyPath = Join-Path $logs "gatescore_daily_summary.csv"  # fallback
+  }
   $phase4Stamp = Join-Path $logs "phase4_validation_passed.json"
   $outJson     = Join-Path $logs "blockg_status_stub.json"
 
@@ -90,7 +93,7 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   $phase23_ok = Has-TodayRow -Rows $phase23Rows -DateField "date" -Today $today
   $evhard_ok  = Has-TodayRow -Rows $evHardRows  -DateField "date" -Today $today
 
-  # Phase-4 stamp (must be present and today) ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â BOM-safe + fail-closed
+  # Phase-4 stamp (must be present and today) ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â BOM-safe + fail-closed
   $phase4_ok = $false
   if (Test-Path $phase4Stamp) {
     try {
