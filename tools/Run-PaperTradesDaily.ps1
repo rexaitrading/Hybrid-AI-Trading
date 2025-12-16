@@ -12,7 +12,7 @@ $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
 # 1) Generate base paper_trades.jsonl (current generator)
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Write-NvdaPaperTradesStub.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Write-NvdaPaperTradesStub.ps1 -Count 360
 if ($LASTEXITCODE -ne 0) { throw "Write-NvdaPaperTradesStub.ps1 failed exit=$LASTEXITCODE" }
 if (Test-Path .\tools\Write-SpyQqqPaperTradesStub.ps1) {
   if ([string]::IsNullOrWhiteSpace($AsOfDate)) {
@@ -41,3 +41,4 @@ $paper = Join-Path $repoRoot "logs\paper_trades.jsonl"
 Write-Host ("[PAPER-TRADES] READY: {0}" -f $paper) -ForegroundColor Green
 Get-Content $paper -TotalCount 3
 exit 0
+

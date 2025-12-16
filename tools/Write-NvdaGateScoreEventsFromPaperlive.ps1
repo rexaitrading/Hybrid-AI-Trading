@@ -15,6 +15,17 @@ $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
 $logs  = Join-Path $repoRoot "logs"
+
+# Phase-2 micro snapshot (day-level) -> micro_score fallback (fail-closed to 0.0)
+$pyExe = Join-Path $repoRoot ".\.venv\Scripts\python.exe"
+$microFallback = 0.0
+try {
+  if (Test-Path $pyExe -and (Test-Path ".\tools\compute_nvda_micro_score_today.py")) {
+    $out = & $pyExe ".\tools\compute_nvda_micro_score_today.py"
+    $microFallback = [double]("$out")
+  }
+} catch { $microFallback = 0.0 }
+
 $today = if ([string]::IsNullOrWhiteSpace($AsOfDate)) { (Get-Date).ToString("yyyy-MM-dd") } else { $AsOfDate }
 
 # Phase-2 micro snapshot (day-level) -> micro_score fallback
@@ -134,6 +145,7 @@ if ($rows -eq 0) {
 
 Write-Host "[GS-EVENTS] Wrote $outJsonl rows=$rows mode=$Mode" -ForegroundColor Green
 exit 0
+
 
 
 
