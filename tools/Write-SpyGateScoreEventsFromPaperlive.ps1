@@ -20,7 +20,7 @@ $outJsonl = Join-Path $logs "spy_gatescore_events.jsonl"
 if (-not (Test-Path $inJsonl)) { throw "Missing input: $inJsonl" }
 
 # overwrite daily (deterministic)
-"" | Out-File -FilePath $outJsonl -Encoding utf8
+Set-Content -Path $outJsonl -Value $null -Encoding utf8
 
 $rows = 0
 Get-Content $inJsonl -Encoding utf8 | ForEach-Object {

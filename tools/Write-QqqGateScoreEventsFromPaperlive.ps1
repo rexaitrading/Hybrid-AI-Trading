@@ -19,7 +19,7 @@ $outJsonl = Join-Path $logs "qqq_gatescore_events.jsonl"
 
 if (-not (Test-Path $inJsonl)) { throw "Missing input: $inJsonl" }
 
-"" | Out-File -FilePath $outJsonl -Encoding utf8
+Set-Content -Path $outJsonl -Value $null -Encoding utf8
 
 $rows = 0
 Get-Content $inJsonl -Encoding utf8 | ForEach-Object {
