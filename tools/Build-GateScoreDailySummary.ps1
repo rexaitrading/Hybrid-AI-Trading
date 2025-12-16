@@ -54,6 +54,56 @@ if (-not (Test-Path $calc)) { Write-Host "[GATESCORE] ERROR: missing $calc" -For
 
 Write-Host "[GATESCORE] Using input: $input" -ForegroundColor Cyan
 
+# --- REAL JSONL aggregation path (skip python calculator) ---
+try {
+  if ($input -like "*_gatescore_events.jsonl") {
+    $evts = @()
+    Get-Content $input -Encoding utf8 | ForEach-Object {
+      if ($_ -and $_.Trim()) {
+        try { $evts += ($_ | ConvertFrom-Json -ErrorAction Stop) } catch { }
+      }
+    }
+
+    if ($evts.Count -gt 0 -and ($evts[0].PSObject.Properties.Name -contains "edge_ratio")) {
+      $sumSignals = 0
+      $sumPnls    = 0
+      $sumEdge    = 0.0
+      $sumMicro   = 0.0
+      $n          = 0
+
+      foreach ($e in $evts) {
+        try {
+          $sumSignals += [int]$e.count_signals
+          $sumPnls    += [int]$e.pnl_samples
+          $sumEdge    += [double]$e.edge_ratio
+          $sumMicro   += [double]$e.micro_score
+          $n++
+        } catch { }
+      }
+
+      if ($n -gt 0) {
+        $header = "as_of_date,symbol,source,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score"
+        $row = "{0},{1},{2},{3},{4},{5},{6}" -f `
+          $today,$Symbol,(Get-GateScoreSourceFromMode $Mode),`
+          $sumSignals,$sumPnls,`
+          ([Math]::Round($sumEdge / $n,6)),`
+          ([Math]::Round($sumMicro / $n,6))
+
+        $header | Out-File -FilePath $out -Encoding ascii
+        $row    | Add-Content -Path $out -Encoding ascii
+
+        Write-Host ("[GATESCORE] REAL JSONL aggregation wrote {0}" -f $out) -ForegroundColor Green
+        Get-Content $out -TotalCount 2
+        exit 0
+      }
+    }
+  }
+} catch {
+  Write-Host ("[GATESCORE] WARN: REAL JSONL aggregation failed: {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+}
+# --- end REAL JSONL aggregation ---
+
+
 # --- Minimal JSONL fallback (schema-safe) -------------------------------------
 # If input is *_gatescore_events.jsonl with only count_signals/pnl_samples/score,
 # the Python calculator may emit empty/skip. We aggregate deterministically here.
@@ -157,6 +207,5 @@ if (-not $rows) {
 Write-Host ("[GATESCORE] Wrote {0}" -f $out) -ForegroundColor Green
 Get-Content $out -TotalCount 2
 exit 0
-
 
 
