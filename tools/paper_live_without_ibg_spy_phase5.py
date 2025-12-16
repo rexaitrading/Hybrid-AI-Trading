@@ -164,6 +164,8 @@ def main() -> None:
         )
 
         ev, ev_band_abs = get_ev_and_band("SPY_ORB_REPLAY")
+
+        ev, ev_band_abs = get_ev_and_band("SPY_ORB_REPLAY")
         out = {
             "idx": idx,
             "ts_trade": ts,
@@ -171,6 +173,8 @@ def main() -> None:
             "side": side,
             "qty": qty,
             "price": row.get("price"),
+            "ev": ev,
+            "ev_band_abs": ev_band_abs,
             "ev": ev,
             "ev_band_abs": ev_band_abs,
             "phase5_result": result,
