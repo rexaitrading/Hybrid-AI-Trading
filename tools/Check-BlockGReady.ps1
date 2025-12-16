@@ -51,14 +51,19 @@ function Get-Bool($v) {
 $phase23 = Get-Bool $c.phase23_health_ok_today
 $evhard  = Get-Bool $c.ev_hard_daily_ok_today
 # GateScore field:
-# Prefer gatescore_ok_today (fresh + samples + thresholds), fallback to gatescore_fresh_today for old contracts.
+# Prefer per-symbol gatescore if present (e.g., nvda_gatescore_ok_today), else fallback to gatescore_ok_today,
+# else fallback to gatescore_fresh_today for old contracts.
 $gs_ok = $false
-if ($c.PSObject.Properties.Name -contains "gatescore_ok_today") {
-$gs_ok = Get-Bool $c.gatescore_ok_today
+
+$gsField = ($Symbol.ToLowerInvariant() + "_gatescore_ok_today")
+if ($c.PSObject.Properties.Name -contains $gsField) {
+    $gs_ok = Get-Bool $c.$gsField
+} elseif ($c.PSObject.Properties.Name -contains "gatescore_ok_today") {
+    $gs_ok = Get-Bool $c.gatescore_ok_today
 } elseif ($c.PSObject.Properties.Name -contains "gatescore_fresh_today") {
-$gs_ok = Get-Bool $c.gatescore_fresh_today
+    $gs_ok = Get-Bool $c.gatescore_fresh_today
 } else {
-    Write-Host "[BLOCKG] INVALID CONTRACT: missing GateScore field (gatescore_ok_today / gatescore_fresh_today)" -ForegroundColor Red
+    Write-Host "[BLOCKG] INVALID CONTRACT: missing GateScore fields (per-symbol / gatescore_ok_today / gatescore_fresh_today)" -ForegroundColor Red
     exit 3
 }
 $nvdaFlag = Get-Bool $c.nvda_blockg_ready
@@ -78,3 +83,4 @@ if ($ok) {
 
 Write-Host "[BLOCKG] NOT READY Symbol=$Symbol as_of_date=$asOf phase23=$phase23 ev_hard=$evhard gatescore_ok=$gs_ok nvda=$nvdaFlag spy=$spyFlag qqq=$qqqFlag" -ForegroundColor Yellow
 exit 3
+
