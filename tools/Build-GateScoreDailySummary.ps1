@@ -27,11 +27,12 @@ $today = (Get-Date).ToString("yyyy-MM-dd")
 $out   = Join-Path $logs "gatescore_daily_summary.csv"
 
 # Fail-closed: we prefer real inputs. If none found, we write HEADER ONLY (no today row).
+$symLower = $Symbol.ToLowerInvariant()
 $candidates = @(
   (Join-Path $logs "gatescore_events.jsonl"),
-  (Join-Path $logs "nvda_gatescore_events.jsonl"),
+  (Join-Path $logs ("{0}_gatescore_events.jsonl" -f $symLower)),
   (Join-Path $logs "gatescore_samples.csv"),
-  (Join-Path $logs "nvda_gatescore_samples.csv")
+  (Join-Path $logs ("{0}_gatescore_samples.csv" -f $symLower))
 )
 
 $input = $null
