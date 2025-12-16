@@ -9,9 +9,9 @@ function Get-GateScoreThresholds {
   param([string]$Symbol)
   $p = "docs\thresholds\gatescore_thresholds.json"
   if (-not (Test-Path $p)) { return $null }
-  $th = Get-Content $p -Raw | ConvertFrom-Json
-  $cfg = $th.$Symbol
-  if (-not $cfg) { $cfg = $th.DEFAULT }
+  $th = Import-PowerShellDataFile -Path $p
+  $cfg = $th[$Symbol]
+  if (-not $cfg) { $cfg = $th["DEFAULT"] }
   return $cfg
 }
 
