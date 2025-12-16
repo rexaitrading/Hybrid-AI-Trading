@@ -17,6 +17,17 @@ Set-Location $repoRoot
 $logs  = Join-Path $repoRoot "logs"
 $today = if ([string]::IsNullOrWhiteSpace($AsOfDate)) { (Get-Date).ToString("yyyy-MM-dd") } else { $AsOfDate }
 
+# Phase-2 micro snapshot (day-level) -> micro_score fallback
+$pyExe = Join-Path $repoRoot ".\.venv\Scripts\python.exe"
+$microFallback = 0.0
+try {
+  if (Test-Path $pyExe -and (Test-Path ".\tools\compute_nvda_micro_score_today.py")) {
+    $out = & $pyExe ".\tools\compute_nvda_micro_score_today.py"
+    $microFallback = [double]("$out")
+  }
+} catch { $microFallback = 0.0 }
+
+
 # NVDA paperlive results (canonical path)
 $inJsonl  = Join-Path $logs "nvda_phase5_paperlive_results.jsonl"
 $outJsonl = Join-Path $logs "nvda_gatescore_events.jsonl"
@@ -27,6 +38,26 @@ if (-not (Test-Path $inJsonl)) { throw "Missing input: $inJsonl" }
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($outJsonl, "", $utf8NoBom)
 
+function Get-EvProxy($obj) {
+  # prefer top-level ev
+  try {
+    if ($null -ne $obj -and $obj.PSObject -and ($obj.PSObject.Properties.Name -contains "ev")) {
+      $v = $obj.PSObject.Properties["ev"].Value
+      if ($null -ne $v) { return [double]("$v") }
+    }
+  } catch { }
+
+  # prefer phase5_result.details.ev_mu / phase5_details.ev_mu
+  try {
+    if ($null -ne $obj.phase5_result) {
+      $d = $obj.phase5_result.phase5_details
+      if ($null -eq $d) { $d = $obj.phase5_result.details }
+      if ($null -ne $d -and $null -ne $d.ev_mu) { return [double]("$($d.ev_mu)") }
+    }
+  } catch { }
+
+  return $null
+}
 function Get-EdgeRatio($obj) {
   try {
     if ($null -ne $obj -and $obj.PSObject -and ($obj.PSObject.Properties.Name -contains "edge_ratio")) {
@@ -75,8 +106,8 @@ Get-Content $inJsonl -Encoding utf8 | ForEach-Object {
   if ($ts.Substring(0,10) -ne $today) { return }
 
   # Only count events that have GateScore metrics (edge_ratio + micro_score) AND a realized_pnl field
-  $edge = Get-EdgeRatio $obj
-  $micro = Get-MicroScore $obj
+  $edge = (Get-EvProxy $obj); if ($null -eq $edge) { $edge = Get-EdgeRatio $obj }
+  $micro = Get-MicroScore $obj; if ($micro -le 0.0) { $micro = $microFallback }
   if ($edge -eq 0.0 -and $micro -eq 0.0) { return }
   if (-not (Has-RealizedPnl $obj)) { return }
 
@@ -103,4 +134,6 @@ if ($rows -eq 0) {
 
 Write-Host "[GS-EVENTS] Wrote $outJsonl rows=$rows mode=$Mode" -ForegroundColor Green
 exit 0
+
+
 
