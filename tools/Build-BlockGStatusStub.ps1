@@ -68,15 +68,25 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   $phase23_ok = Has-TodayRow -Rows $phase23Rows -DateField "date" -Today $today
   $evhard_ok  = Has-TodayRow -Rows $evHardRows  -DateField "date" -Today $today
 
-  # Phase-4 stamp (must be present and today)
+  # Phase-4 stamp (must be present and today) — BOM-safe + fail-closed
   $phase4_ok = $false
   if (Test-Path $phase4Stamp) {
     try {
-      $j = Get-Content $phase4Stamp -Raw 
-      if ($null -ne $j -and "$($j.as_of_date)" -eq $today -and [bool]$j.phase4_ok_today) {
-        $phase4_ok = $true
+      $raw = Get-Content $phase4Stamp -Raw -Encoding utf8
+      if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 65279) { $raw = $raw.TrimStart([char]65279) }
+      $j = $raw | ConvertFrom-Json -ErrorAction Stop
+      $as = "$($j.as_of_date)"
+      if ($as.Length -ge 10) { $as = $as.Substring(0,10) }
+      $okv = $false
+      try { $okv = [bool]$j.phase4_ok_today } catch { $okv = $false }
+      if ($as -eq $today -and $okv) { $phase4_ok = $true }
+      if (-not $phase4_ok) {
+        Write-Host ("[BLOCK-G] PHASE4_STAMP parsed but not OK: as_of_date={0} today={1} phase4_ok_today={2}" -f $as,$today,$okv) -ForegroundColor Yellow
       }
-    } catch { $phase4_ok = $false }
+    } catch {
+      Write-Host ("[BLOCK-G] PHASE4_STAMP parse failed: {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+      $phase4_ok = $false
+    }
   }
 
   # GateScore checks (fresh + samples + threshold)
