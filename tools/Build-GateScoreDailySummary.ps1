@@ -1,15 +1,19 @@
 [CmdletBinding()]
-param()
+param(
+  [ValidateSet("NVDA","SPY","QQQ")]
+  [string]$Symbol = "NVDA",
 
+  [ValidateSet("DEV_REPLAY","REAL")]
+  [string]$Mode = "DEV_REPLAY"
+)
 $ErrorActionPreference="Stop"
 Set-StrictMode -Version Latest
 
 
-function Get-GateScoreSourceFromInput([string]$InputPath) {
-  # DEV_REPLAY must never arm LIVE.
-  $name = ([IO.Path]::GetFileName(($InputPath + ""))).ToLowerInvariant()
-  if ($name -match 'gatescore_samples' -or $name -match 'nvda_gatescore_samples\.csv') { return "DEV_REPLAY" }
-  return "REAL"
+function Get-GateScoreSourceFromMode([string]$ModeValue) {
+  $m = ("$ModeValue").Trim().ToUpperInvariant()
+  if ($m -eq "REAL") { return "REAL" }
+  return "DEV_REPLAY"
 }
 
 $toolsDir = Split-Path -Parent $PSCommandPath
@@ -67,14 +71,13 @@ $header2 = "as_of_date,symbol,source,count_signals,pnl_samples,mean_edge_ratio,m
 if (-not $rows) {
   $header2 | Out-File -FilePath $out -Encoding ascii
 } else {
-  $sym = ""
-  if ($input -match "nvda") { $sym = "NVDA" }
+  $sym = $Symbol
   $inPath = $null
   foreach($vn in @("input","Input","InputCsv","inputCsv","inputPath","InputPath","samplesCsv","SamplesCsv")) {
     $v = Get-Variable -Name $vn -ErrorAction SilentlyContinue
     if ($v -and $v.Value) { $inPath = ($v.Value + ""); break }
   }
-  $src = Get-GateScoreSourceFromInput $input
+  $src = Get-GateScoreSourceFromMode $Mode
   $lines = @($header2)
   foreach($r in $rows) {
     $d = "$($r.as_of_date)"
