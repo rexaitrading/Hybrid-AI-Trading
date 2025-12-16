@@ -76,9 +76,19 @@ class IBKRClient(BrokerClient):
         limit_px: Optional[float] = None,
         meta: Optional[Dict[str, Any]] = None,
     ):
-        # ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ B4: HARD LIVE SAFETY GATE
+        # ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ B4: HARD LIVE SAFETY GATE
         ctx = load_run_context_from_env()
-        ctx.require_live_safe()
+        # attach for traceability / unified context
+        try:
+            self.run_context = ctx
+        except Exception:
+            pass
+
+        # fail-closed: prefer symbol-aware gate when available
+        try:
+            ctx.require_live_safe(symbol=symbol)
+        except TypeError:
+            ctx.require_live_safe()
 
         c = self._contract(symbol)
         side = side.upper()
@@ -89,7 +99,7 @@ class IBKRClient(BrokerClient):
             else LimitOrder(side, abs(qty), limit_px)
         )
 
-        # ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ Block-G NVDA enforcement
+        # ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Block-G NVDA enforcement
         sym = getattr(c, "symbol", None)
         if sym and str(sym).upper() == "NVDA" and ctx.is_live:
             ensure_symbol_blockg_ready("NVDA")
