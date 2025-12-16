@@ -27,24 +27,23 @@ def _get(d: Dict[str, Any], *keys: str) -> Any:
     return None
 
 def micro_score(row: Dict[str, Any]) -> float:
-    # Fail-closed default
-    score = 0.0
+    # Fail-closed default: missing microstructure evidence must not score high.
+    # We compute feature-availability and cap score when key inputs are absent.
 
-    # --- range_pct (prefer OHLC if present) ---
+    # --- range_pct availability ---
     high = _f(_get(row, "high", "h"), 0.0)
     low  = _f(_get(row, "low", "l"), 0.0)
     mid  = _f(_get(row, "mid", "m", "price", "px"), 0.0)
     if mid <= 0.0:
-        # try fill price as mid
         mid = _f(_get(row, "fill_price", "fill_px"), 0.0)
 
+    has_range = (mid > 0.0 and high > 0.0 and low > 0.0 and high >= low)
     range_pct = 0.0
-    if mid > 0.0 and high > 0.0 and low > 0.0 and high >= low:
-        range_pct = (high - low) / mid  # 0.. maybe 0.01
-    # map: tighter range => better (cap)
+    if has_range:
+        range_pct = (high - low) / mid
     range_component = max(0.0, 1.0 - min(range_pct / 0.003, 1.0))  # 0.3% band
 
-    # --- trend_flag ---
+    # --- trend availability ---
     side = _s(_get(row, "side", "action"), "").upper()
     trend_flag = 0.0
     if side in ("BUY", "B"):
@@ -52,9 +51,9 @@ def micro_score(row: Dict[str, Any]) -> float:
     elif side in ("SELL", "S"):
         trend_flag = -1.0
 
-    # if return/ret exists, use its sign instead (stronger signal)
     ret = _get(row, "ret", "return", "window_ret")
-    if ret is not None:
+    has_ret = (ret is not None)
+    if has_ret:
         r = _f(ret, 0.0)
         if r > 0:
             trend_flag = 1.0
@@ -62,26 +61,25 @@ def micro_score(row: Dict[str, Any]) -> float:
             trend_flag = -1.0
         else:
             trend_flag = 0.0
-
     trend_component = (trend_flag + 1.0) / 2.0  # [-1,0,1] -> [0,0.5,1]
 
-    # --- spread proxy ---
+    # --- spread proxy availability ---
     px = _f(_get(row, "price", "px"), 0.0)
     fill = _f(_get(row, "fill_price", "fill_px"), 0.0)
+    has_spread = (px > 0.0 and fill > 0.0)
     spread_pct = 0.0
-    if px > 0.0 and fill > 0.0:
+    if has_spread:
         spread_pct = abs(fill - px) / px
     spread_component = max(0.0, 1.0 - min(spread_pct / 0.0005, 1.0))  # 5 bps band
 
-    # Weighted score in [0,1]
-    score = 0.45 * range_component + 0.35 * spread_component + 0.20 * trend_component
+    # If we have no real microstructure evidence, cap score (fail-closed).
+    if (not has_range) and (not has_spread) and (not has_ret):
+        score = 0.10 + 0.10 * trend_component  # BUY≈0.20, SELL≈0.10, neutral≈0.15
+        return max(0.0, min(score, 1.0))
 
-    # clamp
-    if score < 0.0:
-        score = 0.0
-    if score > 1.0:
-        score = 1.0
-    return score
+    # Otherwise, weighted score in [0,1]
+    score = 0.45 * range_component + 0.35 * spread_component + 0.20 * trend_component
+    return max(0.0, min(score, 1.0))
 
 def process(in_path: Path, out_path: Path) -> int:
     if not in_path.exists():
@@ -102,7 +100,7 @@ def process(in_path: Path, out_path: Path) -> int:
             except Exception:
                 continue
 
-            # write micro_score (don’t delete existing fields)
+            # write micro_score (donâ€™t delete existing fields)
             try:
                 row["micro_score"] = micro_score(row)
             except Exception:
