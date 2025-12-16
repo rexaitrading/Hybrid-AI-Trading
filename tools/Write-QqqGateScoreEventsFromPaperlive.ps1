@@ -1,7 +1,10 @@
 [CmdletBinding()]
 param(
   [ValidateSet("REAL")]
-  [string]$Mode = "REAL"
+  [string]$Mode = "REAL",
+
+  [Parameter(Mandatory=$false)]
+  [string]$AsOfDate = ""
 )
 
 $ErrorActionPreference="Stop"
@@ -12,7 +15,7 @@ $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
 $logs  = Join-Path $repoRoot "logs"
-$today = (Get-Date).ToString("yyyy-MM-dd")
+$today = if ([string]::IsNullOrWhiteSpace($AsOfDate)) { (Get-Date).ToString("yyyy-MM-dd") } else { $AsOfDate }
 
 $inJsonl  = Join-Path $logs "qqq_phase5_paperlive_results_with_micro.jsonl"
 if (-not (Test-Path $inJsonl)) { $inJsonl = Join-Path $logs "qqq_phase5_paperlive_results.jsonl" }
