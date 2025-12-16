@@ -1,3 +1,20 @@
+function As-Array {
+  param([Parameter(ValueFromPipeline=$true)]$InputObject)
+  if ($null -eq $InputObject) { return @() }
+  if ($InputObject -is [System.Array]) { return $InputObject }
+  return @($InputObject)
+}
+
+function Get-GateScoreThresholds {
+  param([string]$Symbol)
+  $p = "config\gatescore_thresholds.json"
+  if (-not (Test-Path $p)) { return $null }
+  $th = Get-Content $p -Raw | ConvertFrom-Json
+  $cfg = $th.$Symbol
+  if (-not $cfg) { $cfg = $th.DEFAULT }
+  return $cfg
+}
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
