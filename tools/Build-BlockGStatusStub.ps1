@@ -7,7 +7,7 @@ function As-Array {
 
 function Get-GateScoreThresholds {
   param([string]$Symbol)
-  $p = "config\gatescore_thresholds.json"
+  $p = "docs\config\gatescore_thresholds.json"
   if (-not (Test-Path $p)) { return $null }
   $th = Get-Content $p -Raw | ConvertFrom-Json
   $cfg = $th.$Symbol
@@ -92,7 +92,7 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
       # If symbol column exists, require NVDA for NVDA gating
       if ($r.PSObject.Properties.Name -contains "source") { if ("$($r.source)".Trim().ToUpperInvariant() -ne "REAL") { continue } }
       if ($r.PSObject.Properties.Name -contains "symbol") {
-        if ("$($r.symbol)".Trim().ToUpperInvariant() -ne "NVDA") { continue }
+        if ("$($r.symbol)".Trim().ToUpperInvariant() -ne "$Symbol") { continue }
       }
       $gs_fresh = $true
       break
@@ -115,7 +115,7 @@ $min_edge_abs = 0.50   # NVDA: abs(score) threshold (short-safe)
       if ("$($r.as_of_date)".Substring(0,10) -ne $today) { continue }
       if ($r.PSObject.Properties.Name -contains "source") { if ("$($r.source)".Trim().ToUpperInvariant() -ne "REAL") { continue } }
       if ($r.PSObject.Properties.Name -contains "symbol") {
-        if ("$($r.symbol)".Trim().ToUpperInvariant() -ne "NVDA") { continue }
+        if ("$($r.symbol)".Trim().ToUpperInvariant() -ne "$Symbol") { continue }
       }
       $row = $r
       # keep scanning; take LAST match
