@@ -32,10 +32,42 @@ Get-Content $inJsonl -Encoding utf8 | ForEach-Object {
   if ($ts.Substring(0,10) -ne $today) { return }
 
   # score proxy: EV if present, else 0.0 (fail-closed thresholds)
-  $score = 0.0
+    $score = 0.0
+  # Fallback: pull EV from Phase-5 result payload if top-level ev is missing
+  try {
+    if (($null -eq $obj.ev) -and ($null -ne $obj.phase5_result)) {
+      $d = $obj.phase5_result.phase5_details
+      if ($null -eq $d) { $d = $obj.phase5_result.details }
+      if ($null -ne $d -and $null -ne $d.ev_mu) { $obj.ev = $d.ev_mu }
+    }
+  } catch { }
   if ($null -ne $obj.ev) {
-    try { $score = [double]("$($obj.ev)") } catch { $score = 0.0 }
-  } elseif ($null -ne $obj.ev_band_abs) { try { $score = 0.0 - [double]("$($obj.ev_band_abs)") } catch { $score = 0.0 } }
+    try { $score = [double]("$($obj.ev)") } catch {   $score = 0.0
+  # Fallback: pull EV from Phase-5 result payload if top-level ev is missing
+  try {
+    if (($null -eq $obj.ev) -and ($null -ne $obj.phase5_result)) {
+      $d = $obj.phase5_result.phase5_details
+      if ($null -eq $d) { $d = $obj.phase5_result.details }
+      if ($null -ne $d -and $null -ne $d.ev_mu) { $obj.ev = $d.ev_mu }
+    }
+  } catch { } }
+  } elseif ($null -ne $obj.ev_band_abs) { try {   $score = 0.0
+  # Fallback: pull EV from Phase-5 result payload if top-level ev is missing
+  try {
+    if (($null -eq $obj.ev) -and ($null -ne $obj.phase5_result)) {
+      $d = $obj.phase5_result.phase5_details
+      if ($null -eq $d) { $d = $obj.phase5_result.details }
+      if ($null -ne $d -and $null -ne $d.ev_mu) { $obj.ev = $d.ev_mu }
+    }
+  } catch { } - [double]("$($obj.ev_band_abs)") } catch {   $score = 0.0
+  # Fallback: pull EV from Phase-5 result payload if top-level ev is missing
+  try {
+    if (($null -eq $obj.ev) -and ($null -ne $obj.phase5_result)) {
+      $d = $obj.phase5_result.phase5_details
+      if ($null -eq $d) { $d = $obj.phase5_result.details }
+      if ($null -ne $d -and $null -ne $d.ev_mu) { $obj.ev = $d.ev_mu }
+    }
+  } catch { } } }
 
   $evt = [ordered]@{
     as_of_date     = $today
