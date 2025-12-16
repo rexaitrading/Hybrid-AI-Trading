@@ -56,6 +56,7 @@ def ensure_symbol_blockg_ready(symbol: str, engine: object | None = None, ctx: R
         raise RuntimeError(
             f"BLOCK-G NOT READY: symbol={d.symbol} as_of_date={d.as_of_date} reason={d.reason}"
         )
+
 def _require_engine_live_gate(engine: object, symbol: str) -> None:
     """
     Canonical Phase-5 live gate (fail-closed).
