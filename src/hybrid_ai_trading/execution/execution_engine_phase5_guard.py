@@ -13,13 +13,22 @@ def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
     Thin shim so tests and callers have a single place to hook Phase-5 guards.
     """
 
-    # --- BLOCK-G: fail-closed readiness enforcement ---
-    symbol = str(trade.get("symbol", "") or "").strip().upper()
-    d = require_blockg_ready(symbol)
-    if not d.ready:
-        raise RuntimeError(
-            f"BLOCK-G NOT READY: symbol={d.symbol} as_of_date={d.as_of_date} reason={d.reason}"
-        )
+        # LIVE-only Block-G enforcement:
+    # - Paper/replay artifact generation must not be blocked by readiness flags.
+    # - Live execution paths are already guarded by RunContext + Block-G in engine/broker layers.
+    regime = str(trade.get("regime", "") or "")
+    if "LIVE" not in regime.upper():
+        # non-live (paper/replay) -> skip contract readiness gate here
+        pass
+    else:
+        # --- BLOCK-G: fail-closed readiness enforcement ---
+        symbol = str(trade.get("symbol", "") or "").strip().upper()
+        d = require_blockg_ready(symbol)
+        if not d.ready:
+            raise RuntimeError(
+                f"BLOCK-G NOT READY: symbol={d.symbol} as_of_date={d.as_of_date} reason={d.reason}"
+            )
+
 
     if rm is None:
         raise RuntimeError("RiskManager is required for Phase-5 guard")
