@@ -149,7 +149,6 @@ def main() -> None:
             side=side,
             qty=qty,
             price=row.get("price"),
-        ev, ev_band_abs = get_ev_and_band("QQQ_ORB_REPLAY")
             regime="QQQ_ORB_REPLAY",
         )
 
