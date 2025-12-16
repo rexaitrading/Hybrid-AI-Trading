@@ -24,6 +24,91 @@ $logs = Join-Path $repoRoot "logs"
 if (-not (Test-Path $logs)) { New-Item -ItemType Directory -Path $logs | Out-Null }
 
 $today = (Get-Date).ToString("yyyy-MM-dd")
+function Has-TodayLine([string]$p, [string]$today) {
+  if (-not (Test-Path $p)) { return $false }
+  try {
+    $txt = Get-Content $p -Raw -Encoding utf8
+    return ($txt -match [regex]::Escape($today))
+  } catch { return $false }
+}
+
+function Try-BuildRealFromNvdaPaperlive([string]$repoRoot, [string]$logs, [string]$today, [string]$out) {
+  $src = Join-Path $logs "nvda_phase5_paperlive_results.jsonl"
+  if (-not (Test-Path $src)) { return $false }
+
+  # Compute a conservative REAL proxy:
+  # - count_signals = number of rows today with a signal/side field
+  # - pnl_samples  = number of rows today with realized_pnl field (even if 0.0)
+  # - mean_edge_ratio = average edge_ratio if present else 0
+  # - mean_micro_score = average micro_score if present else 0
+  $lines = @(Get-Content $src -Encoding utf8)
+  if (-not $lines) { return $false }
+
+  $nSignals = 0
+  $nPnL = 0
+  $sumEdge = 0.0
+  $sumMicro = 0.0
+  $nEdge = 0
+  $nMicro = 0
+
+  foreach ($ln in $lines) {
+    if ([string]::IsNullOrWhiteSpace($ln)) { continue }
+    try { $o = $ln | ConvertFrom-Json -ErrorAction Stop } catch { continue }
+
+    $ts = ""
+    foreach ($k in @("ts_trade","entry_ts")) {
+      $p = $o.PSObject.Properties[$k]
+      if ($null -ne $p -and $null -ne $p.Value) { $ts = "$($p.Value)"; break }
+    }
+    if ([string]::IsNullOrWhiteSpace($ts)) {
+      # nested fallback: extra.entry_ts
+      $p2 = $o.PSObject.Properties["extra"]
+      if ($null -ne $p2 -and $null -ne $p2.Value) {
+        try {
+          $ex = $p2.Value
+          $p3 = $ex.PSObject.Properties["entry_ts"]
+          if ($null -ne $p3 -and $null -ne $p3.Value) { $ts = "$($p3.Value)" }
+        } catch { }
+      }
+    }
+    if ($ts.Length -lt 10) { continue }
+    if ($ts.Substring(0,10) -ne $today) { continue }
+
+    # signals heuristic
+    $sig = ""
+    $pSig = $o.PSObject.Properties["signal"]
+    if ($null -ne $pSig -and $null -ne $pSig.Value) { $sig = "$($pSig.Value)" }
+    $side = ""
+    $pSide = $o.PSObject.Properties["side"]
+    if ($null -ne $pSide -and $null -ne $pSide.Value) { $side = "$($pSide.Value)" }
+    if (-not [string]::IsNullOrWhiteSpace($sig) -or -not [string]::IsNullOrWhiteSpace($side)) { $nSignals++ }
+
+    # realized pnl samples (presence-based)
+    if ($o.PSObject.Properties.Name -contains "realized_pnl") {
+      $nPnL++
+    }
+
+    if ($o.PSObject.Properties.Name -contains "edge_ratio") {
+      try { $sumEdge += [double]$o.edge_ratio; $nEdge++ } catch {}
+    }
+    if ($o.PSObject.Properties.Name -contains "micro_score") {
+      try { $sumMicro += [double]$o.micro_score; $nMicro++ } catch {}
+    }
+  }
+
+  if ($nSignals -lt 1) { return $false }
+
+  $meanEdge = 0.0; if ($nEdge -gt 0) { $meanEdge = $sumEdge / [double]$nEdge }
+  $meanMicro = 0.0; if ($nMicro -gt 0) { $meanMicro = $sumMicro / [double]$nMicro }
+
+  $header = "as_of_date,symbol,source,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score"
+  $row = "{0},{1},{2},{3},{4},{5},{6}" -f $today,"NVDA","REAL",$nSignals,$nPnL,([Math]::Round($meanEdge,6)),([Math]::Round($meanMicro,6))
+
+  $header | Out-File -FilePath $out -Encoding ascii
+  $row    | Add-Content -Path $out -Encoding ascii
+  return $true
+}
+
 $out   = Join-Path $logs ("gatescore_daily_summary_{0}.csv" -f $Symbol.ToLowerInvariant())
 # Fail-closed: we prefer real inputs. If none found, we write HEADER ONLY (no today row).
 $symLower = $Symbol.ToLowerInvariant()
@@ -39,6 +124,17 @@ foreach($c in $candidates){
   if(Test-Path $c){ $input = $c; break }
 }
 
+# REAL mode fallback: if samples exist but are stale, try build today row from nvda_phase5_paperlive_results.jsonl
+if ($Mode -eq "REAL" -and $input -like "*nvda_gatescore_samples.csv" -and -not (Has-TodayLine $input $today)) {
+  $ok = Try-BuildRealFromNvdaPaperlive -repoRoot $repoRoot -logs $logs -today $today -out $out
+  if ($ok) {
+    Write-Host ("[GATESCORE] REAL paperlive fallback wrote {0}" -f $out) -ForegroundColor Green
+    Get-Content $out -TotalCount 2
+    exit 0
+  } else {
+    Write-Host "[GATESCORE] WARN: REAL paperlive fallback could not produce today row; continue fail-closed." -ForegroundColor Yellow
+  }
+}
 if (-not $input) {
   # Header only -> Build-BlockGStatusStub will set gatescore_fresh_today=false => nvda_blockg_ready=false
   "as_of_date,symbol,source,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score" | Out-File -FilePath $out -Encoding ascii
@@ -207,5 +303,9 @@ if (-not $rows) {
 Write-Host ("[GATESCORE] Wrote {0}" -f $out) -ForegroundColor Green
 Get-Content $out -TotalCount 2
 exit 0
+
+
+
+
 
 
