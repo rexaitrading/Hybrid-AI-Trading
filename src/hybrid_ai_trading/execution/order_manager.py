@@ -17,6 +17,20 @@ OrderManager (minimal, test-friendly)
 """
 
 import logging
+from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
+
+def _enforce_blockg_before_live_send(engine, symbol: str) -> None:
+    """
+    Institutional fail-closed gate at the last mile.
+    - Prefer RunContext if present (unified contract).
+    - Always enforce Block-G contract file as PowerShell truth.
+    """
+    rc = getattr(engine, "run_context", None)
+    if rc is not None:
+        rc.require_live_safe(symbol=symbol)
+
+    # Contract truth (generated/verified by PS tooling)
+    assert_symbol_ready(symbol)
 from pathlib import Path
 import uuid
 from types import SimpleNamespace
@@ -521,6 +535,7 @@ class OrderManager:
                             "reason": f"BLOCKG_NOT_READY: {e}",
                         }
                 # --- end Block-G gate ---
+                _enforce_blockg_before_live_send(engine, str(symbol))
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
