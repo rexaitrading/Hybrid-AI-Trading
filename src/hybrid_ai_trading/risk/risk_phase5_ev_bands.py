@@ -41,7 +41,7 @@ def get_ev_and_band(regime: str) -> Tuple[Optional[float], Optional[float]]:
     - EV and band are not None for the three live regimes
     - band >= 0.0
     """
-    cfg = _EV_BANDS.get(regime)
+    cfg = _EV_BANDS.get(_normalize_regime(regime))
     if cfg is None:
         return None, None
     return cfg.ev, cfg.band_abs
@@ -54,7 +54,7 @@ def require_ev_band(regime: str, ev: Optional[float]) -> Tuple[bool, str]:
     Returns:
         (allowed, reason_code)
     """
-    cfg = _EV_BANDS.get(regime)
+    cfg = _EV_BANDS.get(_normalize_regime(regime))
     if cfg is None:
         return False, "ev_config_missing"
 
