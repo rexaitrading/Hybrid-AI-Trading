@@ -77,4 +77,4 @@ if ($ok) {
 }
 
 Write-Host "[BLOCKG] NOT READY Symbol=$Symbol as_of_date=$asOf phase23=$phase23 ev_hard=$evhard gatescore_ok=$gs_ok nvda=$nvdaFlag spy=$spyFlag qqq=$qqqFlag" -ForegroundColor Yellow
-exit 2
+exit 3
