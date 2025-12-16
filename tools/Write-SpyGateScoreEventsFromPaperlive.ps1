@@ -32,9 +32,13 @@ Get-Content $inJsonl -Encoding utf8 | ForEach-Object {
   if ($ts.Substring(0,10) -ne $today) { return }
 
   # score proxy: EV if present, else 0.0 (fail-closed thresholds)
+    # score proxy: prefer EV, else penalize uncertainty via ev_band_abs
   $score = 0.0
   if ($null -ne $obj.ev) {
     try { $score = [double]("$($obj.ev)") } catch { $score = 0.0 }
+  } elseif ($null -ne $obj.ev_band_abs) {
+    try { $score = 0.0 - [double]("$($obj.ev_band_abs)") } catch { $score = 0.0 }
+  } catch { $score = 0.0 }
   }
 
   $evt = [ordered]@{
