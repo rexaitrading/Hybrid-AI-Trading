@@ -17,9 +17,16 @@ def _repo_root() -> Path:
 
 
 def _contract_path() -> Path:
-    env = os.getenv("HAT_BLOCKG_CONTRACT_PATH", "").strip()
+    # Canonical env var: HAT_BLOCKG_CONTRACT_PATH
+    # Back-compat alias:  BLOCKG_CONTRACT_PATH
+    env = (os.getenv("HAT_BLOCKG_CONTRACT_PATH", "") or "").strip()
     if env:
         return Path(env)
+
+    env2 = (os.getenv("BLOCKG_CONTRACT_PATH", "") or "").strip()
+    if env2:
+        return Path(env2)
+
     return _repo_root() / "logs" / "blockg_status_stub.json"
 
 
