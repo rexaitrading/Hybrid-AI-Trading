@@ -141,16 +141,6 @@ def main() -> None:
         side = info["side"]
         qty = info["qty"]
 
-        slip_bps = 1.0
-        px = float(row.get("price") or 0.0)
-        fill_price = None
-        if px > 0.0:
-            if str(side).upper() in ("BUY", "B"):
-                fill_price = px * (1.0 + slip_bps / 10000.0)
-            else:
-                fill_price = px * (1.0 - slip_bps / 10000.0)
-
-
         result = place_order_phase5(
             engine,
             symbol="QQQ",
@@ -161,21 +151,6 @@ def main() -> None:
             regime="QQQ_ORB_REPLAY",
         )
 
-        details = None
-        if isinstance(result, dict):
-            details = (
-                result.get("phase5_details")
-                or result.get("risk_details")
-                or result.get("details")
-            )
-
-        ev = None
-        ev_band_abs = None
-        if isinstance(details, dict):
-            ev = details.get("ev_mu")
-            ev_band_abs = details.get("ev_band_abs")
-
-
         out = {
             "idx": idx,
             "ts_trade": ts,
@@ -183,10 +158,6 @@ def main() -> None:
             "side": side,
             "qty": qty,
             "price": row.get("price"),
-            "fill_price": fill_price,
-            "slip_bps": slip_bps,
-            "ev": ev,
-            "ev_band_abs": ev_band_abs,
             "phase5_result": result,
             "position_after": engine.positions.get("QQQ", 0.0),
         }
