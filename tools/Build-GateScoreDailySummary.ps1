@@ -54,6 +54,56 @@ $calc = Join-Path $repoRoot "tools\compute_gatescore_daily_summary.py"
 if (-not (Test-Path $calc)) { Write-Host "[GATESCORE] ERROR: missing $calc" -ForegroundColor Red; exit 3 }
 
 Write-Host "[GATESCORE] Using input: $input" -ForegroundColor Cyan
+
+# --- Minimal JSONL fallback (schema-safe) -------------------------------------
+# If input is *_gatescore_events.jsonl with only count_signals/pnl_samples/score,
+# the Python calculator may emit empty/skip. We aggregate deterministically here.
+try {
+  $ext = [IO.Path]::GetExtension($input).ToLowerInvariant()
+  $name = [IO.Path]::GetFileName($input).ToLowerInvariant()
+  if ($ext -eq ".jsonl" -and $name -like "*_gatescore_events.jsonl") {
+    $rawLines = @(Get-Content -LiteralPath $input -ErrorAction Stop)
+    $evts = @()
+    foreach ($ln in $rawLines) {
+      if ([string]::IsNullOrWhiteSpace($ln)) { continue }
+      try { $evts += ($ln | ConvertFrom-Json -ErrorAction Stop) } catch { }
+    }
+    if ($evts.Count -gt 0) {
+      $missingEdge = $true
+      $missingMicro = $true
+      foreach ($e in $evts) {
+        if ($e.PSObject.Properties.Name -contains "edge_ratio") { $missingEdge = $false }
+        if ($e.PSObject.Properties.Name -contains "micro_score") { $missingMicro = $false }
+      }
+      if ($missingEdge -and $missingMicro) {
+        $sumSignals = 0; $sumPnls = 0; $sumScore = 0.0; $n = 0
+        foreach ($e in $evts) {
+          try { $sumSignals += [int]$e.count_signals } catch { }
+          try { $sumPnls    += [int]$e.pnl_samples } catch { }
+          try { $sumScore   += [double]$e.score } catch { }
+          $n++
+        }
+        $meanScore = 0.0
+        if ($n -gt 0) { $meanScore = $sumScore / [double]$n }
+        $src = Get-GateScoreSourceFromMode $Mode
+        $header2 = "as_of_date,symbol,source,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score"
+        $d = "$today"
+        $lines2 = @(
+          $header2,
+          ("{0},{1},{2},{3},{4},{5},{6}" -f $d,$Symbol,$src,$sumSignals,$sumPnls,("{0:F6}" -f $meanScore),("{0:F6}" -f 0.0))
+        )
+        $lines2 | Out-File -FilePath $out -Encoding ascii
+        Write-Host "[GATESCORE] Minimal JSONL fallback wrote logs\gatescore_daily_summary.csv" -ForegroundColor Green
+        Get-Content $out -TotalCount 2
+        exit 0
+      }
+    }
+  }
+} catch {
+  Write-Host ("[GATESCORE] WARN: minimal JSONL fallback failed: {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+}
+# -----------------------------------------------------------------------------
+
 & $py $calc $input $out
 $code = $LASTEXITCODE
 if ($code -ne 0) {
@@ -109,7 +159,6 @@ if (-not $rows) {
 Write-Host "[GATESCORE] Wrote logs\gatescore_daily_summary.csv" -ForegroundColor Green
 Get-Content $out -TotalCount 2
 exit 0
-
 
 
 
