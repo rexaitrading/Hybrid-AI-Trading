@@ -74,9 +74,15 @@ def micro_score(row: Dict[str, Any]) -> float:
 
     # If we have no real microstructure evidence, cap score (fail-closed).
     if (not has_range) and (not has_spread) and (not has_ret):
-        score = 0.10 + 0.10 * trend_component  # BUY≈0.20, SELL≈0.10, neutral≈0.15
+        score = 0.10 + 0.10 * trend_component  # BUYâ‰ˆ0.20, SELLâ‰ˆ0.10, neutralâ‰ˆ0.15
         return max(0.0, min(score, 1.0))
 
+
+    # If we only have a synthetic spread proxy (fill vs price) but no range/ret context,
+    # cap the score to avoid falsely "excellent" micro quality.
+    if (not has_range) and has_spread and (not has_ret):
+        raw = 0.45 * range_component + 0.35 * spread_component + 0.20 * trend_component
+        return max(0.0, min(raw, 0.35))
     # Otherwise, weighted score in [0,1]
     score = 0.45 * range_component + 0.35 * spread_component + 0.20 * trend_component
     return max(0.0, min(score, 1.0))
@@ -100,7 +106,7 @@ def process(in_path: Path, out_path: Path) -> int:
             except Exception:
                 continue
 
-            # write micro_score (donâ€™t delete existing fields)
+            # write micro_score (donÃ¢â‚¬â„¢t delete existing fields)
             try:
                 row["micro_score"] = micro_score(row)
             except Exception:
