@@ -105,6 +105,7 @@ def place_order_phase5(
     """
     return {
         "status": "ok_stub_engine",
+        "phase5_details": {"ev_mu": 0.0, "ev_band_abs": 0.0, "reason": "stub_engine_no_ev_model"},
         "symbol": symbol,
         "side": side,
         "qty": qty,
