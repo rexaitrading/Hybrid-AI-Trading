@@ -1,3 +1,12 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+# FAIL-CLOSED: Always derive repo root from filesystem truth (Unicode-safe).
+REPO_ROOT = Path(__file__).resolve().parents[1]
+os.chdir(str(REPO_ROOT))
+
 # conftest: ensure repo/src is importable in any CI working dir / interpreter
 import importlib.util
 import os
