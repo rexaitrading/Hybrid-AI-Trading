@@ -15,28 +15,18 @@ $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
 $logs  = Join-Path $repoRoot "logs"
-
-# Phase-2 micro snapshot (day-level) -> micro_score fallback (fail-closed to 0.0)
-$pyExe = Join-Path $repoRoot ".\.venv\Scripts\python.exe"
 $microFallback = 0.0
-try {
-  if (Test-Path $pyExe -and (Test-Path ".\tools\compute_nvda_micro_score_today.py")) {
-    $out = & $pyExe ".\tools\compute_nvda_micro_score_today.py"
-    $microFallback = [double]("$out")
-  }
-} catch { $microFallback = 0.0 }
+$microPath = Join-Path $logs "nvda_micro_for_gatescore.json"
+if (Test-Path $microPath) {
+  try {
+    $m = (Get-Content $microPath -Raw -Encoding utf8) | ConvertFrom-Json -ErrorAction Stop
+    if ($null -ne $m -and $null -ne $m.micro_score) { $microFallback = [double]("$($m.micro_score)") }
+  } catch { $microFallback = 0.0 }
+}
 
+# Phase-2 micro snapshot (day-level) -> micro_score fallback (artifact only; fail-closed to 0.0)
 $today = if ([string]::IsNullOrWhiteSpace($AsOfDate)) { (Get-Date).ToString("yyyy-MM-dd") } else { $AsOfDate }
-
-# Phase-2 micro snapshot (day-level) -> micro_score fallback
-$pyExe = Join-Path $repoRoot ".\.venv\Scripts\python.exe"
-$microFallback = 0.0
-try {
-  if (Test-Path $pyExe -and (Test-Path ".\tools\compute_nvda_micro_score_today.py")) {
-    $out = & $pyExe ".\tools\compute_nvda_micro_score_today.py"
-    $microFallback = [double]("$out")
-  }
-} catch { $microFallback = 0.0 }
+# Phase-2 micro snapshot (day-level) -> micro_score fallback (artifact only; fail-closed to 0.0)
 
 
 # NVDA paperlive results (canonical path)
@@ -64,6 +54,22 @@ function Get-EvProxy($obj) {
       $d = $obj.phase5_result.phase5_details
       if ($null -eq $d) { $d = $obj.phase5_result.details }
       if ($null -ne $d -and $null -ne $d.ev_mu) { return [double]("$($d.ev_mu)") }
+    }
+  } catch { }
+
+  return $null
+}
+function Get-EvMu($obj) {
+  try {
+    if ($null -ne $obj -and $obj.PSObject -and ($obj.PSObject.Properties.Name -contains "ev_mu")) {
+      $v = $obj.PSObject.Properties["ev_mu"].Value
+      if ($null -ne $v) { return [double]("$v") }
+    }
+  } catch { }
+
+  try {
+    if ($null -ne $obj.phase5_result -and $null -ne $obj.phase5_result.ev_mu) {
+      return [double]("$($obj.phase5_result.ev_mu)")
     }
   } catch { }
 
@@ -117,7 +123,7 @@ Get-Content $inJsonl -Encoding utf8 | ForEach-Object {
   if ($ts.Substring(0,10) -ne $today) { return }
 
   # Only count events that have GateScore metrics (edge_ratio + micro_score) AND a realized_pnl field
-  $edge = (Get-EvProxy $obj); if ($null -eq $edge) { $edge = Get-EdgeRatio $obj }
+  $edge = (Get-EvMu $obj); if ($null -eq $edge) { $edge = (Get-EvProxy $obj) }; if ($null -eq $edge) { $edge = Get-EdgeRatio $obj }
   $micro = Get-MicroScore $obj; if ($micro -le 0.0) { $micro = $microFallback }
   if ($edge -eq 0.0 -and $micro -eq 0.0) { return }
   if (-not (Has-RealizedPnl $obj)) { return }
@@ -145,6 +151,7 @@ if ($rows -eq 0) {
 
 Write-Host "[GS-EVENTS] Wrote $outJsonl rows=$rows mode=$Mode" -ForegroundColor Green
 exit 0
+
 
 
 
