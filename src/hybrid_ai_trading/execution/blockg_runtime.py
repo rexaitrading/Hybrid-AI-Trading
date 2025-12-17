@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from hybrid_ai_trading.blockg_contract import require_blockg_ready
+from hybrid_ai_trading.execution.blockg_contract_reader import is_symbol_ready
 from hybrid_ai_trading.runtime.run_context import RunContext, RunMode
 
 
@@ -23,8 +23,7 @@ def enforce_blockg_if_live(ctx: RunContext, symbol: str, *, is_live: bool | None
         is_live = (ctx.mode == RunMode.LIVE)
     if not is_live:
         return BlockGRuntimeDecision(ok=True, reasons=["NON_LIVE_MODE"])
-
-    d = require_blockg_ready(symbol)
+    d = is_symbol_ready(symbol)
     if not d.ready:
         return BlockGRuntimeDecision(ok=False, reasons=[f"{d.reason}"])
     return BlockGRuntimeDecision(ok=True, reasons=["OK"])

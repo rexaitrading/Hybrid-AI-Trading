@@ -1,6 +1,6 @@
 from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env
 from hybrid_ai_trading.runtime.context_loader import is_live_env
-from hybrid_ai_trading.blockg_contract import require_blockg_ready
+from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
 def _is_live_mode() -> bool:
     """
     Unified LIVE-mode check via RunContext (single authority).
@@ -74,52 +74,13 @@ class IBAdapter(Broker):
                 raise ValueError("limit_price required for LIMIT orders")
             order = LimitOrder(side.upper(), qty, limit_price)
         else:
-            order = MarketOrder(side.upper(), qty)
-        # --- HARD BLOCK-G ENFORCEMENT (last-mile) ---
+            order = MarketOrder(side.upper(), qty)        # --- HARD BLOCK-G ENFORCEMENT (last-mile, fail-closed) ---
         # No live NVDA order may reach IBKR unless contract says READY.
-        try:
-            # 'symbol' may not be in scope; prefer contract symbol if available.
-            _sym = (locals().get("symbol") or "").upper()
-            _c = locals().get("c", None) or locals().get("contract", None)
-            if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
-                if _is_live_mode():
-                    d = require_blockg_ready("NVDA")
-                    if not d.ready:
-                        raise RuntimeError(f"BLOCK-G FAIL: {d.reason} as_of_date={d.as_of_date}")
-        except Exception as _exc:
-            raise
-        
-        from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
+                if (symbol or "").strip().upper() == "NVDA" and _is_live_mode():
+            assert_symbol_ready("NVDA")
+from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
         forbid_direct_ib_live("broker/ib_safe.py:direct_send")
-        # --- Block-G LIVE no-bypass (last-mile) ---
-        # If this is a live boundary, we must fail-closed unless RunContext says OK.
-        ctx = kwargs.get("run_context", None)
-        if ctx is None:
-            ctx = getattr(self, "run_context", None)
-
-        # Heuristic: treat meta/regime hint as live if present; otherwise trust ctx if it exists.
-        regime = ""
-        try:
-            meta = kwargs.get("meta", None) or {}
-            regime = str(meta.get("regime", "") or "")
-        except Exception:
-            regime = ""
-
-        is_live_hint = ("LIVE" in regime.upper())
-
-        if ctx is not None:
-            # Canonical: RunContext is the single authority
-            if is_live_hint:
-                try:
-                    ctx.require_live_safe(symbol=symbol)
-                except TypeError:
-                    ctx.require_live_safe()
-        else:
-            # No RunContext available: fail-closed if caller hints LIVE
-            if is_live_hint:
-                raise RuntimeError("BLOCK-G: missing RunContext on LIVE order path (fail-closed)")
-        # --- end Block-G LIVE no-bypass ---
-        trade = self.ib.placeOrder(contract, order)
+trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)
         st = trade.orderStatus
