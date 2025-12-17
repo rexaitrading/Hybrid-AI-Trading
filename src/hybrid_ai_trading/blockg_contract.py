@@ -85,7 +85,8 @@ def require_blockg_ready(symbol: str) -> BlockGDecision:
     if not _get_bool(c.get(f)):
         return BlockGDecision(as_of_date=as_of, symbol=sym, ready=False, reason="symbol_not_ready")
 
-    return BlockGDecision(True, "ok", as_of)
+    return BlockGDecision(as_of_date=as_of, symbol=sym, ready=True, reason="ok")
+
 
 
 
