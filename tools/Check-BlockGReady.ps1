@@ -50,6 +50,7 @@ function Get-Bool($v) {
 
 $phase23 = Get-Bool $c.phase23_health_ok_today
 $evhard  = Get-Bool $c.ev_hard_daily_ok_today
+$phase4  = Get-Bool $c.phase4_ok_today
 # GateScore field:
 # Prefer per-symbol gatescore if present (e.g., nvda_gatescore_ok_today), else fallback to gatescore_ok_today,
 # else fallback to gatescore_fresh_today for old contracts.
@@ -81,6 +82,10 @@ if ($ok) {
     exit 0
 }
 
-Write-Host "[BLOCKG] NOT READY Symbol=$Symbol as_of_date=$asOf phase23=$phase23 ev_hard=$evhard gatescore_ok=$gs_ok nvda=$nvdaFlag spy=$spyFlag qqq=$qqqFlag" -ForegroundColor Yellow
-exit 3
+if (-not $phase4) { Write-Host "[BLOCKG] FAIL phase4_ok_today=false" -ForegroundColor Yellow; exit 10 }
+if (-not $phase23) { Write-Host "[BLOCKG] FAIL phase23_health_ok_today=false" -ForegroundColor Yellow; exit 11 }
+if (-not $evhard) { Write-Host "[BLOCKG] FAIL ev_hard_daily_ok_today=false" -ForegroundColor Yellow; exit 12 }
+if (-not $gs_ok) { Write-Host "[BLOCKG] FAIL gatescore_ok_today=false" -ForegroundColor Yellow; exit 13 }
 
+Write-Host "[BLOCKG] FAIL symbol_ready_flag=false Symbol=$Symbol nvda=$nvdaFlag spy=$spyFlag qqq=$qqqFlag" -ForegroundColor Yellow
+exit 14
