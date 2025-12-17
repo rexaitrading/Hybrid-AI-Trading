@@ -172,3 +172,48 @@ def compute_nvda_gatescore_today(repo_root: Optional[Path] = None) -> float:
         return -1.0
     return 1.0 if first_long <= first_short else -1.0
 
+def main() -> int:
+    """
+    Phase-1 canonical entrypoint (deterministic, testable).
+
+    Contract:
+      - returns 0 on success
+      - returns non-zero on failure
+    """
+    try:
+        # If this module already exposes a CLI-style entrypoint, prefer it.
+        if "cli" in globals() and callable(globals().get("cli")):
+            out = globals()["cli"]()
+            return int(out) if out is not None else 0
+
+        # If there is a common runner function, call it with safe defaults.
+        for nm in ("compute_nvda_gatescore_today", "load_nvda_gatescore_health", "run", "run_replay", "compute", "compute_gatescore", "gate_score", "gatescore"):
+            fn = globals().get(nm)
+            if callable(fn):
+                out = fn()
+                # Phase-1 smoke contract: success means "ran deterministically" (rc=0),
+                # regardless of strategy direction (-1/0/+1).
+                try:
+                    print(f"[PHASE1] gatescore_out={out}")
+                    print(f"[PHASE1] _NVDA_GS_COUNT_SIGNALS={globals().get('_NVDA_GS_COUNT_SIGNALS')}")
+                    print(f"[PHASE1] _NVDA_GS_PNL_SAMPLES={globals().get('_NVDA_GS_PNL_SAMPLES')}")
+                except Exception:
+                    pass
+                return 0
+
+        # Fallback: if the file was meant to be executed for side effects,
+        # then reaching here means "nothing callable" -> fail-closed.
+        print("[PHASE1] FAIL-CLOSED: no callable entrypoint (expected cli/run/compute/*) in nvda_bplus_gate_score.py")
+        return 2
+    except SystemExit as e:
+        # argparse patterns often raise SystemExit
+        try:
+            return int(getattr(e, "code", 1) or 0)
+        except Exception:
+            return 1
+    except Exception as e:
+        print(f"[PHASE1] FAIL-CLOSED: exception in main(): {type(e).__name__}: {e}")
+        return 1
+
+
+
