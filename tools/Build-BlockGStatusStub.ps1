@@ -78,7 +78,7 @@ function Main {
     $gsDailyPath = Join-Path $logs "gatescore_daily_summary.csv"  # fallback
   }
   $phase4Stamp = Join-Path $logs "phase4_validation_passed.json"
-  $outJson     = Join-Path $logs "blockg_status_stub.json"
+  $outJson     = Join-Path $logs ("blockg_status_stub_{0}.json" -f $Symbol.ToLowerInvariant())
 
   # Diagnostics: show missing inputs (log-only)
   if (-not (Test-Path $phase23Path)) { Write-Host "[BLOCK-G] MISSING $phase23Path" -ForegroundColor Yellow }
@@ -212,6 +212,11 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
   [System.IO.File]::WriteAllText($outJson, $json, $utf8NoBom)
   Write-Host "[BLOCK-G] Wrote $outJson" -ForegroundColor Green
+  # Compat: keep legacy single-file path updated for NVDA only (do not clobber other symbols)
+  if ($Symbol -eq "NVDA") {
+    $legacyPath = Join-Path $logs "blockg_status_stub.json"
+    try { Copy-Item -Force $outJson $legacyPath } catch { }
+  }
   Write-Host ("[BLOCK-G] today={0} phase4_ok={1} phase23_ok={2} evhard_ok={3} gs_ok={4} nvda_ready={5}" -f $today,$phase4_ok,$phase23_ok,$evhard_ok,$gs_ok,($obj.nvda_blockg_ready))
 }
 Main -Symbol $Symbol
