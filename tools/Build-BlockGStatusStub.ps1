@@ -211,7 +211,7 @@ $nvda_ready = ($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok_smoke)
     gatescore_samples_ok_today   = [bool]$gs_samples_ok
     gatescore_threshold_ok_today = [bool]$gs_threshold_ok
     gatescore_ok_today           = [bool]$gs_ok_smoke
-    nvda_blockg_ready            = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok -and ($Symbol -eq "NVDA"))
+    nvda_blockg_ready            = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok_smoke -and ($Symbol -eq "NVDA"))
     spy_blockg_ready             = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok -and ($Symbol -eq "SPY"))
     qqq_blockg_ready             = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok -and ($Symbol -eq "QQQ"))
   }
