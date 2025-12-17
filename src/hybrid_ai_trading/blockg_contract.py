@@ -2,55 +2,86 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
+
+
+LOGS_DIR = Path("logs")
+CONTRACT_PATH = LOGS_DIR / "blockg_status_stub.json"
 
 
 @dataclass(frozen=True)
 class BlockGDecision:
-    as_of_date: str
-    symbol: str
     ready: bool
     reason: str
+    as_of_date: str
 
 
-def _safe_bool(x: Any) -> bool:
-    return bool(x) is True
+def _today_str() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
 
 
-def load_blockg_status(path: Path) -> Dict[str, Any]:
+def _get_bool(v: Any) -> bool:
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return bool(v)
+    if isinstance(v, str):
+        t = v.strip().lower()
+        if t in {"true", "1", "yes", "y"}:
+            return True
+        if t in {"false", "0", "no", "n"}:
+            return False
+    return False
+
+
+def _load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
     if not path.exists():
         return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+    raw = path.read_text(encoding="utf-8")
+    # BOM-safe
+    if raw and ord(raw[0]) == 65279:
+        raw = raw.lstrip("\ufeff")
+    return json.loads(raw)
 
 
-def require_blockg_ready(
-    symbol: str,
-    status_path: Optional[str] = None,
-) -> BlockGDecision:
+def require_blockg_ready(symbol: str) -> BlockGDecision:
     """
-    Fail-closed readiness check.
-
-    - Reads logs/blockg_status_stub.json (or provided path)
-    - Requires per-symbol readiness flag (nvda_blockg_ready, spy_blockg_ready, qqq_blockg_ready)
+    Contract-only Block-G gate. No recomputation. Fail-closed.
     """
     sym = (symbol or "").strip().upper()
     if not sym:
-        return BlockGDecision(as_of_date="", symbol="", ready=False, reason="symbol_empty")
+        return BlockGDecision(False, "symbol_empty", "")
+    c = _load_contract()
+    if not c:
+        return BlockGDecision(False, "contract_missing", "")
 
-    default_path = Path("logs") / "blockg_status_stub.json"
-    p = Path(status_path) if status_path else default_path
+    today = _today_str()
+    as_of = str(c.get("as_of_date") or "")
+    if as_of != today:
+        return BlockGDecision(False, f"stale_contract as_of={as_of} today={today}", as_of)
 
-    j = load_blockg_status(p)
-    as_of = str(j.get("as_of_date", ""))
+    # required common fields
+    if not _get_bool(c.get("phase4_ok_today")):
+        return BlockGDecision(False, "phase4_not_ok", as_of)
+    if not _get_bool(c.get("phase23_health_ok_today")):
+        return BlockGDecision(False, "phase23_not_ok", as_of)
+    if not _get_bool(c.get("ev_hard_daily_ok_today")):
+        return BlockGDecision(False, "ev_hard_not_ok", as_of)
 
-    key = f"{sym.lower()}_blockg_ready"
-    ready_val = _safe_bool(j.get(key, False))
+    # gatescore ok (prefer per-symbol)
+    per = f"{sym.lower()}_gatescore_ok_today"
+    gs_ok = _get_bool(c.get(per)) if per in c else _get_bool(c.get("gatescore_ok_today"))
+    if not gs_ok:
+        return BlockGDecision(False, "gatescore_not_ok", as_of)
 
-    if not ready_val:
-        return BlockGDecision(as_of_date=as_of, symbol=sym, ready=False, reason=f"blockg_not_ready:{key}")
+    # per-symbol ready flag
+    flag_map = {"NVDA": "nvda_blockg_ready", "SPY": "spy_blockg_ready", "QQQ": "qqq_blockg_ready"}
+    f = flag_map.get(sym)
+    if not f or f not in c:
+        return BlockGDecision(False, "symbol_flag_missing", as_of)
+    if not _get_bool(c.get(f)):
+        return BlockGDecision(False, "symbol_not_ready", as_of)
 
-    return BlockGDecision(as_of_date=as_of, symbol=sym, ready=True, reason="ok")
+    return BlockGDecision(True, "ok", as_of)
