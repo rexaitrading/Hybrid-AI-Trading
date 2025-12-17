@@ -38,11 +38,11 @@ def main() -> int:
     # Simple gating rule (adjust later if needed)
     if health.count_signals < 3:
         print("[GS-SMOKE] FAIL: count_signals < 3 (insufficient signal history).")
-        return 2
+        return 10
 
     if health.pnl_samples < 1:
         print("[GS-SMOKE] FAIL: pnl_samples < 1 (no realized PnL samples).")
-        return 3
+        return 10
 
     print("[GS-SMOKE] PASS: GateScore sample counts are sufficient for NVDA.")
     return 0
