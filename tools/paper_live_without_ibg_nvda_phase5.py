@@ -159,8 +159,7 @@ def main() -> None:
     trades = load_nvda_paper_trades()
 
     dst = Path("logs") / "nvda_phase5_paperlive_results.jsonl"
-    out_f = dst.open("a", encoding="utf-8", newline="\n")
-
+    out_f = dst.open("w", encoding="utf-8")
     print(f"Loaded {len(trades)} NVDA paper trade candidates.")
 
     for idx, row in enumerate(trades, start=1):
@@ -218,3 +217,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
