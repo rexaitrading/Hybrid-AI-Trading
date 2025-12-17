@@ -1,8 +1,7 @@
 from __future__ import annotations
 from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env
 from hybrid_ai_trading.runtime.context_loader import is_live_env
-from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
-
+from hybrid_ai_trading.blockg_contract import require_blockg_ready
 def _is_live_mode() -> bool:
     """
     Unified LIVE-mode check via RunContext (single authority).
@@ -79,7 +78,9 @@ class IBAdapter(Broker):
         _force_contract = bool((_os.getenv("BLOCKG_CONTRACT_PATH", "") or "").strip())
         if (symbol or "").strip().upper() == "NVDA" and (_is_live_mode() or _force_contract):
             try:
-                ensure_symbol_blockg_ready("NVDA")
+                d = require_blockg_ready("NVDA")
+                if not d.ready:
+                    raise RuntimeError(f"BLOCK-G FAIL: {d.reason} as_of_date={d.as_of_date}")
             except Exception as _exc:
                 raise RuntimeError(f"[BLOCK-G] NVDA not ready: {_exc}")
 
@@ -94,7 +95,9 @@ class IBAdapter(Broker):
         _force_contract2 = bool((_os2.getenv("BLOCKG_CONTRACT_PATH", "") or "").strip())
         if (symbol or "").strip().upper() == "NVDA" and (_is_live_mode() or _force_contract2):
             try:
-                ensure_symbol_blockg_ready("NVDA")
+                d = require_blockg_ready("NVDA")
+                if not d.ready:
+                    raise RuntimeError(f"BLOCK-G FAIL: {d.reason} as_of_date={d.as_of_date}")
             except Exception as _exc:
                 raise RuntimeError(f"[BLOCK-G] NVDA not ready: {_exc}")
 
@@ -138,3 +141,4 @@ class IBAdapter(Broker):
                 }
             )
         return pos
+

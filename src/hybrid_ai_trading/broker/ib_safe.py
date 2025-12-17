@@ -1,7 +1,6 @@
 from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env
 from hybrid_ai_trading.runtime.context_loader import is_live_env
-from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
-
+from hybrid_ai_trading.blockg_contract import require_blockg_ready
 def _is_live_mode() -> bool:
     """
     Unified LIVE-mode check via RunContext (single authority).
@@ -84,7 +83,9 @@ class IBAdapter(Broker):
             _c = locals().get("c", None) or locals().get("contract", None)
             if (getattr(_c, "symbol", None) or "").upper() == "NVDA" or _sym == "NVDA":
                 if _is_live_mode():
-                    ensure_symbol_blockg_ready("NVDA")
+                    d = require_blockg_ready("NVDA")
+                    if not d.ready:
+                        raise RuntimeError(f"BLOCK-G FAIL: {d.reason} as_of_date={d.as_of_date}")
         except Exception as _exc:
             raise
         
@@ -156,8 +157,6 @@ class IBAdapter(Broker):
                 }
             )
         return pos
-from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
-
 from typing import Any, Dict, List, Optional, Tuple
 
 from .base import Broker
@@ -368,4 +367,5 @@ def map_ib_error(err: Exception) -> str:
     if "host unreachable" in m or "unreachable" in m:
         return "HOST_UNREACHABLE"
     return "UNKNOWN"
+
 
