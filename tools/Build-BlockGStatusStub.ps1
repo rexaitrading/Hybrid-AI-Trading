@@ -66,6 +66,17 @@ function Main {
   $logs = Join-Path $repoRoot "logs"
   $today = Get-TodayStr
 
+
+# --- BLOCKG_GATESCORE_SMOKE_SINGLE_TRUTH ---
+# Canonical GateScore truth: must match smoke output (fail-closed).
+$gs_ok = $false
+try {
+  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "Run-GateScoreSmoke.ps1") | Out-Host
+  $gs_ok = ($LASTEXITCODE -eq 0)
+} catch {
+  $gs_ok = $false
+}
+# --- END BLOCKG_GATESCORE_SMOKE_SINGLE_TRUTH ---
   # Normalize Symbol (StrictMode-safe)
   $Symbol = ("$Symbol").Trim().ToUpperInvariant()
   if ([string]::IsNullOrWhiteSpace($Symbol)) { throw "[BLOCK-G] -Symbol is empty." }
