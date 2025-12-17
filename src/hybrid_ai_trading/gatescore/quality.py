@@ -6,6 +6,28 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from .schemas import GateScoreDailySummaryRow
+def _mins_for_symbol(thresholds: Dict[str, Any], symbol: str) -> Dict[str, Any]:
+    """
+    Support two threshold schemas:
+      A) {"minimums": {"count_signals":..., "pnl_samples":..., "mean_edge_ratio":..., "mean_micro_score":...}}
+      B) {"NVDA": {"min_signals":..., "min_pnl_samples":..., "min_edge_ratio":..., "min_micro_score":...}, "DEFAULT": {...}}
+    """
+    mins = thresholds.get("minimums")
+    if isinstance(mins, dict):
+        return mins
+
+    sym = str(symbol or "").upper()
+    bucket = thresholds.get(sym) or thresholds.get("DEFAULT") or {}
+    if not isinstance(bucket, dict):
+        return {}
+
+    return {
+        "count_signals": bucket.get("min_signals", 0),
+        "pnl_samples": bucket.get("min_pnl_samples", 0),
+        "mean_edge_ratio": bucket.get("min_edge_ratio", float("-inf")),
+        "mean_micro_score": bucket.get("min_micro_score", float("-inf")),
+    }
+
 
 
 @dataclass(frozen=True)
@@ -19,7 +41,7 @@ def load_thresholds(path: str) -> Dict[str, Any]:
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(str(p))
-    obj = json.loads(p.read_text(encoding="utf-8"))
+    obj = json.loads(p.read_text(encoding="utf-8-sig"))
     if not isinstance(obj, dict):
         raise ValueError("thresholds json must be an object")
     return obj
@@ -50,7 +72,7 @@ def evaluate_daily_summary_row(
     if require_real_source and str(row.source).upper() != "REAL":
         reasons.append("source_not_real")
 
-    mins = thresholds.get("minimums") or {}
+    mins = _mins_for_symbol(thresholds, row.symbol) or {}
     try:
         min_signals = int(mins.get("count_signals", 0))
         min_pnl = int(mins.get("pnl_samples", 0))
