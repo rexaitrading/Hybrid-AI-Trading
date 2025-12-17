@@ -9,6 +9,20 @@ Set-StrictMode -Version Latest
 $intents = "logs\portfolio_order_intents.jsonl"
 $rows = @()
 
+function Test-StrategyIdAllowed {
+  param([string]$StrategyId)
+
+  if(-not $StrategyId){ return $false }
+  $s = $StrategyId.Trim()
+  if($s.Length -eq 0){ return $false }
+
+  # Block obvious non-prod / stub IDs (fail-closed)
+  if($s -match '^(?i)(DUMMY|TEST|DEV)'){ return $false }
+
+  return $true
+}
+
+
 if(Test-Path $intents){
   $seen = New-Object "System.Collections.Generic.HashSet[string]"
   Get-Content $intents -Encoding utf8 | ForEach-Object {
@@ -16,7 +30,7 @@ if(Test-Path $intents){
     try {
       $o = $_ | ConvertFrom-Json
       $sid = [string]$o.strategy_id
-      if($sid -and $seen.Add($sid)){
+      if((Test-StrategyIdAllowed $sid) -and $seen.Add($sid)){
         $rows += [pscustomobject]@{ strategy_id = $sid; score = 0.0 }
       }
     } catch {

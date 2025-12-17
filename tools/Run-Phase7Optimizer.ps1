@@ -19,6 +19,13 @@ if(-not $rows -or $rows.Count -eq 0){
 }
 
 $strats = $rows | ForEach-Object { $_.strategy_id } | Where-Object { $_ -and $_.Trim().Length -gt 0 } | Select-Object -Unique
+# Fail-closed: block stub/dev strategy ids
+$bad = $strats | Where-Object { $_ -match '^(?i)(DUMMY|TEST|DEV)' }
+if($bad -and $bad.Count -gt 0){
+  Write-Host ("[PHASE7] FAIL-CLOSED: invalid strategy_id(s): " + ($bad -join ",")) -ForegroundColor Red
+  exit 5
+}
+
 if(-not $strats -or $strats.Count -eq 0){
   Write-Host "[PHASE7] FAIL-CLOSED: no strategy_id in Phase-6 summary" -ForegroundColor Red
   exit 4
