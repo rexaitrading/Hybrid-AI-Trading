@@ -1,4 +1,4 @@
-﻿from types import SimpleNamespace
+from types import SimpleNamespace
 
 import pytest
 
@@ -18,9 +18,15 @@ class DummyEngine:
                 details={"test": True},
             )
         )
+        # This test engine represents PAPER execution unless explicitly overridden
+        self.is_paper = True
 
 
-def test_place_order_phase5_with_guard_calls_underlying_and_allows():
+def test_place_order_phase5_with_guard_calls_underlying_and_allows_in_paper():
+    """
+    Institutional rule: PAPER must never be blocked by Block-G readiness.
+    This test verifies the guarded path returns the underlying stub result.
+    """
     engine = DummyEngine()
     result = place_order_phase5_with_guard(
         engine,
@@ -28,20 +34,17 @@ def test_place_order_phase5_with_guard_calls_underlying_and_allows():
         side="BUY",
         qty=1.0,
         price=500.0,
-        regime="SPY_ORB_LIVE",
+        regime="SPY_ORB_PAPER",
         day_id="2025-11-10",
     )
-
-    # We don't assert exact shape of the underlying result, just that
-    # the function returns a dict and did not synthesize a blocked result.
     assert isinstance(result, dict)
     assert result.get("status") == "ok_stub_engine"
 
 
 def test_blockg_contract_failure_blocks_nvda_live(monkeypatch):
     """
-    If ensure_symbol_blockg_ready raises for NVDA live,
-    place_order_phase5_with_guard must surface that RuntimeError
+    If contract gate fails for NVDA live intent,
+    place_order_phase5_with_guard must surface a RuntimeError
     and must NOT call place_order_phase5.
     """
     import hybrid_ai_trading.execution.execution_engine_phase5_guard as guard_mod
@@ -52,28 +55,31 @@ def test_blockg_contract_failure_blocks_nvda_live(monkeypatch):
             self.reason = "ok"
             self.details = {}
 
-    class DummyEngine:
+    class DummyEngine2:
         def __init__(self) -> None:
-            # Risk manager just needs to be non-None so guard_phase5_trade is invoked
+            self.is_paper = False
             self.risk_manager = object()
 
     # 1) Risk guard always allows the trade (focus this test on Block-G contract)
     def fake_guard_phase5_trade(rm, trade):
         return DummyDecision()
 
-    # 2) Block-G helper fails hard for NVDA
-    def fake_ensure_symbol_blockg_ready(symbol: str):
-        raise RuntimeError("Block-G NVDA not ready")
+    # 2) Force contract gate failure deterministically
+    def fake_enforce_blockg_if_live(ctx, symbol: str, *, is_live=None):
+        class D:
+            ok = False
+            reasons = ["Block-G NVDA not ready"]
+        return D()
 
-    # 3) If place_order_phase5 is ever reached, we want the test to fail loudly
+    # 3) If place_order_phase5 is ever reached, fail loudly
     def fail_place_order_phase5(*args, **kwargs):
         raise AssertionError("place_order_phase5 should NOT be called when Block-G is not ready")
 
     monkeypatch.setattr(guard_mod, "guard_phase5_trade", fake_guard_phase5_trade)
-    monkeypatch.setattr(guard_mod, "ensure_symbol_blockg_ready", fake_ensure_symbol_blockg_ready)
+    monkeypatch.setattr(guard_mod, "enforce_blockg_if_live", fake_enforce_blockg_if_live)
     monkeypatch.setattr(guard_mod, "place_order_phase5", fail_place_order_phase5)
 
-    engine = DummyEngine()
+    engine = DummyEngine2()
 
     with pytest.raises(RuntimeError) as excinfo:
         guard_mod.place_order_phase5_with_guard(
