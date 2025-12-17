@@ -40,6 +40,30 @@ if ($exitCode -ne 0) {
 
 Write-Host "[STEP 1] nvda_phase5_live_runner.py completed successfully." -ForegroundColor Green
 
+# [ASSERT] fail-closed if today's paperlive rows are missing ev_mu
+$today = (Get-Date).ToString("yyyy-MM-dd")
+$paperliveJsonl = Join-Path $repoRoot "logs\nvda_phase5_paperlive_results.jsonl"
+if (-not (Test-Path $paperliveJsonl)) { throw "Missing paperlive jsonl: $paperliveJsonl" }
+
+$hasEv = 0; $missEv = 0
+Get-Content $paperliveJsonl -Encoding utf8 | ForEach-Object {
+  $ln = $_.Trim(); if (-not $ln) { return }
+  try { $o = $ln | ConvertFrom-Json -ErrorAction Stop } catch { return }
+  if ($o.PSObject.Properties.Name -contains "ts_trade") {
+    $ts = "$($o.ts_trade)"
+    if ($ts.Length -ge 10 -and $ts.Substring(0,10) -eq $today) {
+      if (($o.PSObject.Properties.Name -contains "ev_mu") -and ($null -ne $o.ev_mu)) { $hasEv++ } else { $missEv++ }
+    }
+  }
+}
+
+if ($missEv -gt 0) {
+  Write-Host "[ASSERT] FAIL-CLOSED: paperlive rows missing ev_mu today=$today has=$hasEv missing=$missEv" -ForegroundColor Red
+  exit 14
+}
+Write-Host "[ASSERT] OK: paperlive rows all have ev_mu today=$today rows=$hasEv" -ForegroundColor Green
+
+
 Write-Host "`n[STEP 1.25] Remove BOM from nvda_phase5_paperlive_results.jsonl (optional harden)" -ForegroundColor Cyan
 if (Test-Path ".\tools\Fix-NvdaJsonlBom.ps1") {
     .\tools\Fix-NvdaJsonlBom.ps1
