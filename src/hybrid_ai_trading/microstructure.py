@@ -1,29 +1,17 @@
 from __future__ import annotations
 
-"""
-Compatibility shim.
+from dataclasses import dataclass
+from typing import List
 
-Historically, HybridAITrading used a single module:
-  hybrid_ai_trading.microstructure (microstructure.py)
 
-Phase-2 requires a package:
-  hybrid_ai_trading.microstructure/
+@dataclass(frozen=True)
+class MicrostructureFeatures:
+    volume_sum: float
 
-This shim preserves the old import path by re-exporting from the package.
-"""
 
-from hybrid_ai_trading.microstructure.core import (  # type: ignore
-    MicrostructureFeatures,
-    MicrostructureTelemetryWriter,
-    compute_microstructure_features,
-    record_microstructure,
-    classify_micro_regime,
-)
-
-__all__ = [
-    "MicrostructureFeatures",
-    "MicrostructureTelemetryWriter",
-    "compute_microstructure_features",
-    "record_microstructure",
-    "classify_micro_regime",
-]
+def compute_microstructure_features(*, closes: List[float], volumes: List[float]) -> MicrostructureFeatures:
+    """
+    Minimal deterministic microstructure features (scaffold).
+    """
+    vsum = float(sum(float(v) for v in volumes))
+    return MicrostructureFeatures(volume_sum=vsum)
