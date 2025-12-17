@@ -13,9 +13,10 @@ CONTRACT_PATH = LOGS_DIR / "blockg_status_stub.json"
 
 @dataclass(frozen=True)
 class BlockGDecision:
+    as_of_date: str
+    symbol: str
     ready: bool
     reason: str
-    as_of_date: str
 
 
 def _today_str() -> str:
@@ -60,28 +61,31 @@ def require_blockg_ready(symbol: str) -> BlockGDecision:
     today = _today_str()
     as_of = str(c.get("as_of_date") or "")
     if as_of != today:
-        return BlockGDecision(False, f"stale_contract as_of={as_of} today={today}", as_of)
+        return BlockGDecision(as_of_date=as_of, symbol=sym, ready=False, reason=f"stale_contract as_of={as_of} today={today}")
 
     # required common fields
     if not _get_bool(c.get("phase4_ok_today")):
-        return BlockGDecision(False, "phase4_not_ok", as_of)
+        return BlockGDecision(as_of_date=as_of, symbol=sym, ready=False, reason="phase4_not_ok")
     if not _get_bool(c.get("phase23_health_ok_today")):
-        return BlockGDecision(False, "phase23_not_ok", as_of)
+        return BlockGDecision(as_of_date=as_of, symbol=sym, ready=False, reason="phase23_not_ok")
     if not _get_bool(c.get("ev_hard_daily_ok_today")):
-        return BlockGDecision(False, "ev_hard_not_ok", as_of)
+        return BlockGDecision(as_of_date=as_of, symbol=sym, ready=False, reason="ev_hard_not_ok")
 
     # gatescore ok (prefer per-symbol)
     per = f"{sym.lower()}_gatescore_ok_today"
     gs_ok = _get_bool(c.get(per)) if per in c else _get_bool(c.get("gatescore_ok_today"))
     if not gs_ok:
-        return BlockGDecision(False, "gatescore_not_ok", as_of)
+        return BlockGDecision(as_of_date=as_of, symbol=sym, ready=False, reason="gatescore_not_ok")
 
     # per-symbol ready flag
     flag_map = {"NVDA": "nvda_blockg_ready", "SPY": "spy_blockg_ready", "QQQ": "qqq_blockg_ready"}
     f = flag_map.get(sym)
     if not f or f not in c:
-        return BlockGDecision(False, "symbol_flag_missing", as_of)
+        return BlockGDecision(as_of_date=as_of, symbol=sym, ready=False, reason="symbol_flag_missing")
     if not _get_bool(c.get(f)):
-        return BlockGDecision(False, "symbol_not_ready", as_of)
+        return BlockGDecision(as_of_date=as_of, symbol=sym, ready=False, reason="symbol_not_ready")
 
     return BlockGDecision(True, "ok", as_of)
+
+
+

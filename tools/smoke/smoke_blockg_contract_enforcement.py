@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from hybrid_ai_trading.execution.blockg_contract import load_blockg_status, nvda_blockg_ready
+from hybrid_ai_trading.blockg_contract import require_blockg_ready
 from hybrid_ai_trading.execution.execution_engine_phase5_guard import place_order_phase5_with_guard
 
 
@@ -14,9 +14,8 @@ class DummyEngine:
 
 
 def main() -> int:
-    s = load_blockg_status()
-    print("[SMOKE] as_of_date=", s.as_of_date, "nvda_ready=", nvda_blockg_ready(s))
-
+    d0 = require_blockg_ready("NVDA")
+    print("[SMOKE] as_of_date=", d0.as_of_date, "nvda_ready=", d0.ready, "reason=", d0.reason)
     for is_paper in (False, True):
         label = "paper" if is_paper else "live"
         try:
