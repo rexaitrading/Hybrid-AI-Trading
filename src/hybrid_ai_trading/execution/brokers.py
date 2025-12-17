@@ -1,13 +1,9 @@
 from __future__ import annotations
-from hybrid_ai_trading.execution.blockg_ps_gate import enforce_blockg_via_powershell
-
 from typing import Any, Dict, Optional, Tuple
 from pathlib import Path
 
 from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env
-from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
-
-
+from hybrid_ai_trading.blockg_contract import require_blockg_ready
 class BrokerError(Exception):
     pass
 
@@ -102,9 +98,9 @@ class IBKRClient(BrokerClient):
         # ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Block-G NVDA enforcement
         sym = getattr(c, "symbol", None)
         if sym and str(sym).upper() == "NVDA" and ctx.is_live:
-            ensure_symbol_blockg_ready("NVDA")
-
-        enforce_blockg_via_powershell(getattr(c, "symbol", "") or "", "execution/brokers.py:submit_order")
+            d = require_blockg_ready("NVDA")
+            if not d.ready:
+                raise RuntimeError(f"BLOCK-G FAIL: {d.reason} as_of_date={d.as_of_date}")
         t = self.ib.placeOrder(c, o)
         self.ib.sleep(0.5)
 
@@ -209,5 +205,6 @@ class KrakenClient(BrokerClient):
             resp.get("id") or resp.get("txid") or resp.get("clientOrderId") or "unknown"
         )
         return oid, {"raw": resp}
+
 
 
