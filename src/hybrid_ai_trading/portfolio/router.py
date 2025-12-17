@@ -11,6 +11,7 @@ from hybrid_ai_trading.execution.blockg_runtime import enforce_blockg_if_live
 from hybrid_ai_trading.runtime.run_context import RunContext
 from hybrid_ai_trading.strategies.registry import StrategySpec, get as get_strategy
 from hybrid_ai_trading.portfolio.risk_aggregator import check_portfolio_risk
+from hybrid_ai_trading.portfolio.logging import append_intent
 
 
 def _now_utc_iso() -> str:
@@ -96,7 +97,7 @@ def route_one(
             "intent": intent,
             "result": res,
         }
-        _append_jsonl(Path("logs") / "portfolio_order_intents.jsonl", payload)
+        append_intent(payload=payload)
 
         out["intents"].append({"status": "sent", "intent": intent, "result": res})
 
