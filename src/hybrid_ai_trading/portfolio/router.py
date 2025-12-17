@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-
-
 import json
 
 from dataclasses import asdict
@@ -11,8 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from typing import Dict, List, Optional
-
-
 
 from hybrid_ai_trading.execution.execution_engine_phase5_guard import place_order_phase5_with_guard
 
@@ -26,17 +22,9 @@ from hybrid_ai_trading.portfolio.risk_aggregator import check_portfolio_risk
 
 from hybrid_ai_trading.portfolio.logging import append_intent
 
-
-
-
-
 def _now_utc_iso() -> str:
 
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
-
-
-
-
 
 def route_one(
 
@@ -80,15 +68,11 @@ def route_one(
 
         portfolio_state = {}
 
-
-
     spec: Optional[StrategySpec] = get_strategy(strategy_id)
 
     if spec is None:
 
         raise RuntimeError(f"[PHASE6] Strategy not registered: {strategy_id}")
-
-
 
     # signal + intents
 
@@ -96,11 +80,7 @@ def route_one(
 
     intents: List[Dict] = spec.order_plan_fn(signal, ctx, portfolio_state) or []
 
-
-
     out = {"status": "ok", "strategy_id": spec.strategy_id, "intents": []}
-
-
 
     for intent in intents:
 
@@ -108,13 +88,9 @@ def route_one(
 
         regime = str(intent.get("regime") or "").strip()
 
-
-
         # define LIVE intent by regime tag (same boundary rule as Phase-5 guard)
 
         is_live = ("LIVE" in regime.upper())
-
-
 
         # portfolio risk gate
 
@@ -126,8 +102,6 @@ def route_one(
 
             continue
 
-
-
         # Block-G enforcement for LIVE only (contract truth)
 
         dec = enforce_blockg_if_live(ctx, symbol, is_live=is_live)
@@ -137,8 +111,6 @@ def route_one(
             out["intents"].append({"status": "blocked", "reason": ",".join(dec.reasons), "intent": intent})
 
             continue
-
-
 
         # submit via Phase-5 guard (paper engines bypass readiness in the guard)
 
@@ -159,8 +131,6 @@ def route_one(
             day_id=str(intent.get("day_id") or ""),
 
         )
-
-
 
         # log intent
 
@@ -184,10 +154,6 @@ def route_one(
 
         append_intent(payload=payload)
 
-
-
         out["intents"].append({"status": "sent", "intent": intent, "result": res})
-
-
 
     return out
