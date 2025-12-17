@@ -35,10 +35,20 @@ $exitCode = $LASTEXITCODE
 if ($exitCode -ne 0) {
     Write-Host "[STEP 1] nvda_phase5_live_runner.py exited with code $exitCode" -ForegroundColor Red
     Write-Host "[PIPELINE] Aborting before CSV rebuild." -ForegroundColor Yellow
-    return
+    exit $exitCode
 }
 
 Write-Host "[STEP 1] nvda_phase5_live_runner.py completed successfully." -ForegroundColor Green
+
+# [STEP 1.1] Deterministic EV backfill for today (fix historic rows before quality gate)
+$today = (Get-Date).ToString("yyyy-MM-dd")
+if (Test-Path ".\tools\Backfill-NvdaPaperliveEvMu.ps1") {
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Backfill-NvdaPaperliveEvMu.ps1 -AsOfDate $today
+} else {
+  Write-Host "[STEP 1.1] FAIL-CLOSED: missing tools\Backfill-NvdaPaperliveEvMu.ps1" -ForegroundColor Red
+  exit 15
+}
+
 
 # [ASSERT] fail-closed if today's paperlive rows are missing ev_mu
 $today = (Get-Date).ToString("yyyy-MM-dd")
@@ -106,3 +116,4 @@ Write-Host "`n[STEP 2] Rebuild NVDA Phase-5 paper CSV for Notion" -ForegroundCol
 }
 
 Write-Host "`n[PIPELINE] NVDA Phase-5 paper pipeline complete." -ForegroundColor Green
+
