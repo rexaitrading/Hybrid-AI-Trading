@@ -134,13 +134,16 @@ def place_order_phase5_with_guard(
     }    # 1) Unified RunContext + Block-G enforcement (single authority, fail-closed)
     ctx = getattr(engine, "run_context", None) or RunContext.from_env()
 
-    # Define "LIVE" consistently: either ctx.mode==LIVE OR regime contains LIVE
-    is_live = (ctx.mode == RunMode.LIVE) or ("LIVE" in (regime or "").upper())
+    # PAPER must never be blocked by readiness flags (institutional rule)
+    if getattr(engine, "is_paper", False):
+        is_live = False
+    else:
+        is_live = ("LIVE" in (regime or "").upper())
     if is_live:
         # Canonical gate: requires Block-G contract truth
-        dec = enforce_blockg_if_live(ctx, symbol)
+        dec = enforce_blockg_if_live(ctx, symbol, is_live=is_live)
         if not dec.ok:
-            raise RuntimeError(f"BLOCKG_DENY:{symbol}:" + ",".join(dec.reasons))
+            raise RuntimeError(f"BLOCKG_DENY:{symbol}:mode={ctx.mode}:" + ",".join(dec.reasons))
 
     # 2) Phase-5 RiskManager guard
     rm = getattr(engine, "risk_manager", None)
