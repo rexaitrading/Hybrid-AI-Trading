@@ -13,9 +13,11 @@ $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
 $contractPath = Join-Path $repoRoot ("logs\blockg_status_stub_{0}.json" -f $Symbol.ToLowerInvariant())
+Write-Host "[BLOCKG] contract_path=$contractPath" -ForegroundColor DarkGray
 if (-not (Test-Path $contractPath)) {
     # Backward compat: fall back to legacy single-file contract
     $contractPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
+Write-Host "[BLOCKG] contract_path=$contractPath" -ForegroundColor DarkGray
 }
 if (-not (Test-Path $contractPath)) {
     Write-Host "[BLOCKG] Missing contract: logs\blockg_status_stub.json" -ForegroundColor Red
