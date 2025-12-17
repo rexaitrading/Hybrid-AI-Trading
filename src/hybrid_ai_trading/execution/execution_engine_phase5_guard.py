@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from hybrid_ai_trading.risk.risk_phase5_ev_bands import get_ev_and_band
 from dataclasses import asdict
 from typing import Any, Dict
 
@@ -78,6 +79,12 @@ def place_order_phase5(
     """
     Underlying Phase-5 order placement hook (stub for tests).
     """
+    ev_mu, ev_band_abs = (None, None)
+    try:
+        ev_mu, ev_band_abs = get_ev_and_band(str(regime))
+    except Exception:
+        ev_mu, ev_band_abs = (None, None)
+
     return {
         "status": "ok_stub_engine",
         "symbol": symbol,
@@ -87,6 +94,15 @@ def place_order_phase5(
         "regime": regime,
         "day_id": day_id,
         "extra": kwargs,
+
+        # Phase-5 EV surface (deterministic from ev-band table; may be None)
+        "ev_mu": ev_mu,
+        "ev_band_abs": ev_band_abs,
+        "phase5_result": {
+            "ev_mu": ev_mu,
+            "ev_band_abs": ev_band_abs,
+            "source": "ev_band_table",
+        },
     }
 
 
@@ -150,3 +166,4 @@ def place_order_phase5_with_guard(
         day_id=day_id,
         **kwargs,
     )
+
