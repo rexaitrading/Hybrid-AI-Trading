@@ -1,4 +1,4 @@
-﻿@{
+@{
   DEFAULT = @{
     min_signals      = 80
     min_pnl_samples  = 200
@@ -9,7 +9,7 @@
   NVDA = @{
     min_signals      = 100
     min_pnl_samples  = 300
-    min_edge_ratio   = 0.30
+    min_edge_ratio   = 0.02
     min_micro_score  = 0.55
   }
 
@@ -27,3 +27,4 @@
     min_micro_score  = 0.45
   }
 }
+
