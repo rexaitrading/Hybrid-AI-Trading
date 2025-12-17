@@ -69,12 +69,12 @@ function Main {
 
 # --- BLOCKG_GATESCORE_SMOKE_SINGLE_TRUTH ---
 # Canonical GateScore truth: must match smoke output (fail-closed).
-$gs_ok = $false
+$gs_ok_smoke = $false
 try {
   powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "Run-GateScoreSmoke.ps1") | Out-Host
-  $gs_ok = ($LASTEXITCODE -eq 0)
+  $gs_ok_smoke = ($LASTEXITCODE -eq 0)
 } catch {
-  $gs_ok = $false
+  $gs_ok_smoke = $false
 }
 # --- END BLOCKG_GATESCORE_SMOKE_SINGLE_TRUTH ---
   # Normalize Symbol (StrictMode-safe)
@@ -198,9 +198,7 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   }
 
   $gs_ok = ($gs_fresh -and $gs_samples_ok -and $gs_threshold_ok)
-
-  $nvda_ready = ($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok)
-
+$nvda_ready = ($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok_smoke)
   $obj = [ordered]@{
     ts_utc                       = (Get-Date).ToUniversalTime().ToString("o")
     as_of_date                   = $today
@@ -212,8 +210,7 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
     gatescore_fresh_today        = [bool]$gs_fresh
     gatescore_samples_ok_today   = [bool]$gs_samples_ok
     gatescore_threshold_ok_today = [bool]$gs_threshold_ok
-    gatescore_ok_today           = [bool]$gs_ok
-
+    gatescore_ok_today           = [bool]$gs_ok_smoke
     nvda_blockg_ready            = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok -and ($Symbol -eq "NVDA"))
     spy_blockg_ready             = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok -and ($Symbol -eq "SPY"))
     qqq_blockg_ready             = [bool]($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok -and ($Symbol -eq "QQQ"))
