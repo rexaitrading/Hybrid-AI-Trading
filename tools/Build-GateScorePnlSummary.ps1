@@ -72,8 +72,20 @@ foreach($r in $rows) {
 }
 
 if ($vals.Count -lt 1) {
-  Write-Utf8NoBom -Path $out -Content ($header + "`r`n")
-  Write-Host "[GATESCORE-PNL] WARN: no REAL $sym pnl samples for today ($today); wrote header-only (fail-closed)." -ForegroundColor Yellow
+  # Deterministic fail-closed row (prevents downstream ValueError; smoke fails by pnl_samples<1)
+  $countSignals = 0
+  $pnlSamples   = 0
+  $meanEdge     = 0.0
+  $meanMicro    = 0.0
+  $meanPnl      = 0.0
+
+  $line = ("{0},{1},{2},{3},{4},{5},{6}" -f `
+    $today, $sym, $countSignals, $pnlSamples, `
+    ("{0:F6}" -f $meanEdge), ("{0:F6}" -f $meanMicro), ("{0:F6}" -f $meanPnl))
+
+  Write-Utf8NoBom -Path $out -Content ($header + "`r`n" + $line + "`r`n")
+  Write-Host "[GATESCORE-PNL] FAIL-CLOSED: no REAL $sym pnl samples for today ($today); wrote pnl_samples=0 row." -ForegroundColor Yellow
+  Get-Content -LiteralPath $out -TotalCount 2
   exit 0
 }
 
