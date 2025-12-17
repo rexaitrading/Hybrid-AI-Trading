@@ -123,7 +123,8 @@ Get-Content $inJsonl -Encoding utf8 | ForEach-Object {
   if ($ts.Substring(0,10) -ne $today) { return }
 
   # Only count events that have GateScore metrics (edge_ratio + micro_score) AND a realized_pnl field
-  $edge = (Get-EvMu $obj); if ($null -eq $edge) { $edge = (Get-EvProxy $obj) }; if ($null -eq $edge) { $edge = Get-EdgeRatio $obj }
+  $edge = (Get-EvMu $obj)
+  if ($null -eq $edge) { return }  # fail-closed: GateScore events require ev_mu
   $micro = Get-MicroScore $obj; if ($micro -le 0.0) { $micro = $microFallback }
   if ($edge -eq 0.0 -and $micro -eq 0.0) { return }
   if (-not (Has-RealizedPnl $obj)) { return }
@@ -151,6 +152,8 @@ if ($rows -eq 0) {
 
 Write-Host "[GS-EVENTS] Wrote $outJsonl rows=$rows mode=$Mode" -ForegroundColor Green
 exit 0
+
+
 
 
 
