@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+
+from hybrid_ai_trading.execution.blockg_runtime import enforce_blockg_if_live
+from hybrid_ai_trading.runtime.run_context import RunContext, RunMode
 from hybrid_ai_trading.risk.risk_phase5_ev_bands import get_ev_and_band
 from dataclasses import asdict
 from typing import Any, Dict
@@ -128,21 +131,16 @@ def place_order_phase5_with_guard(
         "regime": regime,
         "day_id": day_id,
         **kwargs,
-    }
+    }    # 1) Unified RunContext + Block-G enforcement (single authority, fail-closed)
+    ctx = getattr(engine, "run_context", None) or RunContext.from_env()
 
-        # 1) Block-G enforcement for LIVE orders (single authority)
-    if "LIVE" in (regime or "").upper():
-        ctx = getattr(engine, "run_context", None)
-
-        if ctx is not None:
-            # Canonical strict gate: RunContext is the authority (fail-closed)
-            try:
-                ctx.require_live_safe(symbol=symbol)
-            except TypeError:
-                ctx.require_live_safe()
-        else:
-            # Legacy/test hook: allow monkeypatch in unit tests (no kwargs)
-            ensure_symbol_blockg_ready(symbol, engine=engine)
+    # Define "LIVE" consistently: either ctx.mode==LIVE OR regime contains LIVE
+    is_live = (ctx.mode == RunMode.LIVE) or ("LIVE" in (regime or "").upper())
+    if is_live:
+        # Canonical gate: requires Block-G contract truth
+        dec = enforce_blockg_if_live(ctx, symbol)
+        if not dec.ok:
+            raise RuntimeError(f"BLOCKG_DENY:{symbol}:" + ",".join(dec.reasons))
 
     # 2) Phase-5 RiskManager guard
     rm = getattr(engine, "risk_manager", None)
