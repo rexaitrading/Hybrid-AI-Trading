@@ -2,11 +2,19 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import os
+
+def _paper_trades_path() -> Path:
+    # Optional override so ops can feed merged temp JSONL without contaminating logs/paper_trades.jsonl
+    p = (os.getenv("HAT_PAPER_TRADES_PATH", "") or "").strip()
+    if p:
+        return Path(p)
+    return Path("logs") / "paper_trades.jsonl"
 from typing import Any, Dict, List
 
 
 def _load_candidates(symbol: str, limit: int | None = 50) -> List[Dict[str, Any]]:
-    src = Path("logs") / "paper_trades.jsonl"
+    src = _paper_trades_path()
     if not src.exists():
         return []
 
