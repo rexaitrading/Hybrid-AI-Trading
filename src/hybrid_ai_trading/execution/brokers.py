@@ -105,11 +105,17 @@ class IBKRClient(BrokerClient):
         self.ib.sleep(0.5)
 
         order_id = str(t.order.orderId)
+                _fills_obj = None
+        try:
+            _fills_attr = getattr(t, "fills", None)
+            _fills_obj = _fills_attr() if callable(_fills_attr) else _fills_attr
+        except Exception:
+            _fills_obj = None
+
         fills = [
             {"px": f.execution.avgPrice, "qty": f.execution.shares}
-            for f in (t.fills() or [])
-        ]
-        return order_id, {"status": t.orderStatus.status, "fills": fills}
+            for f in (_fills_obj or [])
+        ]return order_id, {"status": t.orderStatus.status, "fills": fills}
 
     def disconnect(self):
         try:
@@ -205,6 +211,7 @@ class KrakenClient(BrokerClient):
             resp.get("id") or resp.get("txid") or resp.get("clientOrderId") or "unknown"
         )
         return oid, {"raw": resp}
+
 
 
 
