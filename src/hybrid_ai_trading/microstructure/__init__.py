@@ -1,18 +1,6 @@
 from __future__ import annotations
 
-"""
-Compatibility shim.
-
-Historically, HybridAITrading used a single module:
-  hybrid_ai_trading.microstructure (microstructure.py)
-
-Phase-2 requires a package:
-  hybrid_ai_trading.microstructure/
-
-This shim preserves the old import path by re-exporting from the package.
-"""
-
-from hybrid_ai_trading.microstructure.core import (  # type: ignore
+from .core import (
     MicrostructureFeatures,
     MicrostructureTelemetryWriter,
     compute_microstructure_features,
