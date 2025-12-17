@@ -13,13 +13,15 @@ class BlockGRuntimeDecision:
     reasons: List[str]
 
 
-def enforce_blockg_if_live(ctx: RunContext, symbol: str) -> BlockGRuntimeDecision:
+def enforce_blockg_if_live(ctx: RunContext, symbol: str, *, is_live: bool | None = None) -> BlockGRuntimeDecision:
     """
     Single shared fail-closed gate:
       - PAPER/REPLAY: ok=True (never block artifact/sim)
       - LIVE: must pass require_blockg_ready(symbol) (contract truth)
     """
-    if ctx.mode != RunMode.LIVE:
+    if is_live is None:
+        is_live = (ctx.mode == RunMode.LIVE)
+    if not is_live:
         return BlockGRuntimeDecision(ok=True, reasons=["NON_LIVE_MODE"])
 
     d = require_blockg_ready(symbol)

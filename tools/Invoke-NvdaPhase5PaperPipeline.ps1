@@ -27,9 +27,9 @@ Write-Host "PythonExe = $PythonExe"
 Write-Host "PYTHONPATH= $env:PYTHONPATH"
 
 # --- Step 1: run NVDA Phase-5 live runner (IB paper) ------------------------
-Write-Host "`n[STEP 1] Run nvda_phase5_live_runner.py (IB paper)" -ForegroundColor Cyan
+Write-Host "`n[STEP 1] Run paper_live_without_ibg_nvda_phase5.py (paper, NO-IBG)" -ForegroundColor Cyan
 
-& $PythonExe .\src\hybrid_ai_trading\runners\nvda_phase5_live_runner.py
+& $PythonExe .\tools\paper_live_without_ibg_nvda_phase5.py
 $exitCode = $LASTEXITCODE
 
 if ($exitCode -ne 0) {
