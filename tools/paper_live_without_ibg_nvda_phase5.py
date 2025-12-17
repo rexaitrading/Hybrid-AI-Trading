@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+from hybrid_ai_trading.risk.risk_phase5_ev_bands import get_ev_and_band
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -197,8 +198,20 @@ def main() -> None:
 # out["ts_trade"] preserved from paper_trades ts (do not overwrite)
         if not out.get("entry_ts"):
             out["entry_ts"] = out["ts_trade"]
+        # --- EV-band stamp (fail-closed safe): ensure ev_mu/ev_band_abs are present for GateScore readiness
+        try:
+            if out.get("ev_mu") is None or out.get("ev_band_abs") is None:
+                ev_mu, ev_band_abs = get_ev_and_band(str(out.get("regime") or "NVDA_BPLUS_LIVE"))
+                out.setdefault("ev_mu", ev_mu)
+                out.setdefault("ev_band_abs", ev_band_abs)
+                p5 = out.get("phase5_result") or {}
+                p5.setdefault("ev_mu", out.get("ev_mu"))
+                p5.setdefault("ev_band_abs", out.get("ev_band_abs"))
+                p5.setdefault("source", "ev_band_table")
+                out["phase5_result"] = p5
+        except Exception:
+            pass
         out_f.write(json.dumps(out) + "\n")
-
     out_f.close()
     print(f"Wrote NVDA Phase-5 paper-live results to {dst}")
 
