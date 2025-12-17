@@ -17,9 +17,7 @@ OrderManager (minimal, test-friendly)
 """
 
 import logging
-from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
-
-
+from hybrid_ai_trading.blockg_contract import require_blockg_ready
 def _enforce_blockg_before_live_send(symbol: str) -> None:
     """
     Institutional fail-closed Block-G gate at OrderManager boundary.
@@ -28,8 +26,9 @@ def _enforce_blockg_before_live_send(symbol: str) -> None:
       - RunContext is enforced at engine / IB adapter layers.
       - OrderManager enforces contract truth ONLY.
     """
-    assert_symbol_ready(symbol)
-
+    d = require_blockg_ready(symbol)
+    if not d.ready:
+        raise RuntimeError(f"BLOCK-G NOT READY: symbol={d.symbol} as_of_date={d.as_of_date} reason={d.reason}")
 from pathlib import Path
 import uuid
 from types import SimpleNamespace
@@ -704,3 +703,4 @@ class OrderManager:
         self.active_orders.clear()
         self._open_ids.clear()
         return {"status": "flattened", "flattened": True, "cancelled": cancelled}
+
