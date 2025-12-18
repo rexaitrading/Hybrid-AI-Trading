@@ -1,18 +1,7 @@
 from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env
 from hybrid_ai_trading.runtime.context_loader import is_live_env
 from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
-def _is_live_mode() -> bool:
-    """
-    Unified LIVE-mode check via RunContext (single authority).
-    Preserves operator override: IBKR_LIVE=1.
-    """
-    import os
-    if os.getenv("IBKR_LIVE", "0") == "1":
-        return True
-    return bool(load_run_context_from_env().is_live)
-
 from typing import Any, Dict, List, Optional, Tuple
-
 from .base import Broker
 
 try:
@@ -22,6 +11,15 @@ except Exception as e:  # pragma: no cover
     _import_error = e
 else:
     _import_error = None
+def _is_live_mode() -> bool:
+    """
+    Unified LIVE-mode check via RunContext (single authority).
+    Preserves operator override: IBKR_LIVE=1.
+    """
+    import os
+    if os.getenv("IBKR_LIVE", "0") == "1":
+        return True
+    return bool(load_run_context_from_env().is_live)
 
 
 class IBAdapter(Broker):
@@ -69,21 +67,25 @@ class IBAdapter(Broker):
         meta: Optional[Dict[str, Any]] = None,
     ) -> Tuple[int, Dict[str, Any]]:
         contract = Stock(symbol, "SMART", "USD")
+
         if order_type.upper() == "LIMIT":
             if limit_price is None:
                 raise ValueError("limit_price required for LIMIT orders")
             order = LimitOrder(side.upper(), qty, limit_price)
         else:
-            order = MarketOrder(side.upper(), qty)        # --- HARD BLOCK-G ENFORCEMENT (last-mile, fail-closed) ---
-        # No live NVDA order may reach IBKR unless contract says READY.
-                if (symbol or "").strip().upper() == "NVDA" and _is_live_mode():
+            order = MarketOrder(side.upper(), qty)
+
+        # --- HARD BLOCK-G ENFORCEMENT (last-mile, fail-closed) ---
+        if (symbol or "").strip().upper() == "NVDA" and _is_live_mode():
             assert_symbol_ready("NVDA")
-from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
+
+        from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
         forbid_direct_ib_live("broker/ib_safe.py:direct_send")
-trade = self.ib.placeOrder(contract, order)
-        # Give IB a moment to populate status in async loop
+
+        trade = self.ib.placeOrder(contract, order)
         self.ib.sleep(0.1)
         st = trade.orderStatus
+
         meta_out = {
             "status": st.status,
             "filled": float(st.filled or 0),
@@ -118,19 +120,6 @@ trade = self.ib.placeOrder(contract, order)
                 }
             )
         return pos
-from typing import Any, Dict, List, Optional, Tuple
-
-from .base import Broker
-
-try:
-    from ib_insync import IB, LimitOrder, MarketOrder, Stock
-except Exception as e:  # pragma: no cover
-    IB = None
-    _import_error = e
-else:
-    _import_error = None
-
-
 
 def account_snapshot(ib, account: str, wait_sec: float = 0.25):
     """

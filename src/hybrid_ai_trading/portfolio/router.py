@@ -11,8 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from hybrid_ai_trading.execution.execution_engine_phase5_guard import place_order_phase5_with_guard
-
-from hybrid_ai_trading.execution.blockg_runtime import enforce_blockg_if_live
+import hybrid_ai_trading.execution.blockg_runtime as br
 
 from hybrid_ai_trading.runtime.run_context import RunContext
 
@@ -90,7 +89,7 @@ def route_one(
 
         # define LIVE intent by regime tag (same boundary rule as Phase-5 guard)
 
-        is_live = ("LIVE" in regime.upper())
+        is_live = (("LIVE" in regime.upper()) or (str(intent.get("mode") or "").strip().upper() == "LIVE"))
 
         # portfolio risk gate
 
@@ -100,18 +99,36 @@ def route_one(
 
             out["intents"].append({"status": "blocked", "reason": ",".join(pr.reasons), "intent": intent})
 
+            try:
+
+                append_intent({"status": "blocked", "reason": ",".join(pr.reasons), "intent": intent})
+
+            except Exception:
+
+                pass
             continue
 
         # Block-G enforcement for LIVE only (contract truth)
-
-        dec = enforce_blockg_if_live(ctx, symbol, is_live=is_live)
-
-        if not dec.ok:
-
-            out["intents"].append({"status": "blocked", "reason": ",".join(dec.reasons), "intent": intent})
-
-            continue
-
+        # Block-G enforcement for LIVE only (contract truth) — monkeypatch-safe
+        if is_live:
+            try:
+                d = br.require_blockg_ready(symbol)
+                if not bool(getattr(d, "ready", False)):
+                    reason = str(getattr(d, "reason", "BLOCKG_NOT_READY"))
+                    out["intents"].append({"status": "blocked", "reason": reason, "intent": intent})
+                    try:
+                        append_intent({"status": "blocked", "reason": reason, "intent": intent})
+                    except Exception:
+                        pass
+                    continue
+            except Exception as e:
+                reason = f"BLOCKG_EXCEPTION:{type(e).__name__}"
+                out["intents"].append({"status": "blocked", "reason": reason, "intent": intent})
+                try:
+                    append_intent({"status": "blocked", "reason": reason, "intent": intent})
+                except Exception:
+                    pass
+                continue
         # submit via Phase-5 guard (paper engines bypass readiness in the guard)
 
         res = place_order_phase5_with_guard(
@@ -156,4 +173,11 @@ def route_one(
 
         out["intents"].append({"status": "sent", "intent": intent, "result": res})
 
+        try:
+
+            append_intent({"status": "sent", "intent": intent, "result": res})
+
+        except Exception:
+
+            pass
     return out

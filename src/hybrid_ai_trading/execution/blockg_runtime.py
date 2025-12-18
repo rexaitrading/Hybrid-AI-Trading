@@ -27,3 +27,11 @@ def enforce_blockg_if_live(ctx: RunContext, symbol: str, *, is_live: bool | None
     if not d.ready:
         return BlockGRuntimeDecision(ok=False, reasons=[f"{d.reason}"])
     return BlockGRuntimeDecision(ok=True, reasons=["OK"])
+# --- Back-compat shim (tests monkeypatch this symbol) ---
+def require_blockg_ready(symbol: str):
+    """
+    Back-compat for tests. Delegates to contract reader single truth.
+    """
+    from hybrid_ai_trading.execution.blockg_contract_reader import is_symbol_ready
+    return is_symbol_ready(symbol)
+# --- End shim ---

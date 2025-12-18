@@ -1,7 +1,15 @@
 from __future__ import annotations
+
+def ensure_symbol_blockg_ready(symbol: str) -> None:
+    """
+    Back-compat shim for tests: canonical Block-G contract-only check.
+    """
+    from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
+    assert_symbol_ready(str(symbol))
 from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env
 from hybrid_ai_trading.runtime.context_loader import is_live_env
-from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+
 def _is_live_mode() -> bool:
     """
     Unified LIVE-mode check via RunContext (single authority).
@@ -41,7 +49,6 @@ class IBAdapter(Broker):
         self.timeout = timeout
         self.ib = IB()
 
-        self.run_context = load_run_context_from_env()
     def connect(self) -> bool:
         ok = self.ib.connect(
             self.host, self.port, clientId=self.client_id, timeout=self.timeout
@@ -70,6 +77,18 @@ class IBAdapter(Broker):
         meta: Optional[Dict[str, Any]] = None,
     ) -> Tuple[int, Dict[str, Any]]:
         contract = Stock(symbol, "SMART", "USD")
+                        # --- HARD BLOCK-G ENFORCEMENT (early, fail-closed) ---
+        # Rules:
+        #   - LIVE mode: enforce NVDA Block-G
+        #   - Contract override set (BLOCKG_CONTRACT_PATH): enforce NVDA Block-G (test last-mile)
+        import os as _os
+        _force_contract = bool((_os.getenv("BLOCKG_CONTRACT_PATH", "") or "").strip())
+        if (symbol or "").strip().upper() == "NVDA" and (_is_live_mode() or _force_contract):
+            try:
+                ensure_symbol_blockg_ready("NVDA")
+            except Exception as _exc:
+                raise RuntimeError(f"[BLOCK-G] NVDA not ready: {_exc}")
+
         if order_type.upper() == "LIMIT":
             if limit_price is None:
                 raise ValueError("limit_price required for LIMIT orders")
@@ -78,11 +97,13 @@ class IBAdapter(Broker):
             order = MarketOrder(side.upper(), qty)
                         # --- HARD BLOCK-G ENFORCEMENT (last-mile) ---
         import os as _os2
-        _force_contract2 = bool((_os2.getenv("HAT_BLOCKG_CONTRACT_PATH", "") or "").strip())
-                if (symbol or "").strip().upper() == "NVDA" and (_is_live_mode() or _force_contract2):
-            assert_symbol_ready("NVDA")
-from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
-        forbid_direct_ib_live("brokers/ib_adapter.py:direct_send")
+        _force_contract2 = bool((_os2.getenv("BLOCKG_CONTRACT_PATH", "") or "").strip())
+        if (symbol or "").strip().upper() == "NVDA" and (_is_live_mode() or _force_contract2):
+            try:
+                ensure_symbol_blockg_ready("NVDA")
+            except Exception as _exc:
+                raise RuntimeError(f"[BLOCK-G] NVDA not ready: {_exc}")
+
         trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)
@@ -121,4 +142,3 @@ from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
                 }
             )
         return pos
-

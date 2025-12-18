@@ -515,7 +515,7 @@ class OrderManager:
         # LIVE PATH
         if not self.dry_run and self.live_client is not None:
             try:
-_enforce_blockg_before_live_send(str(symbol))
+                _enforce_blockg_before_live_send(str(symbol))
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
@@ -545,6 +545,27 @@ _enforce_blockg_before_live_send(str(symbol))
                     "order_id": oid,
                     "raw": raw,
                 }
+            except RuntimeError as e:
+                # Block-G is an institutional hard gate (fail-closed): surface as BLOCKED not ERROR
+                return {
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qty,
+                    "notional": notional,
+                    "status": "blocked",
+                    "reason": f"BLOCKG: {e}",
+                }
+            except RuntimeError as e:
+                # Block-G hard gate -> BLOCKED, not ERROR
+                return {
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": qty,
+                    "notional": notional,
+                    "status": "blocked",
+                    "reason": f"BLOCKG_NOT_READY: {e}",
+                }
+
             except Exception as e:
                 logger.error("OrderManager live submit error: %s", e)
                 return {

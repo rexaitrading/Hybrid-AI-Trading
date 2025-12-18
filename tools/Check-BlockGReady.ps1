@@ -12,15 +12,26 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
-$contractPath = Join-Path $repoRoot ("logs\blockg_status_stub_{0}.json" -f $Symbol.ToLowerInvariant())
-Write-Host "[BLOCKG] contract_path=$contractPath" -ForegroundColor DarkGray
-if (-not (Test-Path $contractPath)) {
-    # Backward compat: fall back to legacy single-file contract
-    $contractPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
-Write-Host "[BLOCKG] contract_path=$contractPath" -ForegroundColor DarkGray
+# Contract path resolution (single truth):
+# 1) Explicit env override (HAT_BLOCKG_CONTRACT_PATH / BLOCKG_CONTRACT_PATH)
+# 2) Canonical default: logs\blockg_status_stub.json
+# 3) Back-compat per-symbol: logs\blockg_status_stub_{symbol}.json
+$envPath = ( ($env:HAT_BLOCKG_CONTRACT_PATH + "") ).Trim()
+if (-not $envPath) { $envPath = ( ($env:BLOCKG_CONTRACT_PATH + "") ).Trim() }
+
+if ($envPath) {
+    $contractPath = $envPath
+} else {
+    $canonical = Join-Path $repoRoot "logs\blockg_status_stub.json"
+    if (Test-Path $canonical) {
+        $contractPath = $canonical
+    } else {
+        $contractPath = Join-Path $repoRoot ("logs\blockg_status_stub_{0}.json" -f $Symbol.ToLowerInvariant())
+    }
 }
+
 if (-not (Test-Path $contractPath)) {
-    Write-Host "[BLOCKG] Missing contract: logs\blockg_status_stub.json" -ForegroundColor Red
+    Write-Host "[BLOCKG] Missing contract: $contractPath" -ForegroundColor Red
     exit 2
 }
 

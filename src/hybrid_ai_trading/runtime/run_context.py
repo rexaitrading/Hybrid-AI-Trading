@@ -4,46 +4,61 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 from pathlib import Path
-import os
 
 
 class RunMode(str, Enum):
-    REPLAY = "REPLAY"
     PAPER = "PAPER"
     LIVE = "LIVE"
+    PREMARKET = "PREMARKET"
 
 
 @dataclass(frozen=True)
 class RunContext:
     """
-    Unified runtime context (single truth) shared by:
-      - pre-market routines
-      - sim/paper runners
-      - live runners
-      - Notion exporters
+    Canonical run context shared across tools/runners/engines.
 
-    Fail-closed:
-      - LIVE requires a valid Block-G contract for the symbol/day.
+    Fail-safe defaults:
+      - mode defaults to PAPER
+      - trading_date defaults to today
+      - day_id defaults to ISO date string
     """
-    mode: RunMode
-    day_id: str
-    fail_closed: bool = True
+    mode: RunMode = RunMode.PAPER
+    trading_date: date = date.today()
+    symbol: str | None = None
+
+    # legacy compatibility (many modules use day_id)
+    day_id: str = ""
+
+    # Phase readiness flags (fail-safe False)
+    phase4_passed: bool = False
+    blockg_ready: bool = False
+    phase23_ok: bool = False
+    ev_hard_ok: bool = False
+    gatescore_fresh: bool = False
+
+    # repo wiring (safe defaults)
+    repo_root: Path = Path(".")
+    logs_dir: Path = Path(".") / "logs"
     blockg_path: Path | None = None
 
-    @staticmethod
-    def today_day_id() -> str:
-        return date.today().isoformat()
+    def __post_init__(self):
+        # dataclasses(frozen=True) -> use object.__setattr__
+        if not self.day_id:
+            object.__setattr__(self, "day_id", self.trading_date.isoformat())
+
+
+
+    @property
+    def is_live(self) -> bool:
+        return self.mode == RunMode.LIVE
+
+    @property
+    def is_paper(self) -> bool:
+        return self.mode == RunMode.PAPER
 
     @classmethod
     def from_env(cls) -> "RunContext":
-        mode_s = (os.getenv("HAT_RUN_MODE", "PAPER") or "PAPER").strip().upper()
-        try:
-            mode = RunMode(mode_s)
-        except Exception:
-            mode = RunMode.PAPER
-
-        day_id = (os.getenv("HAT_DAY_ID", "") or cls.today_day_id()).strip()
-        fail_closed = (os.getenv("HAT_FAIL_CLOSED", "1").strip() != "0")
-        bg = (os.getenv("HAT_BLOCKG_PATH", "") or "").strip()
-        blockg_path = Path(bg) if bg else None
-        return cls(mode=mode, day_id=day_id, fail_closed=fail_closed, blockg_path=blockg_path)
+        # Delegate to canonical loader (single authority)
+        from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env
+        return load_run_context_from_env()
+__all__ =  ["RunMode", "RunContext"]
