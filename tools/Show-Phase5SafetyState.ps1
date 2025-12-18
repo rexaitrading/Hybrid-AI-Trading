@@ -25,6 +25,8 @@ Write-Host "[SAFETY] Loading Phase-5 RunContext from $runCtxPath" -ForegroundCol
 
 try {
     $raw     = Get-Content -Path $runCtxPath -Raw -Encoding UTF8
+    # BOM-safe
+    if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 65279) { $raw = $raw.TrimStart([char]65279) }
     $runCtx  = $raw | ConvertFrom-Json
 } catch {
     Write-Host "[SAFETY] ERROR: Failed to parse RunContext JSON. $_" -ForegroundColor Red
@@ -50,7 +52,9 @@ $mode    = Get-FieldSafe -Obj $runCtx -Name "phase5_mode"
 
 $phase23 = Get-FieldSafe -Obj $runCtx -Name "phase23_health_ok_today"
 $evHard  = Get-FieldSafe -Obj $runCtx -Name "ev_hard_daily_ok_today"
-$gsFresh = Get-FieldSafe -Obj $runCtx -Name "gatescore_fresh_today"
+$gsField = "gatescore_ok_today"
+$gsFresh = Get-FieldSafe -Obj $runCtx -Name $gsField
+if ($null -eq $gsFresh) { $gsField = "gatescore_fresh_today"; $gsFresh = Get-FieldSafe -Obj $runCtx -Name $gsField }
 
 $nvdaReady = Get-FieldSafe -Obj $runCtx -Name "nvda_blockg_ready"
 $spyReady  = Get-FieldSafe -Obj $runCtx -Name "spy_blockg_ready"
@@ -65,6 +69,7 @@ Write-Host "------------------------------------------------------------" -Foreg
 Write-Host ("Phase23 OK   : {0}" -f $phase23)
 Write-Host ("EV-hard OK   : {0}" -f $evHard)
 Write-Host ("GateScore OK : {0}" -f $gsFresh)
+Write-Host ("GateScore field: {0}" -f $gsField) -ForegroundColor DarkGray
 Write-Host "------------------------------------------------------------" -ForegroundColor DarkCyan
 Write-Host ("NVDA Block-G : {0}" -f $nvdaReady)
 Write-Host ("SPY  Block-G : {0}" -f $spyReady)
