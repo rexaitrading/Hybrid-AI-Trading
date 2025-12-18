@@ -22,6 +22,11 @@ $header = "date,ok,reason"
 # INPUT HOOK (computed): later wire to real EV-hard snapshot output.
 # For now, compute from presence of a placeholder "ev_hard_snapshot.json" with today's date and ok=true.
 $snap = Join-Path $logsDir "ev_hard_snapshot.json"
+
+# --- EVHARD_DEBUG_PATHS ---
+Write-Host "[EV-HARD] logsDir=$logsDir" -ForegroundColor DarkCyan
+Write-Host "[EV-HARD] snap=$snap exists=$((Test-Path $snap))" -ForegroundColor DarkCyan
+# --- END EVHARD_DEBUG_PATHS ---
 $ok = $false
 $reason = "missing_inputs"
 
