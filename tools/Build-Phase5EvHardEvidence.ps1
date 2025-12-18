@@ -7,15 +7,14 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
 function Resolve-RepoRoot {
-  # 0) ENV override is single truth
   $envRoot = (($env:HAT_REPO_ROOT + "")).Trim()
   if($envRoot){
     $full = [System.IO.Path]::GetFullPath($envRoot)
+    if(Test-Path -LiteralPath (Join-Path $full ".git")){ return $full }
     if(Test-Path -LiteralPath (Join-Path $full "logs")){ return $full }
     if(Test-Path -LiteralPath $full){ return $full }
   }
 
-  # 1) fallback: walk up from script path to find .git
   $scriptPath = $PSCommandPath
   if([string]::IsNullOrWhiteSpace($scriptPath)){ $scriptPath = $MyInvocation.MyCommand.Path }
   if([string]::IsNullOrWhiteSpace($scriptPath)){ throw "[REPOROOT] cannot resolve script path" }
@@ -29,38 +28,21 @@ function Resolve-RepoRoot {
   }
   throw "[REPOROOT] Could not find .git and no HAT_REPO_ROOT set"
 }
-if([string]::IsNullOrWhiteSpace($scriptPath)){ throw "[EV-HARD-EVIDENCE] cannot resolve script path" }
 
-  $d = Split-Path -Parent $scriptPath
-  while($true){
-    if(Test-Path -LiteralPath (Join-Path $d ".git")){ return $d }
-    $p = Split-Path -Parent $d
-    if([string]::IsNullOrWhiteSpace($p) -or $p -eq $d){ break }
-    $d = $p
-  }
-  throw "[EV-HARD-EVIDENCE] Could not find .git by walking up from $scriptPath"
-}
-
-$repoRoot = Resolve-RepoRoot
 $repoRoot = Resolve-RepoRoot
 Set-Location $repoRoot
 
 $logs = Join-Path $repoRoot "logs"
 if(-not (Test-Path $logs)){ New-Item -ItemType Directory -Force -Path $logs | Out-Null }
 
-$today = if($AsOf){ $AsOf } else { (Get-Date).ToString("yyyy-MM-dd") }
+$today   = if($AsOf){ $AsOf } else { (Get-Date).ToString("yyyy-MM-dd") }
+$snapPath= Join-Path $logs "phase5_ev_hard_veto_snapshot.json"
+$outPath = Join-Path $logs "phase5_ev_hard_veto_evidence.json"
 
-$snapPath = Join-Path $logs "phase5_ev_hard_veto_snapshot.json"
-$outPath  = Join-Path $logs "phase5_ev_hard_veto_evidence.json"
-
-# --- EVHARD_EVIDENCE_DEBUG_PATHS ---
 Write-Host "[EV-HARD-EVIDENCE] repoRoot=$repoRoot" -ForegroundColor DarkCyan
 Write-Host "[EV-HARD-EVIDENCE] logs=$logs" -ForegroundColor DarkCyan
 Write-Host "[EV-HARD-EVIDENCE] snapPath=$snapPath exists=$((Test-Path $snapPath))" -ForegroundColor DarkCyan
-# --- END EVHARD_EVIDENCE_DEBUG_PATHS ---
-$outPath  = Join-Path $logs "phase5_ev_hard_veto_evidence.json"
 
-# fail-closed defaults
 $ok = $false
 $reason = "missing_phase5_ev_hard_veto_snapshot"
 
@@ -70,8 +52,8 @@ if(Test-Path $snapPath){
     if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 65279) { $raw = $raw.TrimStart([char]65279) }
     $o = $raw | ConvertFrom-Json -ErrorAction Stop
 
-    $asOf = [string]$o.as_of_date
-    if($asOf -ne $today){
+    $as = [string]$o.as_of_date
+    if($as -ne $today){
       $ok = $false
       $reason = "snapshot_stale"
     } else {
@@ -86,11 +68,11 @@ if(Test-Path $snapPath){
 }
 
 $payload = [ordered]@{
-  ts_utc   = (Get-Date).ToUniversalTime().ToString("o")
-  as_of_date = $today
-  ok       = $ok
-  reason   = $reason
-  inputs   = [ordered]@{
+  ts_utc    = (Get-Date).ToUniversalTime().ToString("o")
+  as_of_date= $today
+  ok        = $ok
+  reason    = $reason
+  inputs    = [ordered]@{
     source = "phase5_ev_hard_veto_snapshot.json"
   }
 }
