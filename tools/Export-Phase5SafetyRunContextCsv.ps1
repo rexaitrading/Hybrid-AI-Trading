@@ -1,77 +1,69 @@
 [CmdletBinding()]
-param()
+param(
+  [Parameter(Mandatory=$false)][string]$AsOf = ""
+)
 
 Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference="Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
-$logsDir  = Join-Path $repoRoot "logs"
+Set-Location $repoRoot
 
-if (-not (Test-Path $logsDir)) {
-    Write-Host "[SAFETY-CSV] ERROR: logs directory not found at $logsDir" -ForegroundColor Red
-    exit 1
-}
+$logsDir = Join-Path $repoRoot "logs"
+if(-not (Test-Path $logsDir)){ New-Item -ItemType Directory -Force -Path $logsDir | Out-Null }
 
-$runCtxPath = Join-Path $logsDir "run_context.json"
-$outCsvPath = Join-Path $logsDir "phase5_safety_runcontext_daily.csv"
+$today = if($AsOf){ $AsOf } else { (Get-Date).ToString("yyyy-MM-dd") }
+$path  = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
 
-if (-not (Test-Path $runCtxPath)) {
-    Write-Host "[SAFETY-CSV] ERROR: RunContext stub JSON not found at $runCtxPath" -ForegroundColor Red
-    Write-Host "[SAFETY-CSV] HINT: Run tools\\Build-BlockGStatusStub.ps1 and tools\\Build-RunContextStub.ps1 first." -ForegroundColor DarkYellow
-    exit 1
-}
+# Canonical schema
+$header = "date,ok,reason"
 
-Write-Host "[SAFETY-CSV] Loading Phase-5 RunContext from $runCtxPath" -ForegroundColor Cyan
+# INPUT HOOK (computed): later wire to real EV-hard snapshot output.
+# For now, compute from presence of a placeholder "ev_hard_snapshot.json" with today's date and ok=true.
+$snap = Join-Path $logsDir "ev_hard_snapshot.json"
 
-try {
-    $raw    = Get-Content -Path $runCtxPath -Raw -Encoding UTF8
-    $runCtx = $raw | ConvertFrom-Json
-} catch {
-    Write-Host "[SAFETY-CSV] ERROR: Failed to parse RunContext JSON. $_" -ForegroundColor Red
-    exit 1
-}
+# --- EVHARD_DEBUG_PATHS ---
+Write-Host "[EV-HARD] logsDir=$logsDir" -ForegroundColor DarkCyan
+Write-Host "[EV-HARD] snap=$snap exists=$((Test-Path $snap))" -ForegroundColor DarkCyan
+# --- END EVHARD_DEBUG_PATHS ---
+$ok = $false
+$reason = "missing_inputs"
 
-function Get-FieldSafe {
-    param(
-        [Parameter(Mandatory = $true)]$Obj,
-        [Parameter(Mandatory = $true)][string]$Name
-    )
-
-    $prop = $Obj.PSObject.Properties[$Name]
-    if ($prop -ne $null) {
-        return $prop.Value
+if(Test-Path $snap){
+  try {
+    $raw = Get-Content $snap -Raw -Encoding utf8
+    if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 65279) { $raw = $raw.TrimStart([char]65279) }
+    $o = $raw | ConvertFrom-Json -ErrorAction Stop
+    if([string]$o.as_of_date -eq $today -and [bool]$o.ok -eq $true){
+      $ok = $true
+      $reason = "computed_from_ev_hard_snapshot"
+    } else {
+      $ok = $false
+      $reason = "snapshot_not_ok_or_stale"
     }
-    return $null
+  } catch {
+    $ok = $false
+    $reason = "snapshot_parse_failed"
+  }
 }
 
-$asOf    = Get-FieldSafe -Obj $runCtx -Name "as_of_date"
-if (-not $asOf) { $asOf = "" }
+$row = "$today," + ($(if($ok){"true"}else{"false"})) + ",$reason"
 
-$mode    = Get-FieldSafe -Obj $runCtx -Name "phase5_mode"
-$phase23 = Get-FieldSafe -Obj $runCtx -Name "phase23_health_ok_today"
-$evHard  = Get-FieldSafe -Obj $runCtx -Name "ev_hard_daily_ok_today"
-$gsFresh = Get-FieldSafe -Obj $runCtx -Name "gatescore_fresh_today"
-
-$nvdaReady = Get-FieldSafe -Obj $runCtx -Name "nvda_blockg_ready"
-$spyReady  = Get-FieldSafe -Obj $runCtx -Name "spy_blockg_ready"
-$qqqReady  = Get-FieldSafe -Obj $runCtx -Name "qqq_blockg_ready"
-
-$row = [PSCustomObject]@{
-    as_of_date          = $asOf
-    phase5_mode         = $mode
-    phase23_ok          = $phase23
-    ev_hard_ok          = $evHard
-    gatescore_ok        = $gsFresh
-    nvda_blockg_ready   = $nvdaReady
-    spy_blockg_ready    = $spyReady
-    qqq_blockg_ready    = $qqqReady
+$lines = @()
+if(Test-Path $path){
+  $lines = @(Get-Content $path -Encoding utf8)
+  if($lines.Count -eq 0){ $lines = @($header) }
+  if($lines[0].Trim() -ne $header){ $lines = @($header) + $lines }
+} else {
+  $lines = @($header)
 }
 
-Write-Host "[SAFETY-CSV] Writing Phase-5 safety RunContext CSV to $outCsvPath" -ForegroundColor Cyan
-$row | Export-Csv -Path $outCsvPath -NoTypeInformation -Encoding UTF8
+$lines = $lines | Where-Object { $_ -notmatch "^$today," }
+$lines = $lines + $row
 
-Write-Host "[SAFETY-CSV] Sample row:" -ForegroundColor Yellow
-$row | Format-Table -AutoSize
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($path, ($lines -join "`n") + "`n", $utf8NoBom)
 
+Write-Host "[EV-HARD] computed -> $row" -ForegroundColor Green
 exit 0
