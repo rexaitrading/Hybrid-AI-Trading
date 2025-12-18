@@ -20,13 +20,24 @@ import logging
 from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
 def _enforce_blockg_before_live_send(symbol: str) -> None:
     """
-    Institutional fail-closed Block-G gate at OrderManager boundary.
+    Institutional Block-G gate at OrderManager LIVE boundary.
 
-    Rule:
-      - Enforce contract truth only (no recomputation).
-      - Contract path resolution is canonical (env-aware).
+    - Contract truth only (assert_symbol_ready)
+    - Scoped to protected symbols (default NVDA only)
+    - LIVE is defined by: (not dry_run) and (live_client is not None)
     """
-    assert_symbol_ready(str(symbol))
+    import os as _os
+    _sym = str(symbol).upper().strip()
+    _cfg = str(_os.getenv("HAT_BLOCKG_SYMBOLS", "")).strip()
+    if _cfg:
+        _protected = {s.strip().upper() for s in _cfg.split(",") if s.strip()}
+    else:
+        _protected = {"NVDA"}
+
+    if _sym not in _protected:
+        return
+
+    assert_symbol_ready(_sym)
 from pathlib import Path
 import uuid
 from types import SimpleNamespace
@@ -511,42 +522,12 @@ class OrderManager:
         veto = self._risk_veto(symbol, side, qf, nf)
         if veto is not None:
             return veto
-
         # LIVE PATH
         if not self.dry_run and self.live_client is not None:
+            # 1) Block-G gate (institutional hard gate) => BLOCKED
             try:
                 _enforce_blockg_before_live_send(str(symbol))
-                raw = self.live_client.submit_order(symbol, side, qf, nf)
-                oid = None
-                if isinstance(raw, dict):
-                    oid = (
-                        raw.get("id")
-                        or raw.get("order_id")
-                        or (raw.get("_raw") or {}).get("id")
-                    )
-                if oid:
-                    self._open_ids.add(oid)
-                    self.active_orders.append(
-                        {
-                            "order_id": oid,
-                            "symbol": symbol,
-                            "side": side,
-                            "qty": qf,
-                            "notional": nf,
-                            "status": "pending",
-                        }
-                    )
-                return {
-                    "symbol": symbol,
-                    "side": side,
-                    "qty": qty,
-                    "notional": notional,
-                    "status": "pending",
-                    "order_id": oid,
-                    "raw": raw,
-                }
-            except RuntimeError as e:
-                # Block-G is an institutional hard gate (fail-closed): surface as BLOCKED not ERROR
+            except Exception as e:
                 return {
                     "symbol": symbol,
                     "side": side,
@@ -555,17 +536,10 @@ class OrderManager:
                     "status": "blocked",
                     "reason": f"BLOCKG: {e}",
                 }
-            except RuntimeError as e:
-                # Block-G hard gate -> BLOCKED, not ERROR
-                return {
-                    "symbol": symbol,
-                    "side": side,
-                    "qty": qty,
-                    "notional": notional,
-                    "status": "blocked",
-                    "reason": f"BLOCKG_NOT_READY: {e}",
-                }
 
+            # 2) Live submit errors => ERROR
+            try:
+                raw = self.live_client.submit_order(symbol, side, qf, nf)
             except Exception as e:
                 logger.error("OrderManager live submit error: %s", e)
                 return {
@@ -574,8 +548,33 @@ class OrderManager:
                     "qty": qty,
                     "notional": notional,
                     "status": "error",
-                    "reason": f"live submit error: {e}",
+                    "reason": f"{e}",
                 }
+
+            oid = None
+            if isinstance(raw, dict):
+                oid = raw.get("id") or raw.get("order_id") or (raw.get("_raw") or {}).get("id")
+            if oid:
+                self._open_ids.add(oid)
+                self.active_orders.append(
+                    {
+                        "order_id": oid,
+                        "symbol": symbol,
+                        "side": side,
+                        "qty": qf,
+                        "notional": nf,
+                        "status": "pending",
+                    }
+                )
+            return {
+                "symbol": symbol,
+                "side": side,
+                "qty": qty,
+                "notional": notional,
+                "status": "pending",
+                "order_id": oid,
+                "raw": raw,
+            }
 
         # PAPER SIM PATH
         if self.dry_run and self.use_paper_simulator:

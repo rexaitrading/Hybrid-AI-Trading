@@ -1,3 +1,4 @@
+from hybrid_ai_trading.execution.blockg_lastmile import enforce_blockg_lastmile
 from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env
 from hybrid_ai_trading.runtime.context_loader import is_live_env
 from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
