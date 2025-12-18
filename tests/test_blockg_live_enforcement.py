@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 
 import pytest
+from datetime import date
 
 from hybrid_ai_trading.execution.execution_engine_phase5_guard import place_order_phase5_with_guard
 
@@ -17,7 +19,7 @@ class DummyEngine:
 def write_contract(tmp_path: Path, ready: bool) -> Path:
     p = tmp_path / "blockg_status_stub_nvda.json"
     payload = {
-        "as_of_date": "2099-01-01",
+        "as_of_date": date.today().isoformat(),
         "phase4_ok_today": True,
         "phase23_health_ok_today": True,
         "ev_hard_daily_ok_today": True,
@@ -47,7 +49,6 @@ def test_live_fails_closed_when_contract_missing(monkeypatch):
 def test_live_allows_when_contract_ready(monkeypatch, tmp_path):
     p = write_contract(tmp_path, ready=True)
     monkeypatch.setenv("HAT_BLOCKG_CONTRACT_PATH", str(p))
-
     out = place_order_phase5_with_guard(
         DummyEngine(is_paper=False),
         symbol="NVDA",
