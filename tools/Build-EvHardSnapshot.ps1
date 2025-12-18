@@ -7,12 +7,46 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
 function Resolve-RepoRoot {
-  # 0) ENV override is single truth
+  # 0) Single-truth file: logs\repo_root.txt (preferred)
+  try {
+    $here = Split-Path -Parent $PSCommandPath
+    $candidate = Join-Path (Split-Path -Parent $here) "logs\repo_root.txt"
+    if(Test-Path -LiteralPath $candidate){
+      $s = (Get-Content -Path $candidate -Raw -Encoding UTF8)
+      if ($s.Length -gt 0 -and [int][char]$s[0] -eq 65279) { $s = $s.TrimStart([char]65279) }
+      $root = ($s.Trim())
+      if($root){
+        $full = [System.IO.Path]::GetFullPath($root)
+        if(Test-Path -LiteralPath (Join-Path $full "logs")){ return $full }
+        if(Test-Path -LiteralPath $full){ return $full }
+      }
+    }
+  } catch { }
+
+  # 1) ENV override
   $envRoot = (($env:HAT_REPO_ROOT + "")).Trim()
   if($envRoot){
     $full = [System.IO.Path]::GetFullPath($envRoot)
-    if(Test-Path -LiteralPath (Join-Path $full ".git")){ return $full }
     if(Test-Path -LiteralPath (Join-Path $full "logs")){ return $full }
+    if(Test-Path -LiteralPath $full){ return $full }
+  }
+
+  # 2) fallback: walk up to find .git
+  $scriptPath = $PSCommandPath
+  if([string]::IsNullOrWhiteSpace($scriptPath)){ $scriptPath = $MyInvocation.MyCommand.Path }
+  if([string]::IsNullOrWhiteSpace($scriptPath)){ throw "[REPOROOT] cannot resolve script path" }
+
+  $d = Split-Path -Parent $scriptPath
+  while($true){
+    if(Test-Path -LiteralPath (Join-Path $d ".git")){ return $d }
+    $parent = Split-Path -Parent $d
+    if([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $d){ break }
+    $d = $parent
+  }
+
+  throw "[REPOROOT] Could not resolve repo root (no repo_root.txt, no env, no .git)"
+}
+if(Test-Path -LiteralPath (Join-Path $full "logs")){ return $full }
     if(Test-Path -LiteralPath $full){ return $full }
   }
 
