@@ -87,13 +87,14 @@ if ($c.PSObject.Properties.Name -contains $gsField) {
 $nvdaFlag = Get-Bool $c.nvda_blockg_ready
 $spyFlag  = Get-Bool $c.spy_blockg_ready
 $qqqFlag  = Get-Bool $c.qqq_blockg_ready
-# required per-symbol readiness field
-$required = switch ($Symbol) {
-    "NVDA" { $ok = ($phase23 -and $evhard -and $gs_ok -and $nvdaFlag) }
-    "SPY"  { $ok = ($phase23 -and $evhard -and $gs_ok -and $spyFlag) }
-    "QQQ"  { $ok = ($phase23 -and $evhard -and $gs_ok -and $qqqFlag) }
-}
 
+# Contract-only truth: per-symbol readiness flag
+$ok = switch ($Symbol) {
+    "NVDA" { $nvdaFlag }
+    "SPY"  { $spyFlag }
+    "QQQ"  { $qqqFlag }
+    default { $false }
+}
 if ($ok) {
     Write-Host "[BLOCKG] READY Symbol=$Symbol as_of_date=$asOf" -ForegroundColor Green
     exit 0

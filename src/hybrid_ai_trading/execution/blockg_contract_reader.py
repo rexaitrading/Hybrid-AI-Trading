@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from hybrid_ai_trading.execution.blockg_guard import _contract_path
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,6 +60,34 @@ def is_symbol_ready(symbol: str, contract_path: Optional[Path] = None) -> BlockG
             symbol=sym,
             ready=False,
             reason="BLOCKG_CONTRACT_MISSING_OR_UNREADABLE",
+            contract_path=str(cp.as_posix()),
+        )
+    # BLOCKG_TODAYNESS_ENFORCED
+    try:
+        today = datetime.now().strftime("%Y-%m-%d")
+        as_of = obj.get("as_of_date", None)
+        if as_of is None:
+            return BlockGDecision(
+                symbol=sym,
+                ready=False,
+                reason="BLOCKG_FIELD_MISSING:as_of_date",
+                contract_path=str(cp.as_posix()),
+            )
+        as_s = str(as_of)
+        if len(as_s) >= 10:
+            as_s = as_s[:10]
+        if as_s != today:
+            return BlockGDecision(
+                symbol=sym,
+                ready=False,
+                reason=f"BLOCKG_STALE_AS_OF_DATE:{as_s}",
+                contract_path=str(cp.as_posix()),
+            )
+    except Exception:
+        return BlockGDecision(
+            symbol=sym,
+            ready=False,
+            reason="BLOCKG_TODAYNESS_CHECK_ERROR",
             contract_path=str(cp.as_posix()),
         )
 
