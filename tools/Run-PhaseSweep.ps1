@@ -15,6 +15,23 @@ function WriteUtf8NoBom {
 
 function NowStamp { (Get-Date).ToString("yyyyMMdd_HHmmss") }
 function TodayStr { (Get-Date).ToString("yyyy-MM-dd") }
+function ReadUtf8Raw([string]$path){
+  if(-not (Test-Path $path)){ return $null }
+  return Get-Content $path -Raw -Encoding utf8
+}
+function TailUtf8([string]$path, [int]$n){
+  if(-not (Test-Path $path)){ return @() }
+  return Get-Content $path -Tail $n -Encoding utf8
+}
+function CsvHasTodayRow([string]$path, [string]$today){
+  if(-not (Test-Path $path)){ return $false }
+  $lines = Get-Content $path -Encoding utf8
+  if($lines.Count -lt 2){ return $false }
+  foreach($ln in $lines[1..($lines.Count-1)]){
+    if($ln -like "$today,*"){ return $true }
+  }
+  return $false
+}
 function Exists($p){ Test-Path $p }
 function LastWrite($p){
   if(Test-Path $p){ (Get-Item $p).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss") } else { "" }
