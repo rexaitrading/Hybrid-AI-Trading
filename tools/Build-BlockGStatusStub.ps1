@@ -131,7 +131,7 @@ try {
 $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   # Conservative: require today rows to exist
   $phase23_ok = Has-TodayRow -Rows $phase23Rows -DateField "date" -Today $today
-  $evhard_ok  = Has-TodayRow -Rows $evHardRows  -DateField "date" -Today $today
+  $evhard_ok  = Get-EvHardOkToday -Rows $evHardRows -Today $today
 # Phase-4 stamp (must be present and today) (BOM-safe, fail-closed)
   $phase4_ok = $false
   if (Test-Path $phase4Stamp) {
