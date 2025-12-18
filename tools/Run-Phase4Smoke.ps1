@@ -38,24 +38,6 @@ if ($ec -ne 0) {
   exit $ec
 }
 
-function Resolve-RepoRoot {
-  # start from the directory containing this script
-  $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-  $d = (Resolve-Path $here).Path
-
-  while($true){
-    if(Test-Path (Join-Path $d ".git")){ return $d }
-    $parent = Split-Path -Parent $d
-    if([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $d){ break }
-    $d = $parent
-  }
-
-  throw "PhaseSweep: Could not find .git by walking up from script dir: $here"
-}
-
-$repoRoot = Resolve-RepoRoot
-Set-Location $repoRoot
-
 
 # --- PHASE4_STAMP_SINGLE_TRUTH ---
 # Write today's phase4_validation_passed.json based on smoke result.
