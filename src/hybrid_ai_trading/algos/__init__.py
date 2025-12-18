@@ -9,7 +9,7 @@ import warnings as _w
 import os as _os
 
 def _under_pytest() -> bool:
-    return bool(_os.getenv("PYTEST_CURRENT_TEST")) or (_os.getenv("HAT_SILENCE_DEPRECATION_WARNINGS") == "1")
+    return (_os.getenv("HAT_SILENCE_DEPRECATION_WARNINGS") == "1")
 def _emit():
     _w.warn(
         "deprecated: hybrid_ai_trading.algos  use concrete algo modules directly",
@@ -24,7 +24,8 @@ try:
 except Exception:
     pass
 _w.simplefilter("always")
-if not _under_pytest():`n    _emit()
+if not _under_pytest():
+    _emit()
 # Re-export real executors/signals from the canonical locations
 try:
     from hybrid_ai_trading.execution.algos.iceberg_executor import IcebergExecutor
