@@ -8,6 +8,12 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
+# PreStep: compute EV-hard veto daily (fail-closed)
+if (Test-Path ".\tools\Build-Phase5EvHardVetoComputed.ps1") {
+  Write-Host "`n[PHASE5-SAFETY] PreStep: Build-Phase5EvHardVetoComputed.ps1" -ForegroundColor Yellow
+  .\tools\Build-Phase5EvHardVetoComputed.ps1 | Out-Host
+}
+
 Write-Host "`n[PHASE5-SAFETY] Phase-5 Safety Snapshot RUN" -ForegroundColor Cyan
 Write-Host "[PHASE5-SAFETY] RepoRoot = $repoRoot" -ForegroundColor DarkCyan
 
