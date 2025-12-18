@@ -28,3 +28,28 @@
   }
 }
 
+# ------------------------------
+# DEV thresholds (PAPER/DEV only)
+# - Used to bootstrap SPY/QQQ data collection.
+# - LIVE mode must continue to use strict (DEFAULT/SPY/QQQ).
+# ------------------------------
+DEV_DEFAULT = @{
+  min_signals     = 5
+  min_pnl_samples = 5
+  min_edge_ratio  = 0.00
+  min_micro_score = 0.00
+}
+
+DEV_SPY = @{
+  min_signals     = 5
+  min_pnl_samples = 5
+  min_edge_ratio  = 0.00
+  min_micro_score = 0.00
+}
+
+DEV_QQQ = @{
+  min_signals     = 5
+  min_pnl_samples = 5
+  min_edge_ratio  = 0.00
+  min_micro_score = 0.00
+}
