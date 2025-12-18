@@ -5,9 +5,6 @@ import os
 from datetime import date
 from pathlib import Path
 
-from hybrid_ai_trading.execution.gatescore_daily import load_daily_summary_for_symbol  # if exists
-from hybrid_ai_trading.gatescore.quality import evaluate_row  # if exists
-
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 

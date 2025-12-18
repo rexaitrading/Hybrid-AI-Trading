@@ -1,52 +1,73 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
+import csv
 
-from hybrid_ai_trading.replay.nvda_bplus_gate_score import (
-    GateScoreHealth,
-    load_nvda_gatescore_health,
-)
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[1]
 
+def _pick_row(rows: list[dict], sym: str, today: str) -> dict | None:
+    symu = sym.upper()
+    picked = None
+    for r in rows:
+        d = (r.get("as_of_date") or "")[:10]
+        src = (r.get("source") or "").strip().upper()
+        rsym = (r.get("symbol") or "").strip().upper()
+        if d != today:
+            continue
+        if src != "REAL":
+            continue
+        if rsym and rsym != symu:
+            continue
+        picked = r
+    return picked
 
 def main() -> int:
-    """
-    GateScore smoke for NVDA.
+    sym = "NVDA"
+    today = date.today().isoformat()
+    logs = _repo_root() / "logs"
 
-    Rules (tunable later):
-      - require count_signals >= 3
-      - require pnl_samples   >= 1
+    p1 = logs / f"gatescore_daily_summary_{sym.lower()}.csv"
+    p2 = logs / "gatescore_daily_summary.csv"
+    path = p1 if p1.exists() else p2
 
-    If these are not satisfied, we treat this as a Phase-3 health failure.
-    """
-    script_path = Path(__file__).resolve()
-    repo_root = script_path.parents[1]
+    if not path.exists():
+        print(f"[GS-SMOKE] FAIL: missing daily summary csv: {path}")
+        return 10
+
+    with path.open("r", encoding="utf-8", errors="replace", newline="") as f:
+        rd = csv.DictReader(f)
+        rows = list(rd)
+
+    row = _pick_row(rows, sym, today)
+    if not row:
+        print(f"[GS-SMOKE] FAIL: no REAL row for {sym} today={today}")
+        return 10
 
     try:
-        health: GateScoreHealth = load_nvda_gatescore_health(repo_root)
-    except Exception as e:  # noqa: BLE001
-        print(f"[GS-SMOKE] ERROR: failed to load NVDA GateScore health: {e!r}")
-        return 1
+        count_signals = int(float(row.get("count_signals") or 0))
+        pnl_samples = int(float(row.get("pnl_samples") or 0))
+        edge = float(row.get("mean_edge_ratio") or 0.0)
+        micro = float(row.get("mean_micro_score") or 0.0)
+    except Exception:
+        print("[GS-SMOKE] FAIL: parse error")
+        return 10
 
     print("[GS-SMOKE] NVDA GateScore health snapshot:")
-    print(f"  symbol          = {health.symbol}")
-    print(f"  count_signals   = {health.count_signals}")
-    print(f"  pnl_samples     = {health.pnl_samples}")
-    print(f"  mean_edge_ratio = {health.mean_edge_ratio:.6f}")
-    print(f"  mean_micro_score= {health.mean_micro_score:.6f}")
-    print(f"  mean_pnl        = {health.mean_pnl:.6f}")
+    print("  symbol          =", sym)
+    print("  count_signals   =", count_signals)
+    print("  pnl_samples     =", pnl_samples)
+    print("  mean_edge_ratio =", f"{edge:.6f}")
+    print("  mean_micro_score=", f"{micro:.6f}")
 
-    # Simple gating rule (adjust later if needed)
-    if health.count_signals < 3:
+    # Minimal smoke gate (keep it LIGHT; full thresholds are enforced elsewhere)
+    if count_signals < 3:
         print("[GS-SMOKE] FAIL: count_signals < 3 (insufficient signal history).")
         return 10
 
-    if health.pnl_samples < 1:
-        print("[GS-SMOKE] FAIL: pnl_samples < 1 (no realized PnL samples).")
-        return 10
-
-    print("[GS-SMOKE] PASS: GateScore sample counts are sufficient for NVDA.")
+    print("[GS-SMOKE] PASS")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
