@@ -7,14 +7,41 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
 function Resolve-RepoRoot {
-  # 0) Single-truth file: logs\repo_root.txt (preferred)
+  # 0) Single-truth tracked pointer: .hat\repo_root.txt (preferred, ASCII-safe)
   try {
-    $here = Split-Path -Parent $PSCommandPath
-    $candidate = Join-Path (Split-Path -Parent $here) "logs\repo_root.txt"
-    if(Test-Path -LiteralPath $candidate){
-      $s = (Get-Content -Path $candidate -Raw -Encoding UTF8)
+    $rootFile = Join-Path $PSScriptRoot "..\.hat\repo_root.txt"
+    $rootFile = [System.IO.Path]::GetFullPath($rootFile)
+    if(Test-Path -LiteralPath $rootFile){
+      $s = (Get-Content -LiteralPath $rootFile -Raw -Encoding UTF8)
       if ($s.Length -gt 0 -and [int][char]$s[0] -eq 65279) { $s = $s.TrimStart([char]65279) }
-      $root = ($s.Trim())
+      $p = $s.Trim()
+      if($p){
+        $full = [System.IO.Path]::GetFullPath($p)
+        if(Test-Path -LiteralPath (Join-Path $full ".git")){ return $full }
+        throw "[REPOROOT] .hat/repo_root.txt points to missing repo: $full"
+      }
+    }
+  } catch { throw }
+
+  # 1) ENV override (secondary)
+  $envRoot = (($env:HAT_REPO_ROOT + "")).Trim()
+  if($envRoot){
+    $full = [System.IO.Path]::GetFullPath($envRoot)
+    if(Test-Path -LiteralPath (Join-Path $full ".git")){ return $full }
+  }
+
+  # 2) Fallback: walk up from script location to find .git
+  $d = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+  while($true){
+    if(Test-Path -LiteralPath (Join-Path $d ".git")){ return $d }
+    $parent = Split-Path -Parent $d
+    if([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $d){ break }
+    $d = $parent
+  }
+
+  throw "[REPOROOT] Could not resolve repo root (.hat pointer/env/.git all failed)"
+}
+$root = ($s.Trim())
       if($root){
         $full = [System.IO.Path]::GetFullPath($root)
         if(Test-Path -LiteralPath (Join-Path $full "logs")){ return $full }
