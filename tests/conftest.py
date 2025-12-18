@@ -1,107 +1,15 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
-# FAIL-CLOSED: Always derive repo root from filesystem truth (Unicode-safe).
-REPO_ROOT = Path(__file__).resolve().parents[1]
-os.chdir(str(REPO_ROOT))
+def _mask_env(name: str) -> str:
+    v = os.getenv(name)
+    if not v:
+        return "NOT_SET"
+    tail = v[-4:] if len(v) >= 4 else v
+    return f"SET(****{tail})"
 
-# conftest: ensure repo/src is importable in any CI working dir / interpreter
-import importlib.util
-import os
-import pathlib
-import sys
-
-import pytest
-
-ROOT = pathlib.Path(__file__).resolve().parents[1]  # project root (tests/..)
-CANDIDATES = [ROOT / "src", ROOT]
-for p in CANDIDATES:
-    sp = str(p)
-    if sp not in sys.path:
-        sys.path.insert(0, sp)
-spec = importlib.util.find_spec("hybrid_ai_trading")
-sys.stderr.write(
-    f"[conftest] exe={sys.executable} importable={bool(spec)} root={ROOT}\\n"
-)
-if spec is None:
-    # leave path injected; test files also prepend a tiny shim as last resort
-    pass
-
-
-# === IB_INSYNC_TEST_SHIM_BEGIN ===
-# Minimal ib_insync stub for smoke tests when real package is absent.
-try:
-    import ib_insync  # type=ignore
-except Exception:
-    import sys
-    import types
-
-    m = types.ModuleType("ib_insync")
-
-    class _IBDummy:
-        def __init__(self, *a, **k):
-            pass
-
-        def __call__(self, *a, **k):
-            return self
-
-        def __getattr__(self, _):
-            return self
-
-    class IB(_IBDummy):
-        def connect(self, *a, **k):
-            return True
-
-        def disconnect(self, *a, **k):
-            return None
-
-    class Contract(_IBDummy):
-        pass
-
-    class Stock(_IBDummy):
-        pass
-
-    class Forex(_IBDummy):
-        pass
-
-    class MarketOrder(_IBDummy):
-        pass
-
-    class LimitOrder(_IBDummy):
-        pass
-
-    class ContractDetails(_IBDummy):
-        pass
-
-    class Ticker(_IBDummy):
-        pass
-
-    class util(_IBDummy):
-        pass
-
-    m.IB = IB
-    m.Contract = Contract
-    m.Stock = Stock
-    m.Forex = Forex
-    m.MarketOrder = MarketOrder
-    m.LimitOrder = LimitOrder
-    m.ContractDetails = ContractDetails
-    m.Ticker = Ticker
-    m.util = util
-
-    def _ibins_getattr(name):  # catch-all for any other symbol (Order, TagValue, etc.)
-        return _IBDummy()
-
-    m.__getattr__ = _ibins_getattr
-    sys.modules["ib_insync"] = m
-# === IB_INSYNC_TEST_SHIM_END ===
-
-
-@pytest.fixture()
-def TradeEngineClass():
-    # Minimal import to satisfy tests that expect this fixture
-    from hybrid_ai_trading.trade_engine import TradeEngine
-
-    return TradeEngine
+# NOTE: never print full secrets
+print("OPENAI_API_KEY: " + _mask_env("OPENAI_API_KEY"))
+print("COINAPI_KEY: " + _mask_env("COINAPI_KEY"))
+print("BROKER_API_KEY: " + _mask_env("BROKER_API_KEY"))
