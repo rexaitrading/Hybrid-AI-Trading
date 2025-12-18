@@ -66,8 +66,7 @@ $today = if($AsOf){ $AsOf } else { (Get-Date).ToString("yyyy-MM-dd") }
 $path  = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
 
 $header = "date,ok,reason"
-$snap   = Join-Path $logsDir "ev_hard_snapshot.json"
-
+$snap   = Join-Path $logsDir "phase5_ev_hard_veto_snapshot.json"
 Write-Host "[EV-HARD] logsDir=$logsDir" -ForegroundColor DarkCyan
 Write-Host "[EV-HARD] snap=$snap exists=$((Test-Path $snap))" -ForegroundColor DarkCyan
 
