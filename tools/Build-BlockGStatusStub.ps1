@@ -71,7 +71,7 @@ function Main {
 # Canonical GateScore truth: must match smoke output (fail-closed).
 $gs_ok_smoke = $false
 try {
-  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "Run-GateScoreSmoke.ps1") | Out-Host
+  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "Run-GateScoreSmoke.ps1") -Symbol $Symbol | Out-Host
   $gs_ok_smoke = ($LASTEXITCODE -eq 0)
 } catch {
   $gs_ok_smoke = $false
