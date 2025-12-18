@@ -83,6 +83,26 @@ class IBAdapter(Broker):
         from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
         forbid_direct_ib_live("broker/ib_safe.py:direct_send")
 
+        # IBSAFE_BLOCKG_NVDA_LASTMILE
+
+        # Fail-closed last-mile enforcement for direct IB sends.
+
+        # LIVE only, NVDA only (institutional rule). Uses contract truth only.
+
+        try:
+
+            _sym = str(symbol).upper().strip()
+
+        except Exception:
+
+            _sym = ""
+
+        if _sym == "NVDA" and _is_live_mode():
+
+            assert_symbol_ready("NVDA")
+
+        
+
         trade = self.ib.placeOrder(contract, order)
         self.ib.sleep(0.1)
         st = trade.orderStatus
