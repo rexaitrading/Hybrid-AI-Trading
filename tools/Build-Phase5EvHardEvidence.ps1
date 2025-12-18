@@ -7,14 +7,14 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
 function Resolve-RepoRoot {
-  # 0) Single-truth tracked pointer: .hat\repo_root.txt (preferred, ASCII-safe)
+  # 0) Single-truth tracked pointer: .hat\repo_root.txt (preferred; points to ASCII junction C:\HAT)
   $rootFile = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.hat\repo_root.txt"))
   if(Test-Path -LiteralPath $rootFile){
     $s = (Get-Content -LiteralPath $rootFile -Raw -Encoding UTF8)
     if ($s.Length -gt 0 -and [int][char]$s[0] -eq 65279) { $s = $s.TrimStart([char]65279) }
-    $p = $s.Trim()
-    if($p){
-      $full = [System.IO.Path]::GetFullPath($p)
+    $pp = $s.Trim()
+    if($pp){
+      $full = [System.IO.Path]::GetFullPath($pp)
       if(Test-Path -LiteralPath (Join-Path $full ".git")){ return $full }
       throw "[REPOROOT] .hat/repo_root.txt points to missing repo: $full"
     }
@@ -27,7 +27,7 @@ function Resolve-RepoRoot {
     if(Test-Path -LiteralPath (Join-Path $full ".git")){ return $full }
   }
 
-  # 2) Fallback: walk up from script location to find .git
+  # 2) Fallback: walk up from script folder
   $d = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
   while($true){
     if(Test-Path -LiteralPath (Join-Path $d ".git")){ return $d }
@@ -36,24 +36,7 @@ function Resolve-RepoRoot {
     $d = $parent
   }
 
-  throw "[REPOROOT] Could not resolve repo root (.hat pointer/env/.git all failed)"
-}
-if(Test-Path -LiteralPath (Join-Path $full "logs")){ return $full }
-    if(Test-Path -LiteralPath $full){ return $full }
-  }
-
-  $scriptPath = $PSCommandPath
-  if([string]::IsNullOrWhiteSpace($scriptPath)){ $scriptPath = $MyInvocation.MyCommand.Path }
-  if([string]::IsNullOrWhiteSpace($scriptPath)){ throw "[REPOROOT] cannot resolve script path" }
-
-  $d = Split-Path -Parent $scriptPath
-  while($true){
-    if(Test-Path -LiteralPath (Join-Path $d ".git")){ return $d }
-    $parent = Split-Path -Parent $d
-    if([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $d){ break }
-    $d = $parent
-  }
-  throw "[REPOROOT] Could not find .git and no HAT_REPO_ROOT set"
+  throw "[REPOROOT] Could not resolve repo root (.hat/env/.git all failed)"
 }
 
 $repoRoot = Resolve-RepoRoot
@@ -62,14 +45,19 @@ Set-Location $repoRoot
 $logs = Join-Path $repoRoot "logs"
 if(-not (Test-Path $logs)){ New-Item -ItemType Directory -Force -Path $logs | Out-Null }
 
-$today   = if($AsOf){ $AsOf } else { (Get-Date).ToString("yyyy-MM-dd") }
-$snapPath= Join-Path $logs "phase5_ev_hard_veto_snapshot.json"
-$outPath = Join-Path $logs "phase5_ev_hard_veto_evidence.json"
+$today = if($AsOf){ $AsOf } else { (Get-Date).ToString("yyyy-MM-dd") }
 
+$snapPath = Join-Path $logs "phase5_ev_hard_veto_snapshot.json"
+$outPath  = Join-Path $logs "phase5_ev_hard_veto_evidence.json"
+
+# --- EVHARD_EVIDENCE_DEBUG_PATHS ---
 Write-Host "[EV-HARD-EVIDENCE] repoRoot=$repoRoot" -ForegroundColor DarkCyan
 Write-Host "[EV-HARD-EVIDENCE] logs=$logs" -ForegroundColor DarkCyan
 Write-Host "[EV-HARD-EVIDENCE] snapPath=$snapPath exists=$((Test-Path $snapPath))" -ForegroundColor DarkCyan
+# --- END EVHARD_EVIDENCE_DEBUG_PATHS ---
+$outPath  = Join-Path $logs "phase5_ev_hard_veto_evidence.json"
 
+# fail-closed defaults
 $ok = $false
 $reason = "missing_phase5_ev_hard_veto_snapshot"
 
@@ -79,8 +67,8 @@ if(Test-Path $snapPath){
     if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 65279) { $raw = $raw.TrimStart([char]65279) }
     $o = $raw | ConvertFrom-Json -ErrorAction Stop
 
-    $as = [string]$o.as_of_date
-    if($as -ne $today){
+    $asOf = [string]$o.as_of_date
+    if($asOf -ne $today){
       $ok = $false
       $reason = "snapshot_stale"
     } else {
@@ -95,11 +83,11 @@ if(Test-Path $snapPath){
 }
 
 $payload = [ordered]@{
-  ts_utc    = (Get-Date).ToUniversalTime().ToString("o")
-  as_of_date= $today
-  ok        = $ok
-  reason    = $reason
-  inputs    = [ordered]@{
+  ts_utc   = (Get-Date).ToUniversalTime().ToString("o")
+  as_of_date = $today
+  ok       = $ok
+  reason   = $reason
+  inputs   = [ordered]@{
     source = "phase5_ev_hard_veto_snapshot.json"
   }
 }
