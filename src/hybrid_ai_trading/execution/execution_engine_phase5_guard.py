@@ -1,7 +1,4 @@
 from __future__ import annotations
-
-
-from hybrid_ai_trading.execution.blockg_runtime import enforce_blockg_if_live
 from hybrid_ai_trading.runtime.run_context import RunContext, RunMode
 from hybrid_ai_trading.risk.risk_phase5_ev_bands import get_ev_and_band
 from dataclasses import asdict
@@ -9,9 +6,6 @@ from typing import Any, Dict
 
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
 from hybrid_ai_trading.blockg_contract import require_blockg_ready
-from hybrid_ai_trading.runtime.run_context import RunContext
-
-
 def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
     """
     Thin shim so tests and callers have a single place to hook Phase-5 guards.
@@ -132,20 +126,17 @@ def place_order_phase5_with_guard(
         "day_id": day_id,
         **kwargs,
     }    # 1) Unified RunContext + Block-G enforcement (single authority, fail-closed)
-    ctx = getattr(engine, "run_context", None) or RunContext.from_env()
+# PAPER must never be blocked by readiness flags (institutional rule)
+is_paper = bool(getattr(engine, "is_paper", False))
 
-    # PAPER must never be blocked by readiness flags (institutional rule)
-    if getattr(engine, "is_paper", False):
-        is_live = False
-    else:
-        is_live = ("LIVE" in (regime or "").upper())
-    if is_live:
-        # Canonical gate: requires Block-G contract truth
-        dec = enforce_blockg_if_live(ctx, symbol, is_live=is_live)
-        if not dec.ok:
-            raise RuntimeError(f"BLOCKG_DENY:{symbol}:mode={ctx.mode}:" + ",".join(dec.reasons))
+# Derive LIVE intent from regime string (conservative): only enforce for live regimes
+reg_u = (regime or "").upper()
+is_live = (not is_paper) and ("LIVE" in reg_u)
 
-    # 2) Phase-5 RiskManager guard
+if is_live:
+    _require_engine_live_gate(engine, symbol)
+
+# 2) Phase-5 RiskManager guard
     rm = getattr(engine, "risk_manager", None)
     if rm is not None:
         decision = guard_phase5_trade(rm, trade)
