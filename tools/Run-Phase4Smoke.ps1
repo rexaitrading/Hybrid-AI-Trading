@@ -40,3 +40,20 @@ if ($ec -ne 0) {
 
 Write-Host "[PHASE4] PASS" -ForegroundColor Green
 exit 0
+
+
+# --- PHASE4_STAMP_SINGLE_TRUTH ---
+# Write today's phase4_validation_passed.json based on smoke result.
+try {
+  $phase4Ok = "0"
+  if ($LASTEXITCODE -eq 0) { $phase4Ok = "1" }
+
+  if (Test-Path ".\tools\Write-Phase4PassedStamp.ps1") {
+    powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\Write-Phase4PassedStamp.ps1" -Phase4Ok $phase4Ok | Out-Host
+  } else {
+    Write-Host "[PHASE4] WARN: Write-Phase4PassedStamp.ps1 not found; stamp not written." -ForegroundColor Yellow
+  }
+} catch {
+  Write-Host "[PHASE4] WARN: stamp write failed (non-fatal): $($_.Exception.Message)" -ForegroundColor Yellow
+}
+# --- END PHASE4_STAMP_SINGLE_TRUTH ---

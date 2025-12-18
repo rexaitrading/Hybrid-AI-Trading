@@ -311,3 +311,35 @@ exit 0
 
 
 
+
+
+# --- GATESCORE_MASTER_UPSERT ---
+try {
+  $master = Join-Path $logs "gatescore_daily_summary.csv"
+  if(-not (Test-Path $master)){
+    "as_of_date,symbol,source,count_signals,pnl_samples,mean_edge_ratio,mean_micro_score" | Out-File -FilePath $master -Encoding ascii
+  }
+
+  $today = (Get-Date).ToString("yyyy-MM-dd")
+  $sym = ("$Symbol").Trim().ToUpperInvariant()
+
+  if(Test-Path $out){
+    $lines = Get-Content $out -Encoding utf8
+    if($lines.Count -ge 2){
+      $row = $lines[-1]
+      if($row -like "$today,*"){
+        $m = Get-Content $master -Encoding utf8
+        $m = $m | Where-Object { $_ -notlike "$today,$sym,*" }
+        $m += $row
+
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($master, ($m -join "`n"), $utf8NoBom)
+
+        Write-Host "[GATESCORE] Master upserted: $row" -ForegroundColor Green
+      }
+    }
+  }
+} catch {
+  Write-Host "[GATESCORE] WARN: master upsert failed (non-fatal): $($_.Exception.Message)" -ForegroundColor Yellow
+}
+# --- END GATESCORE_MASTER_UPSERT ---

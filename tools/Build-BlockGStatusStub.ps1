@@ -30,6 +30,35 @@ function Try-LoadCsv {
   try { return @(Import-Csv $Path) } catch { return @() }
 }
 
+
+function Get-EvHardOkToday {
+  param(
+    [Parameter(Mandatory=$true)]$Rows,
+    [Parameter(Mandatory=$true)][string]$Today
+  )
+  if (-not $Rows) { return $false }
+
+  foreach($r in $Rows){
+    try {
+      $d = ""
+      if($r.PSObject.Properties.Name -contains "date"){ $d = "$($r.date)" }
+      if($d -ne $Today){ continue }
+
+      # schema A: date,ev_hard_ok
+      if($r.PSObject.Properties.Name -contains "ev_hard_ok"){
+        return [bool]([System.Convert]::ToBoolean("$($r.ev_hard_ok)"))
+      }
+
+      # schema B (canonical): date,ok,reason
+      if($r.PSObject.Properties.Name -contains "ok"){
+        $v = ("$($r.ok)").Trim().ToLowerInvariant()
+        if($v -eq "true"){ return $true }
+        return $false
+      }
+    } catch { }
+  }
+  return $false
+}
 function Has-TodayRow {
   param(
     [Parameter()]$Rows,
