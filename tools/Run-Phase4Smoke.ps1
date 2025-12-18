@@ -38,15 +38,30 @@ if ($ec -ne 0) {
   exit $ec
 }
 
-Write-Host "[PHASE4] PASS" -ForegroundColor Green
-exit 0
+function Resolve-RepoRoot {
+  # start from the directory containing this script
+  $here = Split-Path -Parent $MyInvocation.MyCommand.Path
+  $d = (Resolve-Path $here).Path
+
+  while($true){
+    if(Test-Path (Join-Path $d ".git")){ return $d }
+    $parent = Split-Path -Parent $d
+    if([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $d){ break }
+    $d = $parent
+  }
+
+  throw "PhaseSweep: Could not find .git by walking up from script dir: $here"
+}
+
+$repoRoot = Resolve-RepoRoot
+Set-Location $repoRoot
 
 
 # --- PHASE4_STAMP_SINGLE_TRUTH ---
 # Write today's phase4_validation_passed.json based on smoke result.
 try {
   $phase4Ok = "0"
-  if ($ec -eq 0) { $phase4Ok = "1" }
+  if ($LASTEXITCODE -eq 0) { $phase4Ok = "1" }
 
   if (Test-Path ".\tools\Write-Phase4PassedStamp.ps1") {
     powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\Write-Phase4PassedStamp.ps1" -Phase4Ok $phase4Ok | Out-Host
