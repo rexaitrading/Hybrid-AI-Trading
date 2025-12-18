@@ -8,20 +8,17 @@ $ErrorActionPreference="Stop"
 
 function Resolve-RepoRoot {
   # 0) Single-truth tracked pointer: .hat\repo_root.txt (preferred, ASCII-safe)
-  try {
-    $rootFile = Join-Path $PSScriptRoot "..\.hat\repo_root.txt"
-    $rootFile = [System.IO.Path]::GetFullPath($rootFile)
-    if(Test-Path -LiteralPath $rootFile){
-      $s = (Get-Content -LiteralPath $rootFile -Raw -Encoding UTF8)
-      if ($s.Length -gt 0 -and [int][char]$s[0] -eq 65279) { $s = $s.TrimStart([char]65279) }
-      $p = $s.Trim()
-      if($p){
-        $full = [System.IO.Path]::GetFullPath($p)
-        if(Test-Path -LiteralPath (Join-Path $full ".git")){ return $full }
-        throw "[REPOROOT] .hat/repo_root.txt points to missing repo: $full"
-      }
+  $rootFile = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.hat\repo_root.txt"))
+  if(Test-Path -LiteralPath $rootFile){
+    $s = (Get-Content -LiteralPath $rootFile -Raw -Encoding UTF8)
+    if ($s.Length -gt 0 -and [int][char]$s[0] -eq 65279) { $s = $s.TrimStart([char]65279) }
+    $p = $s.Trim()
+    if($p){
+      $full = [System.IO.Path]::GetFullPath($p)
+      if(Test-Path -LiteralPath (Join-Path $full ".git")){ return $full }
+      throw "[REPOROOT] .hat/repo_root.txt points to missing repo: $full"
     }
-  } catch { throw }
+  }
 
   # 1) ENV override (secondary)
   $envRoot = (($env:HAT_REPO_ROOT + "")).Trim()
@@ -40,38 +37,6 @@ function Resolve-RepoRoot {
   }
 
   throw "[REPOROOT] Could not resolve repo root (.hat pointer/env/.git all failed)"
-}
-$root = ($s.Trim())
-      if($root){
-        $full = [System.IO.Path]::GetFullPath($root)
-        if(Test-Path -LiteralPath (Join-Path $full "logs")){ return $full }
-        if(Test-Path -LiteralPath $full){ return $full }
-      }
-    }
-  } catch { }
-
-  # 1) ENV override
-  $envRoot = (($env:HAT_REPO_ROOT + "")).Trim()
-  if($envRoot){
-    $full = [System.IO.Path]::GetFullPath($envRoot)
-    if(Test-Path -LiteralPath (Join-Path $full "logs")){ return $full }
-    if(Test-Path -LiteralPath $full){ return $full }
-  }
-
-  # 2) fallback: walk up to find .git
-  $scriptPath = $PSCommandPath
-  if([string]::IsNullOrWhiteSpace($scriptPath)){ $scriptPath = $MyInvocation.MyCommand.Path }
-  if([string]::IsNullOrWhiteSpace($scriptPath)){ throw "[REPOROOT] cannot resolve script path" }
-
-  $d = Split-Path -Parent $scriptPath
-  while($true){
-    if(Test-Path -LiteralPath (Join-Path $d ".git")){ return $d }
-    $parent = Split-Path -Parent $d
-    if([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $d){ break }
-    $d = $parent
-  }
-
-  throw "[REPOROOT] Could not resolve repo root (no repo_root.txt, no env, no .git)"
 }
 if(Test-Path -LiteralPath (Join-Path $full "logs")){ return $full }
     if(Test-Path -LiteralPath $full){ return $full }
