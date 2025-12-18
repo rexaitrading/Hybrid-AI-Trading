@@ -1,3 +1,11 @@
+# INVOKE_BLOCKGREADY_CHILD_ONLY
+# This script MUST be launched as a child process:
+#   powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-BlockGReady.ps1 -Symbol ALL -Build
+# Running it directly (.\tools\Invoke-BlockGReady.ps1) may terminate your ConsoleHost due to exit codes.
+if ($MyInvocation.InvocationName -notlike "*powershell*") {
+  Write-Host "[Invoke-BlockGReady] REFUSE: run as child process only. Use: powershell -File .\tools\Invoke-BlockGReady.ps1 ..." -ForegroundColor Yellow
+  return 2
+}
 [CmdletBinding()]
 param(
   [Parameter(Mandatory=$false)]
