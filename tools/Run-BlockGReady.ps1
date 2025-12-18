@@ -22,8 +22,9 @@ Set-Location $repoRoot
 
 function Invoke-Child([string]$file, [string[]]$args) {
   $ps = (Get-Command powershell).Source
-  & $ps -NoProfile -ExecutionPolicy Bypass -File $file @args
-  return $LASTEXITCODE
+  # IMPORTANT: print child output, but return ONLY numeric exit code.
+  & $ps -NoProfile -ExecutionPolicy Bypass -File $file @args | Out-Host
+  return [int]$LASTEXITCODE
 }
 
 function One([string]$sym) {
@@ -52,8 +53,11 @@ Write-Host "[BLOCKG_MATRIX] $line" -ForegroundColor Cyan
 
 # If ALL, return 0 only if all are 0; else return max exit code for visibility.
 if ($Symbol -eq "ALL") {
-  if (($results.Values | Where-Object { $_ -ne 0 }).Count -eq 0) { return 0 }
-  return (($results.Values | Measure-Object -Maximum).Maximum)
+  $vals = @($results.Values | ForEach-Object { [int]$_ })
+  if (($vals | Where-Object { $_ -ne 0 }).Count -eq 0) { return 0 }
+  $max = 0
+  foreach ($v in $vals) { if ($v -gt $max) { $max = $v } }
+  return $max
 }
 
 return $results[$Symbol]
