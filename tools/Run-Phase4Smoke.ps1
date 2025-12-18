@@ -46,7 +46,7 @@ exit 0
 # Write today's phase4_validation_passed.json based on smoke result.
 try {
   $phase4Ok = "0"
-  if ($LASTEXITCODE -eq 0) { $phase4Ok = "1" }
+  if ($ec -eq 0) { $phase4Ok = "1" }
 
   if (Test-Path ".\tools\Write-Phase4PassedStamp.ps1") {
     powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\Write-Phase4PassedStamp.ps1" -Phase4Ok $phase4Ok | Out-Host
