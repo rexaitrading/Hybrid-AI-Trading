@@ -4,10 +4,25 @@ param(
 )
 
 Set-StrictMode -Version Latest
+
+function Resolve-RepoRoot {
+  # PS5/StrictMode safe: prefer $PSCommandPath, fallback to $MyInvocation
+  $scriptPath = $PSCommandPath
+  if([string]::IsNullOrWhiteSpace($scriptPath)){ $scriptPath = $MyInvocation.MyCommand.Path }
+  if([string]::IsNullOrWhiteSpace($scriptPath)){ throw "[EV-HARD] cannot resolve script path" }
+
+  $d = Split-Path -Parent $scriptPath
+  while($true){
+    if(Test-Path -LiteralPath (Join-Path $d ".git")){ return $d }
+    $parent = Split-Path -Parent $d
+    if([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $d){ break }
+    $d = $parent
+  }
+  throw "[EV-HARD] Could not find .git by walking up from $scriptPath"
+}
 $ErrorActionPreference="Stop"
 
-$toolsDir = Split-Path -Parent $PSCommandPath
-$repoRoot = Split-Path -Parent $toolsDir
+$repoRoot = Resolve-RepoRoot
 Set-Location $repoRoot
 
 $logs = Join-Path $repoRoot "logs"
