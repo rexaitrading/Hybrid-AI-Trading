@@ -60,4 +60,22 @@ if ($Symbol -eq "ALL") {
   return $max
 }
 
-return $results[$Symbol]
+# --- FINAL EXIT/RETURN (process-safe) ---
+$finalRc = 0
+if ($Symbol -eq "ALL") {
+  # If ALL, treat non-zero as failure; return max code for visibility
+  $vals = @($results.Values | ForEach-Object { [int]$_ })
+  if (($vals | Where-Object { $_ -ne 0 }).Count -eq 0) { $finalRc = 0 }
+  else {
+    $max = 0
+    foreach ($v in $vals) { if ($v -gt $max) { $max = $v } }
+    $finalRc = $max
+  }
+} else {
+  $finalRc = [int]$results[$Symbol]
+}
+
+# When invoked via `powershell -File`, set the real process exit code.
+# When invoked in-session (direct call), return an int without killing ConsoleHost.
+if ($MyInvocation.MyCommand.Path) { exit $finalRc }
+return $finalRc
