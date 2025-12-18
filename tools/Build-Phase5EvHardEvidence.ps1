@@ -29,12 +29,12 @@ if(-not (Test-Path $logs)){ New-Item -ItemType Directory -Force -Path $logs | Ou
 
 $today = if($AsOf){ $AsOf } else { (Get-Date).ToString("yyyy-MM-dd") }
 
-$snapPath = Join-Path $logs "ev_hard_snapshot.json"
+$snapPath = Join-Path $logs "phase5_ev_hard_veto_snapshot.json"
 $outPath  = Join-Path $logs "phase5_ev_hard_veto_evidence.json"
 
 # fail-closed defaults
 $ok = $false
-$reason = "missing_ev_hard_snapshot"
+$reason = "missing_phase5_ev_hard_veto_snapshot"
 
 if(Test-Path $snapPath){
   try {
@@ -63,7 +63,7 @@ $payload = [ordered]@{
   ok       = $ok
   reason   = $reason
   inputs   = [ordered]@{
-    source = "ev_hard_snapshot.json"
+    source = "phase5_ev_hard_veto_snapshot.json"
   }
 }
 
