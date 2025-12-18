@@ -1,5 +1,5 @@
 from hybrid_ai_trading.execution.blockg_lastmile import enforce_blockg_lastmile
-from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env
+from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env, is_live_env
 from hybrid_ai_trading.runtime.context_loader import is_live_env
 from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
 from typing import Any, Dict, List, Optional, Tuple
@@ -17,12 +17,10 @@ def _is_live_mode() -> bool:
     Unified LIVE-mode check via RunContext (single authority).
     Preserves operator override: IBKR_LIVE=1.
     """
-    import os
-    if os.getenv("IBKR_LIVE", "0") == "1":
-        return True
-    return bool(load_run_context_from_env().is_live)
-
-
+    try:
+        return bool(is_live_env())
+    except Exception:
+        return False
 class IBAdapter(Broker):
     def __init__(
         self,

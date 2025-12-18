@@ -122,9 +122,13 @@ def load_run_context_from_env() -> RunContext:
         logs_dir=logs_dir,
     )
 
-def is_live_env() -> bool:
+def is_live_env(ctx: RunContext | None = None) -> bool:
     """
-    Legacy-friendly check: True only when env resolves to LIVE.
+    Unified LIVE-mode check via RunContext (single authority).
+    Preserves operator override: IBKR_LIVE=1.
     """
-    return load_run_context_from_env().is_live
-
+    import os
+    if os.getenv("IBKR_LIVE", "0") == "1":
+        return True
+    c = ctx or load_run_context_from_env()
+    return bool(c.is_live)

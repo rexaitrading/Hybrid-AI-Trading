@@ -5,7 +5,7 @@ def ensure_symbol_blockg_ready(symbol: str) -> None:
     """
     from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
     assert_symbol_ready(str(symbol))
-from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env
+from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env, is_live_env
 from hybrid_ai_trading.runtime.context_loader import is_live_env
 
 def _is_live_mode() -> bool:
@@ -13,11 +13,10 @@ def _is_live_mode() -> bool:
     Unified LIVE-mode check via RunContext (single authority).
     Preserves operator override: IBKR_LIVE=1.
     """
-    import os
-    if os.getenv("IBKR_LIVE", "0") == "1":
-        return True
-    return bool(load_run_context_from_env().is_live)
-
+    try:
+        return bool(is_live_env())
+    except Exception:
+        return False
 from typing import Any, Dict, List, Optional, Tuple
 
 from .base import Broker
