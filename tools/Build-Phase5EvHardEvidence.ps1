@@ -32,6 +32,13 @@ $today = if($AsOf){ $AsOf } else { (Get-Date).ToString("yyyy-MM-dd") }
 $snapPath = Join-Path $logs "phase5_ev_hard_veto_snapshot.json"
 $outPath  = Join-Path $logs "phase5_ev_hard_veto_evidence.json"
 
+# --- EVHARD_EVIDENCE_DEBUG_PATHS ---
+Write-Host "[EV-HARD-EVIDENCE] repoRoot=$repoRoot" -ForegroundColor DarkCyan
+Write-Host "[EV-HARD-EVIDENCE] logs=$logs" -ForegroundColor DarkCyan
+Write-Host "[EV-HARD-EVIDENCE] snapPath=$snapPath exists=$((Test-Path $snapPath))" -ForegroundColor DarkCyan
+# --- END EVHARD_EVIDENCE_DEBUG_PATHS ---
+$outPath  = Join-Path $logs "phase5_ev_hard_veto_evidence.json"
+
 # fail-closed defaults
 $ok = $false
 $reason = "missing_phase5_ev_hard_veto_snapshot"
