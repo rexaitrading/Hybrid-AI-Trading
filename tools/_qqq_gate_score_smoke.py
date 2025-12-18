@@ -1,0 +1,1 @@
+from tools._gatescore_smoke import main; raise SystemExit(main("QQQ"))
