@@ -13,7 +13,7 @@ if (-not (Test-Path $logsDir)) {
     exit 1
 }
 
-$runCtxPath = Join-Path $logsDir "runcontext_phase5_stub.json"
+$runCtxPath = Join-Path $logsDir "run_context.json"
 $outCsvPath = Join-Path $logsDir "phase5_safety_runcontext_daily.csv"
 
 if (-not (Test-Path $runCtxPath)) {
