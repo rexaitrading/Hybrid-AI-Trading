@@ -23,7 +23,7 @@ $out   = Join-Path $logs ("portfolio_optimizer_daily_{0}.json" -f $today)
 $runCtxPath = Join-Path $logs "run_context.json"
 
 $reasons = New-Object System.Collections.Generic.List[string]
-$status = "OK"
+$status = "SKIPPED"
 
 if(-not (Test-Path $runCtxPath)){
   $status = "SKIPPED"
