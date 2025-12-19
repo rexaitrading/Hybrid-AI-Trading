@@ -23,6 +23,15 @@ Write-Host "[PYTEST] PYTEST_DISABLE_PLUGIN_AUTOLOAD=$env:PYTEST_DISABLE_PLUGIN_A
 
 & $py -c "import os,sys,hybrid_ai_trading; print('[PYTEST] CWD=',os.getcwd()); print('[PYTEST] hybrid_ai_trading.__file__=', hybrid_ai_trading.__file__); print('[PYTEST] PATH_HAS_ONEDRIVE=', any('OneDrive' in p for p in sys.path))"
 
+
+# IMPORT_ROOT_GUARD: abort if imports resolve outside this repo
+$probe = & $py -c "import os,sys,hybrid_ai_trading; print(hybrid_ai_trading.__file__)"
+if(-not $probe){ throw "[PYTEST] import probe failed" }
+$probe = $probe.Trim()
+$expected = (Join-Path $root "src\hybrid_ai_trading\__init__.py")
+if($probe -ne $expected){
+  throw "[PYTEST] FAIL: hybrid_ai_trading resolved outside repo. expected=$expected actual=$probe"
+}
 if ($PytestArgs.Count -gt 0) {
   & $py -m pytest --rootdir $root .\tests @PytestArgs
 } else {
