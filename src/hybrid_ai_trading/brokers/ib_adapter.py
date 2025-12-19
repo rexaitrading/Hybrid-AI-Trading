@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 from .base import Broker
 
@@ -63,6 +64,12 @@ class IBAdapter(Broker):
             order = LimitOrder(side.upper(), qty, limit_price)
         else:
             order = MarketOrder(side.upper(), qty)
+        # Block-G: hard fail-closed for LIVE orders (double-gate)
+
+        if hasattr(self, "is_paper") and (not getattr(self, "is_paper", True)):
+
+            require_blockg_ready_for_live(symbol)
+
         trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)

@@ -1,13 +1,13 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import asdict
 from typing import Any, Dict
 
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
 from hybrid_ai_trading.execution.blockg_contract import (
-from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
     ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready,
 )
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 
 def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
@@ -112,6 +112,12 @@ def place_order_phase5_with_guard(
             }
 
     # 3) Call underlying order function
+
+    # Block-G: hard fail-closed for LIVE only (paper stays runnable).
+    # We only enforce this path if engine explicitly tells us it is live.
+    if hasattr(engine, "is_paper") and (not getattr(engine, "is_paper", True)):
+        require_blockg_ready_for_live(symbol)
+
     return place_order_phase5(
         engine=engine,
         symbol=symbol,
