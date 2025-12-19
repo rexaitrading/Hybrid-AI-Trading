@@ -5,6 +5,7 @@ Fetch Polygon bars, grade breakouts, export CSV+JSON, optionally place IBKR brac
 """
 
 import csv
+from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
 import json
 import logging
 
@@ -129,6 +130,7 @@ def place_bracket_order(ib: IB, symbol: str, info: Dict[str, Any]) -> Dict[str, 
     stop_loss.parentId = parent.orderId
     stop_loss.transmit = True
 
+    forbid_direct_ib_live("pipelines/daily_stock_dashboard.py:daily_dashboard_with_ibkr")
     ib.placeOrder(contract, parent)
     ib.placeOrder(contract, take_profit)
     ib.placeOrder(contract, stop_loss)

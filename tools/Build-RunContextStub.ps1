@@ -13,7 +13,7 @@ if (-not (Test-Path $logsDir)) {
 }
 
 $statusPath   = Join-Path $logsDir "blockg_status_stub.json"
-$runCtxPath   = Join-Path $logsDir "runcontext_phase5_stub.json"
+$runCtxPath   = Join-Path $logsDir "run_context.json"
 
 if (-not (Test-Path $statusPath)) {
     Write-Host "[RUNCTX] ERROR: Block-G status JSON not found at $statusPath" -ForegroundColor Red
@@ -49,7 +49,9 @@ if (-not $asOf) { $asOf = Get-StatusFieldSafe -Status $status -Name "trading_day
 
 $phase23  = Get-StatusFieldSafe -Status $status -Name "phase23_health_ok_today"
 $evHard   = Get-StatusFieldSafe -Status $status -Name "ev_hard_daily_ok_today"
-$gsFresh  = Get-StatusFieldSafe -Status $status -Name "gatescore_fresh_today"
+# GateScore schema lock: prefer gatescore_ok_today; fallback gatescore_fresh_today
+$gsFresh = Get-StatusFieldSafe -Status $status -Name "gatescore_ok_today"
+if ($null -eq $gsFresh) { $gsFresh = Get-StatusFieldSafe -Status $status -Name "gatescore_fresh_today" }
 
 $nvdaReady = Get-StatusFieldSafe -Status $status -Name "nvda_blockg_ready"
 $spyReady  = Get-StatusFieldSafe -Status $status -Name "spy_blockg_ready"
@@ -72,7 +74,10 @@ $payload = [ordered]@{
 $payloadJson = $payload | ConvertTo-Json -Depth 4
 
 Write-Host "[RUNCTX] Writing Phase-5 RunContext stub to $runCtxPath" -ForegroundColor Cyan
-$payloadJson | Set-Content -Path $runCtxPath -Encoding UTF8
-
+# Write UTF-8 NO-BOM + LF (PS 5.1 Set-Content UTF8 writes BOM)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$payloadJsonLf = ($payloadJson -replace "`r`n","`n") + "`n"
+[IO.File]::WriteAllText($runCtxPath, $payloadJsonLf, $utf8NoBom)
 Write-Host "[RUNCTX] RunContext snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
+

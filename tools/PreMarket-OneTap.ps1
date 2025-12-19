@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 Set-StrictMode -Version Latest
@@ -7,6 +7,15 @@ $ErrorActionPreference = "Stop"
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
+
+# ---- Phase-5 RunContext stub (global view) ----
+Write-Host "`n[RUNCTX] Phase-5 RunContext stub (global view)" -ForegroundColor Yellow
+$runCtxScript = Join-Path $toolsDir "Show-RunContextStub.ps1"
+if (Test-Path $runCtxScript) {
+    & $runCtxScript
+} else {
+    Write-Host "[RUNCTX] Show-RunContextStub.ps1 not found under tools\" -ForegroundColor DarkYellow
+}
 
 Write-Host "`n[PREMARKET] NVDA pre-market one-tap STUB (Phase-5 safety branch)" -ForegroundColor Cyan
 Write-Host "[PREMARKET] RepoRoot = $repoRoot" -ForegroundColor DarkCyan

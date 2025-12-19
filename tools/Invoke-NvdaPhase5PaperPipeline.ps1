@@ -1,0 +1,119 @@
+[CmdletBinding()]
+param(
+    [switch]$SkipCsv
+)
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+# Script lives under repoRoot\tools -> go one level up to repo root
+$toolsDir = Split-Path -Parent $PSCommandPath
+$repoRoot = Split-Path -Parent $toolsDir
+Set-Location $repoRoot
+
+Write-Host "`n[PIPELINE] NVDA Phase-5 paper pipeline (live runner + CSV)" -ForegroundColor Cyan
+
+# Python + PYTHONPATH
+$env:PYTHONPATH = Join-Path $repoRoot 'src'
+$PythonExe = '.\.venv\Scripts\python.exe'
+
+if (-not (Test-Path $PythonExe)) {
+    Write-Host "[ERROR] Python executable not found at $PythonExe" -ForegroundColor Red
+    return
+}
+
+Write-Host "RepoRoot  = $repoRoot"
+Write-Host "PythonExe = $PythonExe"
+Write-Host "PYTHONPATH= $env:PYTHONPATH"
+
+# --- Step 1: run NVDA Phase-5 live runner (IB paper) ------------------------
+Write-Host "`n[STEP 1] Run paper_live_without_ibg_nvda_phase5.py (paper, NO-IBG)" -ForegroundColor Cyan
+
+& $PythonExe .\tools\paper_live_without_ibg_nvda_phase5.py
+$exitCode = $LASTEXITCODE
+
+if ($exitCode -ne 0) {
+    Write-Host "[STEP 1] nvda_phase5_live_runner.py exited with code $exitCode" -ForegroundColor Red
+    Write-Host "[PIPELINE] Aborting before CSV rebuild." -ForegroundColor Yellow
+    exit $exitCode
+}
+
+Write-Host "[STEP 1] nvda_phase5_live_runner.py completed successfully." -ForegroundColor Green
+
+# [STEP 1.1] Deterministic EV backfill for today (fix historic rows before quality gate)
+$today = (Get-Date).ToString("yyyy-MM-dd")
+if (Test-Path ".\tools\Backfill-NvdaPaperliveEvMu.ps1") {
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Backfill-NvdaPaperliveEvMu.ps1 -AsOfDate $today
+} else {
+  Write-Host "[STEP 1.1] FAIL-CLOSED: missing tools\Backfill-NvdaPaperliveEvMu.ps1" -ForegroundColor Red
+  exit 15
+}
+
+
+# [ASSERT] fail-closed if today's paperlive rows are missing ev_mu
+$today = (Get-Date).ToString("yyyy-MM-dd")
+$paperliveJsonl = Join-Path $repoRoot "logs\nvda_phase5_paperlive_results.jsonl"
+if (-not (Test-Path $paperliveJsonl)) { throw "Missing paperlive jsonl: $paperliveJsonl" }
+
+$hasEv = 0; $missEv = 0
+Get-Content $paperliveJsonl -Encoding utf8 | ForEach-Object {
+  $ln = $_.Trim(); if (-not $ln) { return }
+  try { $o = $ln | ConvertFrom-Json -ErrorAction Stop } catch { return }
+  if ($o.PSObject.Properties.Name -contains "ts_trade") {
+    $ts = "$($o.ts_trade)"
+    if ($ts.Length -ge 10 -and $ts.Substring(0,10) -eq $today) {
+      if (($o.PSObject.Properties.Name -contains "ev_mu") -and ($null -ne $o.ev_mu)) { $hasEv++ } else { $missEv++ }
+    }
+  }
+}
+
+if ($missEv -gt 0) {
+  Write-Host "[ASSERT] FAIL-CLOSED: paperlive rows missing ev_mu today=$today has=$hasEv missing=$missEv" -ForegroundColor Red
+  exit 14
+}
+Write-Host "[ASSERT] OK: paperlive rows all have ev_mu today=$today rows=$hasEv" -ForegroundColor Green
+
+
+Write-Host "`n[STEP 1.25] Remove BOM from nvda_phase5_paperlive_results.jsonl (optional harden)" -ForegroundColor Cyan
+if (Test-Path ".\tools\Fix-NvdaJsonlBom.ps1") {
+    .\tools\Fix-NvdaJsonlBom.ps1
+} else {
+    Write-Host "[STEP 1.25] Fix-NvdaJsonlBom.ps1 missing -> skipped" -ForegroundColor Yellow
+}
+
+# --- Step 1.5: backfill PnL stub into nvda_phase5_paperlive_results.jsonl -----
+Write-Host "`n[STEP 1.5] Backfill NVDA Phase-5 live PnL stub (realized_pnl=0.0) into nvda_phase5_paperlive_results.jsonl" -ForegroundColor Cyan
+if (Test-Path ".\tools\Backfill-NvdaPhase5LivePnlStub.ps1") {
+    .\tools\Backfill-NvdaPhase5LivePnlStub.ps1
+} else {
+    Write-Host "[STEP 1.5] Backfill script missing -> skipped (fail-closed)" -ForegroundColor Yellow
+}
+
+# --- Step 2: rebuild CSV ------------------------------------------------------
+
+# --- Step 2: rebuild NVDA Phase-5 paper CSV for Notion ----------------------
+if (-not $SkipCsv) {
+    Write-Host "`n[STEP 1.75] Remove BOM from nvda_phase5_paperlive_results.jsonl (final harden)" -ForegroundColor Cyan
+if (Test-Path ".\tools\Fix-NvdaJsonlBom.ps1") {
+    .\tools\Fix-NvdaJsonlBom.ps1
+} else {
+    Write-Host "[STEP 1.75] Fix-NvdaJsonlBom.ps1 missing -> skipped" -ForegroundColor Yellow
+}
+Write-Host "`n[STEP 2] Rebuild NVDA Phase-5 paper CSV for Notion" -ForegroundColor Cyan
+
+    & $PythonExe .\tools\nvda_phase5_paper_to_csv.py
+    $exitCode = $LASTEXITCODE
+
+    if ($exitCode -ne 0) {
+        Write-Host "[STEP 2] nvda_phase5_paper_to_csv.py exited with code $exitCode" -ForegroundColor Red
+        Write-Host "[PIPELINE] CSV step failed; check logs\nvda_phase5_paper_for_notion.csv manually." -ForegroundColor Yellow
+        return
+    }
+
+    Write-Host "[STEP 2] nvda_phase5_paper_to_csv.py completed successfully." -ForegroundColor Green
+} else {
+    Write-Host "[STEP 2] SkipCsv switch set -> CSV rebuild skipped." -ForegroundColor Yellow
+}
+
+Write-Host "`n[PIPELINE] NVDA Phase-5 paper pipeline complete." -ForegroundColor Green
+

@@ -1,106 +1,52 @@
-# Python
+# -----------------------------
+# Runtime artifacts / logs
+# -----------------------------
+audit.csv
+backup.csv
+logs/
+.logs/
+replay_out/
+reports/
+
+# Python cache / test cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.egg-info/
-
-# pytest
+pytest_cache/
 .pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
 
-# editors
-*.swp
-*.swo
-.vscode/
-.idea/
+# venv
+.venv/
+venv/
+.venv.*/
+# backups / scratch
+*.bak
+*.bak.*
+*.bak_*
+*.broken_*
+*.RESTORE_*
+*.PRE_REWRITE.bak
+*.converter*.bak
+*.fullrewrite*.bak
 
-# OS
+# OS/editor
 .DS_Store
 Thumbs.db
 
-# our scripts + backups
-scripts/*.bak*
-*.bak
-*.orig
-*.rej
+ib_insync_*.log
 
-# logs & outputs
-logs/
-.log/
-*.log
-*.jsonl
+tmp_*.py
 
-# notebooks (optional)
-.ipynb_checkpoints/
+tmp_*.txt
 
-# data temp (keep real datasets by path, ignore temp files)
-data/*~
+tmp_*
 
-.venv/
-# local backups / experiments
-.github/workflows/backup_removed/
-src/hybrid_ai_trading/tools/bar_replay_legacy.*.py
-# local ops + caches
-.tmp_pytest_cache/
-.coverage
-dist/
-build/
-*.egg-info/
-**/__pycache__/
-logs/*.tmp
-# secrets & local configs
-.env
-*.env
-config/*.yml
-config/*.yaml
-**/config.yaml
-**/config.yml
-**/config.ini
-**/jts.ini
-**/IBC/**/config.ini
+test_cli_write.txt
 
-# logs & local state
-.logs/
-logs/
-*.jsonl
-.state/
-archive/
-backups*/
-.backup/
 
-# local backups
-_backup_notion_journal_*.py
-
-# local backups
-_backup_notion_journal_*.py
-
-# local artifacts
-.artifacts/
-
-src/hybrid-ai-trading/
-
-protection.backup.json
-
-# runtime state
-/tmp_state.json
-
-# logs
-/audit.csv
-/backup.csv
-# local temp / reports
-.tmp/
-_tmp/
-.reports/
-_reports/
-.quarantine/
-# pytest caches
-.pytest_cache/
-# bytecode
-**/__pycache__/
-.tmp/
-_tmp/
-.reports/
-_reports/
-.quarantine/
-.pytest_cache/
-**/__pycache__/
+# Allow deterministic replay fixtures
+!tests/fixtures/*.csv

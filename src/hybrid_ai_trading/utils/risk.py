@@ -1,4 +1,5 @@
 from ib_insync import IB, MarketOrder
+from hybrid_ai_trading.runtime.live_boundary import forbid_direct_ib_live
 
 
 def intraday_risk_checks(
@@ -24,4 +25,5 @@ def _flatten(ib: IB, positions):
 
 def _flatten_one(ib: IB, p):
     side = "SELL" if p.position > 0 else "BUY"
+    forbid_direct_ib_live("utils/risk.py:direct_send")
     ib.placeOrder(p.contract, MarketOrder(side, abs(int(p.position))))

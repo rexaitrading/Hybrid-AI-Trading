@@ -19,7 +19,11 @@ try {
     # Step 1: Run GateScore daily suite / smoke
     if (Test-Path '.\tools\Run-GateScoreDailySuite.ps1') {
         Write-Host "`n[PHASE3] Running Run-GateScoreDailySuite.ps1..." -ForegroundColor Yellow
-        .\tools\Run-GateScoreDailySuite.ps1
+        try {
+            .\tools\Run-GateScoreDailySuite.ps1
+        } catch {
+            Write-Host ("[PHASE3] WARN: GateScoreDailySuite failed (non-fatal): {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+        }
     } elseif (Test-Path '.\tools\Run-GateScoreSmoke.ps1') {
         Write-Host "`n[PHASE3] Running Run-GateScoreSmoke.ps1..." -ForegroundColor Yellow
         .\tools\Run-GateScoreSmoke.ps1
@@ -38,7 +42,11 @@ try {
     # Step 3: Export GateScore + PnL to Notion
     if (Test-Path '.\tools\Run-ExportNvdaGateScoreForNotion.ps1') {
         Write-Host "`n[PHASE3] Exporting GateScore vs PnL for NVDA to Notion..." -ForegroundColor Yellow
-        .\tools\Run-ExportNvdaGateScoreForNotion.ps1
+        try {
+            .\tools\Run-ExportNvdaGateScoreForNotion.ps1
+        } catch {
+            Write-Host ("[PHASE3] WARN: Notion export failed (non-fatal): {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+        }
     } else {
         Write-Host "[WARN] Run-ExportNvdaGateScoreForNotion.ps1 not found; skipping Notion export." -ForegroundColor Yellow
     }

@@ -13,7 +13,7 @@ if (-not (Test-Path $logsDir)) {
     exit 1
 }
 
-$runCtxPath = Join-Path $logsDir "runcontext_phase5_stub.json"
+$runCtxPath = Join-Path $logsDir "run_context.json"
 $outCsvPath = Join-Path $logsDir "phase5_safety_runcontext_daily.csv"
 
 if (-not (Test-Path $runCtxPath)) {
@@ -26,6 +26,7 @@ Write-Host "[SAFETY-CSV] Loading Phase-5 RunContext from $runCtxPath" -Foregroun
 
 try {
     $raw    = Get-Content -Path $runCtxPath -Raw -Encoding UTF8
+    if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 65279) { $raw = $raw.TrimStart([char]65279) }
     $runCtx = $raw | ConvertFrom-Json
 } catch {
     Write-Host "[SAFETY-CSV] ERROR: Failed to parse RunContext JSON. $_" -ForegroundColor Red

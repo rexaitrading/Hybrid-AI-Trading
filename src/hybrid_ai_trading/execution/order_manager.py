@@ -17,9 +17,30 @@ OrderManager (minimal, test-friendly)
 """
 
 import logging
+from hybrid_ai_trading.execution.blockg_guard import require_blockg_ready
+def _enforce_blockg_before_live_send(symbol: str) -> None:
+    """
+    Institutional Block-G gate at OrderManager LIVE boundary.
+    - Contract truth only (require_blockg_ready)
+    - Scoped to protected symbols (default NVDA only)
+    - LIVE is defined by: (not dry_run) and (live_client is not None)
+    """
+    import os as _os
+    _sym = str(symbol).upper().strip()
+    _cfg = str(_os.getenv("HAT_BLOCKG_SYMBOLS", "")).strip()
+    if _cfg:
+        _protected = {s.strip().upper() for s in _cfg.split(",") if s.strip()}
+    else:
+        _protected = {"NVDA"}
+
+    if _sym not in _protected:
+        return
+    require_blockg_ready(_sym)
+from pathlib import Path
 import uuid
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
+from hybrid_ai_trading.runtime.risk_envelope_loader import effective_caps
 
 logger = logging.getLogger(__name__)
 
@@ -376,6 +397,16 @@ class OrderManager:
             }
         # FRONT-DOOR CAPS GUARD (per-trade notional / exposure / leverage)
         try:
+            # SPECIAL-MODE ENVELOPE (explicitly armed risk budget overlay)
+            # Applies ONLY when HAT_SPECIAL_MODE=1 AND logs/risk_envelope.json is valid for today.
+            _repo_root = Path(".")
+            _eq_probe = None
+            try:
+                _eq_probe = float(getattr(getattr(self, "risk_mgr", None), "equity", None) or 0.0)
+            except Exception:
+                _eq_probe = None
+            _env_caps = effective_caps(_repo_root, equity=_eq_probe)
+
             rm = getattr(self, "risk_mgr", None)
             cfg = getattr(rm, "cfg", None) if rm is not None else None
 
@@ -409,6 +440,11 @@ class OrderManager:
                 v = _to_float(getattr(obj, "per_trade_notional_cap", None))
                 if v is not None:
                     capN = v
+                    try:
+                        if "per_trade_notional_cap" in _env_caps:
+                            capN = float(_env_caps["per_trade_notional_cap"])
+                    except Exception:
+                        pass
             if (
                 capN is not None
                 and _to_float(notional) is not None
@@ -431,6 +467,11 @@ class OrderManager:
                 v = _to_float(getattr(obj, "max_portfolio_exposure", None))
                 if v is not None:
                     exp = v
+                    try:
+                        if "max_portfolio_exposure" in _env_caps:
+                            exp = float(_env_caps["max_portfolio_exposure"])
+                    except Exception:
+                        pass
             if exp is not None and eq is not None and _to_float(notional) is not None:
                 if float(notional) > float(eq) * float(exp):
                     return {
@@ -450,6 +491,11 @@ class OrderManager:
                 v = _to_float(getattr(obj, "max_leverage", None))
                 if v is not None:
                     lev = v
+                    try:
+                        if "max_leverage" in _env_caps:
+                            lev = float(_env_caps["max_leverage"])
+                    except Exception:
+                        pass
             if lev is not None and eq is not None and _to_float(notional) is not None:
                 if float(notional) > float(eq) * float(lev):
                     return {
@@ -474,39 +520,24 @@ class OrderManager:
         veto = self._risk_veto(symbol, side, qf, nf)
         if veto is not None:
             return veto
-
         # LIVE PATH
         if not self.dry_run and self.live_client is not None:
+            # 1) Block-G gate (institutional hard gate) => BLOCKED
             try:
-                raw = self.live_client.submit_order(symbol, side, qf, nf)
-                oid = None
-                if isinstance(raw, dict):
-                    oid = (
-                        raw.get("id")
-                        or raw.get("order_id")
-                        or (raw.get("_raw") or {}).get("id")
-                    )
-                if oid:
-                    self._open_ids.add(oid)
-                    self.active_orders.append(
-                        {
-                            "order_id": oid,
-                            "symbol": symbol,
-                            "side": side,
-                            "qty": qf,
-                            "notional": nf,
-                            "status": "pending",
-                        }
-                    )
+                _enforce_blockg_before_live_send(str(symbol))
+            except Exception as e:
                 return {
                     "symbol": symbol,
                     "side": side,
                     "qty": qty,
                     "notional": notional,
-                    "status": "pending",
-                    "order_id": oid,
-                    "raw": raw,
+                    "status": "blocked",
+                    "reason": f"BLOCKG: {e}",
                 }
+
+            # 2) Live submit errors => ERROR
+            try:
+                raw = self.live_client.submit_order(symbol, side, qf, nf)
             except Exception as e:
                 logger.error("OrderManager live submit error: %s", e)
                 return {
@@ -515,8 +546,33 @@ class OrderManager:
                     "qty": qty,
                     "notional": notional,
                     "status": "error",
-                    "reason": f"live submit error: {e}",
+                    "reason": f"{e}",
                 }
+
+            oid = None
+            if isinstance(raw, dict):
+                oid = raw.get("id") or raw.get("order_id") or (raw.get("_raw") or {}).get("id")
+            if oid:
+                self._open_ids.add(oid)
+                self.active_orders.append(
+                    {
+                        "order_id": oid,
+                        "symbol": symbol,
+                        "side": side,
+                        "qty": qf,
+                        "notional": nf,
+                        "status": "pending",
+                    }
+                )
+            return {
+                "symbol": symbol,
+                "side": side,
+                "qty": qty,
+                "notional": notional,
+                "status": "pending",
+                "order_id": oid,
+                "raw": raw,
+            }
 
         # PAPER SIM PATH
         if self.dry_run and self.use_paper_simulator:
@@ -647,3 +703,4 @@ class OrderManager:
         self.active_orders.clear()
         self._open_ids.clear()
         return {"status": "flattened", "flattened": True, "cancelled": cancelled}
+

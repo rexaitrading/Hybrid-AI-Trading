@@ -1,15 +1,15 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import csv
 import json
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Minimal bar replay stub -> EV summary JSON"
+        description="Bar replay stub -> EV summary JSON with richer stats"
     )
 
     # New-style flags
@@ -44,20 +44,93 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def simple_replay_stats(csv_path: Path) -> Tuple[int, float]:
-    """
-    Minimal stub: count bars and return (count, dummy_ev_mean).
-    """
-    count = 0
-    with csv_path.open(newline="") as f:
-        reader = csv.reader(f)
-        _header = next(reader, None)
-        for _row in reader:
-            count += 1
+def _load_closes(csv_path: Path) -> Tuple[int, List[float]]:
+    closes: List[float] = []
+    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                close = float(row["close"])
+            except Exception:
+                continue
+            closes.append(close)
+    return len(closes), closes
 
-    # v1 stub: EV is zero; later versions can compute real EV
-    ev_mean = 0.0
-    return count, ev_mean
+
+def _compute_return_stats(closes: List[float]) -> Tuple[float, float, float, float, float, float]:
+    """
+    Compute:
+      - mean_edge_ratio (we'll use mean return for now)
+      - max_drawdown_pct
+      - win_rate
+      - avg_win
+      - avg_loss
+      - stdev of returns (for ev.stdev)
+    """
+    import math
+
+    n = len(closes)
+    if n < 2:
+        return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+
+    rets: List[float] = []
+    prev = closes[0]
+    for c in closes[1:]:
+        if prev != 0.0:
+            rets.append((c - prev) / prev)
+        prev = c
+
+    if not rets:
+        return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+
+    mean_r = sum(rets) / len(rets)
+
+    # max drawdown from close series
+    peak = closes[0]
+    max_dd = 0.0
+    for c in closes:
+        if c > peak:
+            peak = c
+        if peak != 0.0:
+            dd = (c - peak) / peak
+            if dd < max_dd:
+                max_dd = dd
+
+    wins = [r for r in rets if r > 0.0]
+    losses = [r for r in rets if r < 0.0]
+
+    win_rate = len(wins) / len(rets) if rets else 0.0
+    avg_win = sum(wins) / len(wins) if wins else 0.0
+    avg_loss = sum(losses) / len(losses) if losses else 0.0
+
+    # simple stdev of returns
+    var = sum((r - mean_r) ** 2 for r in rets) / len(rets)
+    stdev = math.sqrt(var)
+
+    # For now, treat mean_edge_ratio as mean return
+    mean_edge_ratio = mean_r
+
+    max_drawdown_pct = max_dd  # negative value
+    return mean_edge_ratio, max_drawdown_pct, win_rate, avg_win, avg_loss, stdev
+
+
+def simple_replay_stats(csv_path: Path) -> Tuple[int, float, float, float, float, float, float, float]:
+    """
+    Compute richer stats from a simple OHLCV CSV:
+      - bars
+      - mean_edge_ratio
+      - max_drawdown_pct
+      - win_rate
+      - avg_win
+      - avg_loss
+      - ev_mean
+      - ev_stdev
+    """
+    n_bars, closes = _load_closes(csv_path)
+    mean_edge_ratio, max_dd, win_rate, avg_win, avg_loss, stdev = _compute_return_stats(closes)
+    ev_mean = mean_edge_ratio
+    ev_stdev = stdev
+    return n_bars, mean_edge_ratio, max_dd, win_rate, avg_win, avg_loss, ev_mean, ev_stdev
 
 
 def main() -> None:
@@ -94,15 +167,29 @@ def main() -> None:
 
     outdir.mkdir(parents=True, exist_ok=True)
 
-    bars, ev_mean = simple_replay_stats(csv_path)
+    (
+        bars,
+        mean_edge_ratio,
+        max_drawdown_pct,
+        win_rate,
+        avg_win,
+        avg_loss,
+        ev_mean,
+        ev_stdev,
+    ) = simple_replay_stats(csv_path)
 
     summary = {
         "symbol": symbol,
         "session": session,
         "bars": bars,
+        "mean_edge_ratio": mean_edge_ratio,
+        "max_drawdown_pct": max_drawdown_pct,
+        "win_rate": win_rate,
+        "avg_win": avg_win,
+        "avg_loss": avg_loss,
         "ev": {
             "mean": ev_mean,
-            "stdev": 0.0,
+            "stdev": ev_stdev,
         },
     }
 

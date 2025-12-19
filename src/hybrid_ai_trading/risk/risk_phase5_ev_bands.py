@@ -20,6 +20,19 @@ _EV_BANDS: Dict[str, EvBandConfig] = {
 }
 
 
+def _normalize_regime(regime: str) -> str:
+    r = (regime or "").strip().upper()
+    # Map common replay/dev names onto the canonical LIVE config keys
+    if "SPY_ORB" in r:
+        return "SPY_ORB_LIVE"
+    if "QQQ_ORB" in r:
+        return "QQQ_ORB_LIVE"
+    if "NVDA" in r and "BPLUS" in r:
+        return "NVDA_BPLUS_LIVE"
+    # Generic fallback: REPLAY -> LIVE
+    r = r.replace("_REPLAY", "_LIVE").replace("DEV_REPLAY", "LIVE")
+    return r
+
 def get_ev_and_band(regime: str) -> Tuple[Optional[float], Optional[float]]:
     """
     Return (ev_value, ev_band_abs) for the given regime.
@@ -28,7 +41,7 @@ def get_ev_and_band(regime: str) -> Tuple[Optional[float], Optional[float]]:
     - EV and band are not None for the three live regimes
     - band >= 0.0
     """
-    cfg = _EV_BANDS.get(regime)
+    cfg = _EV_BANDS.get(_normalize_regime(regime))
     if cfg is None:
         return None, None
     return cfg.ev, cfg.band_abs
@@ -41,7 +54,7 @@ def require_ev_band(regime: str, ev: Optional[float]) -> Tuple[bool, str]:
     Returns:
         (allowed, reason_code)
     """
-    cfg = _EV_BANDS.get(regime)
+    cfg = _EV_BANDS.get(_normalize_regime(regime))
     if cfg is None:
         return False, "ev_config_missing"
 

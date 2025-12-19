@@ -106,3 +106,11 @@ ERROR tests/engine/test_trade_engine_alert_branches.py
 - reset_day(): return reason + exact log string
 - Encoding/line-endings: UTF-8 no-BOM, LF
 [2025-11-07] Phase 6/7: CodeQL advanced-only; branch-protection contexts; PreMarket smoke; paper runner tests.
+
+## Block-G Ops Safety: avoid killing the console
+- DO NOT dot-source wrappers that call exit.
+- Use child-process invocations:
+  - powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Check-BlockGReady-Wrapper.ps1 -Symbol NVDA
+  - or use .\tools\Run-BlockGReady.ps1 -Symbol ALL -Build
+- Run-BlockGReady.ps1 calls the checker in a child process so exit codes are safe.
+

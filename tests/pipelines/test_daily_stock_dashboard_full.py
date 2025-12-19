@@ -1,5 +1,5 @@
 """
-Unit Tests: Daily Stock Dashboard (Quant Pro v7.1 Ã¢â‚¬â€œ Hedge-Fund Grade, 100% Coverage)
+Unit Tests: Daily Stock Dashboard (Quant Pro v7.1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Hedge-Fund Grade, 100% Coverage)
 ====================================================================================
 Covers:
 - get_bars success + request failure
@@ -10,7 +10,7 @@ Covers:
   * IBKR connection fail
   * disconnect branch
   * executed summary logging
-- Ã¢Å“â€¦ Cleanup of generated files in logs/
+- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Cleanup of generated files in logs/
 """
 
 import logging
@@ -18,6 +18,15 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# ----------------------------------------------------------------------
+# Autouse fixture: force tests to run in PAPER (never LIVE)
+# ----------------------------------------------------------------------
+@pytest.fixture(autouse=True)
+def force_paper_mode(monkeypatch):
+    monkeypatch.setenv("HAT_RUN_MODE", "paper")
+    monkeypatch.delenv("HAT_ALLOW_DIRECT_IB_LIVE", raising=False)
+    yield
 
 import hybrid_ai_trading.pipelines.daily_stock_dashboard as dash
 
@@ -219,3 +228,4 @@ def test_daily_dashboard_ib_none(monkeypatch, caplog):
     dash.daily_dashboard_with_ibkr()
     # Should run without error, but no auto-trades executed
     assert "SUMMARY OF AUTO-TRADES" not in caplog.text
+

@@ -1,130 +1,92 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $false)]
-    [ValidateSet("NVDA","SPY","QQQ")]
-    [string]$Symbol = "NVDA"
+  [Parameter(Mandatory=$false)]
+  [ValidateSet("NVDA","SPY","QQQ","ALL")]
+  [string]$Symbol = "NVDA",
+
+  # Optional override for tests / tooling. If empty, script will compute canonical path.
+  [string]$ContractPath = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$toolsDir = Split-Path -Parent $PSCommandPath
+function Fail([int]$Code, [string]$Msg) {
+  Write-Host "[BLOCK-G] $Msg" -ForegroundColor Yellow
+  exit $Code
+}
+
+# Exit codes (deterministic)
+# 0  = READY
+# 3  = CONTRACT_INVALID (missing/stale/missing required fields/parse error)
+# 10 = NOT_READY (contract ok but readiness flag false)
+
+# Robust script directory (works even if $PSScriptRoot is empty)
+$scriptPath = $PSCommandPath
+if (-not $scriptPath) { $scriptPath = $MyInvocation.MyCommand.Path }
+if (-not $scriptPath) { Fail 3 "cannot resolve script path (PSCommandPath/MyInvocation empty)" }
+
+$toolsDir = Split-Path -Parent $scriptPath
 $repoRoot = Split-Path -Parent $toolsDir
 
-# Prefer logs\blockg_status_stub.json (used by Test-BlockGDateSanity), fallback to .intel
-$logsStatus  = Join-Path $repoRoot "logs\\blockg_status_stub.json"
-$intelStatus = Join-Path $repoRoot ".intel\\blockg_status_stub.json"
-
-if (Test-Path $logsStatus) {
-    $statusPath = $logsStatus
-} elseif (Test-Path $intelStatus) {
-    $statusPath = $intelStatus
-} else {
-    Write-Error "BLOCK-G: status JSON not found (.intel or logs)."
-    exit 1
+function Resolve-ContractPath {
+  param([Parameter(Mandatory=$true)][string]$Sym)
+  $logs = Join-Path $repoRoot "logs"
+  $canonical = Join-Path $logs "blockg_status_stub.json"
+  $per = Join-Path $logs ("blockg_status_stub_{0}.json" -f $Sym.ToLowerInvariant())
+  if (Test-Path -LiteralPath $canonical) { return $canonical }
+  if (Test-Path -LiteralPath $per) { return $per }
+  return $canonical
 }
 
-Write-Host "BLOCK-G: using status JSON at $statusPath" -ForegroundColor Cyan
-
-try {
-    $raw = Get-Content -Path $statusPath -Raw -Encoding UTF8
-    $status = $raw | ConvertFrom-Json
-} catch {
-    Write-Error "BLOCK-G: failed to parse status JSON at $statusPath. $_"
-    exit 1
+# Decide which contract path to use
+$usePath = $ContractPath
+if (-not ($usePath + "").Trim()) {
+  $usePath = Resolve-ContractPath -Sym $Symbol
 }
 
-function Get-AsOfDateString {
-    param([Parameter(Mandatory = $true)]$Payload)
-
-    # Use PSObject.Properties to avoid StrictMode issues
-    $props = $Payload.PSObject.Properties
-
-    $candidate = $null
-    foreach ($name in @("as_of_date","date","trading_day")) {
-        $prop = $props[$name]
-        if ($prop -ne $null -and $prop.Value -ne $null -and $prop.Value -ne "") {
-            $candidate = [string]$prop.Value
-            break
-        }
-    }
-
-    if (-not $candidate) {
-        return $null
-    }
-
-    if ($candidate.Length -ge 10) {
-        return $candidate.Substring(0,10)
-    }
-    return $candidate
+# Read JSON (BOM-safe)
+function Read-JsonFile {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if(-not (Test-Path -LiteralPath $Path)){ return $null }
+  $raw = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+  if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 65279) { $raw = $raw.TrimStart([char]65279) }
+  try { return ($raw | ConvertFrom-Json -ErrorAction Stop) } catch { return $null }
 }
 
-function To-StrictBool {
-    param([Parameter(Mandatory = $true)]$Value)
-
-    if ($null -eq $Value) { return $false }
-    if ($Value -is [bool]) { return [bool]$Value }
-
-    if ($Value -is [string]) {
-        $v = $Value.Trim().ToLowerInvariant()
-        if ($v -in @("1","true","yes","y"))  { return $true }
-        if ($v -in @("0","false","no","n")) { return $false }
-    }
-
-    return [bool]$Value
+function RequireFlag([object]$Obj, [string]$Field) {
+  $p = $Obj.PSObject.Properties.Name
+  if ($p -notcontains $Field) { Fail 3 "contract missing required field: $Field" }
+  return [bool]$Obj.$Field
 }
 
-# 1) Today-ness
-$asOf = Get-AsOfDateString -Payload $status
-if (-not $asOf) {
-    Write-Error "BLOCK-G: status JSON missing as_of_date/date/trading_day."
-    exit 1
-}
+$c = Read-JsonFile -Path $usePath
+if (-not $c) { Fail 3 "contract missing/unreadable/invalid json: $usePath" }
 
+# Freshness: MUST match today (fail-closed)
 $today = (Get-Date).ToString("yyyy-MM-dd")
+$asOf = [string]$c.as_of_date
+if ([string]::IsNullOrWhiteSpace($asOf)) { Fail 3 "contract missing as_of_date" }
+if ($asOf -ne $today) { Fail 3 "contract stale: as_of_date=$asOf today=$today" }
 
-if ($asOf -ne $today) {
-    Write-Error "BLOCK-G: status JSON date mismatch. as_of_date=$asOf, today=$today."
-    exit 1
+# ALL support
+if ($Symbol -eq "ALL") {
+  $nvda = RequireFlag $c "nvda_blockg_ready"
+  $spy  = RequireFlag $c "spy_blockg_ready"
+  $qqq  = RequireFlag $c "qqq_blockg_ready"
+  if ($nvda -and $spy -and $qqq) { Write-Host "[BLOCK-G] READY: ALL" -ForegroundColor Green; exit 0 }
+  Fail 10 ("NOT_READY: ALL nvda=$nvda spy=$spy qqq=$qqq")
 }
 
-# 2) Global health flags
-$phase23Ok = To-StrictBool $status.phase23_health_ok_today
-$evHardOk  = To-StrictBool $status.ev_hard_daily_ok_today
-$gsFresh   = To-StrictBool $status.gatescore_fresh_today
-
-if (-not $phase23Ok) {
-    Write-Error "BLOCK-G: phase23_health_ok_today is FALSE."
-    exit 1
-}
-if (-not $evHardOk) {
-    Write-Error "BLOCK-G: ev_hard_daily_ok_today is FALSE."
-    exit 1
-}
-if (-not $gsFresh) {
-    Write-Error "BLOCK-G: gatescore_fresh_today is FALSE."
-    exit 1
+switch ($Symbol) {
+  "NVDA" { $field = "nvda_blockg_ready" }
+  "SPY"  { $field = "spy_blockg_ready" }
+  "QQQ"  { $field = "qqq_blockg_ready" }
+  default { Fail 3 "unsupported symbol: $Symbol" }
 }
 
-# 3) Per-symbol flag
-$symbolUpper = $Symbol.ToUpperInvariant()
-$readyFlag = $null
+$ok = RequireFlag $c $field
+if (-not $ok) { Fail 10 "NOT_READY: $Symbol ($field=false)" }
 
-switch ($symbolUpper) {
-    "NVDA" { $readyFlag = $status.nvda_blockg_ready }
-    "SPY"  { $readyFlag = $status.spy_blockg_ready }
-    "QQQ"  { $readyFlag = $status.qqq_blockg_ready }
-    default {
-        # Unknown symbol -> conservative: treat as not ready
-        Write-Error "BLOCK-G: unknown symbol '$Symbol' for Block-G check."
-        exit 1
-    }
-}
-
-if (-not (To-StrictBool $readyFlag)) {
-    Write-Error "BLOCK-G: per-symbol ready flag is FALSE for $Symbol."
-    exit 1
-}
-
-Write-Host "BLOCK-G: READY for symbol=$Symbol (date=$asOf)." -ForegroundColor Green
+Write-Host "[BLOCK-G] READY: $Symbol" -ForegroundColor Green
 exit 0

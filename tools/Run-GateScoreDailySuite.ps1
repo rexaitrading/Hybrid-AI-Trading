@@ -17,6 +17,15 @@ if (-not (Test-Path $smoke)) {
     exit 0
 }
 
+$pnls = Join-Path $repoRoot "tools\Build-GateScorePnlSummary.ps1"
+if (Test-Path $pnls) {
+    Write-Host "[PHASE3] Building GateScore PnL summary (fail-closed)..." -ForegroundColor Yellow
+    powershell -NoProfile -ExecutionPolicy Bypass -File $pnls -Symbol NVDA
+    $pcode = $LASTEXITCODE
+    Write-Host "[PHASE3] Build-GateScorePnlSummary exit code = $pcode" -ForegroundColor DarkCyan
+} else {
+    Write-Host "[PHASE3] WARN: Build-GateScorePnlSummary.ps1 not found at $pnls" -ForegroundColor Yellow
+}
 Write-Host "[PHASE3] Delegating to Run-GateScoreSmoke.ps1..." -ForegroundColor Yellow
 & $smoke
 $code = $LASTEXITCODE

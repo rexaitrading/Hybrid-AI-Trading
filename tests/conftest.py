@@ -1,32 +1,41 @@
-# conftest: ensure repo/src is importable in any CI working dir / interpreter
-import importlib.util
+from __future__ import annotations
+
 import os
-import pathlib
 import sys
+import pathlib
+import importlib.util
 
 import pytest
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]  # project root (tests/..)
-CANDIDATES = [ROOT / "src", ROOT]
-for p in CANDIDATES:
-    sp = str(p)
+ROOT = pathlib.Path(__file__).resolve().parents[1]  # repo root (tests/..)
+
+# Ensure repo root + src are importable regardless of CWD
+for cand in [ROOT / "src", ROOT]:
+    sp = str(cand)
     if sp not in sys.path:
         sys.path.insert(0, sp)
-spec = importlib.util.find_spec("hybrid_ai_trading")
-sys.stderr.write(
-    f"[conftest] exe={sys.executable} importable={bool(spec)} root={ROOT}\\n"
-)
-if spec is None:
-    # leave path injected; test files also prepend a tiny shim as last resort
-    pass
 
+def _mask_env(name: str) -> str:
+    v = os.getenv(name)
+    if not v:
+        return "NOT_SET"
+    tail = v[-4:] if len(v) >= 4 else v
+    return f"SET(****{tail})"
+
+# Never print full secrets; only masked tails for diagnostics
+print("OPENAI_API_KEY: " + _mask_env("OPENAI_API_KEY"))
+print("COINAPI_KEY: " + _mask_env("COINAPI_KEY"))
+print("BROKER_API_KEY: " + _mask_env("BROKER_API_KEY"))
+
+# Diagnostic: is package importable?
+spec = importlib.util.find_spec("hybrid_ai_trading")
+sys.stderr.write(f"[conftest] exe={sys.executable} importable={bool(spec)} root={ROOT}\n")
 
 # === IB_INSYNC_TEST_SHIM_BEGIN ===
 # Minimal ib_insync stub for smoke tests when real package is absent.
 try:
-    import ib_insync  # type=ignore
+    import ib_insync  # type: ignore
 except Exception:
-    import sys
     import types
 
     m = types.ModuleType("ib_insync")
@@ -69,9 +78,7 @@ except Exception:
     class Ticker(_IBDummy):
         pass
 
-    class util(_IBDummy):
-        pass
-
+    # Attach into module and register
     m.IB = IB
     m.Contract = Contract
     m.Stock = Stock
@@ -80,19 +87,5 @@ except Exception:
     m.LimitOrder = LimitOrder
     m.ContractDetails = ContractDetails
     m.Ticker = Ticker
-    m.util = util
-
-    def _ibins_getattr(name):  # catch-all for any other symbol (Order, TagValue, etc.)
-        return _IBDummy()
-
-    m.__getattr__ = _ibins_getattr
     sys.modules["ib_insync"] = m
 # === IB_INSYNC_TEST_SHIM_END ===
-
-
-@pytest.fixture()
-def TradeEngineClass():
-    # Minimal import to satisfy tests that expect this fixture
-    from hybrid_ai_trading.trade_engine import TradeEngine
-
-    return TradeEngine
