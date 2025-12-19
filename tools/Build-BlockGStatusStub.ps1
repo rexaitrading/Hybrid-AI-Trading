@@ -227,7 +227,7 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   }
 
   $gs_ok = ($gs_fresh -and $gs_samples_ok -and $gs_threshold_ok)
-$nvda_ready = ($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok_smoke)
+
   $obj = [ordered]@{
     ts_utc                       = (Get-Date).ToUniversalTime().ToString("o")
     as_of_date                   = $today
