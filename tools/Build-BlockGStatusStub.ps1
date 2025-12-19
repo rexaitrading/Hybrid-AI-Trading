@@ -7,6 +7,21 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
+  $path = Join-Path $RepoRoot "logs\phase4_validation_passed.json"
+  if(-not (Test-Path $path)){ return $false }
+
+  try {
+    $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8
+    $j = $raw | ConvertFrom-Json
+    $asOf = [string]$j.as_of_date
+    $ok = [bool]$j.phase4_ok_today
+    return (($asOf.Substring(0,10)) -eq $Today) -and $ok
+  } catch {
+    return $false
+  }
+}
+
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
@@ -28,12 +43,12 @@ function Slice-Date([string]$d) {
 }
 
 # ---- Phase4 ----
-$phase4Ok = $false
+    $phase4Ok = Get-Phase4OkToday $repoRoot $today
 $phase4Path = Join-Path $logsDir "phase4_validation_passed.json"
 if (Test-Path $phase4Path) {
     try {
         $j = Get-Content $phase4Path -Raw -Encoding UTF8 | ConvertFrom-Json
-        $phase4Ok = ((Slice-Date ([string]$j.as_of_date)) -eq $today) -and (To-Bool $j.phase4_ok_today)
+    $phase4Ok = Get-Phase4OkToday $repoRoot $today
     } catch { $phase4Ok = $false }
 }
 
