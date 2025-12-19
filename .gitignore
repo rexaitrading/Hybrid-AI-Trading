@@ -104,3 +104,6 @@ _reports/
 .quarantine/
 .pytest_cache/
 **/__pycache__/
+# runtime artifacts
+audit.csv
+backup.csv
