@@ -58,16 +58,21 @@ foreach ($ln in $lines) {
 
     $props = $j.PSObject.Properties.Name
 
+    # Expanded key-map (no guessing; safe fallbacks)
     $edge = 0.0
-    if ($props -contains "edge_ratio") { $edge = TryD $j.edge_ratio }
-    elseif ($props -contains "mean_edge_ratio") { $edge = TryD $j.mean_edge_ratio }
+    foreach ($k in @("edge_ratio","mean_edge_ratio","edge","edge_mean","gatescore_edge","edgeValue","edge_score")) {
+        if ($props -contains $k) { $edge = TryD ($j.$k); break }
+    }
 
     $micro = 0.0
-    if ($props -contains "micro_score") { $micro = TryD $j.micro_score }
-    elseif ($props -contains "mean_micro_score") { $micro = TryD $j.mean_micro_score }
+    foreach ($k in @("micro_score","mean_micro_score","micro","micro_mean","gatescore_micro","microValue","micro_score_mean")) {
+        if ($props -contains $k) { $micro = TryD ($j.$k); break }
+    }
 
     $pnlSamples = 0
-    if ($props -contains "pnl_samples") { $pnlSamples = TryI $j.pnl_samples }
+    foreach ($k in @("pnl_samples","pnlSamples","pnl_n","trades_n","trade_count","n_trades","samples","sample_count")) {
+        if ($props -contains $k) { $pnlSamples = TryI ($j.$k); break }
+    }
 
     $outObj = [ordered]@{
         as_of_date    = $today
