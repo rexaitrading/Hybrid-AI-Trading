@@ -304,9 +304,12 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
   Merge-Canonical -Sym $Symbol -Obj $obj -LogsDir $logs  Write-Host ("[BLOCK-G] today={0} phase4_ok={1} phase23_ok={2} evhard_ok={3} gs_ok={4} nvda_ready={5}" -f $today,$phase4_ok,$phase23_ok,$evhard_ok,$gs_ok,($obj.nvda_blockg_ready))
 }
 if ($Symbol -eq "ALL") {
-  foreach($s in @("NVDA","SPY","QQQ")){
-    Main -Symbol $s
+  foreach($s in @("NVDA","SPY","QQQ")) {
+    # Call this same script in a clean PowerShell process to avoid scope/parse bleed
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath -Symbol $s
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   }
+  exit 0
 } else {
   Main -Symbol $Symbol
 }
