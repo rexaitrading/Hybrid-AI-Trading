@@ -1,4 +1,5 @@
 from __future__ import annotations
+from hybrid_ai_trading.risk.config import RiskConfig  # compatibility export
 
 from dataclasses import dataclass, field
 from types import SimpleNamespace

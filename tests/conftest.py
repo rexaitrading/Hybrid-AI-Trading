@@ -1,98 +1,29 @@
-# conftest: ensure repo/src is importable in any CI working dir / interpreter
-import importlib.util
+from __future__ import annotations
+
 import os
-import pathlib
 import sys
-
-import pytest
-
-ROOT = pathlib.Path(__file__).resolve().parents[1]  # project root (tests/..)
-CANDIDATES = [ROOT / "src", ROOT]
-for p in CANDIDATES:
-    sp = str(p)
-    if sp not in sys.path:
-        sys.path.insert(0, sp)
-spec = importlib.util.find_spec("hybrid_ai_trading")
-sys.stderr.write(
-    f"[conftest] exe={sys.executable} importable={bool(spec)} root={ROOT}\\n"
-)
-if spec is None:
-    # leave path injected; test files also prepend a tiny shim as last resort
-    pass
+from pathlib import Path
 
 
-# === IB_INSYNC_TEST_SHIM_BEGIN ===
-# Minimal ib_insync stub for smoke tests when real package is absent.
-try:
-    import ib_insync  # type=ignore
-except Exception:
-    import sys
-    import types
-
-    m = types.ModuleType("ib_insync")
-
-    class _IBDummy:
-        def __init__(self, *a, **k):
-            pass
-
-        def __call__(self, *a, **k):
-            return self
-
-        def __getattr__(self, _):
-            return self
-
-    class IB(_IBDummy):
-        def connect(self, *a, **k):
-            return True
-
-        def disconnect(self, *a, **k):
-            return None
-
-    class Contract(_IBDummy):
-        pass
-
-    class Stock(_IBDummy):
-        pass
-
-    class Forex(_IBDummy):
-        pass
-
-    class MarketOrder(_IBDummy):
-        pass
-
-    class LimitOrder(_IBDummy):
-        pass
-
-    class ContractDetails(_IBDummy):
-        pass
-
-    class Ticker(_IBDummy):
-        pass
-
-    class util(_IBDummy):
-        pass
-
-    m.IB = IB
-    m.Contract = Contract
-    m.Stock = Stock
-    m.Forex = Forex
-    m.MarketOrder = MarketOrder
-    m.LimitOrder = LimitOrder
-    m.ContractDetails = ContractDetails
-    m.Ticker = Ticker
-    m.util = util
-
-    def _ibins_getattr(name):  # catch-all for any other symbol (Order, TagValue, etc.)
-        return _IBDummy()
-
-    m.__getattr__ = _ibins_getattr
-    sys.modules["ib_insync"] = m
-# === IB_INSYNC_TEST_SHIM_END ===
+def _detect_repo_root(start: Path) -> Path:
+    p = start.resolve()
+    for _ in range(12):
+        if (p / "pyproject.toml").exists() or (p / ".git").exists():
+            return p
+        if p.parent == p:
+            break
+        p = p.parent
+    return start.resolve()
 
 
-@pytest.fixture()
-def TradeEngineClass():
-    # Minimal import to satisfy tests that expect this fixture
-    from hybrid_ai_trading.trade_engine import TradeEngine
+REPO_ROOT = _detect_repo_root(Path(__file__).parent)
 
-    return TradeEngine
+# Ensure imports resolve from THIS repo (C:\HAT), not any other checkout
+SRC = REPO_ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+# Hard-disable user site packages for test runs (prevents cross-env leakage)
+os.environ.setdefault("PYTHONNOUSERSITE", "1")
+
+print(f"[conftest] exe={sys.executable} importable=True root={REPO_ROOT}")
