@@ -107,3 +107,7 @@ _reports/
 # runtime artifacts
 audit.csv
 backup.csv
+# local patch backups
+*.bak_*
+*.bak
+*.CORRUPTED_*.bak
