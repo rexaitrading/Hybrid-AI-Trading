@@ -56,12 +56,17 @@ if ($ProducersOnly) {
     Write-Host "[NVDA-PREMKT] ProducersOnly: Running Run-Phase3GateScoreDaily.ps1 -Symbol NVDA ..." -ForegroundColor Cyan
     & $phase3Runner -Symbol "NVDA" -StatusPath ".\logs\blockg_status_stub.json" -Out ".\logs\gatescore_daily_build.jsonl"
     $gsExit = $LASTEXITCODE
-    if ($gsExit -ne 0) {
-        Write-Host "[NVDA-PREMKT] ProducersOnly: ERROR Phase-3 GateScore daily build failed (exitCode=$gsExit)." -ForegroundColor Red
-        exit $gsExit
-    }
 
-    # Rebuild GateScore summaries (optional wrapper)
+# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") — keep outputs and continue.
+# Only non-(0,2) indicates a real script failure.
+if ($gsExit -ne 0 -and $gsExit -ne 2) {
+    Write-Host "[NVDA-PREMKT] ProducersOnly: ERROR Phase-3 GateScore daily build failed (exitCode=$gsExit)." -ForegroundColor Red
+    exit $gsExit
+}
+
+if ($gsExit -eq 2) {
+    Write-Host "[NVDA-PREMKT] ProducersOnly: Phase-3 GateScore not-ready (exitCode=2) -> recorded outputs; continuing." -ForegroundColor Yellow
+}# Rebuild GateScore summaries (optional wrapper)
     $gsWrap = Join-Path $repoRoot "tools\Run-BuildGateScoreSummaries.ps1"
     if (Test-Path $gsWrap) {
         Write-Host "[NVDA-PREMKT] ProducersOnly: Rebuilding GateScore summaries ..." -ForegroundColor Cyan
