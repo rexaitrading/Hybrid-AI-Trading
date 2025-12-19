@@ -1,6 +1,5 @@
 [CmdletBinding()]
 param(
-    # NVDA|SPY|QQQ|ALL ; default ALL for builder
     [ValidateSet("NVDA","SPY","QQQ","ALL")]
     [string]$Symbol = "ALL"
 )
@@ -10,530 +9,154 @@ $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
-
 $logsDir  = Join-Path $repoRoot "logs"
-if (-not (Test-Path $logsDir)) {
-    New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
-}
-
-$statusPath = Join-Path $logsDir "blockg_status_stub.json"
+if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
 $today = (Get-Date).ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
+$statusPath = Join-Path $logsDir "blockg_status_stub.json"
 
-function _ToBool {
-    param([object]$v)
+function To-Bool([object]$v) {
     if ($null -eq $v) { return $false }
     $s = ([string]$v).Trim().ToLowerInvariant()
     return $s -in @("1","true","yes","y","ok","pass","passed")
 }
-
-function Get-TodayRow {
-    param([Parameter(Mandatory = $true)][string]$CsvPath)
-
-    if (-not (Test-Path $CsvPath)) { return $null }
-
-    $rows = Import-Csv -Path $CsvPath
-    $rowArray = @($rows)
-    if (@($1).Count -eq 0) { return $null }
-
-    $today = (Get-Date).ToString("yyyy-MM-dd")
-    $candidateRows = @()
-
-    foreach ($row in $rowArray) {
-        $props = $row.PSObject.Properties
-        $dateVal = $null
-
-        foreach ($name in @("as_of_date","date","trading_day")) {
-            $prop = $props[$name]
-            if ($prop -ne $null -and $prop.Value) { $dateVal = [string]$prop.Value; break }
-        }
-
-        if ($dateVal) {
-            if ($dateVal.Length -ge 10) { $dateVal = $dateVal.Substring(0,10) }
-            if ($dateVal -eq $today) { $candidateRows += $row }
-        }
-    }
-
-    if (@($1).Count -gt 0) { return $candidateRows[-1] }
-    return $null
+function Slice-Date([string]$d) {
+    if (-not $d) { return "" }
+    if ($d.Length -ge 10) { return $d.Substring(0,10) }
+    return $d
 }
 
-function Get-Phase4OkToday {
-    param([string]$LogsDir)
-
-    # Prefer common filenames; fail-closed if none.
-    $candidates = @( @(
-        (Join-Path $LogsDir "phase4_validation_passed.json"),
-        (Join-Path $LogsDir "phase4_passed.json"),
-        (Join-Path $LogsDir "phase4_validation.json")
-    ) | Where-Object { Test-Path [CmdletBinding()]
-param(
-    # NVDA|SPY|QQQ|ALL ; default ALL for builder
-    [ValidateSet("NVDA","SPY","QQQ","ALL")]
-    [string]$Symbol = "ALL"
-)
-
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
-$toolsDir = Split-Path -Parent $PSCommandPath
-$repoRoot = Split-Path -Parent $toolsDir
-
-$logsDir  = Join-Path $repoRoot "logs"
-if (-not (Test-Path $logsDir)) {
-    New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+# ---- Phase4 ----
+$phase4Ok = $false
+$phase4Path = Join-Path $logsDir "phase4_validation_passed.json"
+if (Test-Path $phase4Path) {
+    try {
+        $j = Get-Content $phase4Path -Raw -Encoding UTF8 | ConvertFrom-Json
+        $phase4Ok = ((Slice-Date ([string]$j.as_of_date)) -eq $today) -and (To-Bool $j.phase4_ok_today)
+    } catch { $phase4Ok = $false }
 }
 
-$statusPath = Join-Path $logsDir "blockg_status_stub.json"
-
-$today = (Get-Date).ToString("yyyy-MM-dd")
-$tsUtc = (Get-Date).ToUniversalTime().ToString("o")
-
-function _ToBool {
-    param([object]$v)
-    if ($null -eq $v) { return $false }
-    $s = ([string]$v).Trim().ToLowerInvariant()
-    return $s -in @("1","true","yes","y","ok","pass","passed")
-}
-
-function Get-TodayRow {
-    param([Parameter(Mandatory = $true)][string]$CsvPath)
-
-    if (-not (Test-Path $CsvPath)) { return $null }
-
-    $rows = Import-Csv -Path $CsvPath
-    $rowArray = @($rows)
-    if (@($1).Count -eq 0) { return $null }
-
-    $today = (Get-Date).ToString("yyyy-MM-dd")
-    $candidateRows = @()
-
-    foreach ($row in $rowArray) {
-        $props = $row.PSObject.Properties
-        $dateVal = $null
-
-        foreach ($name in @("as_of_date","date","trading_day")) {
-            $prop = $props[$name]
-            if ($prop -ne $null -and $prop.Value) { $dateVal = [string]$prop.Value; break }
-        }
-
-        if ($dateVal) {
-            if ($dateVal.Length -ge 10) { $dateVal = $dateVal.Substring(0,10) }
-            if ($dateVal -eq $today) { $candidateRows += $row }
-        }
-    }
-
-    if (@($1).Count -gt 0) { return $candidateRows[-1] }
-    return $null
-}
-
-function Get-Phase4OkToday {
-    param([string]$LogsDir)
-
-    # Prefer common filenames; fail-closed if none.
-    $candidates = @(
-        (Join-Path $LogsDir "phase4_validation_passed.json"),
-        (Join-Path $LogsDir "phase4_passed.json"),
-        (Join-Path $LogsDir "phase4_validation.json")
-    ) | Where-Object { Test-Path $_ }
-
-    if (@($1).Count -eq 0) { return $false }
-
-    foreach ($p in $candidates) {
-        try {
-            $raw = Get-Content $p -Raw -Encoding UTF8
-            $j = $raw | ConvertFrom-Json
-
-            # Try common keys; fallback: if as_of_date == today AND ok-ish flag exists
-            $asOf = $null
-            foreach ($k in @("as_of_date","date","trading_day")) {
-                if ($j.PSObject.Properties.Name -contains $k) {
-                    $asOf = [string]$j.$k
-                    if ($asOf.Length -ge 10) { $asOf = $asOf.Substring(0,10) }
-                    break
-                }
-            }
-
-            $ok = $false
-            foreach ($k in @("phase4_ok_today","ok_today","passed","phase4_passed","phase4_ok")) {
-                if ($j.PSObject.Properties.Name -contains $k) {
-                    $ok = _ToBool $j.$k
-                    break
-                }
-            }
-
-            if ($asOf -eq $today -and $ok) { return $true }
-        } catch {
-            # ignore and try next
-        }
-    }
-
-    return $false
-}
-
-function Get-GateScoreQualityForSymbol {
-    param(
-        [Parameter(Mandatory = $true)][string]$CsvPath,
-        [Parameter(Mandatory = $true)][string]$Symbol,
-        [int]$MinSignals = 3,
-        [int]$MinPnlSamples = 1,
-        [double]$MinScore = 0.0
-    )
-
-    $out = [ordered]@{
-        fresh_today = $false
-        samples_ok  = $false
-        score_ok    = $false
-        score_value = 0.0
-        count_signals = 0
-        pnl_samples = 0
-    }
-
-    if (-not (Test-Path $CsvPath)) { return $out }
-
-    $rows = @(Import-Csv -Path $CsvPath)
-    if (@($1).Count -eq 0) { return $out }
-
-    $today = (Get-Date).ToString("yyyy-MM-dd")
-    $target = $null
-
-    foreach ($row in $rows) {
-        $props = $row.PSObject.Properties
-        $sym = $props["symbol"]
-        if ($sym -eq $null -or -not $sym.Value) { continue }
-        if ([string]$sym.Value -ne $Symbol) { continue }
-
-        $asOf = $props["as_of_date"]
-        if ($asOf -eq $null -or -not $asOf.Value) { continue }
-        $d = [string]$asOf.Value
-        if ($d.Length -ge 10) { $d = $d.Substring(0,10) }
-        if ($d -ne $today) { continue }
-
-        $target = $row
-        break
-    }
-
-    if ($null -eq $target) { return $out }
-
-    $out.fresh_today = $true
-
-    $cs = 0
-    $ps = 0
-    $sv = 0.0
-
-    $p = $target.PSObject.Properties
-
-    if ($p["count_signals"] -and $p["count_signals"].Value) {
-        [void][int]::TryParse([string]$p["count_signals"].Value, [ref]$cs)
-    }
-    if ($p["pnl_samples"] -and $p["pnl_samples"].Value) {
-        [void][int]::TryParse([string]$p["pnl_samples"].Value, [ref]$ps)
-    }
-
-    foreach ($k in @("gatescore","gate_score","score","value")) {
-        if ($p[$k] -and $p[$k].Value) {
-            [void][double]::TryParse([string]$p[$k].Value, [ref]$sv)
-            break
-        }
-    }
-
-    @($1).Count_signals = $cs
-    $out.pnl_samples   = $ps
-    $out.score_value   = $sv
-
-    $out.samples_ok = ($cs -ge $MinSignals -and $ps -ge $MinPnlSamples)
-    $out.score_ok   = ($sv -ge $MinScore)
-
-    return $out
-}
-
-# === Inputs ===
-$phase23Csv = Join-Path $logsDir "phase23_health_daily.csv"
-$evCsv      = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
-$gsCsv      = Join-Path $logsDir "gatescore_daily_summary.csv"
-
-# === Core daily requirements ===
-$phase23Row = Get-TodayRow -CsvPath $phase23Csv
-$phase23Ok  = $false
-if ($phase23Row -ne $null) {
-    $prop = $phase23Row.PSObject.Properties["phase23_health_ok_today"]
-    $phase23Ok = if ($prop -and $prop.Value) { _ToBool $prop.Value } else { $true }
-}
-
-$evRow    = Get-TodayRow -CsvPath $evCsv
+# ---- EV hard veto daily ----
 $evHardOk = $false
-if ($evRow -ne $null) {
-    $prop = $evRow.PSObject.Properties["ev_hard_daily_ok_today"]
-    $evHardOk = if ($prop -and $prop.Value) { _ToBool $prop.Value } else { $true }
+$evPath = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
+if (Test-Path $evPath) {
+    $rows = @(Import-Csv $evPath)
+    foreach ($r in $rows) {
+        if ((Slice-Date ([string]$r.date)) -eq $today) {
+            if ($r.PSObject.Properties.Name -contains "ok") { $evHardOk = To-Bool $r.ok } else { $evHardOk = $true }
+        }
+    }
 }
 
-$phase4Ok = Get-Phase4OkToday -LogsDir $logsDir
+# ---- Phase23 health (presence = ok unless explicit false) ----
+$phase23Ok = $false
+$phase23Path = Join-Path $logsDir "phase23_health_daily.csv"
+if (Test-Path $phase23Path) {
+    $rows = @(Import-Csv $phase23Path)
+    foreach ($r in $rows) {
+        $d = ""
+        if ($r.PSObject.Properties.Name -contains "as_of_date") { $d = Slice-Date ([string]$r.as_of_date) }
+        elseif ($r.PSObject.Properties.Name -contains "date") { $d = Slice-Date ([string]$r.date) }
+        if ($d -eq $today) {
+            if ($r.PSObject.Properties.Name -contains "phase23_health_ok_today" -and $r.phase23_health_ok_today) {
+                $phase23Ok = To-Bool $r.phase23_health_ok_today
+            } else {
+                $phase23Ok = $true
+            }
+        }
+    }
+}
 
-# === GateScore quality (tunable thresholds) ===
-# defaults: minimal, but still explicit
-$minSignals = 3
-$minPnlSamples = 1
-$minScore = 0.0
+# ---- GateScore thresholds ----
+$thrPath = Join-Path $repoRoot "docs\thresholds\gatescore_thresholds.json"
+$minSignals=999999; $minPnl=999999; $minEdge=999.0; $minMicro=999.0
+if (Test-Path $thrPath) {
+    try {
+        $t = Get-Content $thrPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $symKey = "NVDA"
+        $obj = $null
+        if ($t.PSObject.Properties.Name -contains $symKey) { $obj = $t.$symKey }
+        elseif ($t.PSObject.Properties.Name -contains "DEFAULT") { $obj = $t.DEFAULT }
+        if ($null -ne $obj) {
+            $minSignals = [int]$obj.min_signals
+            $minPnl     = [int]$obj.min_pnl_samples
+            $minEdge    = [double]$obj.min_edge_ratio
+            $minMicro   = [double]$obj.min_micro_score
+        }
+    } catch { }
+}
 
-$gsNvda = Get-GateScoreQualityForSymbol -CsvPath $gsCsv -Symbol "NVDA" -MinSignals $minSignals -MinPnlSamples $minPnlSamples -MinScore $minScore
-$gsSpy  = Get-GateScoreQualityForSymbol -CsvPath $gsCsv -Symbol "SPY"  -MinSignals $minSignals -MinPnlSamples $minPnlSamples -MinScore $minScore
-$gsQqq  = Get-GateScoreQualityForSymbol -CsvPath $gsCsv -Symbol "QQQ"  -MinSignals $minSignals -MinPnlSamples $minPnlSamples -MinScore $minScore
+# ---- GateScore daily summary (NVDA today row) ----
+$gsFresh=$false; $gsSamplesOk=$false; $gsThreshOk=$false
+$gsCount=0; $gsPnl=0; $gsEdge=0.0; $gsMicro=0.0
+$gsPath = Join-Path $logsDir "gatescore_daily_summary.csv"
+if (Test-Path $gsPath) {
+    $rows = @(Import-Csv $gsPath)
+    foreach ($r in $rows) {
+        if ($r.symbol -ne "NVDA") { continue }
+        if ((Slice-Date ([string]$r.as_of_date)) -ne $today) { continue }
+        $gsFresh = $true
+        [void][int]::TryParse([string]$r.count_signals, [ref]$gsCount)
+        [void][int]::TryParse([string]$r.pnl_samples, [ref]$gsPnl)
+        [void][double]::TryParse([string]$r.mean_edge_ratio, [ref]$gsEdge)
+        [void][double]::TryParse([string]$r.mean_micro_score, [ref]$gsMicro)
+    }
+}
+$gsSamplesOk = ($gsCount -ge $minSignals -and $gsPnl -ge $minPnl)
+$gsThreshOk  = ($gsEdge -ge $minEdge -and $gsMicro -ge $minMicro)
+$gsOkToday   = ($gsFresh -and $gsSamplesOk -and $gsThreshOk)
 
-# For backward compatibility, keep these as NVDA’s
-$gsFresh = [bool]$gsNvda.fresh_today
-$gsSamplesOk = [bool]$gsNvda.samples_ok
-$gsValue = [double]$gsNvda.score_value
+# ---- Per-symbol ready (institutional) ----
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsOkToday
+$spyReady  = $false
+$qqqReady  = $false
 
-# === Per-symbol readiness (institutional: include Phase4) ===
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and [bool]$gsNvda.fresh_today -and [bool]$gsNvda.samples_ok -and [bool]$gsNvda.score_ok
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and [bool]$gsSpy.fresh_today  -and [bool]$gsSpy.samples_ok  -and [bool]$gsSpy.score_ok
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and [bool]$gsQqq.fresh_today  -and [bool]$gsQqq.samples_ok  -and [bool]$gsQqq.score_ok
-
-# === reasons_not_ready ===
 $reasons = New-Object System.Collections.Generic.List[string]
 if (-not $phase23Ok) { $reasons.Add("phase23_health_ok_today=false") }
 if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
 if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }
-
-# NVDA-focused diagnostic fields (compat with Python helper)
-if (-not $gsFresh) { $reasons.Add("gatescore_fresh_today=false") }
+if (-not $gsFresh)   { $reasons.Add("gatescore_fresh_today=false") }
 if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
-if (-not [bool]$gsNvda.score_ok) { $reasons.Add("gatescore_below_threshold") }
+if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
 
-# === Build JSON payload ===
 $payload = [ordered]@{
-    ts_utc                   = $tsUtc
-    as_of_date               = $today
+    ts_utc = $tsUtc
+    as_of_date = $today
 
-    # Core daily requirements
-    phase23_health_ok_today  = $phase23Ok
-    ev_hard_daily_ok_today   = $evHardOk
-    phase4_ok_today          = $phase4Ok
+    phase23_health_ok_today = $phase23Ok
+    ev_hard_daily_ok_today  = $evHardOk
+    phase4_ok_today         = $phase4Ok
 
-    # GateScore (NVDA-compatible legacy fields)
-    gatescore_fresh_today    = $gsFresh
-    gatescore_samples_ok     = $gsSamplesOk
-    gatescore_value          = $gsValue
-    gatescore_min_required   = $minScore
-    gatescore_samples        = [int]@($1).Count_signals
-    gatescore_min_samples    = [int]$minSignals
+    gatescore_fresh_today   = $gsFresh
+    gatescore_samples_ok    = $gsSamplesOk
+    gatescore_threshold_ok_today = $gsThreshOk
+    gatescore_ok_today      = $gsOkToday
 
-    # Per-symbol readiness
-    nvda_blockg_ready        = $nvdaReady
-    spy_blockg_ready         = $spyReady
-    qqq_blockg_ready         = $qqqReady
+    gatescore_samples       = $gsCount
+    gatescore_min_samples   = $minSignals
+    gatescore_pnl_samples   = $gsPnl
+    gatescore_min_pnl_samples = $minPnl
 
-    reasons_not_ready        = @($reasons)
+    gatescore_mean_edge_ratio  = $gsEdge
+    gatescore_mean_micro_score = $gsMicro
+    gatescore_min_edge_ratio   = $minEdge
+    gatescore_min_micro_score  = $minMicro
+
+    nvda_blockg_ready = $nvdaReady
+    spy_blockg_ready  = $spyReady
+    qqq_blockg_ready  = $qqqReady
+
+    reasons_not_ready = @($reasons)
 }
 
 $payloadJson = $payload | ConvertTo-Json -Depth 6
-
 Write-Host "[BLOCK-G] Writing Block-G status stub to $statusPath" -ForegroundColor Cyan
 
-# UTF-8 no BOM
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($statusPath, $payloadJson, $utf8NoBom)
-
-Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
-$payload.GetEnumerator() | Format-Table -AutoSize } )
-
-    if (@($1).Count -eq 0) { return $false }
-
-    foreach ($p in $candidates) {
-        try {
-            $raw = Get-Content $p -Raw -Encoding UTF8
-            $j = $raw | ConvertFrom-Json
-
-            # Try common keys; fallback: if as_of_date == today AND ok-ish flag exists
-            $asOf = $null
-            foreach ($k in @("as_of_date","date","trading_day")) {
-                if ($j.PSObject.Properties.Name -contains $k) {
-                    $asOf = [string]$j.$k
-                    if ($asOf.Length -ge 10) { $asOf = $asOf.Substring(0,10) }
-                    break
-                }
-            }
-
-            $ok = $false
-            foreach ($k in @("phase4_ok_today","ok_today","passed","phase4_passed","phase4_ok")) {
-                if ($j.PSObject.Properties.Name -contains $k) {
-                    $ok = _ToBool $j.$k
-                    break
-                }
-            }
-
-            if ($asOf -eq $today -and $ok) { return $true }
-        } catch {
-            # ignore and try next
-        }
-    }
-
-    return $false
-}
-
-function Get-GateScoreQualityForSymbol {
-    param(
-        [Parameter(Mandatory = $true)][string]$CsvPath,
-        [Parameter(Mandatory = $true)][string]$Symbol,
-        [int]$MinSignals = 3,
-        [int]$MinPnlSamples = 1,
-        [double]$MinScore = 0.0
-    )
-
-    $out = [ordered]@{
-        fresh_today = $false
-        samples_ok  = $false
-        score_ok    = $false
-        score_value = 0.0
-        count_signals = 0
-        pnl_samples = 0
-    }
-
-    if (-not (Test-Path $CsvPath)) { return $out }
-
-    $rows = @(Import-Csv -Path $CsvPath)
-    if (@($1).Count -eq 0) { return $out }
-
-    $today = (Get-Date).ToString("yyyy-MM-dd")
-    $target = $null
-
-    foreach ($row in $rows) {
-        $props = $row.PSObject.Properties
-        $sym = $props["symbol"]
-        if ($sym -eq $null -or -not $sym.Value) { continue }
-        if ([string]$sym.Value -ne $Symbol) { continue }
-
-        $asOf = $props["as_of_date"]
-        if ($asOf -eq $null -or -not $asOf.Value) { continue }
-        $d = [string]$asOf.Value
-        if ($d.Length -ge 10) { $d = $d.Substring(0,10) }
-        if ($d -ne $today) { continue }
-
-        $target = $row
-        break
-    }
-
-    if ($null -eq $target) { return $out }
-
-    $out.fresh_today = $true
-
-    $cs = 0
-    $ps = 0
-    $sv = 0.0
-
-    $p = $target.PSObject.Properties
-
-    if ($p["count_signals"] -and $p["count_signals"].Value) {
-        [void][int]::TryParse([string]$p["count_signals"].Value, [ref]$cs)
-    }
-    if ($p["pnl_samples"] -and $p["pnl_samples"].Value) {
-        [void][int]::TryParse([string]$p["pnl_samples"].Value, [ref]$ps)
-    }
-
-    foreach ($k in @("gatescore","gate_score","score","value")) {
-        if ($p[$k] -and $p[$k].Value) {
-            [void][double]::TryParse([string]$p[$k].Value, [ref]$sv)
-            break
-        }
-    }
-
-    @($1).Count_signals = $cs
-    $out.pnl_samples   = $ps
-    $out.score_value   = $sv
-
-    $out.samples_ok = ($cs -ge $MinSignals -and $ps -ge $MinPnlSamples)
-    $out.score_ok   = ($sv -ge $MinScore)
-
-    return $out
-}
-
-# === Inputs ===
-$phase23Csv = Join-Path $logsDir "phase23_health_daily.csv"
-$evCsv      = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
-$gsCsv      = Join-Path $logsDir "gatescore_daily_summary.csv"
-
-# === Core daily requirements ===
-$phase23Row = Get-TodayRow -CsvPath $phase23Csv
-$phase23Ok  = $false
-if ($phase23Row -ne $null) {
-    $prop = $phase23Row.PSObject.Properties["phase23_health_ok_today"]
-    $phase23Ok = if ($prop -and $prop.Value) { _ToBool $prop.Value } else { $true }
-}
-
-$evRow    = Get-TodayRow -CsvPath $evCsv
-$evHardOk = $false
-if ($evRow -ne $null) {
-    $prop = $evRow.PSObject.Properties["ev_hard_daily_ok_today"]
-    $evHardOk = if ($prop -and $prop.Value) { _ToBool $prop.Value } else { $true }
-}
-
-$phase4Ok = Get-Phase4OkToday -LogsDir $logsDir
-
-# === GateScore quality (tunable thresholds) ===
-# defaults: minimal, but still explicit
-$minSignals = 3
-$minPnlSamples = 1
-$minScore = 0.0
-
-$gsNvda = Get-GateScoreQualityForSymbol -CsvPath $gsCsv -Symbol "NVDA" -MinSignals $minSignals -MinPnlSamples $minPnlSamples -MinScore $minScore
-$gsSpy  = Get-GateScoreQualityForSymbol -CsvPath $gsCsv -Symbol "SPY"  -MinSignals $minSignals -MinPnlSamples $minPnlSamples -MinScore $minScore
-$gsQqq  = Get-GateScoreQualityForSymbol -CsvPath $gsCsv -Symbol "QQQ"  -MinSignals $minSignals -MinPnlSamples $minPnlSamples -MinScore $minScore
-
-# For backward compatibility, keep these as NVDA’s
-$gsFresh = [bool]$gsNvda.fresh_today
-$gsSamplesOk = [bool]$gsNvda.samples_ok
-$gsValue = [double]$gsNvda.score_value
-
-# === Per-symbol readiness (institutional: include Phase4) ===
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and [bool]$gsNvda.fresh_today -and [bool]$gsNvda.samples_ok -and [bool]$gsNvda.score_ok
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and [bool]$gsSpy.fresh_today  -and [bool]$gsSpy.samples_ok  -and [bool]$gsSpy.score_ok
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and [bool]$gsQqq.fresh_today  -and [bool]$gsQqq.samples_ok  -and [bool]$gsQqq.score_ok
-
-# === reasons_not_ready ===
-$reasons = New-Object System.Collections.Generic.List[string]
-if (-not $phase23Ok) { $reasons.Add("phase23_health_ok_today=false") }
-if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
-if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }
-
-# NVDA-focused diagnostic fields (compat with Python helper)
-if (-not $gsFresh) { $reasons.Add("gatescore_fresh_today=false") }
-if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
-if (-not [bool]$gsNvda.score_ok) { $reasons.Add("gatescore_below_threshold") }
-
-# === Build JSON payload ===
-$payload = [ordered]@{
-    ts_utc                   = $tsUtc
-    as_of_date               = $today
-
-    # Core daily requirements
-    phase23_health_ok_today  = $phase23Ok
-    ev_hard_daily_ok_today   = $evHardOk
-    phase4_ok_today          = $phase4Ok
-
-    # GateScore (NVDA-compatible legacy fields)
-    gatescore_fresh_today    = $gsFresh
-    gatescore_samples_ok     = $gsSamplesOk
-    gatescore_value          = $gsValue
-    gatescore_min_required   = $minScore
-    gatescore_samples        = [int]@($1).Count_signals
-    gatescore_min_samples    = [int]$minSignals
-
-    # Per-symbol readiness
-    nvda_blockg_ready        = $nvdaReady
-    spy_blockg_ready         = $spyReady
-    qqq_blockg_ready         = $qqqReady
-
-    reasons_not_ready        = @($reasons)
-}
-
-$payloadJson = $payload | ConvertTo-Json -Depth 6
-
-Write-Host "[BLOCK-G] Writing Block-G status stub to $statusPath" -ForegroundColor Cyan
-
-# UTF-8 no BOM
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($statusPath, $payloadJson, $utf8NoBom)
 
 Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
+
+exit 0
