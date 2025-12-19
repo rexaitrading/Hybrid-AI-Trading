@@ -22,7 +22,7 @@ Write-Host "[PYTEST] PYTHONNOUSERSITE=$env:PYTHONNOUSERSITE" -ForegroundColor Cy
 & $py -c "import os,sys,hybrid_ai_trading; print('[PYTEST] hybrid_ai_trading.__file__=', hybrid_ai_trading.__file__); print('[PYTEST] PATH_HAS_ONEDRIVE=', any('OneDrive' in p for p in sys.path))"
 
 if ($PytestArgs.Count -gt 0) {
-  & $py -m pytest @PytestArgs
+  & $py -m pytest --rootdir $root .\tests @PytestArgs
 } else {
   & $py -m pytest -q .\tests -k "execution_engine_full or blockg_enforce or trade_engine_micro_duo" --maxfail=1
 }
