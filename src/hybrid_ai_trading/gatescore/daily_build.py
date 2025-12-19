@@ -20,13 +20,23 @@ def _read_status_json(path: Path) -> dict:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="hybrid_ai_trading.gatescore.daily_build")
     ap.add_argument("--symbol", default="NVDA", help="Symbol (NVDA/SPY/QQQ/...)")
+    ap.add_argument(
+        "--status-path",
+        default="logs/blockg_status_stub.json",
+        help="Path to Block-G status JSON (default: logs/blockg_status_stub.json)",
+    )
+    ap.add_argument(
+        "--out",
+        default="logs/gatescore_daily_build.jsonl",
+        help="Output JSONL path (default: logs/gatescore_daily_build.jsonl)",
+    )
     args = ap.parse_args(argv)
 
     sym = str(args.symbol).upper().strip() or "NVDA"
 
-    logs = Path("logs")
-    logs.mkdir(parents=True, exist_ok=True)
-    status_path = logs / "blockg_status_stub.json"
+    status_path = Path(str(args.status_path)).expanduser()
+    out_path = Path(str(args.out)).expanduser()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Fail-closed, deterministic: write a record and exit 2 (do not crash).
     if not status_path.exists():
@@ -40,8 +50,9 @@ def main(argv: list[str] | None = None) -> int:
             "ok_today": False,
             "reason": "blockg_status_missing",
             "producer": "unknown",
+            "status_path": str(status_path),
         }
-        append_jsonl(logs / "gatescore_daily_build.jsonl", out)
+        append_jsonl(out_path, out)
         print("[gatescore.daily_build]", out)
         return 2
 
@@ -69,8 +80,9 @@ def main(argv: list[str] | None = None) -> int:
         "ok_today": q.ok,
         "reason": q.reason,
         "producer": producer,
+        "status_path": str(status_path),
     }
-    append_jsonl(logs / "gatescore_daily_build.jsonl", out)
+    append_jsonl(out_path, out)
     print("[gatescore.daily_build]", out)
     return 0 if q.ok else 2
 
