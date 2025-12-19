@@ -283,13 +283,13 @@ $gsRows      = @(Try-LoadCsv -Path $gsDailyPath)
     $canon.phase23_health_ok_today = $Obj.phase23_health_ok_today
     $canon.ev_hard_daily_ok_today  = $Obj.ev_hard_daily_ok_today
 
-    # Carry “global” GateScore summary from this run (fine even if symbol-specific, it's today-scoped)
-    $canon.gatescore_fresh_today        = $Obj.gatescore_fresh_today
-    $canon.gatescore_samples_ok_today   = $Obj.gatescore_samples_ok_today
-    $canon.gatescore_threshold_ok_today = $Obj.gatescore_threshold_ok_today
-    $canon.gatescore_ok_today           = $Obj.gatescore_ok_today
-
-    # Write per-symbol readiness into canonical without clobbering the other symbols
+        # Carry GateScore summary into canonical ONLY from NVDA (prevents SPY/QQQ smoke failures from clobbering NVDA truth)
+    if ($Sym -eq "NVDA") {
+      $canon.gatescore_fresh_today        = $Obj.gatescore_fresh_today
+      $canon.gatescore_samples_ok_today   = $Obj.gatescore_samples_ok_today
+      $canon.gatescore_threshold_ok_today = $Obj.gatescore_threshold_ok_today
+      $canon.gatescore_ok_today           = $Obj.gatescore_ok_today
+    }    # Write per-symbol readiness into canonical without clobbering the other symbols
     switch ($Sym) {
       "NVDA" { $canon.nvda_blockg_ready = $Obj.nvda_blockg_ready }
       "SPY"  { $canon.spy_blockg_ready  = $Obj.spy_blockg_ready }
