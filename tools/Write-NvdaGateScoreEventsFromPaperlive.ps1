@@ -74,6 +74,9 @@ foreach ($ln in $lines) {
         if ($props -contains $k) { $pnlSamples = TryI ($j.$k); break }
     }
 
+    $rp = $null
+    if ($props -contains "realized_pnl") { $rp = _TryString $j.realized_pnl }
+
     $outObj = [ordered]@{
         as_of_date    = $today
         symbol        = "NVDA"
@@ -81,6 +84,7 @@ foreach ($ln in $lines) {
         score         = $edge
         edge_ratio    = $edge
         micro_score   = $micro
+        realized_pnl  = $rp
         count_signals = 1
         pnl_samples   = $pnlSamples
         notes         = "from_paperlive"
