@@ -1,17 +1,18 @@
 param(
-  [string]$Channel      = '#all-hybridaitrading',
+  [switch]$RunGateScoreDaily = $true,
+[string]$Channel      = '#all-hybridaitrading',
   [string]$Repo         = 'C:\Dev\HybridAITrading',
   [string]$Python       = 'python',
   [int]   $MinUptimeSec = 30,
   [int]   $MaxRssMB     = 2000
 )
-
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 . 'C:\IBC\Watch-IBG.Functions.ps1'
 
 function Load-Heartbeat { $p='C:\IBC\status\ibg_status.json'; if(Test-Path $p){ try{Get-Content $p|ConvertFrom-Json}catch{}} }
-function Test-IBGHealthy { param([int]$MaxRssMB=2000,[int]$MinUptimeSec=30)
+function Test-IBGHealthy { param(
+[int]$MaxRssMB=2000,[int]$MinUptimeSec=30)
   $hb=Load-Heartbeat; if(-not $hb){return $false}
   if(-not $hb.portUp){return $false}
   if($hb.uptimeSec -lt $MinUptimeSec){return $false}
@@ -19,8 +20,35 @@ function Test-IBGHealthy { param([int]$MaxRssMB=2000,[int]$MinUptimeSec=30)
   return $true
 }
 
+
+function Run-GateScoreDaily {
+  param(
+[string]$Repo,[string]$Python)
+  if(-not (Test-Path $Repo)){ throw "Repo not found: $Repo" }
+
+  $phase3 = Join-Path $Repo "tools\Run-Phase3GateScoreDaily.ps1"
+  if(-not (Test-Path $phase3)){
+    Write-Host "[RISKSMOKE] WARN: $phase3 missing; skipping GateScore daily." -ForegroundColor Yellow
+    return 0
+  }
+
+  Push-Location $Repo
+  try{
+    # Hard lock imports to this repo
+    $env:PYTHONNOUSERSITE = "1"
+    $env:PYTHONPATH = (Join-Path (Get-Location).Path "src")
+    $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = "1"
+
+    & $phase3 -Symbol "NVDA" -StatusPath ".\logs\blockg_status_stub.json" -Out ".\logs\gatescore_daily_build.jsonl"
+    return $LASTEXITCODE
+  } finally {
+    Pop-Location
+  }
+}
+
 function Run-TestNode {
-  param([string]$NodeId,[string]$Repo,[string]$Python='python')
+  param(
+[string]$NodeId,[string]$Repo,[string]$Python='python')
   if(Test-Path $Repo){Push-Location $Repo}else{throw "Repo not found: $Repo"}
   try{
     $sw=[Diagnostics.Stopwatch]::StartNew()
@@ -33,7 +61,8 @@ function Run-TestNode {
 }
 
 function Post-SmokeResult {
-  param([string]$Channel,[object]$Heartbeat,[object[]]$Results)
+  param(
+[string]$Channel,[object]$Heartbeat,[object[]]$Results)
   $failed=$Results|Where-Object {$_.status -ne 'pass'}; $ok= -not $failed
   $lines = foreach($r in $Results){ $mark=if($r.status -eq 'pass'){''}else{''}; "{0} {1}  ({2}s)" -f $mark,$r.node,$r.seconds }
   $body = $lines -join "`n"
