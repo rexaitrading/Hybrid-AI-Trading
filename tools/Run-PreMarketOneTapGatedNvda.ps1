@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [switch]$SkipBlockG  # allow bypass only if you explicitly ask for it
+    [switch]$SkipBlockG,     # allow bypass only if you explicitly ask for it
+    [switch]$ProducersOnly   # run producer diagnostics only; never arms orders
 )
 
 $ErrorActionPreference = 'Stop'
@@ -28,6 +29,50 @@ if ($SkipBlockG) {
     exit $LASTEXITCODE
 }
 
+
+
+if ($ProducersOnly) {
+    Write-Host "[NVDA-PREMKT] ProducersOnly: running safety+Phase3 producers WITHOUT Block-G arming." -ForegroundColor Cyan
+
+    # Phase-5 Safety Snapshot (optional)
+    $phase5SafetyRunner = Join-Path $repoRoot "tools\Run-Phase5SafetySnapshot.ps1"
+    if (Test-Path $phase5SafetyRunner) {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: Running Run-Phase5SafetySnapshot.ps1 ..." -ForegroundColor Cyan
+        & $phase5SafetyRunner
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[NVDA-PREMKT] ProducersOnly: Phase-5 safety snapshot failed. exitCode=$LASTEXITCODE" -ForegroundColor Red
+            exit $LASTEXITCODE
+        }
+    } else {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: WARN Run-Phase5SafetySnapshot.ps1 not found; skipping." -ForegroundColor Yellow
+    }
+
+    # Phase-3 GateScore Daily build (writes gatescore_daily_build.jsonl)
+    if (-not (Test-Path $phase3Runner)) {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: ERROR Run-Phase3GateScoreDaily.ps1 not found at $phase3Runner" -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "[NVDA-PREMKT] ProducersOnly: Running Run-Phase3GateScoreDaily.ps1 -Symbol NVDA ..." -ForegroundColor Cyan
+    & $phase3Runner -Symbol "NVDA" -StatusPath ".\logs\blockg_status_stub.json" -Out ".\logs\gatescore_daily_build.jsonl"
+    $gsExit = $LASTEXITCODE
+    if ($gsExit -ne 0) {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: ERROR Phase-3 GateScore daily build failed (exitCode=$gsExit)." -ForegroundColor Red
+        exit $gsExit
+    }
+
+    # Rebuild GateScore summaries (optional wrapper)
+    $gsWrap = Join-Path $repoRoot "tools\Run-BuildGateScoreSummaries.ps1"
+    if (Test-Path $gsWrap) {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: Rebuilding GateScore summaries ..." -ForegroundColor Cyan
+        & $gsWrap
+    } else {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: WARN Run-BuildGateScoreSummaries.ps1 not found; skipping." -ForegroundColor Yellow
+    }
+
+    Write-Host "[NVDA-PREMKT] ProducersOnly complete (no arming attempted)." -ForegroundColor Yellow
+    exit 0
+}
 # ---- Phase-5 Safety Snapshot (RunContext + Block-G + CSV + dashboard) ----
 $phase5SafetyRunner = Join-Path $repoRoot "tools\Run-Phase5SafetySnapshot.ps1"
 if (-not (Test-Path $phase5SafetyRunner)) {
