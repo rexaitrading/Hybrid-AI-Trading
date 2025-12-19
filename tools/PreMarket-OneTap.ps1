@@ -8,6 +8,10 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
+
+$phase3Runner = 
+Join-Path $repoRoot 'tools\Run-Phase3GateScoreDaily.ps1'
+
 Write-Host "`n[PREMARKET] NVDA pre-market one-tap STUB (Phase-5 safety branch)" -ForegroundColor Cyan
 Write-Host "[PREMARKET] RepoRoot = $repoRoot" -ForegroundColor DarkCyan
 
@@ -23,14 +27,18 @@ if (Test-Path '.\tools\Run-Phase2ToPhase5Validation.ps1') {
     Write-Host "[PREMARKET] WARN: tools\Run-Phase2ToPhase5Validation.ps1 not found; skipping Phase-2→5 validation." -ForegroundColor Yellow
 }
 
-# 2) GateScore daily pipeline
-if (Test-Path '.\tools\Run-Phase3GateScoreDaily.ps1') {
-    Write-Host "`n[PREMARKET] Step 2: Run-Phase3GateScoreDaily.ps1" -ForegroundColor Yellow
-    .\tools\Run-Phase3GateScoreDaily.ps1
+# 2) GateScore daily pipeline (canonical one-tap)
+if (Test-Path $phase3Runner) {
+    Write-Host "`n[PREMARKET] Step 2: Run-Phase3GateScoreDaily.ps1 (canonical)" -ForegroundColor Yellow
+    & $phase3Runner -Symbol "NVDA" -StatusPath ".\logs\blockg_status_stub.json" -Out ".\logs\gatescore_daily_build.jsonl"
+    $gsExit = $LASTEXITCODE
+    if ($gsExit -ne 0) {
+        Write-Host "[PREMARKET] ERROR: Phase-3 GateScore daily build failed (exitCode=$gsExit). Aborting pre-market." -ForegroundColor Red
+        exit $gsExit
+    }
 } else {
     Write-Host "[PREMARKET] WARN: tools\Run-Phase3GateScoreDaily.ps1 not found; skipping GateScore daily pipeline." -ForegroundColor Yellow
 }
-
 # 3) Block-G readiness pipeline
 if (Test-Path '.\tools\Run-BlockGReadiness.ps1') {
     Write-Host "`n[PREMARKET] Step 3: Run-BlockGReadiness.ps1" -ForegroundColor Yellow
