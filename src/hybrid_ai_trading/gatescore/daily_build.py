@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -17,14 +18,21 @@ def _read_status_json(path: Path) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(prog="hybrid_ai_trading.gatescore.daily_build")
+    ap.add_argument("--symbol", default="NVDA", help="Symbol (NVDA/SPY/QQQ/...)")
+    args = ap.parse_args(argv)
+
+    sym = str(args.symbol).upper().strip() or "NVDA"
+
     logs = Path("logs")
+    logs.mkdir(parents=True, exist_ok=True)
     status_path = logs / "blockg_status_stub.json"
 
-    # Fail-closed, but do not crash: write a deterministic record and exit 2.
+    # Fail-closed, deterministic: write a record and exit 2 (do not crash).
     if not status_path.exists():
         out = {
             "as_of_date": "",
-            "symbol": "NVDA",
+            "symbol": sym,
             "gatescore_value": 0.0,
             "gatescore_samples": 0,
             "gatescore_min_required": 0.0,
@@ -37,23 +45,23 @@ def main(argv: list[str] | None = None) -> int:
         print("[gatescore.daily_build]", out)
         return 2
 
-    # Dataclass view (typed)
+    # Typed view (contract)
     s = load_blockg_status(str(status_path))
 
-    # Raw JSON view (optional fields like producer/micro_score_source)
+    # Raw JSON view for optional fields like producer/micro_score_source
     raw = _read_status_json(status_path)
     producer = str(raw.get("micro_score_source", raw.get("producer", "unknown")))
 
     q = evaluate_quality(
-        value=float(s.gatescore_value),
-        samples=int(s.gatescore_samples),
-        min_required=float(s.gatescore_min_required),
-        min_samples=int(s.gatescore_min_samples),
+        value=float(getattr(s, "gatescore_value", 0.0) or 0.0),
+        samples=int(getattr(s, "gatescore_samples", 0) or 0),
+        min_required=float(getattr(s, "gatescore_min_required", 0.0) or 0.0),
+        min_samples=int(getattr(s, "gatescore_min_samples", 0) or 0),
     )
 
     out = {
-        "as_of_date": str(s.as_of_date)[:10],
-        "symbol": "NVDA",
+        "as_of_date": str(getattr(s, "as_of_date", ""))[:10],
+        "symbol": sym,
         "gatescore_value": q.value,
         "gatescore_samples": q.samples,
         "gatescore_min_required": q.min_required,
