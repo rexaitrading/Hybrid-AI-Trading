@@ -274,7 +274,7 @@ def retry(exc_types, attempts: int = 3, backoff: float = 0.5, jitter: float = 0.
                         delay += random.random() * float(jitter)
                     if delay > 0.0:
                         time.sleep(delay)
-            raise last  # pragma: no cover
+            raise (last if isinstance(last, BaseException) else RuntimeError("IB_SAFE: retries exhausted but no exception captured"))  # pragma: no cover
         return wrapper
     return deco
 
@@ -317,8 +317,7 @@ def connect_ib(host: str, port: int, clientId: int, timeout: float,
                 delay += random.random() * float(jitter)
             if delay > 0.0:
                 time.sleep(delay)
-
-    raise last  # pragma: no cover
+            raise (last if isinstance(last, BaseException) else RuntimeError("IB_SAFE: retries exhausted but no exception captured"))  # pragma: no cover
 def map_ib_error(err: Exception) -> str:
     msg = str(err or "")
     m = msg.lower()

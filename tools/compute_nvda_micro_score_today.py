@@ -20,9 +20,6 @@ def main() -> int:
         [p for p in logs.glob("*") if p.is_file() and ("micro" in p.name.lower() or "phase2" in p.name.lower())],
         key=lambda p: p.stat().st_mtime,
         reverse=True,
-    )if p.is_file() and ("micro" in p.name.lower() or "phase2" in p.name.lower())],
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
     )
     if not cands:
         print("0.0")
@@ -45,5 +42,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
