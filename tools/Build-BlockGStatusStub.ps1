@@ -115,6 +115,8 @@ if (Test-Path $gsPath) {
         if ((Slice-Date ([string]$r.as_of_date)) -ne $today) { continue }
         $gsFresh = $true
         [void][int]::TryParse([string]$r.count_signals, [ref]$gsCount)
+        # Producer-missing semantics: a "today row" with 0 signals is NOT fresh.
+        if($gsCount -le 0){ $gsFresh = $false }
         [void][int]::TryParse([string]$r.pnl_samples, [ref]$gsPnl)
         [void][double]::TryParse([string]$r.mean_edge_ratio, [ref]$gsEdge)
         [void][double]::TryParse([string]$r.mean_micro_score, [ref]$gsMicro)
