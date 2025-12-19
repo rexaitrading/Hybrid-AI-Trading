@@ -2,7 +2,18 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 from hybrid_ai_trading.runtime.run_context import RunContext
-from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready
+
+def require_blockg_ready_for_live(symbol: str) -> None:
+    """
+    Backwards-compatible monkeypatch hook for tests.
+    Single source of truth: blockg_contract.ensure_symbol_blockg_ready (fail-closed).
+    """
+    contract_ensure_symbol_blockg_ready(
+        symbol=str(symbol).upper(),
+        allow_paper=False,
+        is_paper=False,
+    )
 
 from .base import Broker
 
