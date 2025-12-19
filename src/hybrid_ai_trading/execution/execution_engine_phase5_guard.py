@@ -1,10 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import asdict
 from typing import Any, Dict
 
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
 from hybrid_ai_trading.execution.blockg_contract import (
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
     ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready,
 )
 
