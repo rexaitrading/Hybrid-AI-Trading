@@ -9,6 +9,27 @@ $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
+
+# Optional config override: configs/blockg_thresholds.json
+$cfgPath = Join-Path $repoRoot "configs\blockg_thresholds.json"
+$cfg = @{}
+if (Test-Path $cfgPath) {
+    try { $cfg = (Get-Content $cfgPath -Raw -Encoding UTF8) | ConvertFrom-Json } catch { $cfg = @{} }
+}
+function _CfgDouble([string]$name, [double]$fallback) {
+    if ($cfg -and ($cfg.PSObject.Properties.Name -contains $name)) {
+        $d = $fallback
+        if ([double]::TryParse([string]$cfg.$name, [ref]$d)) { return $d }
+    }
+    return $fallback
+}
+function _CfgInt([string]$name, [int]$fallback) {
+    if ($cfg -and ($cfg.PSObject.Properties.Name -contains $name)) {
+        $x = $fallback
+        if ([int]::TryParse([string]$cfg.$name, [ref]$x)) { return $x }
+    }
+    return $fallback
+}
 $logsDir  = Join-Path $repoRoot "logs"
 if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
@@ -81,8 +102,8 @@ if (Test-Path $thrPath) {
         if ($null -ne $obj) {
             $minSignals = [int]$obj.min_signals
             $minPnl     = [int]$obj.min_pnl_samples
-            $minEdge    = [double]$obj.min_edge_ratio
-            $minMicro   = [double]$obj.min_micro_score
+            $minEdge = _CfgDouble "min_edge_ratio" ([double]$obj.min_edge_ratio)
+            $minMicro = _CfgDouble "min_micro_score" ([double]$obj.min_micro_score)
         }
     } catch { }
 }
@@ -104,8 +125,24 @@ if (Test-Path $gsPath) {
     }
 }
 $gsSamplesOk = ($gsCount -ge $minSignals -and $gsPnl -ge $minPnl)
-$gsThreshOk  = ($gsEdge -ge $minEdge -and $gsMicro -ge $minMicro)
+
+# Split threshold checks (explicit reasons)
+$edgeOk  = ($gsEdge -ge $minEdge)
+$microOk = ($gsMicro -ge $minMicro)
+
+# Optional paper micro override (NEVER affects live readiness)
+$minMicroPaper = $minMicro
+if ($cfg -and ($cfg.PSObject.Properties.Name -contains "min_micro_score_paper")) {
+    $minMicroPaper = _CfgDouble "min_micro_score_paper" $minMicro
+}
+$microOkPaper = ($gsMicro -ge $minMicroPaper)
+
+$gsThreshOk = ($edgeOk -and $microOk)
 $gsOkToday   = ($gsFresh -and $gsSamplesOk -and $gsThreshOk)
+
+# Paper readiness indicator (NON-LIVE): ignore micro if you want pipeline flow; live remains strict.
+$nvdaReadyPaper = ($phase4Ok -and $gsFresh -and $gsSamplesOk -and $edgeOk)
+
 
 # ---- Per-symbol ready (institutional) ----
 $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsOkToday
@@ -118,7 +155,8 @@ if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
 if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }
 if (-not $gsFresh)   { $reasons.Add("gatescore_fresh_today=false") }
 if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
-if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
+if (-not $edgeOk)  { $reasons.Add("gatescore_edge_below_threshold") }
+if (-not $microOk) { $reasons.Add("gatescore_micro_below_threshold") }
 
 $payload = [ordered]@{
     ts_utc = $tsUtc
@@ -143,7 +181,8 @@ $payload = [ordered]@{
     gatescore_min_edge_ratio   = $minEdge
     gatescore_min_micro_score  = $minMicro
 
-    nvda_blockg_ready = $nvdaReady
+    nvda_blockg_ready       = $nvdaReady
+    nvda_blockg_ready_paper = $nvdaReadyPaper
     spy_blockg_ready  = $spyReady
     qqq_blockg_ready  = $qqqReady
 
