@@ -12,7 +12,7 @@ Set-Location $repoRoot
 
 $checker   = Join-Path $repoRoot 'tools\Check-BlockGReady.ps1'
 $oneTap    = Join-Path $repoRoot 'tools\PreMarket-OneTap.ps1'
-
+$phase3Runner = Join-Path $repoRoot "tools\Run-Phase3GateScoreDaily.ps1"
 Write-Host "[NVDA-PREMKT] PreMarket-OneTap *gated* wrapper (NVDA Block-G contract)" -ForegroundColor Cyan
 
 if (-not (Test-Path $oneTap)) {
@@ -45,6 +45,20 @@ if (-not (Test-Path $phase5SafetyRunner)) {
 if (-not (Test-Path $checker)) {
     Write-Host "[NVDA-PREMKT] ERROR: Check-BlockGReady.ps1 not found at $checker; refusing to continue." -ForegroundColor Red
     exit 1
+}
+# ---- Phase-3 GateScore Daily (canonical one-tap) ----
+if (-not (Test-Path $phase3Runner)) {
+    Write-Host "[NVDA-PREMKT] ERROR: Run-Phase3GateScoreDaily.ps1 not found at $phase3Runner; refusing to continue." -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "[NVDA-PREMKT] Running Run-Phase3GateScoreDaily.ps1 -Symbol NVDA ..." -ForegroundColor Cyan
+& $phase3Runner -Symbol "NVDA" -StatusPath ".\logs\blockg_status_stub.json" -Out ".\logs\gatescore_daily_build.jsonl"
+$gsExit = $LASTEXITCODE
+
+if ($gsExit -ne 0) {
+    Write-Host "[NVDA-PREMKT] ERROR: Phase-3 GateScore daily build failed (exitCode=$gsExit). Aborting NVDA pre-market one-tap." -ForegroundColor Red
+    exit $gsExit
 }
 
 Write-Host "[NVDA-PREMKT] Running Check-BlockGReady.ps1 -Symbol NVDA..." -ForegroundColor Cyan
