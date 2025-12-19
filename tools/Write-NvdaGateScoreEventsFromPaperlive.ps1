@@ -75,7 +75,7 @@ foreach ($ln in $lines) {
     }
 
     $rp = $null
-    if ($props -contains "realized_pnl") { $rp = _TryString $j.realized_pnl }
+    if ($props -contains "realized_pnl") { $rp = [string]$j.realized_pnl }
 
     $outObj = [ordered]@{
         as_of_date    = $today
