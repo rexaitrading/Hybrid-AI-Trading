@@ -22,6 +22,9 @@ class RiskManager:
     """
 
     config: Any = None
+    # ExecutionEngine/test contract (keep as simple scalars; stub RiskManager may ignore them)
+    starting_equity: float = 100000.0
+    equity: float = 100000.0
     daily_pnl: Dict[str, float] = field(default_factory=dict)
     positions: Dict[str, Any] = field(default_factory=dict)
 
@@ -30,6 +33,50 @@ class RiskManager:
             # Default config with no hard daily loss cap
             self.config = SimpleNamespace(phase5_daily_loss_cap=None)
 
+    def reset_day(self) -> Dict[str, Any]:
+        """
+        Reset daily risk state (used by TradeEngine.reset_day tests).
+
+        Contract:
+        - clears daily_pnl and positions
+        - keeps config intact
+        """
+        try:
+            self.daily_pnl.clear()
+            self.positions.clear()
+        except Exception:
+            self.daily_pnl = {}
+            self.positions = {}
+        return {"status": "ok"}
+
+    def approve_trade(self, *args: Any, **kwargs: Any) -> bool:
+        """
+        ExecutionEngine compatibility shim.
+
+        Tests monkeypatch this method to force accept/reject branches.
+        Default: allow.
+        """
+        return True
+
+
+    def approve_trade(self, *args: Any, **kwargs: Any) -> bool:
+        """
+        ExecutionEngine compatibility shim.
+
+        Tests monkeypatch this method to force accept/reject branches.
+        Default: allow.
+        """
+        return True
+
+
+    def approve_trade(self, *args: Any, **kwargs: Any) -> bool:
+        """
+        ExecutionEngine compatibility shim.
+
+        Tests monkeypatch this method to force accept/reject branches.
+        Default: allow.
+        """
+        return True
     # ---- Helpers -----------------------------------------------------
 
     def _get_daily_pnl(self, day_id: str) -> float:
