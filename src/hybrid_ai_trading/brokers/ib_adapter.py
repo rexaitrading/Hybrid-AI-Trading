@@ -1,4 +1,5 @@
 from __future__ import annotations
+from hybrid_ai_trading.execution.blockg_guard import require_blockg_ready
 def ensure_symbol_blockg_ready(symbol: str) -> None:
     """
     Back-compat shim for tests: canonical Block-G contract-only check.
@@ -85,7 +86,11 @@ class IBAdapter(Broker):
         import os as _os2
         _force_contract2 = bool((_os2.getenv("BLOCKG_CONTRACT_PATH", "") or "").strip())
         if (str(symbol).strip().upper() == "NVDA") and (_is_live_mode() or _force_contract2):
-            ensure_symbol_blockg_ready("NVDA")
+            try:
+                require_blockg_ready(symbol)
+            except Exception as e:  # noqa: BLE001
+                sym = str(symbol).strip().upper()
+                raise RuntimeError(f"[BLOCK-G] {sym}: {e}")
 
         trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop

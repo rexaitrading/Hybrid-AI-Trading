@@ -17,12 +17,11 @@ OrderManager (minimal, test-friendly)
 """
 
 import logging
-from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
+from hybrid_ai_trading.execution.blockg_guard import require_blockg_ready
 def _enforce_blockg_before_live_send(symbol: str) -> None:
     """
     Institutional Block-G gate at OrderManager LIVE boundary.
-
-    - Contract truth only (assert_symbol_ready)
+    - Contract truth only (require_blockg_ready)
     - Scoped to protected symbols (default NVDA only)
     - LIVE is defined by: (not dry_run) and (live_client is not None)
     """
@@ -36,8 +35,7 @@ def _enforce_blockg_before_live_send(symbol: str) -> None:
 
     if _sym not in _protected:
         return
-
-    assert_symbol_ready(_sym)
+    require_blockg_ready(_sym)
 from pathlib import Path
 import uuid
 from types import SimpleNamespace
