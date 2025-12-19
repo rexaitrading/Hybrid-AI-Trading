@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
+from hybrid_ai_trading.runtime.run_context import RunContext
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 from .base import Broker
@@ -56,6 +57,7 @@ class IBAdapter(Broker):
         order_type: str = "MARKET",
         limit_price: Optional[float] = None,
         meta: Optional[Dict[str, Any]] = None,
+        ctx: RunContext | None = None,
     ) -> Tuple[int, Dict[str, Any]]:
         contract = Stock(symbol, "SMART", "USD")
         if order_type.upper() == "LIMIT":
