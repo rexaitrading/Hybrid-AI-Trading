@@ -4,11 +4,7 @@ def ensure_symbol_blockg_ready(symbol: str) -> None:
     """
     Back-compat shim for tests: canonical Block-G contract-only check.
     """
-    from hybrid_ai_trading.execution.blockg_contract_reader import assert_symbol_ready
-    assert_symbol_ready(str(symbol))
-from hybrid_ai_trading.runtime.context_loader import load_run_context_from_env, is_live_env
-from hybrid_ai_trading.runtime.context_loader import is_live_env
-
+    require_blockg_ready(str(symbol))
 def _is_live_mode() -> bool:
     """
     Unified LIVE-mode check via RunContext (single authority).
