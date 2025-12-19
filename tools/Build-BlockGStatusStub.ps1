@@ -1,5 +1,5 @@
 param(
-  [Parameter(Mandatory=$false)][ValidateSet("NVDA","SPY","QQQ")][string]$Symbol = "NVDA"
+  [Parameter(Mandatory=$false)][ValidateSet("NVDA","SPY","QQQ","ALL")][string]$Symbol = "NVDA"
 )
 
 function As-Array {
@@ -249,11 +249,64 @@ $nvda_ready = ($phase4_ok -and $phase23_ok -and $evhard_ok -and $gs_ok_smoke)
   $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
   [System.IO.File]::WriteAllText($outJson, $json, $utf8NoBom)
   Write-Host "[BLOCK-G] Wrote $outJson" -ForegroundColor Green
-  # Compat: keep legacy single-file path updated for NVDA only (do not clobber other symbols)
-  if ($Symbol -eq "NVDA") {
-    $legacyPath = Join-Path $logs "blockg_status_stub.json"
-    try { Copy-Item -Force $outJson $legacyPath } catch { }
+  function Merge-Canonical {
+    param(
+      [Parameter(Mandatory=$true)][string]$Sym,
+      [Parameter(Mandatory=$true)][hashtable]$Obj,
+      [Parameter(Mandatory=$true)][string]$LogsDir
+    )
+
+    $canonPath = Join-Path $LogsDir "blockg_status_stub.json"
+
+    # Start with existing canonical (best-effort), else new ordered
+    $canon = $null
+    if (Test-Path -LiteralPath $canonPath) {
+      try {
+        $craw = Get-Content -LiteralPath $canonPath -Raw -Encoding UTF8
+        if ($craw.Length -gt 0 -and [int][char]$craw[0] -eq 65279) { $craw = $craw.TrimStart([char]65279) }
+        $cobj = $craw | ConvertFrom-Json -ErrorAction Stop
+
+        $canon = [ordered]@{}
+        foreach($pn in $cobj.PSObject.Properties.Name){
+          $canon[$pn] = $cobj.$pn
+        }
+      } catch {
+        $canon = $null
+      }
+    }
+    if (-not $canon) { $canon = [ordered]@{} }
+
+    # Always refresh timestamp + as_of_date + global daily fields from this build
+    $canon.ts_utc                  = $Obj.ts_utc
+    $canon.as_of_date              = $Obj.as_of_date
+    $canon.phase4_ok_today         = $Obj.phase4_ok_today
+    $canon.phase23_health_ok_today = $Obj.phase23_health_ok_today
+    $canon.ev_hard_daily_ok_today  = $Obj.ev_hard_daily_ok_today
+
+    # Carry “global” GateScore summary from this run (fine even if symbol-specific, it's today-scoped)
+    $canon.gatescore_fresh_today        = $Obj.gatescore_fresh_today
+    $canon.gatescore_samples_ok_today   = $Obj.gatescore_samples_ok_today
+    $canon.gatescore_threshold_ok_today = $Obj.gatescore_threshold_ok_today
+    $canon.gatescore_ok_today           = $Obj.gatescore_ok_today
+
+    # Write per-symbol readiness into canonical without clobbering the other symbols
+    switch ($Sym) {
+      "NVDA" { $canon.nvda_blockg_ready = $Obj.nvda_blockg_ready }
+      "SPY"  { $canon.spy_blockg_ready  = $Obj.spy_blockg_ready }
+      "QQQ"  { $canon.qqq_blockg_ready  = $Obj.qqq_blockg_ready }
+    }
+
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($canonPath, (($canon | ConvertTo-Json -Depth 6) -replace "`r`n","`n"), $utf8NoBom)
   }
-  Write-Host ("[BLOCK-G] today={0} phase4_ok={1} phase23_ok={2} evhard_ok={3} gs_ok={4} nvda_ready={5}" -f $today,$phase4_ok,$phase23_ok,$evhard_ok,$gs_ok,($obj.nvda_blockg_ready))
+
+  # Always merge this symbol into canonical contract (contract-only checker reads this file)
+  Merge-Canonical -Sym $Symbol -Obj $obj -LogsDir $logs  Write-Host ("[BLOCK-G] today={0} phase4_ok={1} phase23_ok={2} evhard_ok={3} gs_ok={4} nvda_ready={5}" -f $today,$phase4_ok,$phase23_ok,$evhard_ok,$gs_ok,($obj.nvda_blockg_ready))
 }
-Main -Symbol $Symbol
+if ($Symbol -eq "ALL") {
+  foreach($s in @("NVDA","SPY","QQQ")){
+    Main -Symbol $s
+  }
+} else {
+  Main -Symbol $Symbol
+}
