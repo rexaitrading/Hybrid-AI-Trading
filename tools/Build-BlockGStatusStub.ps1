@@ -98,55 +98,104 @@ if (-not $phase23SawToday) {
     $phase23Ok = $false
 }
 
-# ---- GateScore thresholds ----
+# ---- GateScore thresholds (per-symbol) ----
 $thrPath = Join-Path $repoRoot "configs\blockg_thresholds.json"
-$thrPathDocs = Join-Path $repoRoot "docs\thresholds\gatescore_thresholds.json"
+$thrPathDocs = Join-Path $repoRoot "docs\thresholds\blockg_thresholds.json"
 if (-not (Test-Path $thrPath) -and (Test-Path $thrPathDocs)) { $thrPath = $thrPathDocs }
-$minSignals=999999; $minPnl=999999; $minEdge=999.0; $minMicro=999.0
+
+$thrObj = $null
 if (Test-Path $thrPath) {
-    try {
-        $t = Get-Content $thrPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        $symKey = "NVDA"
-        $obj = $null
-        if ($t.PSObject.Properties.Name -contains $symKey) { $obj = $t.$symKey }
-        elseif ($t.PSObject.Properties.Name -contains "DEFAULT") { $obj = $t.DEFAULT }
-        if ($null -ne $obj) {
-            $minSignals = [int]$obj.min_signals
-            $minPnl     = [int]$obj.min_pnl_samples
-            $minEdge    = [double]$obj.min_edge_ratio
-            $minMicro   = [double]$obj.min_micro_score
-        }
-    } catch { }
+    try { $thrObj = Get-Content $thrPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $thrObj = $null }
 }
 
-# ---- GateScore daily summary (NVDA today row) ----
-$gsFresh=$false; $gsSamplesOk=$false; $gsThreshOk=$false
-$gsCount=0; $gsPnl=0; $gsEdge=0.0; $gsMicro=0.0
+function Get-ThresholdsFor([string]$sym) {
+    $ms = 999999; $mp = 999999; $me = 999.0; $mm = 999.0
+    if ($null -ne $thrObj) {
+        $k = $sym.ToUpperInvariant()
+        $obj = $null
+        if ($thrObj.PSObject.Properties.Name -contains $k) { $obj = $thrObj.$k }
+        elseif ($thrObj.PSObject.Properties.Name -contains "DEFAULT") { $obj = $thrObj.DEFAULT }
+        if ($null -ne $obj) {
+            try { $ms = [int]$obj.min_signals } catch { }
+            try { $mp = [int]$obj.min_pnl_samples } catch { }
+            try { $me = [double]$obj.min_edge_ratio } catch { }
+            try { $mm = [double]$obj.min_micro_score } catch { }
+        }
+    }
+    return [pscustomobject]@{ minSignals=$ms; minPnl=$mp; minEdge=$me; minMicro=$mm }
+}
+
+# ---- GateScore daily summary (per-symbol today row) ----
 $gsPath = Join-Path $logsDir "gatescore_daily_summary.csv"
-if (Test-Path $gsPath) {
-    $rows = @(Import-Csv $gsPath)
-    foreach ($r in $rows) {
-        if ($r.symbol -ne "NVDA") { continue }
+$gsRows = @()
+if (Test-Path $gsPath) { $gsRows = @(Import-Csv $gsPath) }
+
+function Get-GSFor([string]$sym) {
+    $fresh=$false; $cnt=0; $pnl=0; $edge=0.0; $micro=0.0
+    foreach ($r in $gsRows) {
+        if (($r.symbol + "").ToUpperInvariant() -ne $sym.ToUpperInvariant()) { continue }
         if ((Slice-Date ([string]$r.as_of_date)) -ne $today) { continue }
-        $gsFresh = $true
-        [void][int]::TryParse([string]$r.count_signals, [ref]$gsCount)
-        # Producer-missing semantics: a "today row" with 0 signals is NOT fresh.
-        if($gsCount -le 0){ $gsFresh = $false }
-        [void][int]::TryParse([string]$r.pnl_samples, [ref]$gsPnl)
-        [void][double]::TryParse([string]$r.mean_edge_ratio, [ref]$gsEdge)
-        [void][double]::TryParse([string]$r.mean_micro_score, [ref]$gsMicro)
+        $fresh = $true
+        [void][int]::TryParse([string]$r.count_signals, [ref]$cnt)
+        if ($cnt -le 0) { $fresh = $false }
+        [void][int]::TryParse([string]$r.pnl_samples, [ref]$pnl)
+        [void][double]::TryParse([string]$r.mean_edge_ratio, [ref]$edge)
+        [void][double]::TryParse([string]$r.mean_micro_score, [ref]$micro)
+    }
+    return [pscustomobject]@{ fresh=$fresh; cnt=$cnt; pnl=$pnl; edge=$edge; micro=$micro }
+}
+
+function Eval-GS([string]$sym) {
+    $thr = Get-ThresholdsFor $sym
+    $gs  = Get-GSFor $sym
+    $samplesOk = ($gs.cnt -ge $thr.minSignals -and $gs.pnl -ge $thr.minPnl)
+    $threshOk  = (($gs.edge + 1e-9) -ge $thr.minEdge -and ($gs.micro + 1e-9) -ge $thr.minMicro)
+    $okToday   = ($gs.fresh -and $samplesOk -and $threshOk)
+    return [pscustomobject]@{
+        fresh=$gs.fresh; samplesOk=$samplesOk; threshOk=$threshOk; okToday=$okToday;
+        cnt=$gs.cnt; pnl=$gs.pnl; edge=$gs.edge; micro=$gs.micro;
+        minSignals=$thr.minSignals; minPnl=$thr.minPnl; minEdge=$thr.minEdge; minMicro=$thr.minMicro
     }
 }
-$gsSamplesOk = ($gsCount -ge $minSignals -and $gsPnl -ge $minPnl)
-$gsThreshOk  = (($gsEdge + 1e-9) -ge $minEdge -and ($gsMicro + 1e-9) -ge $minMicro)
-$gsOkToday   = ($gsFresh -and $gsSamplesOk -and $gsThreshOk)
+
+$gsNVDA = Eval-GS "NVDA"
+$gsSPY  = Eval-GS "SPY"
+$gsQQQ  = Eval-GS "QQQ"
+
+# ---- Legacy GateScore vars (NVDA-based) for backward-compatible payload/reasons ----
+$gsFresh     = [bool]$gsNVDA.fresh
+$gsSamplesOk = [bool]$gsNVDA.samplesOk
+$gsThreshOk  = [bool]$gsNVDA.threshOk
+$gsOkToday   = [bool]$gsNVDA.okToday
+
+$gsCount = [int]$gsNVDA.cnt
+$gsPnl   = [int]$gsNVDA.pnl
+$gsEdge  = [double]$gsNVDA.edge
+$gsMicro = [double]$gsNVDA.micro
+
+$minSignals = [int]$gsNVDA.minSignals
+$minPnl     = [int]$gsNVDA.minPnl
+$minEdge    = [double]$gsNVDA.minEdge
+$minMicro   = [double]$gsNVDA.minMicro
 
 # ---- Per-symbol ready (institutional) ----
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsOkToday
-$spyReady  = $false
-$qqqReady  = $false
+# NOTE: GateScore global fields remain NVDA-based for compatibility; readiness is per-symbol.
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday
+$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday
+$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
+# ---- Per-symbol ready (institutional) ----
+# NOTE: GateScore global fields remain NVDA-based for compatibility; readiness is per-symbol.
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday
+$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday
+$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
 
 $reasons = New-Object System.Collections.Generic.List[string]
+
+# Per-symbol GateScore diagnostics (for operator clarity)
+$reasons.Add(("NVDA_GS_OK_TODAY=" + $gsNVDA.okToday)) | Out-Null
+$reasons.Add(("SPY_GS_OK_TODAY="  + $gsSPY.okToday))  | Out-Null
+$reasons.Add(("QQQ_GS_OK_TODAY="  + $gsQQQ.okToday))  | Out-Null
+
 if (-not $phase23Ok) { $reasons.Add("phase23_health_ok_today=false") }
 if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
 if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }

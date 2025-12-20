@@ -3,39 +3,45 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
+from hybrid_ai_trading.microstructure.regime import classify_micro_regime
+
+
+def _try_float(v: object, default: float = 0.0) -> float:
+    try:
+        if v is None:
+            return default
+        s = str(v).strip()
+        if not s:
+            return default
+        return float(s)
+    except Exception:
+        return default
+
 
 def main() -> int:
     """
-    Phase-2 microstructure enrichment stub for SPY/QQQ.
+    Phase-2 microstructure enrichment (v1).
 
-    v0 behaviour:
-      - Locate logs/spy_qqq_micro_for_notion.csv if present.
-      - Print a small sample to stdout.
-      - Exit 0 regardless (best-effort, does not gate anything).
-
-    This is intentionally light: the real microstructure + cost model logic
-    lives in Build-Phase2CostFromTicks.ps1 and related tools. This script
-    simply gives Run-Phase2ToPhase5Validation.ps1 a safe target to call.
+    - Reads logs/spy_qqq_micro_for_notion.csv
+    - Adds micro_regime=classify_micro_regime(ms_range_pct, est_spread_bps, est_fee_bps)
+    - Writes logs/spy_qqq_micro_for_notion_enriched.csv (does NOT overwrite original)
+    - Best-effort: never gates, always exit 0.
     """
     script_path = Path(__file__).resolve()
     repo_root = script_path.parents[1]
     logs_dir = repo_root / "logs"
-    csv_path = logs_dir / "spy_qqq_micro_for_notion.csv"
+    in_path = logs_dir / "spy_qqq_micro_for_notion.csv"
+    out_path = logs_dir / "spy_qqq_micro_for_notion_enriched.csv"
 
-    if not csv_path.exists():
+    if not in_path.exists():
         print("[MICRO-ENRICH] SKIP: spy_qqq_micro_for_notion.csv not found (nothing to enrich).")
         return 0
 
-    # Avoid printing the full Windows path (may contain non-ASCII -> encoding issues).
-    print("[MICRO-ENRICH] Found microstructure CSV; showing sample rows...")
     try:
-        with csv_path.open(newline="") as f:
+        with in_path.open(newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
-            rows = []
-            for i, row in enumerate(reader):
-                if i >= 10:
-                    break
-                rows.append(row)
+            rows = list(reader)
+            fieldnames = list(reader.fieldnames or [])
     except Exception as e:
         print(f"[MICRO-ENRICH] ERROR reading spy_qqq_micro_for_notion.csv: {e!r}")
         return 0
@@ -44,14 +50,34 @@ def main() -> int:
         print("[MICRO-ENRICH] No data rows found in spy_qqq_micro_for_notion.csv")
         return 0
 
-    print("[MICRO-ENRICH] Sample rows:")
+    if "micro_regime" not in fieldnames:
+        fieldnames.append("micro_regime")
+
     for r in rows:
+        ms_range_pct = _try_float(r.get("ms_range_pct"), 0.0)
+        est_spread_bps = _try_float(r.get("est_spread_bps"), 0.0)
+        est_fee_bps = _try_float(r.get("est_fee_bps"), 0.0)
+        r["micro_regime"] = classify_micro_regime(ms_range_pct, est_spread_bps, est_fee_bps)
+
+    try:
+        with out_path.open("w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fieldnames)
+            w.writeheader()
+            for r in rows:
+                w.writerow(r)
+    except Exception as e:
+        print(f"[MICRO-ENRICH] ERROR writing enriched CSV: {e!r}")
+        return 0
+
+    print("[MICRO-ENRICH] Wrote enriched CSV -> logs/spy_qqq_micro_for_notion_enriched.csv")
+    print("[MICRO-ENRICH] Sample rows:")
+    for r in rows[:10]:
         print(
             f"  symbol={r.get('symbol')}, "
             f"ms_range_pct={r.get('ms_range_pct')}, "
-            f"ms_trend_flag={r.get('ms_trend_flag')}, "
             f"est_spread_bps={r.get('est_spread_bps')}, "
-            f"est_fee_bps={r.get('est_fee_bps')}"
+            f"est_fee_bps={r.get('est_fee_bps')}, "
+            f"micro_regime={r.get('micro_regime')}"
         )
 
     return 0
