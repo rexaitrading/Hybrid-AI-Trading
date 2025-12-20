@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from typing import Any, Dict
 from hybrid_ai_trading.runtime.run_context import RunContext
 
@@ -84,6 +85,13 @@ def place_order_phase5_with_guard(
       - function returns a dict when risk is allowed
       - Block-G failure for NVDA raises and place_order_phase5 is never called.
     """
+    # 0) Hard Block-G enforcement for LIVE orders (fail-closed)
+    try:
+        is_paper = bool(getattr(engine, "is_paper", True))
+    except Exception:
+        is_paper = True
+    if not is_paper:
+        require_blockg_ready_for_live(symbol)
     trade = {
         "symbol": symbol,
         "side": side,
