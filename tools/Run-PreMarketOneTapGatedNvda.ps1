@@ -14,8 +14,6 @@ Set-Location $repoRoot
 # RunContext helpers (repo root + today)
 $rc = Join-Path $repoRoot "tools\_RunContext.ps1"
 if (Test-Path $rc) { . $rc }
-
-$checker   = Join-Path $repoRoot 'tools\Check-BlockGReady.ps1'
 $oneTap    = Join-Path $repoRoot 'tools\PreMarket-OneTap.ps1'
 $phase3Runner = Join-Path $repoRoot "tools\Run-Phase3GateScoreDaily.ps1"
 Write-Host "[NVDA-PREMKT] PreMarket-OneTap *gated* wrapper (NVDA Block-G contract)" -ForegroundColor Cyan
@@ -87,7 +85,7 @@ $evCompute = Join-Path $repoRoot "tools\Compute-Phase5EvHardSnapshotInput.ps1"
     & $phase3Runner -Symbol "NVDA" -StatusPath ".\logs\blockg_status_stub.json" -Out ".\logs\gatescore_daily_build.jsonl"
     $gsExit = $LASTEXITCODE
 
-# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â keep outputs and continue.
+# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â keep outputs and continue.
 # Only non-(0,2) indicates a real script failure.
 if ($gsExit -ne 0 -and $gsExit -ne 2) {
     Write-Host "[NVDA-PREMKT] ProducersOnly: ERROR Phase-3 GateScore daily build failed (exitCode=$gsExit)." -ForegroundColor Red
@@ -120,10 +118,10 @@ if (-not (Test-Path $phase5SafetyRunner)) {
         exit $LASTEXITCODE
     }
 }
-
 # Normal path: enforce Block-G contract before arming anything NVDA-related
-if (-not (Test-Path $checker)) {
-    Write-Host "[NVDA-PREMKT] ERROR: Check-BlockGReady.ps1 not found at $checker; refusing to continue." -ForegroundColor Red
+$blockgInvoke = Join-Path $repoRoot "tools\Invoke-BlockGCheck.ps1"
+if (-not (Test-Path $blockgInvoke)) {
+    Write-Host "[NVDA-PREMKT] ERROR: Invoke-BlockGCheck.ps1 not found at $blockgInvoke; refusing to continue." -ForegroundColor Red
     exit 1
 }
 # ---- Phase-3 GateScore Daily (canonical one-tap) ----
@@ -142,7 +140,7 @@ if ($gsExit -ne 0) {
 }
 
 Write-Host "[NVDA-PREMKT] Running Invoke-BlockGCheck.ps1 -Symbol NVDA..." -ForegroundColor Cyan
-& $checker -Symbol NVDA
+& $blockgInvoke -Symbol NVDA
 $exitCode = $LASTEXITCODE
 
 if ($exitCode -ne 0) {
