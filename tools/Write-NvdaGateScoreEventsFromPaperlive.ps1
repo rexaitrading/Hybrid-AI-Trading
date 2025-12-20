@@ -68,6 +68,7 @@ foreach ($ln in $lines) {
 
     $props = $j.PSObject.Properties.Name
     $asOf = Pick-Date $j @("as_of_date","date","trading_day","day","ts","timestamp","ts_utc") $today
+    if ($Mode -eq "rewrite") { $asOf = $today }
 
     $edge = 0.0
     foreach ($k in @("edge_ratio","mean_edge_ratio","edge","edge_mean","gatescore_edge","edgeValue","edge_score")) {
