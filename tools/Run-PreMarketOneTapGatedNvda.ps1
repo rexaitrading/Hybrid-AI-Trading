@@ -34,6 +34,24 @@ if ($SkipBlockG) {
 if ($ProducersOnly) {
     Write-Host "[NVDA-PREMKT] ProducersOnly: running safety+Phase3 producers WITHOUT Block-G arming." -ForegroundColor Cyan
 
+    # --- EV-HARD computed input + daily export (fail-closed, no manual ok) ---
+    $evCompute = Join-Path $repoRoot "tools\Compute-Phase5EvHardSnapshotInput.ps1"
+    if (Test-Path $evCompute) {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: computing EV-hard snapshot input ..." -ForegroundColor Cyan
+        & $evCompute -EvidencePath ".\logs\ev_hard_snapshot.json"
+        Write-Host "[NVDA-PREMKT] ProducersOnly: ev_hard_compute_exit=$LASTEXITCODE" -ForegroundColor DarkCyan
+    } else {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: WARN EV-hard compute tool not found; skipping." -ForegroundColor Yellow
+    }
+
+    $evExport = Join-Path $repoRoot "tools\Export-Phase5EvHardVetoDailySnapshot.ps1"
+    if (Test-Path $evExport) {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: exporting EV-hard daily snapshot ..." -ForegroundColor Cyan
+        & $evExport
+        Write-Host "[NVDA-PREMKT] ProducersOnly: ev_hard_export_exit=$LASTEXITCODE" -ForegroundColor DarkCyan
+    } else {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: WARN EV-hard export tool not found; skipping." -ForegroundColor Yellow
+    }
     # Phase-5 Safety Snapshot (optional)
     $phase5SafetyRunner = Join-Path $repoRoot "tools\Run-Phase5SafetySnapshot.ps1"
     if (Test-Path $phase5SafetyRunner) {
@@ -57,7 +75,7 @@ if ($ProducersOnly) {
     & $phase3Runner -Symbol "NVDA" -StatusPath ".\logs\blockg_status_stub.json" -Out ".\logs\gatescore_daily_build.jsonl"
     $gsExit = $LASTEXITCODE
 
-# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") — keep outputs and continue.
+# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") â€” keep outputs and continue.
 # Only non-(0,2) indicates a real script failure.
 if ($gsExit -ne 0 -and $gsExit -ne 2) {
     Write-Host "[NVDA-PREMKT] ProducersOnly: ERROR Phase-3 GateScore daily build failed (exitCode=$gsExit)." -ForegroundColor Red
