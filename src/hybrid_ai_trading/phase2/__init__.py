@@ -1,1 +1,0 @@
-"""Phase 2: microstructure / costs / fill realism (REAL skeleton)."""
