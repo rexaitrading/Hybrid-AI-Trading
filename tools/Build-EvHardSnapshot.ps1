@@ -1,11 +1,18 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
-  [string]$EvidencePath = ".\logs\phase5_ev_hard_veto_evidence.json",
+  [string]$EvidencePath = ".\logs\ev_hard_evidence_raw.json",
   [string]$OutPath = ".\logs\ev_hard_snapshot.json"
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+function As-Bool([object]$v) {
+  if ($null -eq $v) { return $false }
+  if ($v -is [bool]) { return [bool]$v }
+  $s = ("" + $v).Trim()
+  return ($s -in @("1","true","True","TRUE","yes","YES"))
+}
 
 function Write-Utf8NoBom([string]$Path, [string]$Text) {
   $enc = New-Object System.Text.UTF8Encoding($false)
@@ -41,7 +48,7 @@ if (Test-Path $EvidencePath) {
       $reason = ("evidence_stale_failclosed as_of_date={0} today={1}" -f $asOf,$today)
     } else {
       # if evidence itself declares ok=true, accept; otherwise fail
-      try { $ok = [bool]$j.ok } catch { $ok = $false }
+      $ok = As-Bool $j.ok
       $reason = if($ok){"computed_from_evidence_ok"}else{"computed_from_evidence_not_ok"}
     }
   }
