@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Tuple
 
 
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 class BrokerError(Exception):
     pass
 
@@ -69,6 +70,23 @@ class IBKRClient(BrokerClient):
         limit_px: Optional[float] = None,
         meta: Optional[Dict[str, Any]] = None,
     ):
+        # Block-G lowest-layer enforcement (fail-closed for LIVE NVDA)
+        # LIVE is determined by:
+        #   - meta["is_paper"] == False  OR  env:HAT_IS_PAPER == "0"
+        # Default is paper (safe). Production live callers must set meta.is_paper=False.
+        try:
+            meta0 = meta or {}
+            is_paper = bool(meta0.get("is_paper", True))
+        except Exception:
+            is_paper = True
+        try:
+            env_flag = str(__import__("os").environ.get("HAT_IS_PAPER", "")).strip()
+            if env_flag in ("0", "false", "False", "NO", "no"):
+                is_paper = False
+        except Exception:
+            pass
+        if not is_paper:
+            require_blockg_ready_for_live(symbol)
         c = self._contract(symbol)
         side = side.upper()
         o = (

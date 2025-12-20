@@ -20,6 +20,7 @@ import logging
 import uuid
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 logger = logging.getLogger(__name__)
 
@@ -478,6 +479,9 @@ class OrderManager:
         # LIVE PATH
         if not self.dry_run and self.live_client is not None:
             try:
+                # Block-G lowest-layer enforcement (OrderManager live path)
+                # Fail-closed: any live symbol must satisfy contract.
+                require_blockg_ready_for_live(symbol)
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
