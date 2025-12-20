@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [switch]$ProducersOnly
 )
@@ -16,13 +16,22 @@ Write-Host "[PREMARKET] RepoRoot = $repoRoot" -ForegroundColor DarkCyan
 # Ensure PYTHONPATH for python modules
 $env:PYTHONPATH = Join-Path $repoRoot 'src'
 
-# --- Step 0: Phase-2→5 validation (optional) ---
+# --- Step 0: Phase-2ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢5 validation (optional) ---
 if (Test-Path '.\tools\Run-Phase2ToPhase5Validation.ps1') {
   Write-Host "`n[PREMARKET] Step 0: Run-Phase2ToPhase5Validation.ps1" -ForegroundColor Yellow
   .\tools\Run-Phase2ToPhase5Validation.ps1
-  if ($LASTEXITCODE -ne 0) { Write-Host "[PREMARKET] ERROR: Phase2→5 validation failed." -ForegroundColor Red; exit $LASTEXITCODE }
+  if ($LASTEXITCODE -ne 0) { Write-Host "[PREMARKET] ERROR: Phase2ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢5 validation failed." -ForegroundColor Red; exit $LASTEXITCODE }
 }
 
+# --- Step 0.5: NVDA events producer (today) ---
+$nvdaToday = Test-Path '.\logs\nvda_phase5_paperlive_results_today.jsonl'
+$writerOk = Test-Path '.\tools\Write-NvdaGateScoreEventsFromPaperlive.ps1'
+if ($nvdaToday -and $writerOk) {
+  Write-Host "`n[PREMARKET] Step 0.5: Write-NvdaGateScoreEventsFromPaperlive.ps1 (today rewrite)" -ForegroundColor Yellow
+  & powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Write-NvdaGateScoreEventsFromPaperlive.ps1 -InputPath ".\logs\nvda_phase5_paperlive_results_today.jsonl" -OutPath ".\logs\nvda_gatescore_events.jsonl" -Mode rewrite -MinEvents 10 | Out-Host
+} else {
+  Write-Host "[PREMARKET] WARN: NVDA today paperlive file missing (or writer missing). GateScore may remain stale -> fail-closed." -ForegroundColor Yellow
+}
 # --- Step 1: Build GateScore summaries (expects events already present) ---
 if (Test-Path '.\tools\Run-BuildGateScoreSummaries.ps1') {
   Write-Host "`n[PREMARKET] Step 1: Run-BuildGateScoreSummaries.ps1" -ForegroundColor Yellow
@@ -30,7 +39,7 @@ if (Test-Path '.\tools\Run-BuildGateScoreSummaries.ps1') {
   if ($LASTEXITCODE -ne 0) { Write-Host "[PREMARKET] WARN: GateScore summaries not ready (fail-closed will apply downstream)." -ForegroundColor Yellow }
 }
 
-# --- Step 2: EV-hard raw evidence → snapshot → compute input → daily export (fail-closed) ---
+# --- Step 2: EV-hard raw evidence ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ snapshot ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ compute input ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ daily export (fail-closed) ---
 if (Test-Path '.\tools\Build-EvHardEvidenceRaw.ps1') {
   Write-Host "`n[PREMARKET] Step 2a: Build-EvHardEvidenceRaw.ps1" -ForegroundColor Yellow
   .\tools\Build-EvHardEvidenceRaw.ps1 | Out-Host
