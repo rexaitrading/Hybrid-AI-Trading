@@ -482,6 +482,8 @@ class OrderManager:
                 # Block-G lowest-layer enforcement (OrderManager live path)
                 # Fail-closed: any live symbol must satisfy contract.
                 require_blockg_ready_for_live(symbol)
+                                # Block-G lowest-layer enforcement (OrderManager live path) — FAIL-CLOSED
+                require_blockg_ready_for_live_symbol(symbol=symbol, status_path="logs/blockg_status_stub.json")
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
