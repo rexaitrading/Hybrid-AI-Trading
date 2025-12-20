@@ -64,23 +64,38 @@ if (Test-Path $evPath) {
     }
 }
 
-# ---- Phase23 health (presence = ok unless explicit false) ----
+# ---- Phase23 health (must match today row; fail-closed) ----
 $phase23Ok = $false
 $phase23Path = Join-Path $logsDir "phase23_health_daily.csv"
+$phase23SawToday = $false
+
 if (Test-Path $phase23Path) {
     $rows = @(Import-Csv $phase23Path)
     foreach ($r in $rows) {
         $d = ""
         if ($r.PSObject.Properties.Name -contains "as_of_date") { $d = Slice-Date ([string]$r.as_of_date) }
         elseif ($r.PSObject.Properties.Name -contains "date") { $d = Slice-Date ([string]$r.date) }
-        if ($d -eq $today) {
-            if ($r.PSObject.Properties.Name -contains "phase23_health_ok_today" -and $r.phase23_health_ok_today) {
-                $phase23Ok = To-Bool $r.phase23_health_ok_today
-            } else {
-                $phase23Ok = $true
-            }
+
+        if ($d -ne $today) { continue }
+
+        $phase23SawToday = $true
+
+        if ($r.PSObject.Properties.Name -contains "phase23_ok") {
+            $phase23Ok = To-Bool $r.phase23_ok
+        }
+        elseif ($r.PSObject.Properties.Name -contains "phase23_health_ok_today") {
+            $phase23Ok = To-Bool $r.phase23_health_ok_today
+        }
+        else {
+            # Unknown schema => fail-closed
+            $phase23Ok = $false
         }
     }
+}
+
+if (-not $phase23SawToday) {
+    # No today row => fail-closed
+    $phase23Ok = $false
 }
 
 # ---- GateScore thresholds ----

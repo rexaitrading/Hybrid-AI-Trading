@@ -1,13 +1,20 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [string]$InputPath = ".\.hat\inputs\phase5_ev_hard_veto_snapshot_input.json",
   [string]$SnapshotOut = ".\logs\phase5_ev_hard_veto_snapshot.json",
-  [string]$EvidenceOut = ".\logs\phase5_ev_hard_veto_evidence.json",
+  [string]$EvidenceOut = ".\logs\ev_hard_snapshot.json",
   [string]$DailyCsv = ".\logs\phase5_ev_hard_veto_daily.csv"
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+function As-Bool([object]$v) {
+  if ($null -eq $v) { return $false }
+  if ($v -is [bool]) { return [bool]$v }
+  $s = ("" + $v).Trim()
+  return ($s -in @("1","true","True","TRUE","yes","YES"))
+}
 
 function Write-Utf8NoBom {
   param([string]$Path, [string]$Text)
