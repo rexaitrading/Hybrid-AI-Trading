@@ -81,6 +81,21 @@ function Mean($arr) {
     foreach ($v in $arr) { $sum += [double]$v }
     return $sum / [double]$arr.Count
 }
+function Get-EventPnlSamples($events) {
+    $sum = 0
+    foreach ($e in $events) {
+        try {
+            $v = $e.pnl_samples
+            if ($null -eq $v) { $v = $e.pnlSamples }
+            if ($null -eq $v) { $v = $e.sample_count }
+            if ($null -eq $v) { $v = $e.samples }
+            $n = 0
+            if ([int]::TryParse([string]$v, [ref]$n)) { $sum += $n }
+            elseif ([double]::TryParse([string]$v, [ref]([double]$d = 0.0))) { $sum += [int]$d }
+        } catch { }
+    }
+    return [int]$sum
+}
 
 $eventFiles = @(
     @{ sym="NVDA"; path=(Join-Path $logsDir "nvda_gatescore_events.jsonl") },
@@ -141,12 +156,22 @@ $todayEvents = @()
         if ($null -ne $micro) { $microVals += $micro }
         if ($null -ne $pnl)   { $pnlVals += $pnl }
     }
+    # pnl_samples semantics:
+    # 1) Prefer numeric pnl samples (realized_pnl count)
+    # 2) Else fallback to declared per-event pnl_samples
+    # 3) Else fallback to count_signals (wiring-safe)
+    $rowPnlSamples = [int]$pnlVals.Count
+    if ($rowPnlSamples -le 0) {
+        $declSum = Get-EventPnlSamples $todayEvents
+        if ($declSum -gt 0) { $rowPnlSamples = $declSum }
+    }
+    if ($rowPnlSamples -le 0) { $rowPnlSamples = [int]$todayEvents.Count }
 
     $row = [pscustomobject]@{
         as_of_date       = $targetDate
         symbol           = $sym
         count_signals    = [int]$todayEvents.Count
-        pnl_samples      = [int]$pnlVals.Count
+        pnl_samples      = [int]$rowPnlSamples
         mean_edge_ratio  = [double](Mean $edgeVals)
         mean_micro_score = [double](Mean $microVals)
         mean_pnl         = [double](Mean $pnlVals)
