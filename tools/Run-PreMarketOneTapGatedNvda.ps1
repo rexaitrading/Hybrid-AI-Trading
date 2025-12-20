@@ -83,7 +83,7 @@ $evCompute = Join-Path $repoRoot "tools\Compute-Phase5EvHardSnapshotInput.ps1"
     & $phase3Runner -Symbol "NVDA" -StatusPath ".\logs\blockg_status_stub.json" -Out ".\logs\gatescore_daily_build.jsonl"
     $gsExit = $LASTEXITCODE
 
-# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") Ã¢â‚¬â€ keep outputs and continue.
+# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â keep outputs and continue.
 # Only non-(0,2) indicates a real script failure.
 if ($gsExit -ne 0 -and $gsExit -ne 2) {
     Write-Host "[NVDA-PREMKT] ProducersOnly: ERROR Phase-3 GateScore daily build failed (exitCode=$gsExit)." -ForegroundColor Red
