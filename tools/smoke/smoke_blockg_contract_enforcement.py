@@ -1,6 +1,6 @@
 ﻿from __future__ import annotations
 
-from hybrid_ai_trading.blockg_contract import require_blockg_ready
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from hybrid_ai_trading.execution.execution_engine_phase5_guard import place_order_phase5_with_guard
 
 
@@ -14,8 +14,14 @@ class DummyEngine:
 
 
 def main() -> int:
-    d0 = require_blockg_ready("NVDA")
-    print("[SMOKE] as_of_date=", d0.as_of_date, "nvda_ready=", d0.ready, "reason=", d0.reason)
+    # Contract check (live)
+    try:
+        require_blockg_ready_for_live("NVDA")
+        print("[SMOKE] require_blockg_ready_for_live NVDA => OK")
+    except Exception as e:
+        print("[SMOKE] require_blockg_ready_for_live NVDA => BLOCK", type(e).__name__, str(e)[:180])
+
+    # Execution path check (phase5 guard wrapper)
     for is_paper in (False, True):
         label = "paper" if is_paper else "live"
         try:
