@@ -11,6 +11,10 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
+# RunContext helpers (repo root + today)
+$rc = Join-Path $repoRoot "tools\_RunContext.ps1"
+if (Test-Path $rc) { . $rc }
+
 $checker   = Join-Path $repoRoot 'tools\Check-BlockGReady.ps1'
 $oneTap    = Join-Path $repoRoot 'tools\PreMarket-OneTap.ps1'
 $phase3Runner = Join-Path $repoRoot "tools\Run-Phase3GateScoreDaily.ps1"
@@ -83,7 +87,7 @@ $evCompute = Join-Path $repoRoot "tools\Compute-Phase5EvHardSnapshotInput.ps1"
     & $phase3Runner -Symbol "NVDA" -StatusPath ".\logs\blockg_status_stub.json" -Out ".\logs\gatescore_daily_build.jsonl"
     $gsExit = $LASTEXITCODE
 
-# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â keep outputs and continue.
+# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â keep outputs and continue.
 # Only non-(0,2) indicates a real script failure.
 if ($gsExit -ne 0 -and $gsExit -ne 2) {
     Write-Host "[NVDA-PREMKT] ProducersOnly: ERROR Phase-3 GateScore daily build failed (exitCode=$gsExit)." -ForegroundColor Red
@@ -137,7 +141,7 @@ if ($gsExit -ne 0) {
     exit $gsExit
 }
 
-Write-Host "[NVDA-PREMKT] Running Check-BlockGReady.ps1 -Symbol NVDA..." -ForegroundColor Cyan
+Write-Host "[NVDA-PREMKT] Running Invoke-BlockGCheck.ps1 -Symbol NVDA..." -ForegroundColor Cyan
 & $checker -Symbol NVDA
 $exitCode = $LASTEXITCODE
 
