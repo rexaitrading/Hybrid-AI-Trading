@@ -35,7 +35,15 @@ if ($ProducersOnly) {
     Write-Host "[NVDA-PREMKT] ProducersOnly: running safety+Phase3 producers WITHOUT Block-G arming." -ForegroundColor Cyan
 
     # --- EV-HARD computed input + daily export (fail-closed, no manual ok) ---
-    $evCompute = Join-Path $repoRoot "tools\Compute-Phase5EvHardSnapshotInput.ps1"
+        $evSnap = Join-Path $repoRoot "tools\Build-EvHardSnapshot.ps1"
+    if (Test-Path $evSnap) {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: building EV-hard snapshot (today) ..." -ForegroundColor Cyan
+        & $evSnap
+        Write-Host "[NVDA-PREMKT] ProducersOnly: ev_hard_snapshot_exit=$LASTEXITCODE" -ForegroundColor DarkCyan
+    } else {
+        Write-Host "[NVDA-PREMKT] ProducersOnly: WARN EV-hard snapshot builder not found; skipping." -ForegroundColor Yellow
+    }
+$evCompute = Join-Path $repoRoot "tools\Compute-Phase5EvHardSnapshotInput.ps1"
     if (Test-Path $evCompute) {
         Write-Host "[NVDA-PREMKT] ProducersOnly: computing EV-hard snapshot input ..." -ForegroundColor Cyan
         & $evCompute -EvidencePath ".\logs\ev_hard_snapshot.json"
@@ -75,7 +83,7 @@ if ($ProducersOnly) {
     & $phase3Runner -Symbol "NVDA" -StatusPath ".\logs\blockg_status_stub.json" -Out ".\logs\gatescore_daily_build.jsonl"
     $gsExit = $LASTEXITCODE
 
-# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") â€” keep outputs and continue.
+# In ProducersOnly, exitCode=2 is expected fail-closed ("not ready") Ã¢â‚¬â€ keep outputs and continue.
 # Only non-(0,2) indicates a real script failure.
 if ($gsExit -ne 0 -and $gsExit -ne 2) {
     Write-Host "[NVDA-PREMKT] ProducersOnly: ERROR Phase-3 GateScore daily build failed (exitCode=$gsExit)." -ForegroundColor Red
