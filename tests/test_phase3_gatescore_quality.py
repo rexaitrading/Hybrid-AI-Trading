@@ -1,19 +1,27 @@
-from hybrid_ai_trading.gatescore.quality import evaluate_quality
+from __future__ import annotations
+
+from hybrid_ai_trading.gatescore.quality import GateScoreThresholds, evaluate_thresholds
 
 
-def test_quality_blocks_low_samples():
-    q = evaluate_quality(value=1.0, samples=1, min_required=0.5, min_samples=10)
-    assert q.ok is False
-    assert q.reason == "gatescore_samples_not_ok"
+def test_gatescore_quality_ok():
+    ok, reason = evaluate_thresholds(
+        count_signals=200,
+        pnl_samples=400,
+        mean_edge_ratio=0.05,
+        mean_micro_score=0.7,
+        thr=GateScoreThresholds(100, 300, 0.03, 0.55),
+    )
+    assert ok is True
+    assert reason == "ok"
 
 
-def test_quality_blocks_low_value():
-    q = evaluate_quality(value=0.1, samples=10, min_required=0.5, min_samples=10)
-    assert q.ok is False
-    assert q.reason == "gatescore_below_threshold"
-
-
-def test_quality_ok():
-    q = evaluate_quality(value=0.8, samples=20, min_required=0.5, min_samples=10)
-    assert q.ok is True
-    assert q.reason == "gatescore_ok"
+def test_gatescore_quality_fails_edge():
+    ok, reason = evaluate_thresholds(
+        count_signals=200,
+        pnl_samples=400,
+        mean_edge_ratio=0.01,
+        mean_micro_score=0.7,
+        thr=GateScoreThresholds(100, 300, 0.03, 0.55),
+    )
+    assert ok is False
+    assert reason == "edge_below_min"
