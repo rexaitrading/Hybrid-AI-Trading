@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [string]$OutPath = ".\logs\ev_hard_evidence_raw.json"
 )
@@ -29,7 +29,11 @@ if (Test-Path $phase4Path) {
   try {
     $j = (Get-Content $phase4Path -Raw) | ConvertFrom-Json
     $phase4AsOf = (($j.as_of_date) + "").Trim()
-    try { $phase4Ok = [bool]$j.ok } catch { $phase4Ok = $false }
+    try {
+      if ($j.PSObject.Properties.Name -contains "ok") { $phase4Ok = [bool]$j.ok }
+      elseif ($j.PSObject.Properties.Name -contains "phase4_ok_today") { $phase4Ok = [bool]$j.phase4_ok_today }
+      else { $phase4Ok = $false }
+    } catch { $phase4Ok = $false }
   } catch {}
 }
 
@@ -41,9 +45,9 @@ if (Test-Path $phase23Path) {
   try {
     $rows = @(Import-Csv $phase23Path)
     if ($rows.Count -gt 0) {
-      $last = $rows | Sort-Object as_of_date | Select-Object -Last 1
-      $phase23AsOf = (($last.as_of_date) + "").Trim()
-      try { $phase23Ok = [bool]$last.ok } catch { $phase23Ok = $false }
+      $last = $rows | Sort-Object date | Select-Object -Last 1
+      $phase23AsOf = (($last.date) + "").Trim()
+      try { $phase23Ok = [bool]$last.phase23_ok } catch { $phase23Ok = $false }
     }
   } catch {}
 }
