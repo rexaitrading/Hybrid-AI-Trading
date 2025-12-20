@@ -123,7 +123,7 @@ if (Test-Path $gsPath) {
     }
 }
 $gsSamplesOk = ($gsCount -ge $minSignals -and $gsPnl -ge $minPnl)
-$gsThreshOk  = ($gsEdge -ge $minEdge -and $gsMicro -ge $minMicro)
+$gsThreshOk  = (($gsEdge + 1e-9) -ge $minEdge -and ($gsMicro + 1e-9) -ge $minMicro)
 $gsOkToday   = ($gsFresh -and $gsSamplesOk -and $gsThreshOk)
 
 # ---- Per-symbol ready (institutional) ----
