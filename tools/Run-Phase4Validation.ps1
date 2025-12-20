@@ -87,7 +87,7 @@ try {
   Invoke-Phase4PyTest -Label "Phase-5 risk + guard slice" -Args $phase5Args
 
   Write-Host "`n[PHASE4] Phase-4 validation harness complete (required slices green / optional slices skipped)." -ForegroundColor Green
-  Write-Phase4Stamp -Ok $true -Reason "" -ExitCode 0
+  Write-Phase4Stamp -Ok $true -Reason "ok" -ExitCode 0
   exit 0
 }
 catch {
