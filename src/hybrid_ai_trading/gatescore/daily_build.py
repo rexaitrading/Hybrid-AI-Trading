@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+EPS = 1e-12
+
 
 def _read_csv_rows(path: Path) -> list[dict[str, str]]:
     raw = path.read_text(encoding="utf-8-sig").splitlines()
@@ -132,10 +134,10 @@ def main() -> None:
     if pnl_samples is None or pnl_samples < int(args.min_pnl_samples):
         ok = False
         reasons.append(f"min_pnl_samples:{pnl_samples}<{args.min_pnl_samples}")
-    if mean_edge is None or float(mean_edge) < float(args.min_edge):
+    if mean_edge is None or (float(mean_edge) + EPS) < float(args.min_edge):
         ok = False
         reasons.append(f"min_edge:{mean_edge}<{args.min_edge}")
-    if mean_micro is None or float(mean_micro) < float(args.min_micro):
+    if mean_micro is None or (float(mean_micro) + EPS) < float(args.min_micro):
         ok = False
         reasons.append(f"min_micro:{mean_micro}<{args.min_micro}")
 

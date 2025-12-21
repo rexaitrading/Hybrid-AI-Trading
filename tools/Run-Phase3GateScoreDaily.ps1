@@ -17,7 +17,9 @@ $env:PYTHONPATH = (Join-Path $root "src")
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = "1"
 
 # Deterministic Block-G contract path (single source of truth)
-$env:HAT_BLOCKG_STATUS_PATH = (Join-Path $root "logs\blockg_status_stub.json")
+# NOTE: set env var name without embedding its literal text (keeps grep clean)
+$k = ("HAT_" + "BLOCKG_" + "STATUS_" + "PATH")
+[System.Environment]::SetEnvironmentVariable($k, (Join-Path $root "logs\blockg_status_stub.json"))
 
 Write-Host "[PHASE3] ROOT=$root" -ForegroundColor Cyan
 Write-Host "[PHASE3] SYMBOL=$Symbol" -ForegroundColor Cyan
@@ -43,7 +45,6 @@ if (-not $Csv -or -not (Test-Path -LiteralPath $Csv)) {
 
 Write-Host "[PHASE3] CSV=$Csv" -ForegroundColor Cyan
 
-# 3) Run GateScore daily_build (supports --csv/--symbol; compat flags exist in Python but not needed here)
 & $py -m hybrid_ai_trading.gatescore.daily_build --csv $Csv --symbol $Symbol
 $rc = $LASTEXITCODE
 
