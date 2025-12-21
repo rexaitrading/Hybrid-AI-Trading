@@ -58,6 +58,7 @@ def main() -> None:
     ap.add_argument("--min-weight", type=float, default=0.00)
     ap.add_argument("--symbols", default="NVDA,SPY,QQQ")
     args = ap.parse_args()
+    max_w = float(args.max_weight)
 
     as_of = args.as_of_date or _today_str()
 
@@ -116,7 +117,7 @@ def main() -> None:
 
     eligible = [s for s in symbols if gs_ok(s) and blockg_ready(s)]
     if not eligible:
-        return _reject(outdir, as_of, "no_eligible_symbols", {"symbols": symbols, "eligible": eligible, "max_weight": max_w})
+        return _reject(outdir, as_of, "no_eligible_symbols", {"symbols": symbols, "eligible": eligible, "max_weight": float(args.max_weight)})
 
     # Deterministic weights: equal-weight among eligible, then clamp to max_weight and renormalize.
     n = len(eligible)
