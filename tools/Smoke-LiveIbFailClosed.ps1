@@ -39,11 +39,37 @@ try {
   [System.IO.File]::WriteAllText((Resolve-Path $bg).Path, ($j | ConvertTo-Json -Depth 12) + "`n", $utf8)
 
   # Run CLI; capture combined output
-  $out = & $py -m hybrid_ai_trading.runners.ah_once --symbol $Symbol --qty 1 --side BUY --live 2>&1 | Out-String
+  $args = @(
+    "-m","hybrid_ai_trading.runners.ah_once",
+    "--symbol",$Symbol,
+    "--force","BUY",
+    "--qty","1",
+    "--order-type","MKT"
+  )
+  $oldEap = $ErrorActionPreference
+  try {
+    # We EXPECT failure here (BlockGNotReady). Do not terminate the script.
+    $ErrorActionPreference = "Continue"
+    $out = & $py @args 2>&1 | Out-String
+  }
+  finally {
+    $ErrorActionPreference = $oldEap
+  }
   $rc = $LASTEXITCODE
 
-  # Strict: must be a Block-G refusal, not usage/help, not module error, not env refusal
-  if ($out -notmatch "BlockG|BLOCK-G|require_blockg_ready_for_live|blockg") {
+  # SMOKE_USAGE_GUARD: never treat argparse usage/help as a BlockG success
+  if ($out -match "usage:\s+ah_once" -or $out -match "the following arguments are required") {
+    throw "[SMOKE] ah_once CLI usage/arg mismatch. output=$out"
+  }
+    # Strict: must be a Block-G refusal.
+  # Accept either plain message OR Python traceback containing BlockGNotReady/BLOCK-G.
+  $is_blockg = ($out -match "BlockGNotReady" -or $out -match "BLOCK-G:" -or $out -match "nvda_blockg_ready=false" -or $out -match "require_blockg_ready_for_live")
+
+  if (-not $is_blockg) {
+    # If we got any traceback but it's NOT Block-G, that's a real failure.
+    if ($out -match "Traceback \(most recent call last\):") {
+      throw "[SMOKE] Traceback not caused by Block-G. rc=$rc output=$out"
+    }
     throw "[SMOKE] NOT BlockG failure. rc=$rc output=$out"
   }
 
