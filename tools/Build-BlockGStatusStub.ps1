@@ -183,8 +183,6 @@ $minMicro   = [double]$gsNVDA.minMicro
 $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday
 $spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday
 $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
-$phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
-
 $reasons = New-Object System.Collections.Generic.List[string]
 
 # Per-symbol GateScore diagnostics (for operator clarity)
