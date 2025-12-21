@@ -78,9 +78,26 @@ class IBAdapter(Broker):
         else:
             order = MarketOrder(side.upper(), qty)
         # Block-G: hard fail-closed for LIVE orders (double-gate)
+        # LIVE is determined by (highest precedence first):
+        #   1) meta["is_paper"] == False
+        #   2) env:HAT_IS_PAPER == "0"
+        #   3) ctx.mode == "live"
+        # Default is paper-safe.
+        meta0 = meta or {}
+        is_paper = True
+        try:
+            if "is_paper" in meta0:
+                is_paper = bool(meta0.get("is_paper", True))
+            else:
+                env_flag = str(__import__("os").environ.get("HAT_IS_PAPER", "")).strip()
+                if env_flag == "0":
+                    is_paper = False
+                elif ctx is not None and getattr(ctx, "mode", ""):
+                    is_paper = str(getattr(ctx, "mode", "")).strip().lower() != "live"
+        except Exception:
+            is_paper = True
 
-        if hasattr(self, "is_paper") and (not getattr(self, "is_paper", True)):
-
+        if not is_paper:
             require_blockg_ready_for_live(symbol)
 
         trade = self.ib.placeOrder(contract, order)
