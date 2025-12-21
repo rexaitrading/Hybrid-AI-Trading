@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+# HAT_NO_SPAWN_GUARD: daily_build must be pure + non-daemon.
+# If anything attempts to spawn background processes/threads, we fail-closed.
+import os as _os
+_os.environ.setdefault("PYTHONWARNINGS", "default")
+_os.environ.setdefault("HAT_NO_SPAWN", "1")
 import argparse
 import csv
 import json
