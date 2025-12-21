@@ -1,8 +1,7 @@
 [CmdletBinding()]
 param(
   [string]$Symbol = "NVDA",
-  [string]$Csv = "",
-  [string]$StatusPath = ".\logs\blockg_status_stub.json"
+  [string]$Csv = ""
 )
 
 $ErrorActionPreference="Stop"
@@ -44,7 +43,7 @@ if (-not $Csv -or -not (Test-Path -LiteralPath $Csv)) {
 
 Write-Host "[PHASE3] CSV=$Csv" -ForegroundColor Cyan
 
-# 3) Run GateScore daily_build (current CLI supports --csv/--symbol only)
+# 3) Run GateScore daily_build (supports --csv/--symbol; compat flags exist in Python but not needed here)
 & $py -m hybrid_ai_trading.gatescore.daily_build --csv $Csv --symbol $Symbol
 $rc = $LASTEXITCODE
 
