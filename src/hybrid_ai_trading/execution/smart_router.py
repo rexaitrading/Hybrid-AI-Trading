@@ -13,6 +13,7 @@ Smart Order Router (Hybrid AI Quant Pro v5.2 - Hedge-Fund OE Grade, Test-Friendl
 
 import logging
 import os
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 import time
 from typing import Any, Callable, Dict, List, Optional
 
@@ -125,6 +126,11 @@ class SmartOrderRouter:
 
                 def submit():
                     return self._timeout_wrapper(
+                        # --- Block-G hard gate for LIVE routed orders (fail-closed)
+                        sym_u = str(symbol).upper()
+                        is_paper = bool(getattr(client, "paper", getattr(client, "is_paper", True)))
+                        if (not self.test_mode) and (not is_paper) and sym_u in ("NVDA","SPY","QQQ"):
+                            require_blockg_ready_for_live(sym_u)
                         client.submit_order,
                         symbol=symbol,
                         qty=size,

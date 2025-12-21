@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 
 import json
 
+import os
 
 class BlockGNotReady(RuntimeError):
     pass
@@ -34,6 +35,13 @@ def load_blockg_status(path: Optional[str] = None) -> Dict[str, Any]:
         raw = p.read_text(encoding="utf-8-sig")
         return json.loads(raw)
 
+    # Env override (deterministic): HAT_BLOCKG_STATUS_PATH points to contract JSON
+    p_env = os.environ.get("HAT_BLOCKG_STATUS_PATH", "").strip()
+    if p_env:
+        pe = Path(p_env)
+        if pe.exists():
+            raw = pe.read_text(encoding="utf-8-sig")
+            return json.loads(raw)
     for p in _default_paths():
         if p.exists():
             raw = p.read_text(encoding="utf-8-sig")
