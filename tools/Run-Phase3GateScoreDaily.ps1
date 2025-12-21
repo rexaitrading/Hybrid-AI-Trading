@@ -1,5 +1,6 @@
 [CmdletBinding()]
 param(
+  [string]$Csv = "",
   [string]$Symbol = "NVDA",
   [string]$StatusPath = ".\logs\blockg_status_stub.json",
   [string]$Out = ".\logs\gatescore_daily_build.jsonl"
@@ -30,7 +31,7 @@ if (-not (Test-Path $builder)) { throw "[PHASE3] Missing $builder" }
 & $builder | Out-Host
 
 # 2) Run GateScore daily_build (fail-closed: returns 0/2)
-& $py -m hybrid_ai_trading.gatescore.daily_build --symbol $Symbol --status-path $StatusPath --out $Out
+#
 $rc = $LASTEXITCODE
 
 Write-Host "[PHASE3] daily_build_exit=$rc" -ForegroundColor Yellow
