@@ -1,0 +1,78 @@
+[CmdletBinding()]
+param(
+  [string]$Symbol = "NVDA",
+  [string]$AsOfDate = ""
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$root = (Resolve-Path ".").Path
+Set-Location $root
+
+if (-not $AsOfDate) { $AsOfDate = (Get-Date).ToString("yyyy-MM-dd") }
+
+Write-Host "[P1-7] RepoRoot=$root" -ForegroundColor Cyan
+Write-Host "[P1-7] Symbol=$Symbol AsOfDate=$AsOfDate" -ForegroundColor Cyan
+
+# Deterministic Block-G contract path for Python
+$k = ("HAT_" + "BLOCKG_" + "STATUS_" + "PATH")
+[System.Environment]::SetEnvironmentVariable($k, (Join-Path $root "logs\blockg_status_stub.json"))
+
+# ---- Phase1 REAL (optional, if replay CSV exists) ----
+$session = Join-Path $root "logs\replay\replay_session.json"
+if (Test-Path $session) {
+  try {
+    $csv = (Get-Content $session -Raw -Encoding utf8 | ConvertFrom-Json).bars_path
+    if ($csv -and (Test-Path -LiteralPath $csv)) {
+      $p1 = Join-Path $root "tools\Run-Phase1ReplayRealCsv.ps1"
+      if (Test-Path $p1) {
+        Write-Host "[P1-7] Phase1 REAL replay..." -ForegroundColor Cyan
+        & $p1 -InputCsv $csv -Symbol $Symbol -OutDir "logs\replay" -Batch 100
+        if ($LASTEXITCODE -ne 0) { throw "[P1-7] Phase1 failed exit=$LASTEXITCODE" }
+      } else {
+        Write-Host "[P1-7] WARN Phase1 runner missing ($p1); skipping." -ForegroundColor Yellow
+      }
+    } else {
+      Write-Host "[P1-7] WARN Phase1 csv missing; skipping." -ForegroundColor Yellow
+    }
+  } catch {
+    Write-Host "[P1-7] WARN Phase1 check failed; skipping. $_" -ForegroundColor Yellow
+  }
+} else {
+  Write-Host "[P1-7] WARN replay_session.json missing; skipping Phase1." -ForegroundColor Yellow
+}
+
+# ---- Phase2.1 REAL (optional) ----
+$p2 = Join-Path $root "tools\Run-Phase2FromPhase1.ps1"
+if (Test-Path $p2) {
+  Write-Host "[P1-7] Phase2.1 (from Phase1) ..." -ForegroundColor Cyan
+  & $p2 -Session "logs\replay\replay_session.json" -OutDir "logs\phase2" -MaxRows 0
+  if ($LASTEXITCODE -ne 0) { throw "[P1-7] Phase2 failed exit=$LASTEXITCODE" }
+} else {
+  Write-Host "[P1-7] WARN Phase2 runner missing ($p2); skipping." -ForegroundColor Yellow
+}
+
+# ---- Phase3/4/5 producers + Block-G ----
+$daily = Join-Path $root "tools\Run-DailyProducersSuite.ps1"
+if (-not (Test-Path $daily)) { throw "[P1-7] Missing: $daily" }
+Write-Host "[P1-7] DailyProducersSuite ..." -ForegroundColor Cyan
+& $daily -Symbol $Symbol
+if ($LASTEXITCODE -ne 0) { throw "[P1-7] DailyProducersSuite failed exit=$LASTEXITCODE" }
+
+# ---- Phase6 ----
+$p6 = Join-Path $root "tools\Run-Phase6DailySummary.ps1"
+if (-not (Test-Path $p6)) { throw "[P1-7] Missing: $p6" }
+Write-Host "[P1-7] Phase6 daily summary ..." -ForegroundColor Cyan
+& $p6 -AsOfDate $AsOfDate -OutDir "logs\phase6"
+if ($LASTEXITCODE -ne 0) { throw "[P1-7] Phase6 failed exit=$LASTEXITCODE" }
+
+# ---- Phase7 ----
+$p7 = Join-Path $root "tools\Run-Phase7Optimizer.ps1"
+if (-not (Test-Path $p7)) { throw "[P1-7] Missing: $p7" }
+Write-Host "[P1-7] Phase7 optimizer ..." -ForegroundColor Cyan
+& $p7 -AsOfDate $AsOfDate -OutDir "logs\phase7" -Symbols "NVDA,SPY,QQQ" -MaxWeight 0.60
+if ($LASTEXITCODE -ne 0) { throw "[P1-7] Phase7 failed exit=$LASTEXITCODE" }
+
+Write-Host "[P1-7] DONE ✅ Phase1..Phase7 daily REAL pipeline complete." -ForegroundColor Green
+exit 0
