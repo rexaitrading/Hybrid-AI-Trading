@@ -125,12 +125,13 @@ class SmartOrderRouter:
             for attempt in range(1, self.max_retries + 1):
 
                 def submit():
+                    # --- Block-G hard gate for LIVE routed orders (fail-closed)
+                    sym_u = str(symbol).upper()
+                    is_paper = bool(getattr(client, "paper", getattr(client, "is_paper", True)))
+                    if (not self.test_mode) and (not is_paper) and sym_u in ("NVDA","SPY","QQQ"):
+                        require_blockg_ready_for_live(sym_u)
+
                     return self._timeout_wrapper(
-                        # --- Block-G hard gate for LIVE routed orders (fail-closed)
-                        sym_u = str(symbol).upper()
-                        is_paper = bool(getattr(client, "paper", getattr(client, "is_paper", True)))
-                        if (not self.test_mode) and (not is_paper) and sym_u in ("NVDA","SPY","QQQ"):
-                            require_blockg_ready_for_live(sym_u)
                         client.submit_order,
                         symbol=symbol,
                         qty=size,
