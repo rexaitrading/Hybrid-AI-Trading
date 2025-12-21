@@ -1,0 +1,28 @@
+{
+  "ts_utc": "YYYY-MM-DDTHH:MM:SSZ",
+  "as_of_date": "YYYY-MM-DD",
+
+  "phase23_health_ok_today": false,
+  "ev_hard_daily_ok_today": false,
+  "phase4_ok_today": false,
+
+  "gatescore_fresh_today": false,
+  "gatescore_samples_ok": false,
+  "gatescore_threshold_ok_today": false,
+  "gatescore_ok_today": false,
+
+  "gatescore_samples": 0,
+  "gatescore_min_samples": 100,
+  "gatescore_pnl_samples": 0,
+  "gatescore_min_pnl_samples": 300,
+  "gatescore_mean_edge_ratio": 0.0,
+  "gatescore_mean_micro_score": 0.0,
+  "gatescore_min_edge_ratio": 0.03,
+  "gatescore_min_micro_score": 0.55,
+
+  "nvda_blockg_ready": false,
+  "spy_blockg_ready": false,
+  "qqq_blockg_ready": false,
+
+  "reasons_not_ready": {}
+}

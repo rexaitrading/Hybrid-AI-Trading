@@ -111,3 +111,6 @@ backup.csv
 *.bak_*
 *.bak
 *.CORRUPTED_*.bak
+
+# Allow tracked Block-G contract template
+!docs/contracts/blockg_status_stub.template.json
