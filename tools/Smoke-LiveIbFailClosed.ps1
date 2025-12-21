@@ -73,7 +73,7 @@ try {
     throw "[SMOKE] NOT BlockG failure. rc=$rc output=$out"
   }
 
-  Write-Host "[SMOKE] ✅ BlockG fail-closed confirmed (rc=$rc)" -ForegroundColor Green
+  Write-Host "[SMOKE] OK BlockG fail-closed confirmed (rc=$rc)" -ForegroundColor Green
   exit 0
 }
 finally {
