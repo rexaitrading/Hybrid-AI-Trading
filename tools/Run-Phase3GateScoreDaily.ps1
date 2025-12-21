@@ -15,6 +15,8 @@ if (-not (Test-Path $py)) { throw "[PHASE3] Python exe not found: $py" }
 # Hard lock imports to this repo
 $env:PYTHONNOUSERSITE = "1"
 $env:PYTHONPATH = (Join-Path $root "src")
+# Block-G deterministic contract path (single source of truth)
+$env:HAT_BLOCKG_STATUS_PATH = (Join-Path $root "logs\blockg_status_stub.json")
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = "1"
 
 Write-Host "[PHASE3] ROOT=$root" -ForegroundColor Cyan

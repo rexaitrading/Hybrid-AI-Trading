@@ -9,6 +9,8 @@ $ErrorActionPreference = 'Stop'
 # Script lives under repoRoot\tools
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
+# Block-G deterministic contract path (single source of truth)
+$env:HAT_BLOCKG_STATUS_PATH = (Join-Path $repoRoot "logs\blockg_status_stub.json")
 Set-Location $repoRoot
 
 # RunContext helpers (repo root + today)
