@@ -1,1 +1,0 @@
-"""Phase 6: Daily Summary (REAL fail-closed skeleton)."""
