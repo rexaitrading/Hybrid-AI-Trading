@@ -282,8 +282,19 @@ class OrderManager:
         return None
 
     def place_order(
-        self, symbol: str, side: str, qty: float, notional: float
+        self,
+        symbol: str,
+        side: str,
+        qty: float = 0.0,
+        notional: float = 0.0,
+        size: float = 0.0,
+        price: float = 0.0,
     ) -> Dict[str, Any]:
+        # --- Compatibility: accept engine-style (size, price) or legacy (qty, notional)
+        if size and (not qty):
+            qty = float(size)
+        if (not notional) and price and qty:
+            notional = float(price) * float(qty)
         # VALIDATION
         if not symbol or not isinstance(symbol, str):
             return {
