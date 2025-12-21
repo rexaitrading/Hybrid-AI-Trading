@@ -53,3 +53,37 @@ def symbol_ready(st: BlockGStatus, symbol: str) -> bool:
     if s == "QQQ":
         return st.qqq_blockg_ready
     return False
+# ---------------------------------------------------------------------------
+# Backward-compatible contract gate (tests + legacy call sites expect this name)
+# ---------------------------------------------------------------------------
+def ensure_symbol_blockg_ready(
+    symbol: str,
+    *,
+    allow_paper: bool = True,
+    is_paper: Optional[bool] = None,
+    status_path: Optional[str] = None,
+) -> None:
+    """
+    Fail-closed contract gate.
+
+    - If allow_paper=True and is_paper=True -> bypass (paper-safe path).
+    - Otherwise requires per-symbol ready flag in Block-G status JSON.
+
+    This function is intentionally lightweight and stable because many tests
+    monkeypatch it directly.
+    """
+    sym = str(symbol or "").upper().strip()
+
+    # Determine paper/live intent (fail-safe default: paper)
+    if is_paper is None:
+        env_flag = str(os.environ.get("HAT_IS_PAPER", "")).strip()
+        is_paper = (env_flag != "0")
+
+    if bool(is_paper) and bool(allow_paper):
+        return
+
+    st = load_blockg_status(status_path) if status_path else load_blockg_status()
+
+    # Conservative: unknown symbols are not allowed for live
+    if not symbol_ready(st, sym):
+        raise RuntimeError(f"BLOCK-G: {sym} not ready (per-symbol flag false)")
