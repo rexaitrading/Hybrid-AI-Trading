@@ -28,6 +28,20 @@ $errLog = Join-Path $logDir ("daily_build_" + $ts + ".err.txt")
 $csv = Join-Path $root "logs\gatescore_daily_summary.csv"
 if (-not (Test-Path $csv)) { throw "[GS-BUILD] missing input csv: $csv" }
 
+
+$today = (Get-Date).ToString("yyyy-MM-dd")
+
+function Has-TodayRow([string]$sym){
+  return (Select-String -Path $csv -Pattern ("^" + [regex]::Escape($today) + "," + [regex]::Escape($sym) + ",") -Quiet)
+}
+
+# Fail-closed: if no today row, do not spawn python (prevents freeze + false data).
+if($Symbol -ne "ALL"){
+  if(-not (Has-TodayRow -sym $Symbol)){
+    Write-Host ("[GS-BUILD] FAIL-CLOSED: no today row for {0} in {1} today={2}" -f $Symbol,$csv,$today) -ForegroundColor Yellow
+    exit 2
+  }
+}
 $startUtc = (Get-Date).ToUniversalTime()
 
 function Kill-LeftoverVenvPython([datetime]$sinceUtc){
@@ -77,7 +91,11 @@ $syms = @("NVDA","SPY","QQQ")
 if ($Symbol -ne "ALL") { $syms = @($Symbol) }
 
 foreach($s in $syms){
-  $rc = RunPyTimeout @("-I","-X","faulthandler","-m","hybrid_ai_trading.gatescore.daily_build","--csv",$csv,"--symbol",$s) $TimeoutSec
+  if(-not (Has-TodayRow -sym $s)){
+    Write-Host ("[GS-BUILD] FAIL-CLOSED: no today row for {0} in {1} today={2}" -f $s,$csv,$today) -ForegroundColor Yellow
+    exit 2
+  }  $rc = $code = "import sys,runpy; sys.path.insert(0,r'$env:PYTHONPATH'); runpy.run_module('hybrid_ai_trading.gatescore.daily_build', run_name='__main__')"
+$rc = RunPyTimeout @("-I","-X","faulthandler","-c",$code,"--csv",$csv,"--symbol",$s) $TimeoutSec
   if ($rc -ne 0) {
     Write-Host "[GS-BUILD] FAIL symbol=$s rc=$rc logs=$logDir" -ForegroundColor Yellow
     exit $rc
