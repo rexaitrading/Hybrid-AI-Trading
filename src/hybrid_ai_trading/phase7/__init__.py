@@ -1,0 +1,1 @@
+"""Phase 7: Portfolio Optimizer (REAL fail-closed skeleton)."""
