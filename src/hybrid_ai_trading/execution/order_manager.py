@@ -20,7 +20,7 @@ import logging
 import uuid
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
-from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live, BlockGNotReady
 
 logger = logging.getLogger(__name__)
 
@@ -515,6 +515,9 @@ class OrderManager:
                     "order_id": oid,
                     "raw": raw,
                 }
+            except BlockGNotReady as e:
+                # FAIL-CLOSED: never swallow Block-G failure in live path
+                raise
             except Exception as e:
                 logger.error("OrderManager live submit error: %s", e)
                 return {
