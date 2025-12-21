@@ -183,11 +183,7 @@ $minMicro   = [double]$gsNVDA.minMicro
 $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday
 $spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday
 $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
-# ---- Per-symbol ready (institutional) ----
-# NOTE: GateScore global fields remain NVDA-based for compatibility; readiness is per-symbol.
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
+$phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
 
 $reasons = New-Object System.Collections.Generic.List[string]
 
@@ -215,6 +211,25 @@ $payload = [ordered]@{
     gatescore_samples_ok    = $gsSamplesOk
     gatescore_threshold_ok_today = $gsThreshOk
     gatescore_ok_today      = $gsOkToday
+
+    # Per-symbol GateScore detail (audit/Notion-friendly)
+    gatescore_by_symbol = [ordered]@{
+        NVDA = [ordered]@{
+            fresh=$gsNVDA.fresh; samples_ok=$gsNVDA.samplesOk; threshold_ok=$gsNVDA.threshOk; ok_today=$gsNVDA.okToday;
+            count_signals=$gsNVDA.cnt; pnl_samples=$gsNVDA.pnl; mean_edge_ratio=$gsNVDA.edge; mean_micro_score=$gsNVDA.micro;
+            min_signals=$gsNVDA.minSignals; min_pnl_samples=$gsNVDA.minPnl; min_edge_ratio=$gsNVDA.minEdge; min_micro_score=$gsNVDA.minMicro
+        }
+        SPY = [ordered]@{
+            fresh=$gsSPY.fresh; samples_ok=$gsSPY.samplesOk; threshold_ok=$gsSPY.threshOk; ok_today=$gsSPY.okToday;
+            count_signals=$gsSPY.cnt; pnl_samples=$gsSPY.pnl; mean_edge_ratio=$gsSPY.edge; mean_micro_score=$gsSPY.micro;
+            min_signals=$gsSPY.minSignals; min_pnl_samples=$gsSPY.minPnl; min_edge_ratio=$gsSPY.minEdge; min_micro_score=$gsSPY.minMicro
+        }
+        QQQ = [ordered]@{
+            fresh=$gsQQQ.fresh; samples_ok=$gsQQQ.samplesOk; threshold_ok=$gsQQQ.threshOk; ok_today=$gsQQQ.okToday;
+            count_signals=$gsQQQ.cnt; pnl_samples=$gsQQQ.pnl; mean_edge_ratio=$gsQQQ.edge; mean_micro_score=$gsQQQ.micro;
+            min_signals=$gsQQQ.minSignals; min_pnl_samples=$gsQQQ.minPnl; min_edge_ratio=$gsQQQ.minEdge; min_micro_score=$gsQQQ.minMicro
+        }
+    }
 
     gatescore_samples       = $gsCount
     gatescore_min_samples   = $minSignals
