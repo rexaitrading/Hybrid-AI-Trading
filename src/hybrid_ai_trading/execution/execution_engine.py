@@ -23,6 +23,7 @@ from hybrid_ai_trading.execution.paper_simulator import PaperSimulator
 from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
 from hybrid_ai_trading.risk.risk_manager import RiskManager
 from hybrid_ai_trading.execution.blockg_guard import require_blockg_ready
+from hybrid_ai_trading.runtime.run_context import RunContext
 
 logger = logging.getLogger("hybrid_ai_trading.execution.execution_engine")
 
@@ -109,6 +110,7 @@ class ExecutionEngine:
         symbol: str,
         side: str,
         qty: float,
+    # ------------------------------------------------------------------        ctx: RunContext | None = None,
         price: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Place an order with risk checks and routing."""
@@ -138,6 +140,7 @@ class ExecutionEngine:
                 symbol=symbol,
                 side=side,
                 size=qty,
+                ctx=ctx,
                 price=price or 0.0,
             )
 
