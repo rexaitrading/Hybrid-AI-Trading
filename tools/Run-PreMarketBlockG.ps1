@@ -14,7 +14,7 @@ $phase4 = Join-Path $PSScriptRoot "Check-Phase4Today.ps1"
 if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
 
 $phase5 = Join-Path $PSScriptRoot "Check-Phase5Today.ps1"
-& $phase5
+& $phase5 -Symbol $Symbol -RequireRunContext
 if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
 $root = (Resolve-Path ".").Path
 Set-Location $root
