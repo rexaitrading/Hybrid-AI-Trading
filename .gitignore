@@ -114,3 +114,5 @@ backup.csv
 
 # Allow tracked Block-G contract template
 !docs/contracts/blockg_status_stub.template.json
+
+tools/Kill-Spammers.ps1
