@@ -3,6 +3,7 @@ import math
 import os
 import pathlib
 import sys
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 from datetime import datetime, timezone
 
 # Windows selector loop is more reliable for ib_insync networking
@@ -13,6 +14,7 @@ if sys.platform.startswith("win"):
         pass
 
 import yaml
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 from ib_insync import IB, Stock
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
@@ -175,7 +177,7 @@ async def main():
                             return
                     if os.getenv("HAT_IS_PAPER","1").strip() == "0" and c.symbol.upper() in ("NVDA","SPY","QQQ"):
                         require_blockg_ready_for_live(c.symbol.upper())
-                    ib.placeOrder(c, sig.order)
+                    ib_place_order_chokepoint(ib, c, sig.order)
 
         except Exception as e:
             # log and move on; do not let Event loop die

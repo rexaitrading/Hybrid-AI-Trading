@@ -7,15 +7,18 @@ Fetch Polygon bars, grade breakouts, export CSV+JSON, optionally place IBKR brac
 import csv
 import json
 import logging
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 
 logger = logging.getLogger(__name__)
 import os
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 import requests
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 from dotenv import load_dotenv
 
 # Optional IBKR import (safe for tests)
@@ -134,9 +137,9 @@ def place_bracket_order(ib: IB, symbol: str, info: Dict[str, Any]) -> Dict[str, 
     stop_loss.parentId = parent.orderId
     stop_loss.transmit = True
 
-    ib.placeOrder(contract, parent)
-    ib.placeOrder(contract, take_profit)
-    ib.placeOrder(contract, stop_loss)
+    ib_place_order_chokepoint(ib, contract, parent)
+    ib_place_order_chokepoint(ib, contract, take_profit)
+    ib_place_order_chokepoint(ib, contract, stop_loss)
 
     return {
         "symbol": symbol,

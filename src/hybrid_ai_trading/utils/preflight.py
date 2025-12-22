@@ -3,6 +3,7 @@ import datetime as dt
 import json
 import os
 import re
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 
 try:
     from zoneinfo import ZoneInfo
@@ -137,7 +138,7 @@ def sanity_probe(
         env_flag = os.environ.get("HAT_IS_PAPER","1").strip()
         if env_flag == "0" and symbol.upper() in ("NVDA","SPY","QQQ"):
             require_blockg_ready_for_live(symbol.upper())
-        trade = ib.placeOrder(c, o)
+        trade = ib_place_order_chokepoint(ib, c, o)
         ib.sleep(2.0)
         _cancel_if_active(ib, trade)
         ib.sleep(1.0)

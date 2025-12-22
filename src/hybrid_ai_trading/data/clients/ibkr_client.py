@@ -9,6 +9,7 @@ IBKR Client (Hybrid AI Quant Pro v1.0 - Safe & Test-Friendly)
 
 
 import os
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 from typing import Any, Dict, List, Optional
 
 from ib_insync import IB, LimitOrder, MarketOrder, Stock
@@ -96,7 +97,7 @@ def place_market_stock(
 ) -> Dict[str, Any]:
     contract = Stock(symbol, "SMART", "USD")
     order = MarketOrder(action.upper(), abs(shares))
-    trade = ib.placeOrder(contract, order)
+    trade = ib_place_order_chokepoint(ib, contract, order)
     ib.sleep(1.0)
     return {"orderId": trade.order.orderId, "status": trade.orderStatus.status}
 
@@ -106,6 +107,6 @@ def place_limit_stock(
 ) -> Dict[str, Any]:
     contract = Stock(symbol, "SMART", "USD")
     order = LimitOrder(action.upper(), abs(shares), float(limit_price))
-    trade = ib.placeOrder(contract, order)
+    trade = ib_place_order_chokepoint(ib, contract, order)
     ib.sleep(1.0)
     return {"orderId": trade.order.orderId, "status": trade.orderStatus.status}

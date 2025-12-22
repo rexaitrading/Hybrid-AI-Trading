@@ -1,22 +1,25 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 # Baseline regression guard:
-# These are the ONLY files currently allowed to contain direct `ib.placeOrder(`.
-# If new call sites appear, this test FAILS (fail-closed).
+# The ONLY files allowed to contain direct `ib.placeOrder(` are:
+#   - broker/ib_safe.py (the chokepoint)
+#   - execution/paper_order.py (paper simulation)
 ALLOWED_FILES = {
     "src/hybrid_ai_trading/broker/ib_safe.py",
-    "src/hybrid_ai_trading/brokers/ib_adapter.py",
-    "src/hybrid_ai_trading/execution/brokers.py",
     "src/hybrid_ai_trading/execution/paper_order.py",
-    "src/hybrid_ai_trading/data/clients/ibkr_client.py",
-    "src/hybrid_ai_trading/pipelines/daily_stock_dashboard.py",
-    "src/hybrid_ai_trading/runners/ah_once.py",
-    "src/hybrid_ai_trading/runners/runner_stream.py",
-    "src/hybrid_ai_trading/utils/preflight.py",
-    "src/hybrid_ai_trading/utils/risk.py",
 }
+
+
+def _strip_docstrings_and_comments(txt: str) -> str:
+    # Remove triple-quoted blocks (best-effort) and line comments
+    txt = re.sub(r"(?s)'''(.*?)'''", "", txt)
+    txt = re.sub(r'(?s)\"\"\"(.*?)\"\"\"', "", txt)
+    txt = re.sub(r"(?m)#.*$", "", txt)
+    return txt
+
 
 def test_no_new_direct_ib_placeorder_call_sites():
     root = Path("src/hybrid_ai_trading")
@@ -24,6 +27,8 @@ def test_no_new_direct_ib_placeorder_call_sites():
 
     for p in root.rglob("*.py"):
         txt = p.read_text(encoding="utf-8-sig")
+        txt = _strip_docstrings_and_comments(txt)
+
         if "ib.placeOrder(" not in txt:
             continue
 
