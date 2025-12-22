@@ -173,7 +173,7 @@ async def main():
                                 return
                         except Exception:
                             return
-                    if os.getenv("HAT_IS_PAPER","1") == "0" and c.symbol.upper() in ("NVDA","SPY","QQQ"):
+                    if os.getenv("HAT_IS_PAPER","1").strip() == "0" and c.symbol.upper() in ("NVDA","SPY","QQQ"):
                         require_blockg_ready_for_live(c.symbol.upper())
                     ib.placeOrder(c, sig.order)
 

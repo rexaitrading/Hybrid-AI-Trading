@@ -68,6 +68,9 @@ def clamp_limit(
     side: str, q: Quotes, slip_pct: float, ticks_clamp: int, fallback_ticks: int
 ) -> float:
     side = side.upper()
+    # Block-G: place_bracket live guard (fail-closed)
+    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and str(getattr(contract, "symbol", symbol)).upper() in ("NVDA","SPY","QQQ"):
+        require_blockg_ready_for_live(str(getattr(contract, "symbol", symbol)).upper())
     tick = max(q.minTick, 0.01)
     if side == "BUY":
         base = q.ask if (q.ask and q.ask > 0) else (q.last or q.close or 10.0)
@@ -106,6 +109,9 @@ def dedupe_open_orders(
     ib: IB, symbol: str, side: str, mode: str = "cancel_older"
 ) -> Tuple[list[Trade], list[Trade]]:
     side = side.upper()
+    # Block-G: place_bracket live guard (fail-closed)
+    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and str(getattr(contract, "symbol", symbol)).upper() in ("NVDA","SPY","QQQ"):
+        require_blockg_ready_for_live(str(getattr(contract, "symbol", symbol)).upper())
     same = [
         t
         for t in ib.reqOpenOrders()
@@ -168,6 +174,9 @@ def place_bracket(
     order_ref: str,
 ) -> Tuple[Trade, Trade, Trade]:
     side = side.upper()
+    # Block-G: place_bracket live guard (fail-closed)
+    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and str(getattr(contract, "symbol", symbol)).upper() in ("NVDA","SPY","QQQ"):
+        require_blockg_ready_for_live(str(getattr(contract, "symbol", symbol)).upper())
     assert side in ("BUY", "SELL")
     parent_id = ib.client.getReqId()
     tp_id = parent_id + 1

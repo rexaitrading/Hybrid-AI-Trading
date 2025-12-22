@@ -118,7 +118,7 @@ def place_bracket_order(ib: IB, symbol: str, info: Dict[str, Any]) -> Dict[str, 
 
 
     # Block-G: fail-closed for LIVE auto-exec
-    if os.getenv("HAT_IS_PAPER","1") == "0" and str(symbol).upper() in ("NVDA","SPY","QQQ"):
+    if os.getenv("HAT_IS_PAPER","1").strip() == "0" and str(symbol).upper() in ("NVDA","SPY","QQQ"):
         require_blockg_ready_for_live(str(symbol).upper())
     qty = int(CAPITAL_PER_TRADE / info["last_close"])
     contract = Stock(symbol, "SMART", "USD")
