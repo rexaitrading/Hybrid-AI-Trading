@@ -15,5 +15,6 @@ If any gate fails: **FAIL-CLOSED** (no live orders).
 Set-Location C:\HAT
 $ErrorActionPreference="Continue"; Set-StrictMode -Version Latest
 
-.\tools\Run-PreMarketBlockG.ps1 -Symbol NVDA
+.\tools\Run-PreMarketBlockG-Smart.ps1 -Symbol NVDA
 "PREMARKET_BLOCKG_RC=$LASTEXITCODE" | Out-Host
+``r
