@@ -92,8 +92,7 @@ def place_order_phase5_with_guard(
     except Exception:
         is_paper = True
     if not is_paper:
-        # Block-G contract (Python-side). Fail-closed for live.
-        require_blockg_ready_for_live_symbol(symbol=symbol, status_path="logs/blockg_status_stub.json")
+        # Block-G: env-aware single gate (fail-closed for live)
         require_blockg_ready_for_live(symbol)
     trade = {
         "symbol": symbol,
