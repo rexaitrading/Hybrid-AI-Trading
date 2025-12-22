@@ -26,6 +26,14 @@ if(Test-Path $phase23){
 & ".\tools\Run-Phase4Validation.ps1"
 if($LASTEXITCODE -ne 0){ throw "[PRE] Phase4 validation failed rc=$LASTEXITCODE" }
 
+# --- RunContext (single source of truth for mode/state) ---
+if(Test-Path ".\tools\Build-RunContextStub.ps1"){
+  & ".\tools\Build-RunContextStub.ps1" -Symbol $Symbol | Out-Host
+} else {
+  Write-Host "[PRE] WARN: tools\Build-RunContextStub.ps1 not found" -ForegroundColor Yellow
+}
+
+
 # --- 2) GateScore events producers (best-effort; strict gating enforced downstream) ---
 try {
   if(Test-Path ".\tools\Write-NvdaGateScoreEventsFromPaperlive.ps1"){
