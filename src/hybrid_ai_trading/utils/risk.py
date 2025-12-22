@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import os
 from ib_insync import IB, MarketOrder
 
@@ -52,4 +53,4 @@ def _flatten_one(ib: IB, p):
     side = "SELL" if p.position > 0 else "BUY"
     # Block-G: do not allow live bypass on flatten
     _blockg_guard_live_risk_flatten(getattr(p.contract, "symbol", ""))
-    ib.placeOrder(p.contract, MarketOrder(side, abs(int(p.position))))
+    ib_place_order_chokepoint(ib, p.contract, MarketOrder(side, abs(int(p.position))))

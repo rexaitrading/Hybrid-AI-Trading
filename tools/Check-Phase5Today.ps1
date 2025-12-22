@@ -11,6 +11,13 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# BLOCKG_SINGLE_SEMANTICS_OWNER
+# Block-G is the single semantics owner for Phase-5 readiness.
+# This script must NOT duplicate contract checks; it calls Check-BlockGReady and trusts exit code.
+$checker = Join-Path (Split-Path -Parent $PSCommandPath) "Check-BlockGReady.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol | Out-Host
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 function Invoke-BlockGReady {
   [CmdletBinding()]
   param(
