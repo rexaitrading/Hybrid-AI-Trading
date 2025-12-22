@@ -14,6 +14,22 @@ $phase4 = Join-Path $PSScriptRoot "Check-Phase4Today.ps1"
 if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
 
 $phase5 = Join-Path $PSScriptRoot "Check-Phase5Today.ps1"
+# ALL_MODE_PHASE_GATES
+if($Symbol -eq "ALL"){
+  foreach($s in @("NVDA","SPY","QQQ")){
+    & $phase4
+    if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+
+    & $phase5 -Symbol $s -RequireRunContext
+    if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+  }
+}else{
+  & $phase4
+  if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+
+  & $phase5 -Symbol $Symbol -RequireRunContext
+  if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+}
 & $phase5 -Symbol $Symbol -RequireRunContext
 if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
 $root = (Resolve-Path ".").Path
