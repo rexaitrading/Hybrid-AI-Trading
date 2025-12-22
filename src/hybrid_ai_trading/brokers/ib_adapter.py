@@ -96,10 +96,13 @@ class IBAdapter(Broker):
                     is_paper = str(getattr(ctx, "mode", "")).strip().lower() != "live"
         except Exception:
             is_paper = True
-
-        if not is_paper:
-            require_blockg_ready_for_live(symbol)
-
+        # Block-G single chokepoint (ctx/json/env precedence inside contract)
+        contract_ensure_symbol_blockg_ready(
+            symbol,
+            allow_paper=True,
+            is_paper=(meta0.get("is_paper", None) if isinstance(meta0, dict) else None),
+            ctx=ctx,
+        )
         trade = self.ib.placeOrder(contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)

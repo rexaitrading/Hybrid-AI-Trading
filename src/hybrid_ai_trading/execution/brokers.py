@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Tuple
 
 
-from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 class BrokerError(Exception):
     pass
 
@@ -85,8 +85,13 @@ class IBKRClient(BrokerClient):
                 is_paper = False
         except Exception:
             pass
-        if not is_paper:
-            require_blockg_ready_for_live(symbol)
+        # Block-G single chokepoint (ctx/json/env precedence inside contract)
+        ensure_symbol_blockg_ready(
+            symbol,
+            allow_paper=True,
+            is_paper=(meta0.get("is_paper", None) if isinstance(meta0, dict) else None),
+            ctx=(meta0.get("ctx", None) if isinstance(meta0, dict) else None),
+        )
         c = self._contract(symbol)
         side = side.upper()
         o = (
