@@ -1,10 +1,19 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [ValidateSet("NVDA","SPY","QQQ")]
+    [ValidateSet("NVDA","SPY","QQQ","ALL")]
     [string]$Symbol = "NVDA"
 )
 
+
+# ALL_MODE_BLOCKGREADY
+if($Symbol -eq "ALL"){
+  foreach($s in @("NVDA","SPY","QQQ")){
+    & $PSCommandPath -Symbol $s
+    if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+  }
+  exit 0
+}
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -57,7 +66,7 @@ if (Test-Path $logsStatus) {
 } elseif (Test-Path $intelStatus) {
   $statusPath = $intelStatus
 } else {
-  Fail-Script "BLOCK-G: status JSON not found (.intel or logs)."
+  Fail-Contract "BLOCK-G: status JSON not found (.intel or logs)."
 }
 
 Write-Host "BLOCK-G: using status JSON at $statusPath" -ForegroundColor Cyan
@@ -79,6 +88,20 @@ $phase23Ok = To-StrictBool $status.phase23_health_ok_today
 $evHardOk  = To-StrictBool $status.ev_hard_daily_ok_today
 $gsFresh   = To-StrictBool $status.gatescore_fresh_today
 
+
+$phase4Ok = To-StrictBool $status.phase4_ok_today
+$gsSamplesOk = To-StrictBool $status.gatescore_samples_ok
+$gsThreshOk  = To-StrictBool $status.gatescore_threshold_ok_today
+
+if (-not $phase4Ok)    { Fail-Contract "BLOCK-G: phase4_ok_today is FALSE." }
+if (-not $gsSamplesOk) { Fail-Contract "BLOCK-G: gatescore_samples_ok is FALSE." }
+if (-not $gsThreshOk)  { Fail-Contract "BLOCK-G: gatescore_threshold_ok_today is FALSE." }
+
+# Optional (if present in payload, enforce; else ignore)
+if ($status.PSObject.Properties.Name -contains "min_samples_ok_today") {
+  $minSamplesOk = To-StrictBool $status.min_samples_ok_today
+  if (-not $minSamplesOk) { Fail-Contract "BLOCK-G: min_samples_ok_today is FALSE." }
+}
 if (-not $phase23Ok) { Fail-Contract "BLOCK-G: phase23_health_ok_today is FALSE." }
 if (-not $evHardOk)  { Fail-Contract "BLOCK-G: ev_hard_daily_ok_today is FALSE." }
 if (-not $gsFresh)   { Fail-Contract "BLOCK-G: gatescore_fresh_today is FALSE." }
