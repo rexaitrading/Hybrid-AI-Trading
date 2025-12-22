@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [ValidateSet("NVDA","SPY","QQQ","ALL")]
-    [string]$Symbol = "ALL"
+    [string]$Symbol = "ALL",
+    [switch]$StrictToday
 )
 
 Set-StrictMode -Version Latest
