@@ -110,6 +110,24 @@ def ensure_symbol_blockg_ready(symbol: str,
 
     st = load_blockg_status(status_path) if status_path else load_blockg_status()
 
+    # -----------------------------------------------------------------------
+    # Upgrade #2: freshness/quality checks (contract-only, no recomputation)
+    # LIVE path must satisfy these daily requirements before per-symbol gating.
+    # -----------------------------------------------------------------------
+    if not bool(getattr(st, "phase4_ok_today", False)):
+        raise RuntimeError("BLOCK-G: phase4_ok_today false")
+    if not bool(getattr(st, "ev_hard_daily_ok_today", False)):
+        raise RuntimeError("BLOCK-G: ev_hard_daily_ok_today false")
+    if hasattr(st, "phase23_health_ok_today") and (not bool(getattr(st, "phase23_health_ok_today", False))):
+        raise RuntimeError("BLOCK-G: phase23_health_ok_today false")
+
+    if not bool(getattr(st, "gatescore_fresh_today", False)):
+        raise RuntimeError("BLOCK-G: gatescore_fresh_today false")
+    if hasattr(st, "gatescore_samples_ok") and (not bool(getattr(st, "gatescore_samples_ok", False))):
+        raise RuntimeError("BLOCK-G: gatescore_samples_ok false")
+    if hasattr(st, "gatescore_threshold_ok_today") and (not bool(getattr(st, "gatescore_threshold_ok_today", False))):
+        raise RuntimeError("BLOCK-G: gatescore_threshold_ok_today false")
+
     # Conservative: unknown symbols are not allowed for live
     if not symbol_ready(st, sym):
         raise RuntimeError(f"BLOCK-G: {sym} not ready (per-symbol flag false)")
