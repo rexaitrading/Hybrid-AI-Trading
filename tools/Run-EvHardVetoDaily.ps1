@@ -25,7 +25,11 @@ if (Test-Path $snap) {
     $j = Get-Content $snap -Raw -Encoding utf8 | ConvertFrom-Json
     $d = [string]$j.as_of_date
     if($d.Length -ge 10){ $d = $d.Substring(0,10) }
-    if ($d -eq $today -and [bool]$j.ok_today) {
+    $okFlag = $false
+if ($j.PSObject.Properties.Name -contains "ok_today") { $okFlag = [bool]$j.ok_today }
+elseif ($j.PSObject.Properties.Name -contains "ok") { $okFlag = [bool]$j.ok }
+
+if ($d -eq $today -and $okFlag) {
       $ok = $true
       $reason = "snapshot_ok_today"
     } else {
