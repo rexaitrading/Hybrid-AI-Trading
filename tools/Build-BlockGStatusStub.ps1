@@ -28,6 +28,18 @@ $logsDir  = Join-Path $repoRoot "logs"
 if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
 $today = (Get-Date).ToString("yyyy-MM-dd")
+$today = (Get-Date).ToString("yyyy-MM-dd")
+
+# ---- GateScore session date (weekend-safe): derive from pnl summary ----
+$pnlPath = Join-Path $logsDir "gatescore_pnl_summary.csv"
+$gsAsOf = ""
+if (Test-Path $pnlPath) {
+  try {
+    $pnlRows = @(Import-Csv $pnlPath)
+    $gsAsOf = @($pnlRows | ForEach-Object { Slice-Date ([string]$_.as_of_date) } | Where-Object { $_ }) | Sort-Object | Select-Object -Last 1
+  } catch { $gsAsOf = "" }
+}
+if (-not $gsAsOf) { $gsAsOf = $today }
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 $statusPath = Join-Path $logsDir "blockg_status_stub.json"
 
@@ -134,7 +146,7 @@ function Get-GSFor([string]$sym) {
     $fresh=$false; $cnt=0; $pnl=0; $edge=0.0; $micro=0.0
     foreach ($r in $gsRows) {
         if (($r.symbol + "").ToUpperInvariant() -ne $sym.ToUpperInvariant()) { continue }
-        if ((Slice-Date ([string]$r.as_of_date)) -ne $today) { continue }
+        if ((Slice-Date ([string]$r.as_of_date)) -ne $gsAsOf) { continue }
         $fresh = $true
         [void][int]::TryParse([string]$r.count_signals, [ref]$cnt)
         if ($cnt -le 0) { $fresh = $false }
@@ -206,6 +218,9 @@ $payload = [ordered]@{
     phase4_ok_today         = $phase4Ok
 
     gatescore_fresh_today   = $gsFresh
+
+    gatescore_as_of_date = $gsAsOf
+    gatescore_fresh_for_session = $gsFresh
     gatescore_samples_ok    = $gsSamplesOk
     gatescore_threshold_ok_today = $gsThreshOk
     gatescore_ok_today      = $gsOkToday
