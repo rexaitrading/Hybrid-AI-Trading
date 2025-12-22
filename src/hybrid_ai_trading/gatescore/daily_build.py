@@ -27,6 +27,7 @@ def _float(x: Any) -> float:
 def main() -> int:
     ap = argparse.ArgumentParser("gatescore.daily_build")
     ap.add_argument("-Symbol", "--Symbol", dest="symbol", default=os.environ.get("HAT_SYMBOL", "NVDA"))
+    ap.add_argument("--symbol", dest="symbol")
     ap.add_argument("--csv", default=os.path.join("logs", "gatescore_daily_summary.csv"))
     ap.add_argument("--min-signals", type=int, default=100)
     ap.add_argument("--min-pnl-samples", type=int, default=300)

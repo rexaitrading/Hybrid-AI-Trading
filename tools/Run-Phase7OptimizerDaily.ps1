@@ -66,7 +66,7 @@ if (-not [bool]$s6.ok) { Fail-Closed "phase6_state_not_ok" @{ ok=$s6.ok; reason=
 if (($bg.as_of_date + "").Substring(0,10) -ne $today) { Fail-Closed "blockg_stale" @{ as_of_date=$bg.as_of_date; today=$today } }
 
 $symbols = @($Symbols.Split(",") | ForEach-Object { $_.Trim().ToUpperInvariant() } | Where-Object { $_ })
-if (-not $symbols -or $symbols.Count -eq 0) { Fail-Closed "no_symbols" @{ Symbols=$Symbols } }
+if (-not $symbols -or @($symbols).Count -eq 0) { Fail-Closed "no_symbols" @{ Symbols=$Symbols } }
 
 function BlockG-Ready([string]$sym) {
   $k = ($sym.ToLowerInvariant() + "_blockg_ready")
@@ -75,7 +75,7 @@ function BlockG-Ready([string]$sym) {
 
 $eligible = @()
 foreach($s in $symbols){ if (BlockG-Ready $s) { $eligible += $s } }
-if (-not $eligible -or $eligible.Count -eq 0) {
+if (-not $eligible -or @($eligible).Count -eq 0) {
   Fail-Closed "no_eligible_symbols" @{ symbols=$symbols; eligible=@() }
 }
 
@@ -83,7 +83,7 @@ if (-not $eligible -or $eligible.Count -eq 0) {
 $w = @{}
 foreach($s in $symbols){ $w[$s] = 0.0 }
 
-$base = 1.0 / [double]$eligible.Count
+$base = 1.0 / [double]@($eligible).Count
 foreach($s in $eligible){ $w[$s] = $base }
 
 $capped = @{}

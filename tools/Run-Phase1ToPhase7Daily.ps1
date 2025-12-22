@@ -61,17 +61,17 @@ Write-Host "[P1-7] DailyProducersSuite ..." -ForegroundColor Cyan
 if ($LASTEXITCODE -ne 0) { throw "[P1-7] DailyProducersSuite failed exit=$LASTEXITCODE" }
 
 # ---- Phase6 ----
-$p6 = Join-Path $root "tools\Run-Phase6DailySummary.ps1"
+$p6 = Join-Path $root "tools\Build-Phase6PortfolioState.ps1"
 if (-not (Test-Path $p6)) { throw "[P1-7] Missing: $p6" }
 Write-Host "[P1-7] Phase6 daily summary ..." -ForegroundColor Cyan
-& $p6 -AsOfDate $AsOfDate -OutDir "logs\phase6"
+& $p6 -OutPath "logs\phase6_portfolio_state.json"
 if ($LASTEXITCODE -ne 0) { throw "[P1-7] Phase6 failed exit=$LASTEXITCODE" }
 
 # ---- Phase7 ----
-$p7 = Join-Path $root "tools\Run-Phase7Optimizer.ps1"
+$p7 = Join-Path $root "tools\Run-Phase7OptimizerDaily.ps1"
 if (-not (Test-Path $p7)) { throw "[P1-7] Missing: $p7" }
 Write-Host "[P1-7] Phase7 optimizer ..." -ForegroundColor Cyan
-& $p7 -AsOfDate $AsOfDate -OutDir "logs\phase7" -Symbols "NVDA,SPY,QQQ" -MaxWeight 0.60
+& $p7 -Enable -StatePath "logs\phase6_portfolio_state.json" -BlockGPath "logs\blockg_status_stub.json" -OutDir "logs\phase7" -OutPath "logs\phase7_optimizer_output.json" -Symbols "NVDA,SPY,QQQ" -MaxWeight 0.60
 if ($LASTEXITCODE -ne 0) { throw "[P1-7] Phase7 failed exit=$LASTEXITCODE" }
 
 Write-Host "[P1-7] DONE ✅ Phase1..Phase7 daily REAL pipeline complete." -ForegroundColor Green
