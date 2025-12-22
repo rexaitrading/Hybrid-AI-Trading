@@ -63,9 +63,9 @@ if (-not $asOf) { $asOf = $today }
 $phase23   = Get-StatusFieldSafe -Status $status -Name "phase23_health_ok_today"
 $evHard    = Get-StatusFieldSafe -Status $status -Name "ev_hard_daily_ok_today"
 $gsFresh   = Get-StatusFieldSafe -Status $status -Name "gatescore_fresh_today"
-$nvdaReady = (Invoke-BlockGReady -Symbol "NVDA" -eq 0)
-$spyReady  = (Invoke-BlockGReady -Symbol "SPY"  -eq 0)
-$qqqReady  = (Invoke-BlockGReady -Symbol "QQQ"  -eq 0)
+$nvdaReady = ((Invoke-BlockGReady -Symbol "NVDA") -eq 0)
+$spyReady  = ((Invoke-BlockGReady -Symbol "SPY") -eq 0)
+$qqqReady  = ((Invoke-BlockGReady -Symbol "QQQ") -eq 0)
 
 # Derive mode from env flag (default paper-safe)
 $mode = "paper"
@@ -103,3 +103,4 @@ Write-Host "[RUNCTX] RunContext snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
 
 exit 0
+
