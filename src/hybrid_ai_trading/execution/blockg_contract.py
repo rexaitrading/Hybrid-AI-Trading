@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-
+from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
+from hybrid_ai_trading.execution.blockg_enforce import BlockGNotReady
 from hybrid_ai_trading.runtime.run_context_reader import load_run_context
 from hybrid_ai_trading.runtime.run_context import RunContext
 
@@ -115,19 +116,19 @@ def ensure_symbol_blockg_ready(symbol: str,
     # LIVE path must satisfy these daily requirements before per-symbol gating.
     # -----------------------------------------------------------------------
     if not bool(getattr(st, "phase4_ok_today", False)):
-        raise RuntimeError("BLOCK-G: phase4_ok_today false")
+        raise BlockGNotReady("BLOCK-G: phase4_ok_today false")
     if not bool(getattr(st, "ev_hard_daily_ok_today", False)):
-        raise RuntimeError("BLOCK-G: ev_hard_daily_ok_today false")
+        raise BlockGNotReady("BLOCK-G: ev_hard_daily_ok_today false")
     if hasattr(st, "phase23_health_ok_today") and (not bool(getattr(st, "phase23_health_ok_today", False))):
-        raise RuntimeError("BLOCK-G: phase23_health_ok_today false")
+        raise BlockGNotReady("BLOCK-G: phase23_health_ok_today false")
 
     if not bool(getattr(st, "gatescore_fresh_today", False)):
-        raise RuntimeError("BLOCK-G: gatescore_fresh_today false")
+        raise BlockGNotReady("BLOCK-G: gatescore_fresh_today false")
     if hasattr(st, "gatescore_samples_ok") and (not bool(getattr(st, "gatescore_samples_ok", False))):
-        raise RuntimeError("BLOCK-G: gatescore_samples_ok false")
+        raise BlockGNotReady("BLOCK-G: gatescore_samples_ok false")
     if hasattr(st, "gatescore_threshold_ok_today") and (not bool(getattr(st, "gatescore_threshold_ok_today", False))):
-        raise RuntimeError("BLOCK-G: gatescore_threshold_ok_today false")
+        raise BlockGNotReady("BLOCK-G: gatescore_threshold_ok_today false")
 
     # Conservative: unknown symbols are not allowed for live
     if not symbol_ready(st, sym):
-        raise RuntimeError(f"BLOCK-G: {sym} not ready (per-symbol flag false)")
+        raise BlockGNotReady(f"BLOCK-G: {sym} not ready (per-symbol flag false)")
