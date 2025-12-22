@@ -6,6 +6,17 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Invoke-BlockGReady {
+  [CmdletBinding()]
+  param(
+    [ValidateSet("NVDA","SPY","QQQ")]
+    [string]$Symbol
+  )
+  $checker = Join-Path (Split-Path -Parent $PSCommandPath) "Check-BlockGReady.ps1"
+  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol | Out-Host
+  return $LASTEXITCODE
+}
+
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
@@ -52,9 +63,9 @@ if (-not $asOf) { $asOf = $today }
 $phase23   = Get-StatusFieldSafe -Status $status -Name "phase23_health_ok_today"
 $evHard    = Get-StatusFieldSafe -Status $status -Name "ev_hard_daily_ok_today"
 $gsFresh   = Get-StatusFieldSafe -Status $status -Name "gatescore_fresh_today"
-$nvdaReady = Get-StatusFieldSafe -Status $status -Name "nvda_blockg_ready"
-$spyReady  = Get-StatusFieldSafe -Status $status -Name "spy_blockg_ready"
-$qqqReady  = Get-StatusFieldSafe -Status $status -Name "qqq_blockg_ready"
+$nvdaReady = (Invoke-BlockGReady -Symbol "NVDA" -eq 0)
+$spyReady  = (Invoke-BlockGReady -Symbol "SPY"  -eq 0)
+$qqqReady  = (Invoke-BlockGReady -Symbol "QQQ"  -eq 0)
 
 # Derive mode from env flag (default paper-safe)
 $mode = "paper"

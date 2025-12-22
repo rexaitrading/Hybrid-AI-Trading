@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory=$false)]
-  [ValidateSet("NVDA","SPY","QQQ")]
+  [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
   [Parameter(Mandatory=$false)]
@@ -10,6 +10,17 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+function Invoke-BlockGReady {
+  [CmdletBinding()]
+  param(
+    [ValidateSet("NVDA","SPY","QQQ")]
+    [string]$Symbol
+  )
+  $checker = Join-Path (Split-Path -Parent $PSCommandPath) "Check-BlockGReady.ps1"
+  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol | Out-Host
+  return $LASTEXITCODE
+}
 
 function Fail-Contract([string]$Msg){
   [Console]::Error.WriteLine($Msg)
@@ -41,6 +52,17 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $today = (Get-Date).ToString("yyyy-MM-dd")
 
+
+# ALL_MODE_PHASE5TODAY
+if($Symbol -eq "ALL"){
+  foreach($s in @("NVDA","SPY","QQQ")){
+    powershell -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath -Symbol $s @(
+      $(if($RequireRunContext){"-RequireRunContext"}else{$null})
+    ) | Out-Host
+    if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+  }
+  exit 0
+}
 # -----------------------------------------------------------------------------
 # 1) EV-hard daily CSV must include a today row with ok==true (fail-closed)
 # -----------------------------------------------------------------------------
