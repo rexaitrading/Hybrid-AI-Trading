@@ -40,6 +40,7 @@ def _blockg_guard_live_ib_safe(symbol: str) -> None:
 
 
 # ----------------------------- Retry / Backoff ----------------------------- #
+
 def retry(
     exc_types: Tuple[type, ...] = (Exception,),
     attempts: int = 3,
