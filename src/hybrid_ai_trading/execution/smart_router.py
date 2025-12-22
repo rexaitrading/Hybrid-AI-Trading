@@ -18,6 +18,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional
 
 from hybrid_ai_trading.execution.latency_monitor import LatencyMonitor
+from hybrid_ai_trading.runtime.run_context import RunContext
 
 logger = logging.getLogger("hybrid_ai_trading.execution.smart_router")
 
@@ -111,6 +112,7 @@ class SmartOrderRouter:
         side: str,
         size: float,
         price: float,
+        ctx: RunContext | None = None,
         timeout_sec: Optional[float] = None,
     ) -> Dict[str, Any]:
         ranked_brokers = self.rank_brokers()
@@ -132,7 +134,7 @@ class SmartOrderRouter:
                         require_blockg_ready_for_live(sym_u)
 
                     return self._timeout_wrapper(
-                        client.submit_order,
+                        submit_order_fn,
                         symbol=symbol,
                         qty=size,
                         side=side.lower(),
