@@ -5,8 +5,15 @@ import sys
 from pathlib import Path
 
 def test_phase1_backtest_replay_smoke(tmp_path: Path):
-    inp = Path("tests/_fixtures/phase1_tiny.csv")
-    assert inp.exists()
+    # Write a tiny CSV inside tmp_path (CI-safe; no repo fixture files)
+    inp = tmp_path / "phase1_tiny.csv"
+    inp.write_text(
+        "ts,symbol,price\n"
+        "2025-12-22T09:30:00Z,NVDA,100\n"
+        "2025-12-22T09:30:01Z,NVDA,100.1\n"
+        "2025-12-22T09:30:02Z,NVDA,100.2\n",
+        encoding="utf-8",
+    )
 
     p = subprocess.run(
         [sys.executable, "runners/backtest_replay.py", "--input", str(inp), "--batch", "2", "--log", str(tmp_path/"bt.jsonl")],
