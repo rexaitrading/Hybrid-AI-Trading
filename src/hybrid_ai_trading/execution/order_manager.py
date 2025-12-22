@@ -1,3 +1,4 @@
+from hybrid_ai_trading.runtime.run_context_reader import load_run_context
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 from hybrid_ai_trading.runtime.run_context import RunContext
 """
@@ -25,6 +26,25 @@ from typing import Any, Dict, Optional
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live, BlockGNotReady
 
 logger = logging.getLogger(__name__)
+
+
+def _get_ctx_cached(obj: object):
+    """
+    Cache and return RunContext. If unavailable, returns None.
+    Live intent enforcement remains fail-closed in blockg_contract.
+    """
+    try:
+        cur = getattr(obj, "_ctx", None)
+        if cur is not None:
+            return cur
+    except Exception:
+        return None
+    try:
+        rc = load_run_context()
+        setattr(obj, "_ctx", rc)
+        return rc
+    except Exception:
+        return None
 
 
 class OrderManager:
@@ -495,11 +515,11 @@ class OrderManager:
             try:
                 # Block-G lowest-layer enforcement (OrderManager live path)
                 # Fail-closed: any live symbol must satisfy contract.
-                ensure_symbol_blockg_ready(str(symbol).upper().strip(), allow_paper=True, is_paper=False, ctx=None)
+                ensure_symbol_blockg_ready(str(symbol).upper().strip(), allow_paper=True, is_paper=False, ctx=_get_ctx_cached(self))
                 # --- Block-G hard gate for LIVE orders (fail-closed for NVDA/SPY/QQQ)
                 sym_u = str(symbol).upper()
                 if (not self.dry_run) and sym_u in ("NVDA","SPY","QQQ"):
-                    ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=None)
+                    ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=_get_ctx_cached(self))
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
