@@ -1,3 +1,4 @@
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 from hybrid_ai_trading.runtime.run_context import RunContext
 """
 OrderManager (minimal, test-friendly)
@@ -498,7 +499,7 @@ class OrderManager:
                 # --- Block-G hard gate for LIVE orders (fail-closed for NVDA/SPY/QQQ)
                 sym_u = str(symbol).upper()
                 if (not self.dry_run) and sym_u in ("NVDA","SPY","QQQ"):
-                    require_blockg_ready_for_live(sym_u)
+                    ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=None)
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
