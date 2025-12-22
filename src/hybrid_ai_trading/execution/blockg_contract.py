@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+from hybrid_ai_trading.runtime.run_context_reader import load_run_context
+from hybrid_ai_trading.runtime.run_context import RunContext
+
 import json
 import os
 from dataclasses import dataclass
@@ -56,12 +59,37 @@ def symbol_ready(st: BlockGStatus, symbol: str) -> bool:
 # ---------------------------------------------------------------------------
 # Backward-compatible contract gate (tests + legacy call sites expect this name)
 # ---------------------------------------------------------------------------
-def ensure_symbol_blockg_ready(
-    symbol: str,
+def _resolve_is_paper_from_ctx(ctx: RunContext | None = None) -> bool:
+    """
+    Canonical is_paper resolver:
+      1) ctx.is_paper
+      2) logs/run_context.json via load_run_context()
+      3) env:HAT_IS_PAPER
+    Default is paper-safe.
+    """
+    try:
+        if ctx is not None:
+            return bool(getattr(ctx, "is_paper", True))
+    except Exception:
+        return False  # fail-closed -> LIVE -> contract blocks
+
+    try:
+        rc = load_run_context()
+        return bool(getattr(rc, "is_paper", True))
+    except Exception:
+        pass
+
+    try:
+        return os.environ.get("HAT_IS_PAPER", "1").strip() != "0"
+    except Exception:
+        return True
+
+def ensure_symbol_blockg_ready(symbol: str,
     *,
     allow_paper: bool = True,
     is_paper: Optional[bool] = None,
     status_path: Optional[str] = None,
+    ctx: RunContext | None = None,
 ) -> None:
     """
     Fail-closed contract gate.
@@ -76,9 +104,7 @@ def ensure_symbol_blockg_ready(
 
     # Determine paper/live intent (fail-safe default: paper)
     if is_paper is None:
-        env_flag = str(os.environ.get("HAT_IS_PAPER", "")).strip()
-        is_paper = (env_flag != "0")
-
+        is_paper = _resolve_is_paper_from_ctx(ctx)
     if bool(is_paper) and bool(allow_paper):
         return
 
