@@ -1,51 +1,55 @@
 from __future__ import annotations
 
 import csv
+import json
 from pathlib import Path
-from typing import Iterable, List
-
-from .schemas import GateScoreDailyRow
+from typing import Any, Dict, Iterable, List
 
 
-def read_daily_csv(path: str | Path) -> List[GateScoreDailyRow]:
+def _read_text_bom_safe(path: Path) -> str:
+    return path.read_text(encoding="utf-8-sig")
+
+
+def read_csv_rows(path: str | Path) -> List[Dict[str, Any]]:
     p = Path(path)
     if not p.exists():
         return []
-    rows: List[GateScoreDailyRow] = []
-    with p.open("r", encoding="utf-8", newline="") as f:
-        r = csv.DictReader(f)
-        for d in r:
-            rows.append(
-                GateScoreDailyRow(
-                    as_of_date=str(d.get("as_of_date", ""))[:10],
-                    symbol=str(d.get("symbol", "")).upper(),
-                    count_signals=int(float(d.get("count_signals", 0) or 0)),
-                    pnl_samples=int(float(d.get("pnl_samples", 0) or 0)),
-                    mean_edge_ratio=float(d.get("mean_edge_ratio", 0) or 0),
-                    mean_micro_score=float(d.get("mean_micro_score", 0) or 0),
-                    mean_pnl=float(d.get("mean_pnl", 0) or 0),
-                )
-            )
-    return rows
+    raw = _read_text_bom_safe(p)
+    if not raw.strip():
+        return []
+    reader = csv.DictReader(raw.splitlines())
+    return [dict(r) for r in reader]
 
 
-def write_daily_csv(path: str | Path, rows: Iterable[GateScoreDailyRow]) -> None:
+def write_csv_rows(path: str | Path, rows: Iterable[Dict[str, Any]], fieldnames: List[str]) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    rows = list(rows)
-    with p.open("w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(
-            f,
-            fieldnames=["as_of_date","symbol","count_signals","pnl_samples","mean_edge_ratio","mean_micro_score","mean_pnl"],
-        )
-        w.writeheader()
-        for r in rows:
-            w.writerow({
-                "as_of_date": r.as_of_date,
-                "symbol": r.symbol,
-                "count_signals": r.count_signals,
-                "pnl_samples": r.pnl_samples,
-                "mean_edge_ratio": r.mean_edge_ratio,
-                "mean_micro_score": r.mean_micro_score,
-                "mean_pnl": r.mean_pnl,
-            })
+    import io as _io
+    s = _io.StringIO()
+    w = csv.DictWriter(s, fieldnames=fieldnames, lineterminator="\n")
+    w.writeheader()
+    for r in rows:
+        w.writerow({k: r.get(k, "") for k in fieldnames})
+    p.write_text(s.getvalue(), encoding="utf-8")
+
+
+def append_jsonl(path: str | Path, obj: Dict[str, Any]) -> None:
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(obj, ensure_ascii=True)
+    with p.open("a", encoding="utf-8", newline="\n") as f:
+        f.write(line + "\n")
+
+
+def read_jsonl(path: str | Path) -> List[Dict[str, Any]]:
+    p = Path(path)
+    if not p.exists():
+        return []
+    raw = _read_text_bom_safe(p)
+    out: List[Dict[str, Any]] = []
+    for ln in raw.splitlines():
+        ln = ln.strip()
+        if not ln:
+            continue
+        out.append(json.loads(ln))
+    return out
