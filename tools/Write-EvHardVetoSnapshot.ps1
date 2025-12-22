@@ -1,7 +1,5 @@
 [CmdletBinding()]
-param(
-  [switch]$ForceOk
-)
+param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
@@ -9,25 +7,25 @@ $ErrorActionPreference="Stop"
 $root = (Resolve-Path ".").Path
 Set-Location $root
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
-$tsUtc  = (Get-Date).ToUniversalTime().ToString("o")
+$build   = Join-Path $root "tools\Build-EvHardSnapshot.ps1"
+$compute = Join-Path $root "tools\Compute-Phase5EvHardSnapshotInput.ps1"
+$export  = Join-Path $root "tools\Export-Phase5EvHardVetoDailySnapshot.ps1"
 
-$logDir = Join-Path $root "logs"
-New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-$out = Join-Path $logDir "phase5_ev_hard_veto_snapshot.json"
+if(-not (Test-Path $build))   { throw "[EV-HARD-SNAP] missing $build" }
+if(-not (Test-Path $compute)) { throw "[EV-HARD-SNAP] missing $compute" }
+if(-not (Test-Path $export))  { throw "[EV-HARD-SNAP] missing $export" }
 
-# FAIL-CLOSED default. Only ForceOk flips it true.
-$ok = [bool]$ForceOk
-$reason = if($ok){"forced_ok_for_dev"}else{"no_real_ev_hard_snapshot_yet"}
+& $build
+if($LASTEXITCODE -ne 0){ throw "[EV-HARD-SNAP] Build-EvHardSnapshot failed rc=$LASTEXITCODE" }
 
-$payload = [ordered]@{
-  ts_utc = $tsUtc
-  as_of_date = $today
-  ok_today = $ok
-  reason = $reason
-}
-$json = $payload | ConvertTo-Json -Depth 6
-[System.IO.File]::WriteAllText($out, ($json + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+& $compute -EvidencePath ".\logs\ev_hard_snapshot.json"
+if($LASTEXITCODE -ne 0){ throw "[EV-HARD-SNAP] Compute-Phase5EvHardSnapshotInput failed rc=$LASTEXITCODE" }
 
-Write-Host "[EV-HARD-SNAP] wrote $out ok=$ok today=$today" -ForegroundColor Green
+& $export
+if($LASTEXITCODE -ne 0){ throw "[EV-HARD-SNAP] Export-Phase5EvHardVetoDailySnapshot failed rc=$LASTEXITCODE" }
+
+$out = Join-Path $root "logs\phase5_ev_hard_veto_snapshot.json"
+if(-not (Test-Path $out)){ throw "[EV-HARD-SNAP] snapshot not produced: $out" }
+
+Write-Host "[EV-HARD-SNAP] OK wrote $out" -ForegroundColor Green
 exit 0
