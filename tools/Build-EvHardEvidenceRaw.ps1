@@ -56,16 +56,18 @@ if (Test-Path $phase23Path) {
 $gsPath = ".\logs\gatescore_daily_summary.csv"
 $gsOk = $false
 $gsAsOf = ""
+$gsFoundTodayRow = $false
+$gsCountSignals = 0
 if (Test-Path $gsPath) {
   try {
     $rows = @(Import-Csv $gsPath)
     $row = $rows | Where-Object { $_.symbol -eq "NVDA" -and ($_.as_of_date + "") -eq $today } | Select-Object -First 1
     if ($null -ne $row) {
+      $gsFoundTodayRow = $true
       $gsAsOf = (($row.as_of_date) + "").Trim()
-      # ok if thresholds/samples satisfied implicitly by existence of today row and count_signals>0
-      $cs = 0
-      [void][int]::TryParse([string]$row.count_signals, [ref]$cs)
-      $gsOk = ($cs -gt 0)
+      # evidence-only: count_signals>0; strict thresholds enforced downstream (Block-G)
+      [void][int]::TryParse([string]$row.count_signals, [ref]$gsCountSignals)
+      $gsOk = ($gsCountSignals -gt 0)
     }
   } catch {}
 }
@@ -74,10 +76,12 @@ if (Test-Path $gsPath) {
 $ok = $false
 $reason = "missing_inputs_failclosed"
 $reasons = New-Object System.Collections.Generic.List[string]
+$warnings = New-Object System.Collections.Generic.List[string]
 
 if ($phase4AsOf -ne $today -or -not $phase4Ok) { $reasons.Add("phase4_not_ok_or_stale") }
 if ($phase23AsOf -ne $today -or -not $phase23Ok) { $reasons.Add("phase23_not_ok_or_stale") }
-if ($gsAsOf -ne $today -or -not $gsOk) { $reasons.Add("gatescore_not_ok_or_missing_today_row") }
+# GateScore is recorded as a warning here; Block-G enforces strict today-ness for LIVE readiness
+if ($gsAsOf -ne $today -or -not $gsOk) { $warnings.Add("gatescore_not_ok_or_missing_today_row") }
 
 if ($reasons.Count -eq 0) {
   $ok = $true
@@ -92,10 +96,18 @@ $out = [ordered]@{
   as_of_date = $today
   ok = $ok
   reason = $reason
+  warnings = @($warnings)
   inputs = [ordered]@{
     phase4 = [ordered]@{ as_of_date=$phase4AsOf; ok=$phase4Ok; path=$phase4Path }
     phase23 = [ordered]@{ as_of_date=$phase23AsOf; ok=$phase23Ok; path=$phase23Path }
-    gatescore = [ordered]@{ as_of_date=$gsAsOf; ok=$gsOk; path=$gsPath; symbol="NVDA" }
+    gatescore = [ordered]@{
+      as_of_date = $gsAsOf
+      ok = $gsOk
+      found_today_row = $gsFoundTodayRow
+      count_signals = $gsCountSignals
+      path = $gsPath
+      symbol = "NVDA"
+    }
   }
 } | ConvertTo-Json -Depth 8
 
