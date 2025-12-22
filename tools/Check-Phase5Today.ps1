@@ -17,7 +17,8 @@ $ErrorActionPreference = "Stop"
 $checker = Join-Path (Split-Path -Parent $PSCommandPath) "Check-BlockGReady.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol | Out-Host
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
+Write-Host ("PHASE5: OK today ({0}) symbol={1}" -f (Get-Date).ToString("yyyy-MM-dd"), $Symbol) -ForegroundColor Green
+exit 0
 function Invoke-BlockGReady {
   [CmdletBinding()]
   param(
