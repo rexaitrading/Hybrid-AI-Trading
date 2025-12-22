@@ -495,7 +495,7 @@ class OrderManager:
             try:
                 # Block-G lowest-layer enforcement (OrderManager live path)
                 # Fail-closed: any live symbol must satisfy contract.
-                require_blockg_ready_for_live(symbol)
+                ensure_symbol_blockg_ready(str(symbol).upper().strip(), allow_paper=True, is_paper=False, ctx=None)
                 # --- Block-G hard gate for LIVE orders (fail-closed for NVDA/SPY/QQQ)
                 sym_u = str(symbol).upper()
                 if (not self.dry_run) and sym_u in ("NVDA","SPY","QQQ"):
