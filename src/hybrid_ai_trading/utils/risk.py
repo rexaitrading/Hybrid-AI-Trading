@@ -9,7 +9,7 @@ from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_
 
 def _blockg_guard_live_risk_flatten(symbol: str) -> None:
     """
-    Fail-closed Block-G guard for any direct ib.placeOrder() usage in utils.risk flatten path.
+    Fail-closed Block-G guard for any direct direct IB order placement usage in utils.risk flatten path.
 
     Policy:
     - Only enforce for NVDA/SPY/QQQ (extend later).
