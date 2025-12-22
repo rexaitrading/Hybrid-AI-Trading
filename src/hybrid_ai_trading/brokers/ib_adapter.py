@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 from hybrid_ai_trading.runtime.run_context import RunContext
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 
 def require_blockg_ready_for_live(symbol: str) -> None:
     """
@@ -103,7 +104,7 @@ class IBAdapter(Broker):
             is_paper=(meta0.get("is_paper", None) if isinstance(meta0, dict) else None),
             ctx=ctx,
         )
-        trade = self.ib.placeOrder(contract, order)
+        trade = self.ib_place_order_chokepoint(ib, contract, order)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)
         st = trade.orderStatus

@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 class BrokerError(Exception):
     pass
 
@@ -99,7 +100,7 @@ class IBKRClient(BrokerClient):
             if order_type.upper() == "MARKET"
             else LimitOrder(side, abs(qty), limit_px)
         )
-        t = self.ib.placeOrder(c, o)
+        t = self.ib_place_order_chokepoint(ib, c, o)
         self.ib.sleep(0.5)
         order_id = str(t.order.orderId)
         fills = [
