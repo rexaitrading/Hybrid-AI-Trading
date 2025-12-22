@@ -133,11 +133,16 @@ foreach ($it in $eventFiles) {
     }
     if ($latest -eq "") { continue }
 
-    $targetDate = $latest
-    if ($targetDate -ne $today) {
+    $targetDate = if($StrictToday){ $today } else { $latest }
+
+    if (-not $StrictToday -and $targetDate -ne $today) {
         Write-Host ("GateScore PnL summary: WARN {0} events are stale (latest={1}, today={2})" -f $sym,$targetDate,$today) -ForegroundColor Yellow
     }
-$todayEvents = @()
+    if ($StrictToday -and $latest -ne $today) {
+        Write-Host ("GateScore PnL summary: STRICT-TODAY no events for today={0} (latest={1})" -f $today,$latest) -ForegroundColor Yellow
+    }
+
+    $todayEvents = @()
     foreach ($e in $events) {
         if ((Get-EventDate $e) -eq $targetDate) { $todayEvents += $e }
     }

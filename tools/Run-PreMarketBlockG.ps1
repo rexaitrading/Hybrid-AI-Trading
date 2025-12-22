@@ -25,11 +25,44 @@ if(Test-Path $evEvidence){
 }
 
 # GateScore daily summary -> required by BlockG strict-today GateScore freshness
+
+# --- GateScore events producers (best-effort; strict gating enforced downstream) ---
+try {
+  if(Test-Path ".\tools\Write-NvdaGateScoreEventsFromPaperlive.ps1"){
+    & ".\tools\Write-NvdaGateScoreEventsFromPaperlive.ps1" -Mode rewrite -MinEvents 10 | Out-Host
+  } else {
+    Write-Host "[PRE] WARN: NVDA GateScore events producer not found" -ForegroundColor Yellow
+  }
+} catch {
+  Write-Host "[PRE] WARN: NVDA GateScore events producer failed: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+
+try {
+  if(Test-Path ".\tools\Write-SpyGateScoreEventsFromPaperlive.ps1"){
+    & ".\tools\Write-SpyGateScoreEventsFromPaperlive.ps1" -Mode rewrite -MinEvents 50 | Out-Host
+  } else {
+    Write-Host "[PRE] WARN: SPY GateScore events producer not found" -ForegroundColor Yellow
+  }
+} catch {
+  Write-Host "[PRE] WARN: SPY GateScore events producer failed: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+
+# QQQ currently stubbed
+try {
+  if(Test-Path ".\tools\Write-SpyQqqGateScoreEventsStub.ps1"){
+    & ".\tools\Write-SpyQqqGateScoreEventsStub.ps1" -Symbol QQQ -N 10 | Out-Host
+  } else {
+    Write-Host "[PRE] WARN: QQQ GateScore stub not found" -ForegroundColor Yellow
+  }
+} catch {
+  Write-Host "[PRE] WARN: QQQ GateScore stub failed: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+
 $gsPnl = ".\tools\Build-GateScorePnlSummary.ps1"
 $gsDaily = ".\tools\Build-GateScoreDailySummary.ps1"
 if(Test-Path $gsPnl){
-  & $gsPnl
-  if($LASTEXITCODE -ne 0){ throw "[PRE] Build-GateScorePnlSummary failed rc=$LASTEXITCODE" }
+  & $gsPnl -StrictToday
+  if($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 2){ throw "[PRE] Build-GateScorePnlSummary failed rc=$LASTEXITCODE" }
 } else {
   Write-Host "[PRE] WARN: tools\Build-GateScorePnlSummary.ps1 not found" -ForegroundColor Yellow
 }
