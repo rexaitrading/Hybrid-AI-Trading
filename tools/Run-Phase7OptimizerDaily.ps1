@@ -1,19 +1,20 @@
 [CmdletBinding()]
 param(
-  [string]$StatePath = ".\logs\phase6_portfolio_state.json",
-  [string]$BlockGPath = ".\logs\blockg_status_stub.json",
-  [string]$OutDir = ".\logs\phase7",
-  [string]$OutPath = ".\logs\phase7_optimizer_output.json",
-  [string]$Symbols = "NVDA,SPY,QQQ",
-  [double]$MaxWeight = 0.60,
-  [double]$MinWeight = 0.00,
+  [string]$StatePath   = ".\logs\phase6_portfolio_state.json",
+  [string]$BlockGPath  = ".\logs\blockg_status_stub.json",
+  [string]$OutDir      = ".\logs\phase7",
+  [string]$OutPath     = ".\logs\phase7_optimizer_output.json",
+  [string]$SymbolsRaw  = "NVDA,SPY,QQQ",
+  [double]$MaxWeight   = 0.60,
+  [double]$MinWeight   = 0.00,
   [switch]$Enable
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-function Write-Utf8NoBom([string]$Path, [string]$Text) {
+function Write-Utf8NoBom {
+  param([string]$Path, [string]$Text)
   $enc = New-Object System.Text.UTF8Encoding($false)
   $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
   $full = $Path
@@ -25,37 +26,79 @@ function Write-Utf8NoBom([string]$Path, [string]$Text) {
   [System.IO.File]::WriteAllText($full, $t, $enc)
 }
 
-function Fail-Closed([string]$Reason, $Payload) {
+function Fail-Closed {
+  param([string]$Reason, $Payload)
+
   $today = (Get-Date).ToString("yyyy-MM-dd")
   $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
+
+  # normalize payload arrays if present
+  try {
+    if($null -ne $Payload){
+      if($Payload.ContainsKey("symbols") -and ($Payload["symbols"] -is [string])){
+        $Payload["symbols"] = @([regex]::Split(($Payload["symbols"] + ""), "[,\s]+") | Where-Object { $_ -and $_.Trim() -ne "" })
+      }
+      if($Payload.ContainsKey("eligible") -and $null -eq $Payload["eligible"]){
+        $Payload["eligible"] = @()
+      }
+    }
+  } catch { }
+
   $out = [ordered]@{
-    ts_utc=$tsUtc; as_of_date=$today; ok=$false; reason=$Reason
-    payload=$Payload
-    weights=@{}
-    version="phase7.1"
+    ts_utc    = $tsUtc
+    as_of_date= $today
+    ok        = $false
+    reason    = $Reason
+    payload   = $Payload
+    weights   = @{}
+    version   = "phase7.2"
   } | ConvertTo-Json -Depth 12
+
   Write-Utf8NoBom -Path $OutPath -Text $out
   Write-Host "[PHASE7] FAIL-CLOSED: $Reason" -ForegroundColor Yellow
   exit 2
 }
 
+trap {
+  $msg  = ($_.Exception.Message + "")
+  $line = ($_.InvocationInfo.ScriptLineNumber)
+  $text = ($_.InvocationInfo.Line + "")
+  Fail-Closed "phase7_unhandled_exception" @{ error=$msg; line=$line; text=$text }
+}
+
+function Invoke-BlockGReady {
+  [CmdletBinding()]
+  param([string]$Symbol)
+
+  $s = (($Symbol + "")).Trim().ToUpperInvariant()
+  $tok = @([regex]::Split($s, "[,\s]+") | Where-Object { $_ -and $_.Trim() -ne "" })
+  if($tok.Count -ne 1){ return 2 }
+
+  $t = $tok[0]
+  if($t -notin @("NVDA","SPY","QQQ")){ return 2 }
+
+  $checker = Join-Path (Split-Path -Parent $PSCommandPath) "Check-BlockGReady.ps1"
+
+  # MUST be child process: checker may 'exit N' or write to stderr when not-ready
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $t 2>$null | Out-Host
+  $code = $LASTEXITCODE
+  $ErrorActionPreference = $prev
+
+  Write-Host ("[PHASE7] BlockG check sym={0} exit={1}" -f $t,$code)
+  return $code
+}
+
+# ---- MAIN ----
 $today = (Get-Date).ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
-if (-not $Enable) {
-  Fail-Closed "optimizer_disabled_failclosed" @{ enable=$false }
-}
+if (-not $Enable) { Fail-Closed "optimizer_disabled_failclosed" @{ enable=$false } }
+if ($MaxWeight -le 0 -or $MaxWeight -gt 1) { Fail-Closed "invalid_max_weight" @{ MaxWeight=$MaxWeight } }
 
-if ($MaxWeight -le 0 -or $MaxWeight -gt 1) {
-  Fail-Closed "invalid_max_weight" @{ MaxWeight=$MaxWeight }
-}
-
-if (-not (Test-Path $StatePath)) {
-  Fail-Closed "phase6_state_missing_failclosed" @{ StatePath=$StatePath }
-}
-if (-not (Test-Path $BlockGPath)) {
-  Fail-Closed "blockg_status_missing_failclosed" @{ BlockGPath=$BlockGPath }
-}
+if (-not (Test-Path $StatePath))  { Fail-Closed "phase6_state_missing_failclosed" @{ StatePath=$StatePath } }
+if (-not (Test-Path $BlockGPath)) { Fail-Closed "blockg_status_missing_failclosed" @{ BlockGPath=$BlockGPath } }
 
 try { $s6 = Get-Content -Path $StatePath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail-Closed "phase6_state_parse_fail" @{ StatePath=$StatePath } }
 try { $bg = Get-Content -Path $BlockGPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail-Closed "blockg_parse_fail" @{ BlockGPath=$BlockGPath } }
@@ -65,41 +108,58 @@ if (-not [bool]$s6.ok) { Fail-Closed "phase6_state_not_ok" @{ ok=$s6.ok; reason=
 
 if (($bg.as_of_date + "").Substring(0,10) -ne $today) { Fail-Closed "blockg_stale" @{ as_of_date=$bg.as_of_date; today=$today } }
 
-$symbols = @($Symbols.Split(",") | ForEach-Object { $_.Trim().ToUpperInvariant() } | Where-Object { $_ })
-if (-not $symbols -or @($symbols).Count -eq 0) { Fail-Closed "no_symbols" @{ Symbols=$Symbols } }
+# Parse symbols deterministically
+$raw = (($SymbolsRaw + "")).Trim().ToUpperInvariant()
+$raw = [regex]::Replace($raw, "\p{Z}+", " ")
+$raw = [regex]::Replace($raw, "\s+", " ")
 
-function BlockG-Ready([string]$sym) {
-  $k = ($sym.ToLowerInvariant() + "_blockg_ready")
-  try { return [bool]$bg.$k } catch { return $false }
+$tmp = @()
+$m = [regex]::Matches($raw, "(NVDA|SPY|QQQ)")
+if($m.Count -gt 0){
+  $seen=@{}
+  foreach($x in $m){ if(-not $seen.ContainsKey($x.Value)){ $seen[$x.Value]=$true; $tmp += $x.Value } }
+} else {
+  foreach($t in [regex]::Split($raw, "[,\s]+")){
+    $u = (($t + "")).Trim().ToUpperInvariant()
+    if($u -ne ""){ $tmp += $u }
+  }
 }
 
+[string[]]$SymbolList = $tmp
+Write-Host ("[PHASE7] SymbolList_count=" + @($SymbolList).Count)
+Write-Host ("[PHASE7] SymbolList=" + ($SymbolList -join ","))
+
+if(-not $SymbolList -or @($SymbolList).Count -eq 0){
+  Fail-Closed "no_symbols" @{ raw=$raw; symbols=@(); eligible=@() }
+}
+
+# Eligibility: trust checker exit codes
 $eligible = @()
-foreach($s in $symbols){ if (BlockG-Ready $s) { $eligible += $s } }
-if (-not $eligible -or @($eligible).Count -eq 0) {
-  Fail-Closed "no_eligible_symbols" @{ symbols=$symbols; eligible=@() }
+foreach($s in @($SymbolList)){
+  if((Invoke-BlockGReady -Symbol $s) -eq 0){ $eligible += $s }
 }
 
-# Deterministic equal weights among eligible, then cap and renormalize
+if(-not $eligible -or @($eligible).Count -eq 0){
+  Fail-Closed "no_eligible_symbols" @{ symbols=@($SymbolList); eligible=@($eligible); raw=$raw }
+}
+
+# Equal weights among eligible, cap, renormalize
 $w = @{}
-foreach($s in $symbols){ $w[$s] = 0.0 }
+foreach($s in @($SymbolList)){ $w[$s] = 0.0 }
 
 $base = 1.0 / [double]@($eligible).Count
-foreach($s in $eligible){ $w[$s] = $base }
+foreach($s in @($eligible)){ $w[$s] = $base }
 
+# Cap + renorm
 $capped = @{}
 $sum = 0.0
-foreach($s in $eligible){
+foreach($s in @($eligible)){
   $c = [Math]::Min([double]$w[$s], [double]$MaxWeight)
   $capped[$s] = $c
   $sum += $c
 }
-if ($sum -le 0) { Fail-Closed "weights_sum_nonpositive_after_cap" @{ MaxWeight=$MaxWeight; eligible=$eligible } }
-
-foreach($s in $eligible){ $w[$s] = [double]$capped[$s] / $sum }
-
-$tot = 0.0
-foreach($s in $symbols){ $tot += [double]$w[$s] }
-if ([Math]::Abs($tot - 1.0) -gt 1e-6) { Fail-Closed "weights_not_normalized" @{ total=$tot; weights=$w } }
+if($sum -le 0){ Fail-Closed "weights_sum_nonpositive_after_cap" @{ MaxWeight=$MaxWeight; eligible=@($eligible) } }
+foreach($s in @($eligible)){ $w[$s] = [double]$capped[$s] / $sum }
 
 # Emit artifacts
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
@@ -108,35 +168,38 @@ if (-not [System.IO.Path]::IsPathRooted($fullOutDir)) { $fullOutDir = Join-Path 
 if (-not (Test-Path $fullOutDir)) { New-Item -ItemType Directory -Force -Path $fullOutDir | Out-Null }
 
 $weightsObj = [ordered]@{}
-foreach($s in $symbols){ $weightsObj[$s] = [double]$w[$s] }
-
-$constraints = [ordered]@{
-  ts_utc=$tsUtc; as_of_date=$today; ok=$true; reason="phase7_optimizer_ok"
-  symbols=$symbols; eligible=$eligible
-  max_weight=[double]$MaxWeight; min_weight=[double]$MinWeight
-  phase6_state_path=$StatePath; blockg_path=$BlockGPath
-  version="phase7.1"
-}
+foreach($s in @($SymbolList)){ $weightsObj[$s] = [double]$w[$s] }
 
 $out = [ordered]@{
-  ts_utc=$tsUtc; as_of_date=$today; ok=$true; reason="phase7_optimizer_ok"
-  weights=$weightsObj
-  constraints=$constraints
+  ts_utc     = $tsUtc
+  as_of_date = $today
+  ok         = $true
+  reason     = "phase7_optimizer_ok"
+  weights    = $weightsObj
+  payload    = @{
+    symbols  = @($SymbolList)
+    eligible = @($eligible)
+    raw      = $raw
+    max_weight = [double]$MaxWeight
+    min_weight = [double]$MinWeight
+    phase6_state_path = $StatePath
+    blockg_path = $BlockGPath
+  }
+  version    = "phase7.2"
 } | ConvertTo-Json -Depth 12
 
+# JSON outputs
 Write-Utf8NoBom -Path (Join-Path $fullOutDir "phase7_weights.json") -Text $out
-
-# CSV
-$csvPath = Join-Path $fullOutDir "phase7_weights.csv"
-$lines = @()
-$lines += "as_of_date,symbol,weight,eligible,blockg_ready"
-foreach($s in $symbols){
-  $lines += ("{0},{1},{2},{3},{4}" -f $today,$s,[double]$w[$s],([bool]($eligible -contains $s)),(BlockG-Ready $s))
-}
-Write-Utf8NoBom -Path $csvPath -Text ($lines -join "`n")
-
-# Backward compatible output file
 Write-Utf8NoBom -Path $OutPath -Text $out
+
+# CSV outputs (NO BlockG-Ready function here; trust Invoke-BlockGReady)
+$csvPath = Join-Path $fullOutDir "phase7_weights.csv"
+$csv = @()
+$csv += "as_of_date,symbol,weight,eligible,blockg_ready"
+foreach($s in @($SymbolList)){
+  $csv += ("{0},{1},{2},{3},{4}" -f $today,$s,[double]$w[$s],([bool](@($eligible) -contains $s)),([bool]((Invoke-BlockGReady -Symbol $s) -eq 0)))
+}
+Write-Utf8NoBom -Path $csvPath -Text ($csv -join "`n")
 
 Write-Host "[PHASE7] OK -> wrote outputs to $fullOutDir" -ForegroundColor Cyan
 exit 0
