@@ -60,6 +60,19 @@ if (-not (Test-Path $bst)) { throw "[DAILY] Missing BlockG status: $bst" }
 $st = Get-Content $bst -Raw -Encoding utf8 | ConvertFrom-Json
 if ($st.as_of_date -ne $today) { throw "[DAILY] BlockG stale: $($st.as_of_date) need=$today" }
 
+
+# Fail-closed: daily suite must not exit 0 unless selected symbol is Block-G ready.
+$ready = $false
+switch ($Symbol.ToUpperInvariant()) {
+  "NVDA" { $ready = [bool]$st.nvda_blockg_ready }
+  "SPY"  { $ready = [bool]$st.spy_blockg_ready }
+  "QQQ"  { $ready = [bool]$st.qqq_blockg_ready }
+  default { $ready = [bool]$st.nvda_blockg_ready }
+}
+if (-not $ready) {
+  Write-Host ("[DAILY] FAIL-CLOSED: Block-G not ready for {0}" -f $Symbol) -ForegroundColor Yellow
+  exit 2
+}
 Write-Host "[DAILY] DONE ✅ Producers suite complete. Block-G ready flags:" -ForegroundColor Green
 "nvda_blockg_ready=$($st.nvda_blockg_ready) spy_blockg_ready=$($st.spy_blockg_ready) qqq_blockg_ready=$($st.qqq_blockg_ready)" | Out-Host
 exit 0
