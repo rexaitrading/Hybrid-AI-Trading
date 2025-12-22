@@ -78,17 +78,16 @@ if (Test-Path $evPath) {
 
 
 # ---- EV hard veto session preview (does NOT arm live; informational) ----
-$evAsOf = ""
+$evSessionAsOf = ""
 $evSessionOk = $false
-$evSnap = Join-Path $logsDir "ev_hard_snapshot.json"
-if (Test-Path $evSnap) {
+$evRaw = Join-Path $logsDir "ev_hard_evidence_raw.json"
+if (Test-Path $evRaw) {
   try {
-    $j = Get-Content $evSnap -Raw -Encoding UTF8 | ConvertFrom-Json
-    $evAsOf = Slice-Date ([string]$j.as_of_date)
+    $j = Get-Content $evRaw -Raw -Encoding UTF8 | ConvertFrom-Json
+    $evSessionAsOf = Slice-Date ([string]$j.as_of_date)
     $evSessionOk = To-Bool $j.ok
-  } catch { $evAsOf=""; $evSessionOk=$false }
-}
-# ---- Phase23 health (must match today row; fail-closed) ----
+  } catch { $evSessionAsOf=""; $evSessionOk=$false }
+}# ---- Phase23 health (must match today row; fail-closed) ----
 $phase23Ok = $false
 $phase23Path = Join-Path $logsDir "phase23_health_daily.csv"
 $phase23SawToday = $false
@@ -227,7 +226,7 @@ $payload = [ordered]@{
 
     phase23_health_ok_today = $phase23Ok
     ev_hard_daily_ok_today  = $evHardOk
-    ev_hard_as_of_date = $evAsOf
+    ev_hard_as_of_date = $evSessionAsOf
     ev_hard_session_ok = $evSessionOk
     phase4_ok_today         = $phase4Ok
 
