@@ -27,8 +27,7 @@ Write-Host "[PHASE3] SYMBOL=$Symbol" -ForegroundColor Cyan
 # 1) Build Block-G contract first (single source of truth)
 $builder = Join-Path $root "tools\Build-BlockGStatusStub.ps1"
 if (-not (Test-Path $builder)) { throw "[PHASE3] Missing $builder" }
-& $builder | Out-Host
-
+Write-Host "[PHASE3] NOTE: Block-G build is owned by strict premarket runner; skipping local rebuild." -ForegroundColor Yellow
 # 2) Choose CSV input for daily_build (REAL CLI)
 if (-not $Csv) {
   $cands = @(
