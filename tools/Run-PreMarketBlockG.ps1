@@ -7,6 +7,15 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
+
+# ---- Phase today-ness hard gates (fail-closed) ----
+$phase4 = Join-Path $PSScriptRoot "Check-Phase4Today.ps1"
+& $phase4
+if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+
+$phase5 = Join-Path $PSScriptRoot "Check-Phase5Today.ps1"
+& $phase5
+if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
 $root = (Resolve-Path ".").Path
 Set-Location $root
 $today = (Get-Date).ToString("yyyy-MM-dd")
