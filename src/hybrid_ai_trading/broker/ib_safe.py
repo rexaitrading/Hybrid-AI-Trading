@@ -11,6 +11,7 @@ IB utils (Phase-2, Step-1): hardened & version-proof
 
 import random
 import time
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from typing import Any, Callable, List, Optional, Tuple
 
 try:
@@ -19,6 +20,19 @@ except Exception:
     IB = object  # type: ignore
 
     class Stock:  # stubs allow import in test envs
+
+def _blockg_guard_live_ib_safe(symbol: str) -> None:
+    # Fail-closed guard for any direct IB placeOrder usage in this module.
+    # Default is paper-safe; live intent must be explicit via env flag (HAT_IS_PAPER=0).
+    try:
+        env_flag = str(__import__("os").environ.get("HAT_IS_PAPER", "")).strip()
+        is_live = (env_flag == "0")
+    except Exception:
+        is_live = False
+
+    if is_live and str(symbol).upper() in ("NVDA", "SPY", "QQQ"):
+        require_blockg_ready_for_live(str(symbol).upper())
+
         def __init__(self, *a, **k): ...
 
     class LimitOrder:
@@ -190,6 +204,7 @@ def flatten_symbol_limit(
     o.outsideRth = True
     o.tif = "DAY"
 
+    _blockg_guard_live_ib_safe(sym)
     tr = ib.placeOrder(c, o)
     deadline = time.time() + max_wait_sec
     while time.time() < deadline and tr.isActive():
@@ -203,6 +218,7 @@ def flatten_symbol_limit(
             new_ref * (1 + reprice_pct) if s == "BUY" else new_ref * (1 - reprice_pct),
             2,
         )
+        _blockg_guard_live_ib_safe(sym)
         ib.placeOrder(c, o)
         for _ in range(8):
             ib.waitOnUpdate(timeout=1.0)
