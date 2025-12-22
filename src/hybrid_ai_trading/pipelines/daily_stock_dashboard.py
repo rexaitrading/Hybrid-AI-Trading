@@ -13,6 +13,7 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 import requests
 from dotenv import load_dotenv
@@ -115,6 +116,10 @@ def place_bracket_order(ib: IB, symbol: str, info: Dict[str, Any]) -> Dict[str, 
     if not all([IB, Stock, MarketOrder, LimitOrder, StopOrder]):
         raise ImportError("ib_insync not available")
 
+
+    # Block-G: fail-closed for LIVE auto-exec
+    if os.getenv("HAT_IS_PAPER","1") == "0" and str(symbol).upper() in ("NVDA","SPY","QQQ"):
+        require_blockg_ready_for_live(str(symbol).upper())
     qty = int(CAPITAL_PER_TRADE / info["last_close"])
     contract = Stock(symbol, "SMART", "USD")
 

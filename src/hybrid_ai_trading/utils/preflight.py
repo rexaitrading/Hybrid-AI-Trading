@@ -12,6 +12,7 @@ except Exception:
 from ib_insync import Forex, LimitOrder, Stock
 
 from hybrid_ai_trading.utils.ib_conn import ib_session
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 
 def _managed_accounts(ib):
@@ -132,6 +133,10 @@ def sanity_probe(
         o = LimitOrder("BUY", qty, safe_px)
         o.outsideRth = bool(allow_ext)
         o.tif = "DAY"
+        # Block-G: if somehow live, do not allow bypass
+        env_flag = os.environ.get("HAT_IS_PAPER","1").strip()
+        if env_flag == "0" and symbol.upper() in ("NVDA","SPY","QQQ"):
+            require_blockg_ready_for_live(symbol.upper())
         trade = ib.placeOrder(c, o)
         ib.sleep(2.0)
         _cancel_if_active(ib, trade)

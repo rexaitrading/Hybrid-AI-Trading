@@ -20,6 +20,12 @@ except Exception:
     IB = object  # type: ignore
 
     class Stock:  # stubs allow import in test envs
+        def __init__(self, *a, **k): ...
+
+    class LimitOrder:
+        def __init__(self, *a, **k): ...
+
+
 
 def _blockg_guard_live_ib_safe(symbol: str) -> None:
     # Fail-closed guard for any direct IB placeOrder usage in this module.
@@ -32,13 +38,6 @@ def _blockg_guard_live_ib_safe(symbol: str) -> None:
 
     if is_live and str(symbol).upper() in ("NVDA", "SPY", "QQQ"):
         require_blockg_ready_for_live(str(symbol).upper())
-
-        def __init__(self, *a, **k): ...
-
-    class LimitOrder:
-        def __init__(self, *a, **k): ...
-
-
 # ----------------------------- Retry / Backoff ----------------------------- #
 
 def retry(

@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import time
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -255,6 +256,10 @@ def run(
     contract = Stock(symbol, "SMART", "USD")
     ib.qualifyContracts(contract)
 
+
+    # Block-G: paper_order live guard (fail-closed)
+    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and symbol.upper() in ("NVDA","SPY","QQQ"):
+        require_blockg_ready_for_live(symbol.upper())
     # Cooldown
     now_ts = int(time.time())
     cooldowns: Dict[str, int] = {}

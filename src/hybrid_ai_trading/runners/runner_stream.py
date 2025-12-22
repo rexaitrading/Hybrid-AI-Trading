@@ -14,6 +14,7 @@ if sys.platform.startswith("win"):
 
 import yaml
 from ib_insync import IB, Stock
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 from hybrid_ai_trading.utils.edges import decide_signal
 from hybrid_ai_trading.utils.exec import gc_stale_orders
@@ -172,6 +173,8 @@ async def main():
                                 return
                         except Exception:
                             return
+                    if os.getenv("HAT_IS_PAPER","1") == "0" and c.symbol.upper() in ("NVDA","SPY","QQQ"):
+                        require_blockg_ready_for_live(c.symbol.upper())
                     ib.placeOrder(c, sig.order)
 
         except Exception as e:
