@@ -17,7 +17,7 @@ $ErrorActionPreference = "Stop"
 # ------------------------------------------------------------
 $blockgFirst = Join-Path (Split-Path -Parent $PSCommandPath) "Run-BlockGTestsFirst.ps1"
 if(Test-Path $blockgFirst){
-  powershell -NoProfile -ExecutionPolicy Bypass -File $blockgFirst | Out-Host
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "chcp 65001 | Out-Null; [Console]::OutputEncoding=[Text.UTF8Encoding]::new(`$false); `$OutputEncoding=[Text.UTF8Encoding]::new(`$false); & `"$blockgFirst`"" | Out-Host
   if($LASTEXITCODE -ne 0){
     Write-Host "[DAILY] FAIL-CLOSED: BlockG-first tests failed. Abort daily run." -ForegroundColor Yellow
     exit 2

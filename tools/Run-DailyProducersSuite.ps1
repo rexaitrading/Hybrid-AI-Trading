@@ -18,7 +18,7 @@ function Invoke-BlockGReady {
     [string]$Symbol
   )
   $checker = Join-Path (Split-Path -Parent $PSCommandPath) "Check-BlockGReady.ps1"
-  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol | Out-Host
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "chcp 65001 | Out-Null; [Console]::OutputEncoding=[Text.UTF8Encoding]::new(`$false); `$OutputEncoding=[Text.UTF8Encoding]::new(`$false); & `"$checker`" -Symbol `"$Symbol`"" | Out-Host
   return $LASTEXITCODE
 }
 
