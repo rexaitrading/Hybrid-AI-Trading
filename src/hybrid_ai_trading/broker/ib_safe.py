@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+from hybrid_ai_trading.runtime.run_context import RunContext
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 import os
 import random
@@ -29,7 +30,42 @@ def _infer_symbol(contract: Any) -> Optional[str]:
     return None
 
 
-def ib_place_order_chokepoint(ib: Any, *args: Any) -> Any:
+def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None, meta: Dict[str, Any] | None = None) -> Any:
+    # IB_CHOKEPOINT_ARGS_RESOLVER
+    # Supported call styles:
+    #   - ib_place_order_chokepoint(ib, contract, order)
+    #   - ib_place_order_chokepoint(ib, order_id, contract, order)
+    # Optional:
+    #   - ctx/meta passed as kwargs for Block-G enforcement.
+    order_id = 0
+    contract = None
+    order = None
+    if len(args) == 2:
+        contract, order = args[0], args[1]
+    elif len(args) >= 3:
+        order_id, contract, order = args[0], args[1], args[2]
+    else:
+        raise ValueError(f"ib_place_order_chokepoint: invalid args len={len(args)}")
+
+    # Resolve symbol robustly
+    sym = None
+    try:
+        sym = str(getattr(contract, "symbol", "") or "").upper().strip()
+    except Exception:
+        sym = None
+    if (not sym) and isinstance(meta, dict):
+        try:
+            sym = str(meta.get("symbol", "") or "").upper().strip()
+        except Exception:
+            sym = None
+
+    # Block-G contract gate (IB chokepoint) — no live IB order may bypass this.
+    try:
+        if sym in ("NVDA","SPY","QQQ"):
+            ensure_symbol_blockg_ready(sym, allow_paper=True, is_paper=None, ctx=ctx)
+    except Exception:
+        if sym in ("NVDA","SPY","QQQ"):
+            ensure_symbol_blockg_ready(sym, allow_paper=True, is_paper=False, ctx=ctx)
     """
     Single chokepoint for raw IB placeOrder.
 

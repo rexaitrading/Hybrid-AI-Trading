@@ -262,7 +262,7 @@ class RiskManager:
         }
 
     # -------- unified API --------
-    def approve_trade(self, symbol: str, side: str, qty: float) -> bool:
+    def approve_trade(self, symbol: str, side: str, qty: float, notional: float = 0.0) -> bool:
         if float(qty) <= 0:
             log.warning("non-positive qty")
             return False
@@ -292,10 +292,44 @@ class RiskManager:
                 log.warning("daily_loss breach")
                 return False
 
-        # portfolio checks
+        # ROI guard
+        if self.roi_min is not None and hasattr(self, "roi"):
+            try:
+                if float(getattr(self, "roi")) < float(self.roi_min):
+                    log.warning("ROI breach")
+                    return False
+            except Exception:
+                log.error("ROI check failed", exc_info=True)
+                return False
+
+        # Sharpe / Sortino (must log both exceptions if both configured)
+        sharpe_failed = False
+        if self.sharpe_min is not None:
+            try:
+                if float(self.sharpe_ratio()) < float(self.sharpe_min):
+                    log.warning("Sharpe breach")
+                    return False
+            except Exception:
+                sharpe_failed = True
+                log.error("Sharpe ratio check failed", exc_info=True)
+
+        sortino_failed = False
+        if self.sortino_min is not None:
+            try:
+                if float(self.sortino_ratio()) < float(self.sortino_min):
+                    log.warning("Sortino breach")
+                    return False
+            except Exception:
+                sortino_failed = True
+                log.error("Sortino ratio check failed", exc_info=True)
+
+        if sharpe_failed or sortino_failed:
+            return False
+
+        # portfolio checks (DummyPortfolio uses get_* APIs)
         if self.portfolio is not None:
             try:
-                # Always probe portfolio methods to exercise exception branch (tests expect fail when portfolio errors)
+                # Touch accessors to fail-closed on portfolio subsystem errors
                 if hasattr(self.portfolio, "get_leverage"):
                     _ = self.portfolio.get_leverage()
                 if hasattr(self.portfolio, "get_total_exposure"):
@@ -314,7 +348,7 @@ class RiskManager:
                 log.error("Portfolio check failed", exc_info=True)
                 return False
 
-        # db logger
+        # db logger (must not crash)
         if self.db_logger is not None:
             try:
                 self.db_logger.log({"symbol": symbol, "side": side, "qty": qty, "x": pnl_or_px})
@@ -322,6 +356,7 @@ class RiskManager:
                 log.error("DB log failed", exc_info=True)
 
         return True
+
 
     def kelly_size(self, edge: float, odds: Any = 2.0, cap: float = 1.0, regime: float = 1.0) -> float:
         try:

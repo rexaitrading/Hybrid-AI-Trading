@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
-from hybrid_ai_trading.execution.blockg_enforce import BlockGNotReady
 from hybrid_ai_trading.runtime.run_context_reader import load_run_context
 from hybrid_ai_trading.runtime.run_context import RunContext
 
@@ -43,8 +42,17 @@ class BlockGStatus:
 
 def load_blockg_status(path: Optional[str] = None) -> BlockGStatus:
     p = path or os.environ.get(_DEFAULT_ENV_KEY) or _DEFAULT_PATH
-    with open(p, "r", encoding="utf-8") as f:
-        d = json.load(f)
+    try:
+
+        with open(p, "r", encoding="utf-8") as f:
+
+            d = json.load(f)
+
+    except FileNotFoundError:
+
+        # Fail-closed: missing contract is NOT a system error; it is "NOT READY"
+
+        raise BlockGNotReady(f"Block-G status missing at: {p}")
     return BlockGStatus.from_dict(d)
 
 
@@ -70,6 +78,13 @@ def _resolve_is_paper_from_ctx(ctx: RunContext | None = None) -> bool:
     """
     try:
         if ctx is not None:
+            # Unified mode semantics: ctx.mode='live' implies LIVE (is_paper=False)
+            try:
+                if str(getattr(ctx, "mode", "")).lower() == "live":
+                    return False
+            except Exception:
+                pass
+
             return bool(getattr(ctx, "is_paper", True))
     except Exception:
         return False  # fail-closed -> LIVE -> contract blocks
@@ -110,6 +125,20 @@ def ensure_symbol_blockg_ready(symbol: str,
         return
 
     st = load_blockg_status(status_path) if status_path else load_blockg_status()
+    # Per-symbol readiness (fail-closed for LIVE)
+    mode = getattr(ctx, "mode", None) if ctx is not None else None
+    env_live = (str(os.environ.get("HAT_IS_PAPER", "1")).strip() == "0")
+    live = (is_paper is False) or (str(mode).lower() == "live") or env_live
+    if live:
+        sym_u = str(symbol).upper().strip()
+        key = f"{sym_u.lower()}_blockg_ready"
+        flag = getattr(st, key, None)
+        if flag is None:
+            # Fail-closed if field missing
+            raise BlockGNotReady(f"Block-G not ready: {key}=missing")
+        if flag is not True:
+            raise BlockGNotReady(f"Block-G not ready: {key}={flag}")
+
 
     # -----------------------------------------------------------------------
     # Upgrade #2: freshness/quality checks (contract-only, no recomputation)

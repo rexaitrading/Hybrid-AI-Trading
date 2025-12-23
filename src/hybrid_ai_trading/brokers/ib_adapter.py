@@ -104,7 +104,7 @@ class IBAdapter(Broker):
             is_paper=(meta0.get("is_paper", None) if isinstance(meta0, dict) else None),
             ctx=ctx,
         )
-        trade = ib_place_order_chokepoint(self.ib, contract, order, ctx=ctx)
+        trade = ib_place_order_chokepoint(self.ib, contract, order, ctx=ctx, meta=meta0)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)
         st = trade.orderStatus

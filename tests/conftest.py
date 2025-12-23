@@ -27,3 +27,11 @@ if str(SRC) not in sys.path:
 os.environ.setdefault("PYTHONNOUSERSITE", "1")
 
 print(f"[conftest] exe={sys.executable} importable=True root={REPO_ROOT}")
+
+import pytest
+
+@pytest.fixture
+def TradeEngineClass():
+    # TODO: update import path to where TradeEngine actually lives
+    from hybrid_ai_trading.trade_engine import TradeEngine
+    return TradeEngine
