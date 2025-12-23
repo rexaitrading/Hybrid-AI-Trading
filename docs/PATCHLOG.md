@@ -106,3 +106,27 @@ ERROR tests/engine/test_trade_engine_alert_branches.py
 - reset_day(): return reason + exact log string
 - Encoding/line-endings: UTF-8 no-BOM, LF
 [2025-11-07] Phase 6/7: CodeQL advanced-only; branch-protection contexts; PreMarket smoke; paper runner tests.
+## 2025-12-22 — Block-G institutional hardening (Phase5/6/7)
+
+**Goal:** No live NVDA order may bypass Block-G contract (fail-closed).
+
+### What is enforced
+- Python: ExecutionEngine + execution_engine_phase5_guard.py enforce Block-G for LIVE (HAT_IS_PAPER=0)
+- IB: broker/ib_safe.py provides a single placeOrder chokepoint for raw IB calls; gates NVDA/SPY/QQQ in LIVE
+- Contract: blockg_contract.py raises BlockGNotReady for all Block-G failures (no RuntimeError leakage)
+- Shared exception: execution/blockg_errors.py eliminates circular imports
+- CI/ops: tools/Run-BlockGTestsFirst.ps1 runs the critical Block-G slice first (fail-closed)
+- Daily: tools/Run-Phase1ToPhase7Daily.ps1 runs BlockG-first, then producers, then stamp gate (fail-closed)
+- Stamp: logs/nvda_live_ready_stamp.json written by tools/Write-NvdaLiveReadyStamp.ps1 (contract-only; deterministic)
+
+### Operator signals
+- Daily prints: [DAILY] NVDA LIVE READY ? (stamp ok).
+- Daily prints: [DAILY] StampPath=...logs\nvda_live_ready_stamp.json
+
+### Rollback
+- Revert commits:
+  - 43749759 (shared error type + IB chokepoint + tests)
+  - dfc9133a (BlockG-first slice runner)
+  - 90053d5c (daily stamp fail-closed)
+  - 513acb9f (stamp path banner)
+  - 4e25a5ee (stamp writer path fix)
