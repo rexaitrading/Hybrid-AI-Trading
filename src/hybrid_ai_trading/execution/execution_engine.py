@@ -110,7 +110,7 @@ class ExecutionEngine:
         symbol: str,
         side: str,
         qty: float,
-    # ------------------------------------------------------------------        ctx: RunContext | None = None,
+        ctx: RunContext | None = None,
         price: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Place an order with risk checks and routing."""
@@ -160,6 +160,7 @@ class ExecutionEngine:
                 symbol=symbol,
                 side=side,
                 size=qty,
+                ctx=ctx,
                 price=price or 0.0,
             )
 
