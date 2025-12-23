@@ -31,7 +31,8 @@ function Find-IntelEntrypoint {
   $hits = Select-String -Path $paths -Pattern $pat -AllMatches -ErrorAction SilentlyContinue |
     Select-Object -Unique Path
 
-  if ($hits -and $hits.Count -gt 0) { return ($hits | Select-Object -First 1).Path }
+    $arr = @($hits)
+  if ($arr.Count -gt 0) { return $arr[0].Path }
   return $null
 }
 
