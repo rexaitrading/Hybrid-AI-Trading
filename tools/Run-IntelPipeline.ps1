@@ -16,26 +16,6 @@ if ([string]::IsNullOrWhiteSpace($override)) {
   $override = [System.Environment]::GetEnvironmentVariable("HAT_INTEL_ENTRYPOINT","Process")
 }
 
-function Find-IntelEntrypoint {
-  param([string]$Root)
-
-  # PS5.1-safe: Pattern must be a SINGLE string to avoid prompting.
-  $pat = '\.intel|risk_pulse|news_feed|notion_intel|intel_report'
-
-  $paths = @(
-    (Join-Path $Root "src\hybrid_ai_trading\**\*.py"),
-    (Join-Path $Root "tools\**\*.py"),
-    (Join-Path $Root "scripts\**\*.py")
-  )
-
-  $hits = Select-String -Path $paths -Pattern $pat -AllMatches -ErrorAction SilentlyContinue |
-    Select-Object -Unique Path
-
-    $arr = @($hits)
-  if ($arr.Count -gt 0) { return $arr[0].Path }
-  return $null
-}
-
 $entry = $null
 if (-not [string]::IsNullOrWhiteSpace($override)) {
   $entry = Join-Path $repoRoot $override
