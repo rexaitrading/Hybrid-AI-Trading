@@ -122,6 +122,8 @@ if (-not $phase23SawToday) {
 # ---- GateScore thresholds (per-symbol) ----
 $thrPath = Join-Path $repoRoot "configs\blockg_thresholds.json"
 $thrPathDocs = Join-Path $repoRoot "docs\thresholds\blockg_thresholds.json"
+$thrOverride = Join-Path $repoRoot "configs\blockg_thresholds.override.json"
+if (Test-Path $thrOverride) { $thrPath = $thrOverride }
 if (-not (Test-Path $thrPath) -and (Test-Path $thrPathDocs)) { $thrPath = $thrPathDocs }
 
 $thrObj = $null
