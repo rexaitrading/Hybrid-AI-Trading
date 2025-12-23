@@ -118,6 +118,26 @@ class ExecutionEngine:
         if not self.risk_manager.approve_trade(symbol, side, qty, notional):
             return {"status": "rejected", "reason": "risk_check_failed"}
 
+        # Phase-2 Cost Gate (fail-closed when enabled)
+        try:
+            cg = (self.config or {}).get("cost_gate", {})
+            if cg.get("enabled", False):
+                max_pct = float(cg.get("max_total_cost_pct", 0.0))
+                costs = (self.config or {}).get("costs", {})
+                commission_pct = float(cg.get("commission_pct", costs.get("commission_pct", 0.0)))
+                slippage_pct   = float(cg.get("slippage_pct", costs.get("slippage_pct", 0.0)))
+                total_pct = commission_pct + slippage_pct
+                if max_pct > 0.0 and total_pct > max_pct:
+                    return {
+                        "status": "rejected",
+                        "reason": f"cost_gate: total_pct={total_pct:.6f} > max_total_cost_pct={max_pct:.6f}",
+                        "total_cost_pct": total_pct,
+                        "max_total_cost_pct": max_pct,
+                    }
+        except Exception:
+            if (self.config or {}).get("cost_gate", {}).get("enabled", False):
+                return {"status": "rejected", "reason": "cost_gate: error_failclosed"}
+
         if self.dry_run and self.paper_simulator:
             try:
                 fill = self.paper_simulator.simulate_fill(symbol, side, qty, price)
@@ -140,7 +160,6 @@ class ExecutionEngine:
                 symbol=symbol,
                 side=side,
                 size=qty,
-                ctx=ctx,
                 price=price or 0.0,
             )
 
