@@ -7,6 +7,21 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+
+# ------------------------------------------------------------
+# Block-G FIRST (institutional risk gate / fail-closed)
+# ------------------------------------------------------------
+$blockgFirst = Join-Path (Split-Path -Parent $PSCommandPath) "Run-BlockGTestsFirst.ps1"
+if(Test-Path $blockgFirst){
+  powershell -NoProfile -ExecutionPolicy Bypass -File $blockgFirst | Out-Host
+  if($LASTEXITCODE -ne 0){
+    Write-Host "[DAILY] FAIL-CLOSED: BlockG-first tests failed. Abort daily run." -ForegroundColor Yellow
+    exit 2
+  }
+}else{
+  Write-Host "[DAILY] FAIL-CLOSED: missing tools\Run-BlockGTestsFirst.ps1" -ForegroundColor Yellow
+  exit 2
+}
 $root = (Resolve-Path ".").Path
 Set-Location $root
 
