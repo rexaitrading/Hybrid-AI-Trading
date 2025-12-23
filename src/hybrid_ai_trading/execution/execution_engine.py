@@ -16,7 +16,8 @@ Responsibilities:
 
 import logging
 from typing import Any, Dict, Optional
-from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
+
 from hybrid_ai_trading.execution.order_manager import OrderManager
 from hybrid_ai_trading.execution.paper_simulator import PaperSimulator
 from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker

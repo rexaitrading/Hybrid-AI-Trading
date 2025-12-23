@@ -313,9 +313,6 @@ class OrderManager:
             ctx: RunContext | None = None,
         price: float = 0.0,
     ) -> Dict[str, Any]:
-        # Cache ctx for downstream calls / Block-G decisions
-        self._ctx = ctx
-
         # --- Compatibility: accept engine-style (size, price) or legacy (qty, notional)
         if size and (not qty):
             qty = float(size)
