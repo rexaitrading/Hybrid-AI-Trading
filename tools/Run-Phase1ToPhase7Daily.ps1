@@ -87,6 +87,7 @@ if(Test-Path $nvdaStamp){
     exit 2
   }else{
     Write-Host "[DAILY] NVDA LIVE READY ✅ (stamp ok)." -ForegroundColor Green
+    Write-Host ("[DAILY] StampPath=" + (Join-Path $root "logs\nvda_live_ready_stamp.json")) -ForegroundColor DarkGray
   }
 }else{
   Write-Host "[DAILY] FAIL-CLOSED: missing tools\Write-NvdaLiveReadyStamp.ps1" -ForegroundColor Yellow
