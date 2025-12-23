@@ -5,6 +5,9 @@ param(
 )
 
 Set-StrictMode -Version Latest
+chcp 65001 | Out-Null
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding  = [System.Text.Encoding]::UTF8
 $ErrorActionPreference="Stop"
 
 
