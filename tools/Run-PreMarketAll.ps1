@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
-  [string]$Symbol = "NVDA"
+  [string]$Symbol = "NVDA",
+
+  [switch]$RequireAllReady
 )
 
 Set-StrictMode -Version Latest
@@ -30,7 +32,13 @@ if ($LASTEXITCODE -ne 0) { throw "[PRE] Daily producers failed rc=$LASTEXITCODE"
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1") | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "[PRE] BlockG build failed rc=$LASTEXITCODE" }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Check-BlockGReady.ps1") -Symbol $Symbol | Out-Host
+# Decide what readiness to REQUIRE:
+# - Symbol=ALL normally means "run all evidence", but default readiness requirement is NVDA-only
+# - If -RequireAllReady is set, require ALL symbols ready
+$effective = $Symbol
+if ($Symbol -eq "ALL" -and -not $RequireAllReady) { $effective = "NVDA" }
+
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Check-BlockGReady.ps1") -Symbol $effective | Out-Host
 $rc = $LASTEXITCODE
 Write-Host "[PRE] BlockG RC=$rc" -ForegroundColor Yellow
 if ($rc -ne 0) { throw "[PRE] BlockG NOT READY rc=$rc (fail-closed)" }
