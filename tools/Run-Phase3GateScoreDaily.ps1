@@ -38,9 +38,8 @@ if (-not $Csv) {
   )
   $Csv = ($cands | Where-Object { Test-Path $_ } | Select-Object -First 1)
 }
-if (-not $Csv -or -not (Test-Path -LiteralPath $Csv)) {
-  throw "[PHASE3] Missing GateScore CSV input. Provide -Csv or ensure logs\gatescore_pnl_summary.csv exists."
-}
+if (-not $Csv -or -not (Test-Path -LiteralPath $Csv)) {  Write-Host "[PHASE3] NOT READY: Missing GateScore CSV input (fail-closed)." -ForegroundColor Yellow
+  exit 2}
 
 Write-Host "[PHASE3] CSV=$Csv" -ForegroundColor Cyan
 

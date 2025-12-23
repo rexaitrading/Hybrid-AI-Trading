@@ -35,6 +35,37 @@ Write-Host "[DAILY] Today=$today" -ForegroundColor Cyan
 $k = ("HAT_" + "BLOCKG_" + "STATUS_" + "PATH")
 [System.Environment]::SetEnvironmentVariable($k, (Join-Path $repoRoot "logs\blockg_status_stub.json"))
 
+
+
+# --- 0) Phase23 health daily (required for EV evidence + BlockG) ---
+$phase23 = Join-Path $repoRoot "tools\Run-Phase23HealthDaily.ps1"
+if (Test-Path $phase23) {
+  & $phase23
+  if ($LASTEXITCODE -ne 0) { throw "[DAILY] Phase23 health daily failed exit=$LASTEXITCODE" }
+} else {
+  Write-Host "[DAILY] WARN: tools\Run-Phase23HealthDaily.ps1 missing; phase23_health_ok_today will fail-closed." -ForegroundColor Yellow
+}
+
+# --- 0b) EV-HARD evidence raw (required BEFORE snapshot) ---
+$evEvidence = Join-Path $repoRoot "tools\Build-EvHardEvidenceRaw.ps1"
+if (Test-Path $evEvidence) {
+  & $evEvidence
+  if ($LASTEXITCODE -ne 0) { throw "[DAILY] EV-hard evidence raw build failed exit=$LASTEXITCODE" }
+} else {
+  Write-Host "[DAILY] WARN: tools\Build-EvHardEvidenceRaw.ps1 missing; EV-hard will fail-closed." -ForegroundColor Yellow
+}
+
+# --- 0c) GateScore CSV producers (required BEFORE Phase3 daily_build) ---
+$gsPnl = Join-Path $repoRoot "tools\Build-GateScorePnlSummary.ps1"
+if (Test-Path $gsPnl) {
+  & $gsPnl
+  if ($LASTEXITCODE -ne 0) { Write-Host "[DAILY] WARN: GateScore pnl summary build failed (will fail-closed)"; }
+}
+$gsDaily = Join-Path $repoRoot "tools\Build-GateScoreDailySummary.ps1"
+if (Test-Path $gsDaily) {
+  & $gsDaily
+  if ($LASTEXITCODE -ne 0) { Write-Host "[DAILY] WARN: GateScore daily summary build failed (will fail-closed)"; }
+}
 # --- 1) EV-HARD snapshot + daily export (fail-closed) ---
 $evSnap    = Join-Path $repoRoot "tools\Build-EvHardSnapshot.ps1"
 $evCompute = Join-Path $repoRoot "tools\Compute-Phase5EvHardSnapshotInput.ps1"
