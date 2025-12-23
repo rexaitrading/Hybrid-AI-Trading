@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 import os
 import random
 import time
