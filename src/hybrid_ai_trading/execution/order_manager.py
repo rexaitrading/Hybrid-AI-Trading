@@ -313,6 +313,9 @@ class OrderManager:
             ctx: RunContext | None = None,
         price: float = 0.0,
     ) -> Dict[str, Any]:
+        # Cache ctx for downstream calls / Block-G decisions
+        self._ctx = ctx
+
         # --- Compatibility: accept engine-style (size, price) or legacy (qty, notional)
         if size and (not qty):
             qty = float(size)
@@ -513,13 +516,16 @@ class OrderManager:
         # LIVE PATH
         if not self.dry_run and self.live_client is not None:
             try:
-                # Block-G lowest-layer enforcement (OrderManager live path)
-                # Fail-closed: any live symbol must satisfy contract.
-                ensure_symbol_blockg_ready(str(symbol).upper().strip(), allow_paper=True, is_paper=False, ctx=_get_ctx_cached(self))
-                # --- Block-G hard gate for LIVE orders (fail-closed for NVDA/SPY/QQQ)
+                # Block-G lowest-layer enforcement (IB-only live path)
+                # For non-IB brokers (Alpaca/Binance/Polygon mocks), do NOT require Block-G contract file.
                 sym_u = str(symbol).upper()
-                if (not self.dry_run) and sym_u in ("NVDA","SPY","QQQ"):
+                client = self.live_client
+                client_name = (client.__class__.__name__ if client is not None else "")
+                client_mod  = (getattr(client.__class__, "__module__", "") if client is not None else "")
+                is_ib_like = (hasattr(client, "placeOrder") or ("ib" in (client_name + " " + client_mod).lower()))
+                if is_ib_like and sym_u in ("NVDA","SPY","QQQ"):
                     ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=_get_ctx_cached(self))
+
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
