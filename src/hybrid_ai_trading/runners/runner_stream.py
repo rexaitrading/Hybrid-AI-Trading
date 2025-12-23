@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import math
 import os
 import pathlib
@@ -85,6 +86,13 @@ async def connect_with_retry(
 
 
 async def main():
+    # UTF-8 console safety (avoid UnicodeEncodeError on Windows cp1252)
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
     host = os.getenv("IB_HOST", "127.0.0.1")
     port = int(os.getenv("IB_PORT", "7497"))
     cid = int(os.getenv("IB_CLIENT_ID", os.getenv("CLIENT_ID", "3021")))
