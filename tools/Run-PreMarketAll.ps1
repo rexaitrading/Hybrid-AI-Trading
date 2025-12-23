@@ -43,6 +43,10 @@ $rc = $LASTEXITCODE
 Write-Host "[PRE] BlockG RC=$rc" -ForegroundColor Yellow
 if ($rc -ne 0) { throw "[PRE] BlockG NOT READY rc=$rc (fail-closed)" }
 
+# 3b) Export BlockG readiness for Notion (idempotent)
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Export-BlockGStatusForNotion.ps1") | Out-Host
+if ($LASTEXITCODE -ne 0) { throw "[PRE] Notion export failed rc=$LASTEXITCODE" }
+
 # 4) Intel (must not break)
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Run-IntelPipeline.ps1")
 if ($LASTEXITCODE -ne 0) { throw "[PRE] Intel pipeline failed rc=$LASTEXITCODE" }
