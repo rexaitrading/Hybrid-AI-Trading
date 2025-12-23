@@ -116,3 +116,5 @@ backup.csv
 !docs/contracts/blockg_status_stub.template.json
 
 tools/Kill-Spammers.ps1
+# local runtime outputs
+.hat/
