@@ -27,7 +27,7 @@ function start-stream {
 
   if (-not (Test-Path -LiteralPath $Script:VenvPy)) {
     Write-Host "Missing Python: $Script:VenvPy" -ForegroundColor Red
-    exit 2
+  throw 'Missing Python venv executable for stream runner'
   }
 
   # Env for runner
@@ -55,7 +55,7 @@ function start-stream {
 
   Write-Host "Stream booted. OUT: $out"
   Write-Host "Stream booted. ERR: $err"
-  exit 0
+  return
 }
 
 function status-stream {
