@@ -10,8 +10,13 @@ param(
   [string]$Config = "config/paper_runner.yaml",
 
   [Parameter(Mandatory=$false)]
-  [string]$OutLog = ""
-)
+  [string]$OutLog = "",
+
+  [Parameter(Mandatory=$false)]
+  [string]$OutDir = "",
+
+  [Parameter(Mandatory=$false)]
+  [int]$Batch = 100)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -23,7 +28,9 @@ Set-Location $repoRoot
 if (-not (Test-Path $InputCsv)) { throw "Phase1 input CSV not found: $InputCsv" }
 
 $logsDir = Join-Path $repoRoot "logs\phase1"
-New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+if ($OutDir) {
+  $logsDir = Join-Path $repoRoot $OutDir
+}New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 
 if (-not $OutLog) {
   $stamp = Get-Date -Format yyyyMMdd_HHmmss
@@ -42,7 +49,7 @@ Write-Host ("[PHASE1] OutLog={0}" -f $OutLog) -ForegroundColor Cyan
 $entry = Join-Path $repoRoot "runners\backtest_replay.py"
 if (-not (Test-Path $entry)) { throw "Missing runners/backtest_replay.py at $entry" }
 
-& $py $entry --config $Config --input $InputCsv --log $OutLog
+& $py $entry --config $Config --input $InputCsv --log $OutLog --batch $Batch
 if ($LASTEXITCODE -ne 0) { throw "Phase1 replay failed (exit=$LASTEXITCODE)" }
 
 Write-Host "[PHASE1] OK" -ForegroundColor Green
