@@ -75,6 +75,23 @@ Write-Host "[P1-7] DailyProducersSuite ..." -ForegroundColor Cyan
 & $daily -Symbol $Symbol
 if ($LASTEXITCODE -ne 0) { throw "[P1-7] DailyProducersSuite failed exit=$LASTEXITCODE" }
 
+
+# ------------------------------------------------------------
+# NVDA LIVE READY STAMP (contract-only; fail-closed)
+# ------------------------------------------------------------
+$nvdaStamp = Join-Path (Split-Path -Parent $PSCommandPath) "Write-NvdaLiveReadyStamp.ps1"
+if(Test-Path $nvdaStamp){
+  powershell -NoProfile -ExecutionPolicy Bypass -File $nvdaStamp | Out-Host
+  if($LASTEXITCODE -ne 0){
+    Write-Host "[DAILY] FAIL-CLOSED: NVDA LIVE NOT ARMED (stamp not ready)." -ForegroundColor Yellow
+    exit 2
+  }else{
+    Write-Host "[DAILY] NVDA LIVE READY ✅ (stamp ok)." -ForegroundColor Green
+  }
+}else{
+  Write-Host "[DAILY] FAIL-CLOSED: missing tools\Write-NvdaLiveReadyStamp.ps1" -ForegroundColor Yellow
+  exit 2
+}
 # ---- Phase6 ----
 $p6 = Join-Path $root "tools\Build-Phase6PortfolioState.ps1"
 if (-not (Test-Path $p6)) { throw "[P1-7] Missing: $p6" }
