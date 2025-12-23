@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from hybrid_ai_trading.execution.execution_engine_phase5_guard import place_order_phase5_with_guard

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 # Phase-6 portfolio namespace re-export.
 # Canonical implementation lives in execution.portfolio_tracker.

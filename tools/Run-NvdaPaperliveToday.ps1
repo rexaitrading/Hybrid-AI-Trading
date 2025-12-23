@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [int]$MinEvents = 120,
   [string]$OutPath = ".\logs\nvda_phase5_paperlive_results_today.jsonl",

@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [string]$InputPath = ".\logs\nvda_phase5_paperlive_results.jsonl",
   [string]$OutPath   = ".\logs\nvda_phase5_paperlive_results_today.jsonl"
