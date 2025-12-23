@@ -26,8 +26,11 @@ if ($LASTEXITCODE -ne 0) { throw "[PRE] Phase sweep failed rc=$LASTEXITCODE" }
 if ($LASTEXITCODE -ne 0) { throw "[PRE] Daily producers failed rc=$LASTEXITCODE" }
 
 # 3) BlockG check (fail-closed)
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Invoke-BlockGCheck.ps1") -Symbol $Symbol -Build
-$rc = $LASTEXITCODE
+# 3) BlockG build + check (fail-closed, deterministic)
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1") | Out-Host
+if ($LASTEXITCODE -ne 0) { throw "[PRE] BlockG build failed rc=$LASTEXITCODE" }
+
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Check-BlockGReady.ps1") -Symbol $Symbol | Out-Host$rc = $LASTEXITCODE
 Write-Host "[PRE] BlockG RC=$rc" -ForegroundColor Yellow
 if ($rc -ne 0) { throw "[PRE] BlockG NOT READY rc=$rc (fail-closed)" }
 
