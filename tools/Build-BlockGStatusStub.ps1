@@ -147,7 +147,7 @@ function Get-ThresholdsFor([string]$sym) {
 }
 
 # ---- GateScore daily summary (per-symbol today row) ----
-$gsPath = Join-Path $logsDir "gatescore_daily_summary.csv"
+$gsPath = $pnlPath  # source-of-truth: gatescore_pnl_summary.csv
 $gsRows = @()
 if (Test-Path $gsPath) { $gsRows = @(Import-Csv $gsPath) }
 
