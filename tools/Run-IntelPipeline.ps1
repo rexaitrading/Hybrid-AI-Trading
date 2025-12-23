@@ -41,7 +41,9 @@ if (-not [string]::IsNullOrWhiteSpace($override)) {
   $entry = Join-Path $repoRoot $override
   if (-not (Test-Path -LiteralPath $entry)) { Write-Host "[INTEL] NOT READY: HAT_INTEL_ENTRYPOINT set but not found: $entry" -ForegroundColor Yellow; exit 2 }
 } else {
-  $entry = Find-IntelEntrypoint -Root $repoRoot
+  # No override => never run arbitrary discovered .py. Use minimal safe intel pulse.
+  & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Run-IntelPipeline-Minimal.ps1")
+  exit $LASTEXITCODE
 }
 
 if (-not $entry -or -not (Test-Path -LiteralPath $entry)) {
@@ -60,7 +62,7 @@ if ($entry.ToLowerInvariant().EndsWith(".py")) {
   $py = Join-Path $repoRoot ".venv\Scripts\python.exe"
   if (-not (Test-Path -LiteralPath $py)) { throw "Python venv missing: $py" }
   Write-Host "[INTEL] Running PY: $entry" -ForegroundColor Cyan
-  & $py $entry
+  $env:PYTHONPATH = $repoRoot`r`n  & $py $entry
   exit $LASTEXITCODE
 }
 
