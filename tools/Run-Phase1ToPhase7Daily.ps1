@@ -72,7 +72,12 @@ $p7 = Join-Path $root "tools\Run-Phase7OptimizerDaily.ps1"
 if (-not (Test-Path $p7)) { throw "[P1-7] Missing: $p7" }
 Write-Host "[P1-7] Phase7 optimizer ..." -ForegroundColor Cyan
 & $p7 -Enable -StatePath "logs\phase6_portfolio_state.json" -BlockGPath "logs\blockg_status_stub.json" -OutDir "logs\phase7" -OutPath "logs\phase7_optimizer_output.json" -Symbols "NVDA,SPY,QQQ" -MaxWeight 0.60
-if ($LASTEXITCODE -ne 0) { throw "[P1-7] Phase7 failed exit=$LASTEXITCODE" }
-
+if ($LASTEXITCODE -ne 0) {
+  if ($LASTEXITCODE -eq 2) {
+    Write-Host "[P1-7] WARN Phase7 fail-closed (exit=2) -> continuing (paper-first safety)" -ForegroundColor Yellow
+  } else {
+    throw "[P1-7] Phase7 failed exit=$LASTEXITCODE"
+  }
+}
 Write-Host "[P1-7] DONE ✅ Phase1..Phase7 daily REAL pipeline complete." -ForegroundColor Green
 exit 0

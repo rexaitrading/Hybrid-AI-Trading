@@ -7,11 +7,8 @@ from typing import Any, Dict, Optional
 import json
 
 import os
-
-class BlockGNotReady(RuntimeError):
-    pass
-
-
+from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 def _today_str() -> str:
     return date.today().isoformat()
 
@@ -64,19 +61,24 @@ def _sym_ready_key(symbol: str) -> str:
 
 def require_blockg_ready_for_live(symbol: str, status: Optional[Dict[str, Any]] = None) -> None:
     """
-    Fail-closed readiness gate.
+    Public stable gate (kept for backward compatibility).
+    Single semantics owner is blockg_contract.ensure_symbol_blockg_ready.
 
-    Test contract:
-    - Unknown symbol => raise BlockGNotReady (fail-closed)
-    - If provided status has nvda_blockg_ready=False => raise and message contains 'nvda_blockg_ready=false'
-    - If status is None => load from default contract JSON
+    - If paper (env HAT_IS_PAPER!=0): no-op
+    - If live (env HAT_IS_PAPER==0): enforce fail-closed using contract JSON
     """
-    st = status if status is not None else load_blockg_status()
+    # Explicit status injection stays supported for tests
+    if status is not None:
+        key = _sym_ready_key(symbol)
+        if not key:
+            raise BlockGNotReady(f"BLOCK-G: unknown symbol '{symbol}' (fail-closed)")
+        if not bool(status.get(key, False)):
+            reasons = status.get("reasons_not_ready", [])
+            raise BlockGNotReady(f"BLOCK-G: {key}=false for {symbol}. reasons={reasons}")
+        return
 
-    key = _sym_ready_key(symbol)
-    if not key:
-        raise BlockGNotReady(f"BLOCK-G: unknown symbol '{symbol}' (fail-closed)")
-
-    if not bool(st.get(key, False)):
-        reasons = st.get("reasons_not_ready", [])
-        raise BlockGNotReady(f"BLOCK-G: {key}=false for {symbol}. reasons={reasons}")
+    # Delegate to contract (env/run_context aware)
+    is_live = os.environ.get("HAT_IS_PAPER", "").strip() == "0"
+    if not is_live:
+        return
+    ensure_symbol_blockg_ready(symbol, allow_paper=False, is_paper=False, ctx=None)

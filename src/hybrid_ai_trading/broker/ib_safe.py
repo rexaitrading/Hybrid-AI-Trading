@@ -48,4 +48,8 @@ def ib_place_order_chokepoint(ib, *args):
         if sym in ("NVDA", "SPY", "QQQ"):
             require_blockg_ready_for_live(sym)
 
-    return ib.placeOrder(order_id, contract, order)
+    try:
+        return ib.placeOrder(order_id, contract, order)
+    except TypeError:
+        # Some mocks / wrappers expose placeOrder(contract, order)
+        return ib.placeOrder(contract, order)
