@@ -61,8 +61,12 @@ if ($entry.ToLowerInvariant().EndsWith(".ps1")) {
 if ($entry.ToLowerInvariant().EndsWith(".py")) {
   $py = Join-Path $repoRoot ".venv\Scripts\python.exe"
   if (-not (Test-Path -LiteralPath $py)) { throw "Python venv missing: $py" }
+
+  # Ensure package imports work when running repo python files
+  $env:PYTHONPATH = $repoRoot
+
   Write-Host "[INTEL] Running PY: $entry" -ForegroundColor Cyan
-  $env:PYTHONPATH = $repoRoot`r`n  & $py $entry
+  & $py $entry
   exit $LASTEXITCODE
 }
 
