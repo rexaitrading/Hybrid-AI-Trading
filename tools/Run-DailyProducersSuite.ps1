@@ -3,6 +3,10 @@ param(
   [ValidateSet("NVDA","SPY","QQQ")]
   [string]$Symbol = "NVDA"
 )
+chcp 65001 | Out-Null
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"

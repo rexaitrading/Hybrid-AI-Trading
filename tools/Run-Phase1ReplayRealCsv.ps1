@@ -1,6 +1,9 @@
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory=$true)]
+  [Parameter(Mandatory=$false)]
+  [ValidateSet("NVDA","SPY","QQQ")]
+  [string]$Symbol = "NVDA",
+[Parameter(Mandatory=$true)]
   [string]$InputCsv,
 
   [Parameter(Mandatory=$false)]
