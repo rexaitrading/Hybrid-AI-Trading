@@ -83,6 +83,6 @@ if (-not $ready) {
   exit 2
 }
 
-Write-Host "[DAILY] DONE ✅ Producers suite complete." -ForegroundColor Green
+Write-Host "[DAILY] DONE [OK] Producers suite complete." -ForegroundColor Green
 Write-Host ("[DAILY] Contract snapshot: nvda={0} spy={1} qqq={2}" -f $st.nvda_blockg_ready, $st.spy_blockg_ready, $st.qqq_blockg_ready) | Out-Host
 exit 0

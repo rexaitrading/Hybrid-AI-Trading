@@ -90,7 +90,7 @@ if(Test-Path $nvdaStamp){
     Write-Host "[DAILY] FAIL-CLOSED: NVDA LIVE NOT ARMED (stamp not ready)." -ForegroundColor Yellow
     exit 2
   }else{
-    Write-Host "[DAILY] NVDA LIVE READY ✅ (stamp ok)." -ForegroundColor Green
+    Write-Host "[DAILY] NVDA LIVE READY [OK] (stamp ok)." -ForegroundColor Green
     Write-Host ("[DAILY] StampPath=" + (Join-Path $root "logs\nvda_live_ready_stamp.json")) -ForegroundColor DarkGray
   }
 }else{
@@ -116,5 +116,5 @@ if ($LASTEXITCODE -ne 0) {
     throw "[P1-7] Phase7 failed exit=$LASTEXITCODE"
   }
 }
-Write-Host "[P1-7] DONE ✅ Phase1..Phase7 daily REAL pipeline complete." -ForegroundColor Green
+Write-Host "[P1-7] DONE [OK] Phase1..Phase7 daily REAL pipeline complete." -ForegroundColor Green
 exit 0
