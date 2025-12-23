@@ -19,16 +19,16 @@ if ([string]::IsNullOrWhiteSpace($override)) {
 function Find-IntelEntrypoint {
   param([string]$Root)
 
-  # Heuristic: locate python files that reference intel artifacts
+  # PS5.1-safe: Pattern must be a SINGLE string to avoid prompting.
+  $pat = '\.intel|risk_pulse|news_feed|notion_intel|intel_report'
+
   $paths = @(
     (Join-Path $Root "src\hybrid_ai_trading\**\*.py"),
     (Join-Path $Root "tools\**\*.py"),
     (Join-Path $Root "scripts\**\*.py")
   )
 
-  $hits = Select-String -Path $paths 
-    -Pattern "\.intel","risk_pulse","news_feed","notion_intel","intel_report" 
-    -AllMatches -ErrorAction SilentlyContinue |
+  $hits = Select-String -Path $paths -Pattern $pat -AllMatches -ErrorAction SilentlyContinue |
     Select-Object -Unique Path
 
   if ($hits -and $hits.Count -gt 0) { return ($hits | Select-Object -First 1).Path }
