@@ -35,14 +35,15 @@ function Find-IntelEntrypoint {
 $entry = $null
 if (-not [string]::IsNullOrWhiteSpace($override)) {
   $entry = Join-Path $repoRoot $override
-  if (-not (Test-Path -LiteralPath $entry)) { throw "HAT_INTEL_ENTRYPOINT set but not found: $entry" }
+  if (-not (Test-Path -LiteralPath $entry)) { Write-Host "[INTEL] NOT READY: HAT_INTEL_ENTRYPOINT set but not found: $entry" -ForegroundColor Yellow; exit 2 }
 } else {
   $entry = Find-IntelEntrypoint -Root $repoRoot
 }
 
 if (-not $entry -or -not (Test-Path -LiteralPath $entry)) {
-  Write-Host "[INTEL] NOT READY: No intel entrypoint found. Set env HAT_INTEL_ENTRYPOINT to a .ps1 or .py path relative to repoRoot." -ForegroundColor Yellow
-  exit 2
+  Write-Host "[INTEL] WARN: No intel entrypoint found; running minimal fallback pulse." -ForegroundColor Yellow
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Run-IntelPipeline-Minimal.ps1")
+exit $LASTEXITCODE
 }
 
 if ($entry.ToLowerInvariant().EndsWith(".ps1")) {
