@@ -30,9 +30,14 @@ Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TaskScheduler/Operati
   Select-Object TimeCreated,Id,Message |
   Out-File -LiteralPath $tsk -Encoding utf8
 
-Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=$since; Id=1000,1001} |
-  Select-Object TimeCreated,Id,ProviderName,Message |
-  Out-File -LiteralPath $app -Encoding utf8
+try {
+  Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=$since; Id=1000,1001} |
+    Select-Object TimeCreated,Id,ProviderName,Message |
+    Out-File -LiteralPath $app -Encoding utf8
+} catch {
+  # NoMatchingEventsFound is normal. Still emit an empty marker file.
+  "" | Out-File -LiteralPath $app -Encoding utf8
+}
 
 Write-Host "[IBG-DEATH] wrote:" -ForegroundColor Yellow
 Write-Host "  $sys" -ForegroundColor Yellow
