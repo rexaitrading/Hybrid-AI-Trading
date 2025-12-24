@@ -28,6 +28,34 @@ UNIVERSE_FILE = "config/universe_equities.yaml"
 POLL_SEC = 0.5
 
 
+
+LOCK_PATH = os.path.join("logs", "runner_stream.lock")
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        if pid <= 0:
+            return False
+        # Windows: os.kill(pid, 0) works for existence checks
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+def enforce_single_instance() -> None:
+    os.makedirs("logs", exist_ok=True)
+    pid = os.getpid()
+    try:
+        if os.path.exists(LOCK_PATH):
+            txt = pathlib.Path(LOCK_PATH).read_text(encoding="utf-8", errors="ignore").strip()
+            old = int(txt) if txt.isdigit() else -1
+            if _pid_alive(old):
+                print(f"[FATAL] runner_stream already running pid={old}; refusing to start", flush=True)
+                raise SystemExit(2)
+    except Exception:
+        # fail-closed: if lock can't be read, still continue (but we prefer not to crash)
+        pass
+
+    pathlib.Path(LOCK_PATH).write_text(str(pid), encoding="utf-8")
 def _nz(x, default=0.0):
     try:
         if x is None:
