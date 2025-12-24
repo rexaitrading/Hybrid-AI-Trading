@@ -122,7 +122,7 @@ async def main():
         pass
 
     host = os.getenv("IB_HOST", "127.0.0.1")
-    port = int(os.getenv("IB_PORT", "7497"))
+    port = int(os.getenv("IB_PORT", "4002"))
     cid = int(os.getenv("IB_CLIENT_ID", os.getenv("CLIENT_ID", "3021")))
 
     ib = IB()
