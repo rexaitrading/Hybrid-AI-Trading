@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
   [int]$IntelEveryMinutes = 30,
-  [int]$PaperEveryMinutes = 5
+  [int]$PaperEveryMinutes = 5,
+  [switch]$RollupOnly,
+  [switch]$Once
 )
 
 Set-StrictMode -Version Latest
@@ -78,6 +80,10 @@ Log "OPS_24x7_START RepoRoot=$RepoRoot"
 Log "IntelEveryMinutes=$IntelEveryMinutes PaperEveryMinutes=$PaperEveryMinutes"
 Log "VenvPy=$VenvPy"
 
+if ($RollupOnly) {
+  try { Write-Rollup } catch { Log ("ROLLUP_FAIL :: {0}" -f $_.Exception.Message) }
+  return
+}
 while ($true) {
   $now = Get-Date
 
@@ -119,5 +125,6 @@ while ($true) {
     $script:nextRoll = (Get-Date).Date.AddDays(1)
   }
 
+  if ($Once) { break }
   Start-Sleep -Seconds 5
 }
