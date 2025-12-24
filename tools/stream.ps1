@@ -42,9 +42,9 @@ function start-stream {
   $port = [int]$portStr
 
   # Fail-closed if IB API port not listening
-  $tnc = Test-NetConnection 127.0.0.1 -Port $port -WarningAction SilentlyContinue
+  $tnc = Test-NetConnection $env:IB_HOST -Port $port -WarningAction SilentlyContinue
   if (-not $tnc.TcpTestSucceeded) {
-    throw "IB API port not listening on 127.0.0.1:$port"
+    throw "IB API port not listening on $env:IB_HOST`:$port"
   }
 
   # Env for runner
