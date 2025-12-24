@@ -72,17 +72,29 @@ function start-stream {
   Write-Host "Stream booted. OUT: $out"
   Write-Host "Stream booted. ERR: $err"
 
-  # Containment window: for 5 seconds, kill any NON-venv python that appears running runner_stream.py
+  # Containment window: for 5 seconds, kill any runner_stream python NOT launched from our venv launcher.
+  # IMPORTANT: On Windows, venv launcher may spawn base python as a child; allow that child (ParentProcessId == venv pid).
   try {
-    $venv = (Resolve-Path $Script:VenvPy).Path
+    $venvExe = (Resolve-Path $Script:VenvPy).Path
+
+    # Identify venv launcher PID for runner_stream (if present)
+    $venvPid = $null
+    $vp = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+      Where-Object { ($_.CommandLine + "") -match 'runner_stream\.py' -and ($_.CommandLine + "") -match [regex]::Escape($venvExe) } |
+      Select-Object -First 1
+    if ($vp) { $venvPid = $vp.ProcessId }
+
     for($i=0; $i -lt 10; $i++){
       Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
         Where-Object {
           ($_.CommandLine + "") -match 'runner_stream\.py' -and
-          ($_.CommandLine + "") -notmatch [regex]::Escape($venv)
+          -not (
+            (($_.CommandLine + "") -match [regex]::Escape($venvExe)) -or
+            ($venvPid -ne $null -and $_.ParentProcessId -eq $venvPid)
+          )
         } |
         ForEach-Object {
-          Write-Host ("[STREAM] KILL_NON_VENV pid={0}" -f $_.ProcessId) -ForegroundColor Yellow
+          Write-Host ("[STREAM] KILL_NON_VENV pid={0} ppid={1}" -f $_.ProcessId, $_.ParentProcessId) -ForegroundColor Yellow
           Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
         }
       Start-Sleep -Milliseconds 500
