@@ -56,7 +56,7 @@ function start-stream {
 
   if (-not (Test-Path -LiteralPath $Script:VenvPy)) {
     Write-Host "Missing Python: $Script:VenvPy" -ForegroundColor Red
-  throw 'Missing Python venv executable for stream runner'
+    exit 2
   }
 
   # Env for runner
@@ -84,7 +84,7 @@ function start-stream {
 
   Write-Host "Stream booted. OUT: $out"
   Write-Host "Stream booted. ERR: $err"
-  return
+  exit 0
 }
 
 function status-stream {
@@ -102,11 +102,14 @@ function status-stream {
     throw "Missing Python venv executable: $Script:VenvPy"
   }
 
-  # Fail-closed if IB port not listening
-  $port = [int]($env:IB_PORT ? $env:IB_PORT : "4002")
+  # Prefer env IB_PORT else default 4002 (PS5.1-safe)
+  $portStr = $env:IB_PORT
+  if ([string]::IsNullOrWhiteSpace($portStr)) { $portStr = "4002" }
+  $port = [int]$portStr
+
   $tnc = Test-NetConnection 127.0.0.1 -Port $port -WarningAction SilentlyContinue
   if (-not $tnc.TcpTestSucceeded) {
-    throw "IB API port not listening on 127.0.0.1:$port (start IBG / check API settings)"
+    throw "IB API port not listening on 127.0.0.1:$port (IBG is listening on 4002 in your netstat)"
   }
 
   # Env for runner
