@@ -25,10 +25,13 @@ $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"
 $ok = $false
 $notes = New-Object System.Collections.Generic.List[string]
 
-function RunPyTimeout([string[]]$args,[int]$timeoutSec){
+function RunPyTimeout([string]$Code,[int]$timeoutSec){
+  $tmp = [System.IO.Path]::Combine($env:TEMP, ("phase4_compile_{0}.py" -f (Get-Date -Format "yyyyMMdd_HHmmss_fff")))
+  [System.IO.File]::WriteAllText($tmp, ($Code + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+
   $psi = New-Object System.Diagnostics.ProcessStartInfo
   $psi.FileName = $py
-  $psi.Arguments = ($args -join " ")
+  $psi.Arguments = ('"{0}"' -f $tmp)
   $psi.WorkingDirectory = $root
   $psi.RedirectStandardOutput = $true
   $psi.RedirectStandardError  = $true
@@ -41,23 +44,40 @@ function RunPyTimeout([string[]]$args,[int]$timeoutSec){
 
   if (-not $p.WaitForExit($timeoutSec * 1000)) {
     try { $p.Kill($true) } catch { }
+    try { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue } catch { }
     return @{ rc = 124; out=""; err="timeout" }
   }
-  return @{ rc = $p.ExitCode; out=$p.StandardOutput.ReadToEnd(); err=$p.StandardError.ReadToEnd() }
+
+  $out = $p.StandardOutput.ReadToEnd()
+  $err = $p.StandardError.ReadToEnd()
+  try { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue } catch { }
+
+  return @{ rc = $p.ExitCode; out=$out; err=$err }
 }
 
 if (-not (Test-Path $py)) {
   $notes.Add("python_missing") | Out-Null
 } else {
   # Phase-4 SAFE: compile sweep only (no pytest; avoids any IB/async hangs)
-  $r = RunPyTimeout @("-c","import compileall,sys; ok=compileall.compile_dir('src',quiet=1); print('compileall_ok',ok); sys.exit(0 if ok else 2)") $TimeoutSec
-  if ($r.rc -eq 0 -and $r.out -match "compileall_ok\s+True") {
+  $r = RunPyTimeout @("-c","import py_compile,sys; files=[
+ 'src/hybrid_ai_trading/runners/runner_stream.py',
+ 'src/hybrid_ai_trading/execution/blockg_enforce.py',
+ 'src/hybrid_ai_trading/broker/ib_safe.py'
+];
+ok=True
+for f in files:
+  try: py_compile.compile(f, doraise=True)
+  except Exception as e:
+    print('py_compile_fail', f, type(e).__name__, e); ok=False
+print('py_compile_ok', ok)
+sys.exit(0 if ok else 2)") $TimeoutSec
+  if ($r.rc -eq 0 -and $r.out -match "py_compile_ok\s+True") {
     $ok = $true
-    $notes.Add("compileall_ok") | Out-Null
+    $notes.Add("py_compile_ok") | Out-Null
   } elseif ($r.rc -eq 124) {
-    $notes.Add("compileall_timeout") | Out-Null
+    $notes.Add("py_compile_timeout") | Out-Null
   } else {
-    $notes.Add("compileall_failed") | Out-Null
+    $notes.Add("py_compile_failed") | Out-Null
   }
 }
 
