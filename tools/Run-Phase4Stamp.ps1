@@ -59,18 +59,24 @@ if (-not (Test-Path $py)) {
   $notes.Add("python_missing") | Out-Null
 } else {
   # Phase-4 SAFE: compile sweep only (no pytest; avoids any IB/async hangs)
-  $r = RunPyTimeout @("-c","import py_compile,sys; files=[
- 'src/hybrid_ai_trading/runners/runner_stream.py',
- 'src/hybrid_ai_trading/execution/blockg_enforce.py',
- 'src/hybrid_ai_trading/broker/ib_safe.py'
-];
+  $code = @"
+import py_compile,sys
+files=[
+  'src/hybrid_ai_trading/runners/runner_stream.py',
+  'src/hybrid_ai_trading/execution/blockg_enforce.py',
+  'src/hybrid_ai_trading/broker/ib_safe.py'
+]
 ok=True
 for f in files:
-  try: py_compile.compile(f, doraise=True)
+  try:
+    py_compile.compile(f, doraise=True)
   except Exception as e:
-    print('py_compile_fail', f, type(e).__name__, e); ok=False
+    print('py_compile_fail', f, type(e).__name__, e)
+    ok=False
 print('py_compile_ok', ok)
-sys.exit(0 if ok else 2)") $TimeoutSec
+sys.exit(0 if ok else 2)
+"@
+  $r = RunPyTimeout $code $TimeoutSec
   if ($r.rc -eq 0 -and $r.out -match "py_compile_ok\s+True") {
     $ok = $true
     $notes.Add("py_compile_ok") | Out-Null
