@@ -29,6 +29,37 @@ POLL_SEC = 0.5
 
 
 
+
+STREAM_LOCK_PATH = os.path.join("logs", "runner_stream.lock")
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        if pid <= 0:
+            return False
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+def enforce_single_instance_and_venv() -> None:
+    # Fail-closed: only allow venv python for runner_stream
+    venv_py = os.path.normcase(os.path.abspath(os.path.join(".venv", "Scripts", "python.exe")))
+    exe = os.path.normcase(os.path.abspath(sys.executable))
+    if exe != venv_py:
+        print(f"[FATAL] runner_stream must run under venv python: expected={venv_py} got={exe}", flush=True)
+        raise SystemExit(2)
+
+    os.makedirs("logs", exist_ok=True)
+    pid = os.getpid()
+
+    if os.path.exists(STREAM_LOCK_PATH):
+        txt = pathlib.Path(STREAM_LOCK_PATH).read_text(encoding="utf-8", errors="ignore").strip()
+        old = int(txt) if txt.isdigit() else -1
+        if _pid_alive(old):
+            print(f"[FATAL] runner_stream already running pid={old}; refusing to start", flush=True)
+            raise SystemExit(2)
+
+    pathlib.Path(STREAM_LOCK_PATH).write_text(str(pid), encoding="utf-8")
 LOCK_PATH = os.path.join("logs", "runner_stream.lock")
 
 def _pid_alive(pid: int) -> bool:
