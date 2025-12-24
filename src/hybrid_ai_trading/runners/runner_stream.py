@@ -95,7 +95,16 @@ async def connect_with_retry(
 ) -> bool:
     for i in range(1, attempts + 1):
         try:
+        try:
             await ib.connectAsync(host, port, clientId=cid, timeout=timeout)
+        except asyncio.CancelledError as e:
+            # Treat as a normal connect failure (avoid propagating cancellation as KeyboardInterrupt)
+            print(f"API connection failed: CancelledError({e})")
+            try:
+                ib.disconnect()
+            except Exception:
+                pass
+            raise Exception("connect cancelled")
             # sanity handshake so we know the API finished starting
             await ib.reqCurrentTimeAsync()
             return True
