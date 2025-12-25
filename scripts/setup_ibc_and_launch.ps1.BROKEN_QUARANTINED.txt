@@ -1,4 +1,4 @@
-param([int]$PortWaitSec = 120)
+﻿param([int]$PortWaitSec = 120)
 $ErrorActionPreference = 'Stop'
 Write-Host "[setup_ibc_and_launch] start" -ForegroundColor Cyan
 
@@ -31,8 +31,12 @@ Write-Host "IBC config -> $cfg" -ForegroundColor Green
 # Force-pinned BAT (ignores outer env; pins 1039/path)
 $logDir = 'C:\HybridAI\logs'
 if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+# Force-pinned BAT (ignores outer env; pins 1039/path)
+$logDir = 'C:\HybridAI\logs'
+if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 $bat = 'C:\IBC\StartGateway_1039_FORCE.bat'
-@"
+
+$batText = @"
 @echo off
 setlocal
 set TWS_MAJOR_VRSN=1039
@@ -47,11 +51,20 @@ tasklist | find /I "ibgateway.exe" >nul && goto :done
 start "" "%IBC_EXE%" "--gateway" "--tws-path=%TWS_PATH%" "--mode=paper" "--ibc-ini=%IBC_INI%" "--tws-version=%TWS_MAJOR_VRSN%" "--log-dir=%LOG_PATH%"
 :done
 endlocal
-"@ | Set-Content -LiteralPath $bat -Encoding ASCII
+"@
+
+$batText | Set-Content -LiteralPath $bat -Encoding ASCII
 Write-Host "Launcher -> $bat" -ForegroundColor Green
 
 # Kill strays and launch minimized
-taskkill /F /IM ibgateway.exe /IM java.exe /IM IBC.exe /IM IBController.exe 2>$null | Out-Null
+# Kill strays and launch minimized (SAFE DEFAULT)
+$forceKill = (($env:HAT_FORCE_KILL_IBG + "").Trim() -eq "1")
+if ($forceKill) {
+  Write-Host "[WARN] HAT_FORCE_KILL_IBG=1 -> killing IBG/Java/IBC" -ForegroundColor Yellow
+  taskkill /F /IM ibgateway.exe /IM java.exe /IM IBC.exe /IM IBController.exe 2>$null | Out-Null
+} else {
+  Write-Host "[SAFE] Not killing IBG. Set env:HAT_FORCE_KILL_IBG=1 to override." -ForegroundColor Green
+}
 Start-Process -WindowStyle Minimized -FilePath $bat
 
 # Wait for Paper port 4002
@@ -93,3 +106,4 @@ if ok:
 }
 
 Write-Host "[setup_ibc_and_launch] done" -ForegroundColor Cyan
+
