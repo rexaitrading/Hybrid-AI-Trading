@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from hybrid_ai_trading.runtime.run_context import RunContext
@@ -31,23 +31,26 @@ def _infer_symbol(contract: Any) -> Optional[str]:
 
 
 def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None, meta: Dict[str, Any] | None = None) -> Any:
-    # IB_CHOKEPOINT_ARGS_RESOLVER
-    # Supported call styles:
-    #   - ib_place_order_chokepoint(ib, contract, order)
-    #   - ib_place_order_chokepoint(ib, order_id, contract, order)
-    # Optional:
-    #   - ctx/meta passed as kwargs for Block-G enforcement.
-    order_id = 0
-    contract = None
-    order = None
+    """
+    Single chokepoint for raw IB placeOrder.
+
+    Supported call styles:
+      - ib_place_order_chokepoint(ib, contract, order)                   # order_id defaults to 0
+      - ib_place_order_chokepoint(ib, order_id, contract, order)         # explicit order_id
+
+    Institutional safety:
+      - If live (HAT_IS_PAPER=0) and symbol is NVDA/SPY/QQQ, enforce Block-G readiness (fail-closed).
+    """
+    # Parse args once
     if len(args) == 2:
-        contract, order = args[0], args[1]
+        contract, order = args
+        order_id = 0
     elif len(args) >= 3:
         order_id, contract, order = args[0], args[1], args[2]
     else:
-        raise ValueError(f"ib_place_order_chokepoint: invalid args len={len(args)}")
+        raise TypeError(f"ib_place_order_chokepoint expected 2 or 3 args after ib, got {len(args)}")
 
-    # Resolve symbol robustly
+    # Infer symbol once
     sym = None
     try:
         sym = str(getattr(contract, "symbol", "") or "").upper().strip()
@@ -59,48 +62,16 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
         except Exception:
             sym = None
 
-    # Block-G contract gate (IB chokepoint) — no live IB order may bypass this.
-    try:
-        if sym in ("NVDA","SPY","QQQ"):
-            ensure_symbol_blockg_ready(sym, allow_paper=True, is_paper=None, ctx=ctx)
-    except Exception:
-        if sym in ("NVDA","SPY","QQQ"):
-            ensure_symbol_blockg_ready(sym, allow_paper=True, is_paper=False, ctx=ctx)
-    """
-    Single chokepoint for raw IB placeOrder.
-
-    Supported call styles:
-      - ib_place_order_chokepoint(ib, contract, order)                   # order_id defaults to 0
-      - ib_place_order_chokepoint(ib, order_id, contract, order)         # explicit order_id
-
-    Institutional safety:
-      - If live (HAT_IS_PAPER=0) and symbol is NVDA/SPY/QQQ, enforce Block-G readiness.
-    """
-    if len(args) == 2:
-        contract, order = args
-        order_id = 0
-    elif len(args) == 3:
-        order_id, contract, order = args
-    else:
-        raise TypeError(
-            f"ib_place_order_chokepoint expected 2 or 3 args after ib, got {len(args)}"
-        )
-
+    # Enforce Block-G (single gate)
     if _is_live():
-        sym = _infer_symbol(contract)
         if sym in ("NVDA", "SPY", "QQQ"):
             require_blockg_ready_for_live(sym)
 
+    # Place order
     try:
         return ib.placeOrder(order_id, contract, order)
     except TypeError:
-        # Some mocks / wrappers expose placeOrder(contract, order)
         return ib.placeOrder(contract, order)
-
-
-# -----------------------------
-# Retry (pure, test-friendly)
-# -----------------------------
 def retry(
     exc_types: Union[Type[BaseException], Tuple[Type[BaseException], ...]],
     attempts: int = 3,
