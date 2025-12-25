@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [ValidateSet("NVDA","SPY","QQQ","ALL")]
     [string]$Symbol = "ALL"
@@ -221,9 +221,8 @@ if ($gsAsOf -ne $today) {
 
 # Per-symbol GateScore diagnostics (for operator clarity)
 $reasons.Add(("NVDA_GS_OK_TODAY=" + $gsNVDA.okToday)) | Out-Null
-$reasons.Add(("SPY_GS_OK_TODAY="  + $gsSPY.okToday))  | Out-Null
-$reasons.Add(("QQQ_GS_OK_TODAY="  + $gsQQQ.okToday))  | Out-Null
-
+# SPY_GS_OK_TODAY omitted for NVDA-only readiness
+# QQQ_GS_OK_TODAY omitted for NVDA-only readiness
 if (-not $phase23Ok) { $reasons.Add("phase23_health_ok_today=false") }
 if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
 if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }
@@ -244,6 +243,8 @@ $payload = [ordered]@{
     gatescore_fresh_today   = (($gsAsOf -eq $today) -and $gsFresh)
 
     gatescore_as_of_date = $gsAsOf
+    gatescore_age_days = $gsAgeDays
+    gatescore_recent_enough = $gsRecentEnough
     gatescore_fresh_for_session = $gsFresh
     gatescore_samples_ok    = $gsSamplesOk
     min_samples_ok_today   = $gsSamplesOk
@@ -296,6 +297,8 @@ Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
 
 exit 0
+
+
 
 
 
