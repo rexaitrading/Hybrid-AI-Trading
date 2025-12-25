@@ -206,9 +206,13 @@ $minPnl     = [int]$gsNVDA.minPnl
 $minEdge    = [double]$gsNVDA.minEdge
 $minMicro   = [double]$gsNVDA.minMicro
 
+# Defaults for StrictMode (computed later in GateScore policy block)
+$gsAgeDays = 9999
+$gsRecentEnough = $false
+
 # ---- Per-symbol ready (institutional) ----
 # NOTE: GateScore global fields remain NVDA-based for compatibility; readiness is per-symbol.
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and $gsRecentEnough
 $spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday
 $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
 $reasons = New-Object System.Collections.Generic.List[string]
