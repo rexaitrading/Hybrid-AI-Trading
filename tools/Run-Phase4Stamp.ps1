@@ -8,7 +8,6 @@ $ErrorActionPreference="Stop"
 
 $root = (Resolve-Path ".").Path
 Set-Location $root
-
 $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 $tsUtc  = (Get-Date).ToUniversalTime().ToString("o")
 
