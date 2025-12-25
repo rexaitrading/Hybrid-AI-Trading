@@ -16,8 +16,7 @@ Covers all branches in portfolio_tracker.py:
 """
 
 import builtins
-from datetime import datetime
-
+from datetime import datetime, timezone
 import pytest
 
 from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
@@ -183,7 +182,7 @@ def test_exposures(tracker):
 # VaR & CVaR
 # ----------------------------------------------------------------------
 def test_var_and_cvar_paths(tracker, caplog):
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 101)]
+    tracker.history = [(datetime.now(timezone.utc), 100), (datetime.now(timezone.utc), 101)]
     with caplog.at_level("DEBUG"):
         assert tracker.get_var(0.95) == 0.0
     assert "insufficient data for VaR" in caplog.text
@@ -191,9 +190,9 @@ def test_var_and_cvar_paths(tracker, caplog):
 
 def test_cvar_no_losses_after_cutoff(tracker, caplog):
     tracker.history = [
-        (datetime.utcnow(), 100),
-        (datetime.utcnow(), 110),
-        (datetime.utcnow(), 120),
+        (datetime.now(timezone.utc), 100),
+        (datetime.now(timezone.utc), 110),
+        (datetime.now(timezone.utc), 120),
     ]
     with caplog.at_level("DEBUG"):
         val = tracker.get_cvar()
@@ -203,9 +202,9 @@ def test_cvar_no_losses_after_cutoff(tracker, caplog):
 
 def test_var_exception_branch(tracker, monkeypatch, caplog):
     tracker.history = [
-        (datetime.utcnow(), 100),
-        (datetime.utcnow(), 90),
-        (datetime.utcnow(), 80),
+        (datetime.now(timezone.utc), 100),
+        (datetime.now(timezone.utc), 90),
+        (datetime.now(timezone.utc), 80),
     ]
     monkeypatch.setattr(
         "numpy.percentile", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("fail"))
@@ -218,9 +217,9 @@ def test_var_exception_branch(tracker, monkeypatch, caplog):
 
 def test_cvar_exception_branch(tracker, monkeypatch, caplog):
     tracker.history = [
-        (datetime.utcnow(), 100),
-        (datetime.utcnow(), 90),
-        (datetime.utcnow(), 80),
+        (datetime.now(timezone.utc), 100),
+        (datetime.now(timezone.utc), 90),
+        (datetime.now(timezone.utc), 80),
     ]
     monkeypatch.setattr(
         "numpy.percentile", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("fail"))
@@ -233,7 +232,7 @@ def test_cvar_exception_branch(tracker, monkeypatch, caplog):
 
 def test_var_scipy_import_failure(monkeypatch):
     tracker = PortfolioTracker()
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 110)]
+    tracker.history = [(datetime.now(timezone.utc), 100), (datetime.now(timezone.utc), 110)]
 
     real_import = builtins.__import__
 
@@ -248,7 +247,7 @@ def test_var_scipy_import_failure(monkeypatch):
 
 def test_cvar_single_negative_loss_branch(caplog):
     t = PortfolioTracker()
-    t.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 90)]
+    t.history = [(datetime.now(timezone.utc), 100), (datetime.now(timezone.utc), 90)]
     with caplog.at_level("DEBUG"):
         val = t.get_cvar()
         assert val > 0
@@ -256,7 +255,7 @@ def test_cvar_single_negative_loss_branch(caplog):
 
 
 def test_var_logs_insufficient_data(tracker, caplog):
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 101)]
+    tracker.history = [(datetime.now(timezone.utc), 100), (datetime.now(timezone.utc), 101)]
     with caplog.at_level("DEBUG"):
         v = tracker.get_var()
     assert v == 0.0
@@ -265,9 +264,9 @@ def test_var_logs_insufficient_data(tracker, caplog):
 
 def test_cvar_all_returns_positive(tracker, caplog):
     tracker.history = [
-        (datetime.utcnow(), 100),
-        (datetime.utcnow(), 110),
-        (datetime.utcnow(), 120),
+        (datetime.now(timezone.utc), 100),
+        (datetime.now(timezone.utc), 110),
+        (datetime.now(timezone.utc), 120),
     ]
     with caplog.at_level("DEBUG"):
         v = tracker.get_cvar()
@@ -282,9 +281,9 @@ def test_var_with_empty_history(tracker):
 
 def test_cvar_losses_but_none_below_cutoff(tracker, monkeypatch, caplog):
     tracker.history = [
-        (datetime.utcnow(), 100),
-        (datetime.utcnow(), 101),
-        (datetime.utcnow(), 102),
+        (datetime.now(timezone.utc), 100),
+        (datetime.now(timezone.utc), 101),
+        (datetime.now(timezone.utc), 102),
     ]
     # Force cutoff high so no losses qualify
     monkeypatch.setattr("numpy.percentile", lambda *a, **k: -9999)
@@ -302,27 +301,27 @@ def test_sharpe_and_sortino(tracker):
     assert tracker.get_sharpe() == 0.0
     assert tracker.get_sortino() == 0.0
 
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 100)]
+    tracker.history = [(datetime.now(timezone.utc), 100), (datetime.now(timezone.utc), 100)]
     assert tracker.get_sharpe() == 0.0
     assert tracker.get_sortino() == float("inf")
 
-    tracker.history = [(datetime.utcnow(), 100), (datetime.utcnow(), 110)]
+    tracker.history = [(datetime.now(timezone.utc), 100), (datetime.now(timezone.utc), 110)]
     assert isinstance(tracker.get_sharpe(), float)
     assert tracker.get_sortino() in [float("inf"), tracker.get_sortino()]
 
 
 def test_sortino_downside_zero_std(tracker):
     tracker.history = [
-        (datetime.utcnow(), 100),
-        (datetime.utcnow(), 99),
-        (datetime.utcnow(), 99),
+        (datetime.now(timezone.utc), 100),
+        (datetime.now(timezone.utc), 99),
+        (datetime.now(timezone.utc), 99),
     ]
     assert tracker.get_sortino() == 0.0
 
 
 def test_returns_single_point_history():
     t = PortfolioTracker()
-    t.history = [(datetime.utcnow(), 100)]
+    t.history = [(datetime.now(timezone.utc), 100)]
     assert t._returns() == []
 
 
@@ -397,9 +396,9 @@ def test_var_returns_empty_history(tracker):
 
 def test_cvar_mixed_returns(tracker):
     tracker.history = [
-        (datetime.utcnow(), 100),
-        (datetime.utcnow(), 90),
-        (datetime.utcnow(), 110),
+        (datetime.now(timezone.utc), 100),
+        (datetime.now(timezone.utc), 90),
+        (datetime.now(timezone.utc), 110),
     ]
     val = tracker.get_cvar()
     assert isinstance(val, float)
@@ -440,10 +439,10 @@ def test_sell_close_and_new_short_forces_both_paths(tracker, caplog):
 def test_cvar_losses_exist_but_none_below_cutoff(tracker, monkeypatch, caplog):
     # Two negative returns but force cutoff too low so losses list is empty
     tracker.history = [
-        (datetime.utcnow(), 100),
-        (datetime.utcnow(), 90),  # -10%
-        (datetime.utcnow(), 80),  # -11%
-        (datetime.utcnow(), 82),  # +2.5%
+        (datetime.now(timezone.utc), 100),
+        (datetime.now(timezone.utc), 90),  # -10%
+        (datetime.now(timezone.utc), 80),  # -11%
+        (datetime.now(timezone.utc), 82),  # +2.5%
     ]
     monkeypatch.setattr("numpy.percentile", lambda *a, **k: -999)  # cutoff excludes all
     with caplog.at_level("DEBUG"):
