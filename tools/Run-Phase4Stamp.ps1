@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [int]$TimeoutSec = 60
 )
@@ -81,6 +81,20 @@ sys.exit(0 if ok else 2)
     $ok = $true
     $notes.Add("py_compile_ok") | Out-Null
   } elseif ($r.rc -eq 124) {
+
+# Phase-4 stronger: tiny pytest slice (fast, no IB hang)
+try {
+  $pytest = Join-Path $root ".venv\Scripts\python.exe"
+  if (Test-Path $pytest) {
+    & $pytest -m pytest -q tests\test_blockg_risk_flatten_guard.py tests\test_blockg_chokepoint_blocks_live.py tests\test_gatescore_fresh_policy.py | Out-Host
+    if ($LASTEXITCODE -ne 0) { $notes.Add("pytest_slice_fail") | Out-Null; $ok = $false } else { $notes.Add("pytest_slice_ok") | Out-Null }
+  } else {
+    $notes.Add("pytest_python_missing") | Out-Null; $ok = $false
+  }
+} catch {
+  $notes.Add("pytest_slice_exception") | Out-Null; $ok = $false
+}
+
     $notes.Add("py_compile_timeout") | Out-Null
   } else {
     $notes.Add("py_compile_failed") | Out-Null
