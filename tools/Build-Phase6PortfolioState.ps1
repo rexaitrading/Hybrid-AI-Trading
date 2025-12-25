@@ -1,58 +1,47 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [string]$OutPath = ".\logs\phase6_portfolio_state.json"
 )
 
 Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference="Stop"
 
-function Write-Utf8NoBom([string]$Path, [string]$Text) {
-  $enc = New-Object System.Text.UTF8Encoding($false)
-  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
-  $full = $Path
-  if (-not [System.IO.Path]::IsPathRooted($full)) { $full = Join-Path $repoRoot $Path }
-  $dir = Split-Path -Parent $full
-  if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
-  $t = $Text -replace "`r`n","`n"
-  if(-not $t.EndsWith("`n")){ $t += "`n" }
-  [System.IO.File]::WriteAllText($full, $t, $enc)
-}
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+$toolsDir = Join-Path $repoRoot "tools"
+$checker  = Join-Path $toolsDir "Check-BlockGReady.ps1"
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
+$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
-# Limits (conservative defaults; wire to your real risk config later)
-$limits = [ordered]@{
-  max_daily_loss_usd = 500.0
-  max_drawdown_usd   = 800.0
-  max_var_usd        = 600.0
-  cooldown_minutes   = 30
+function CheckSym([string]$sym){
+  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym 2>$null | Out-Host
+  return $LASTEXITCODE
 }
 
-# Metrics (paper-first placeholders; wire to real portfolio tracker later)
-$metrics = [ordered]@{
-  daily_pnl_usd        = 0.0
-  drawdown_usd         = 0.0
-  var_usd              = 0.0
-  cooldown_until_utc   = ""
+$syms = @("NVDA","SPY","QQQ")
+$ready = @()
+foreach($s in $syms){
+  if((CheckSym $s) -eq 0){ $ready += $s }
 }
 
-# Fail-closed logic for Phase6 "ok"
-$ok = $true
-$reason = "portfolio_ok"
-if ([double]$metrics.daily_pnl_usd -le (-1.0 * [double]$limits.max_daily_loss_usd)) { $ok = $false; $reason = "daily_loss_limit_hit" }
-if ([double]$metrics.drawdown_usd -ge [double]$limits.max_drawdown_usd)             { $ok = $false; $reason = "drawdown_limit_hit" }
-if ([double]$metrics.var_usd -ge [double]$limits.max_var_usd)                       { $ok = $false; $reason = "var_limit_hit" }
+$ok = ($ready.Count -gt 0)
+$reason = if($ok){"phase6_state_ok"}else{"phase6_state_no_symbols_ready"}
 
-$out = [ordered]@{
+$payload = [ordered]@{
   ts_utc    = $tsUtc
   as_of_date= $today
   ok        = $ok
   reason    = $reason
-  limits    = $limits
-  metrics   = $metrics
+  ready_symbols = @($ready)
+  symbols   = @($syms)
+  version   = "phase6.1"
 } | ConvertTo-Json -Depth 8
 
-Write-Utf8NoBom -Path $OutPath -Text $out
-Write-Host "[PHASE6] wrote portfolio state -> $OutPath ok=$ok reason=$reason" -ForegroundColor Cyan
-exit 0
+$enc = New-Object System.Text.UTF8Encoding($false)
+$full = Join-Path $repoRoot $OutPath
+$dir = Split-Path -Parent $full
+if($dir -and -not (Test-Path $dir)){ New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+[System.IO.File]::WriteAllText($full, ($payload -replace "`r`n","`n") + "`n", $enc)
+
+Write-Host "[PHASE6] wrote $full ok=$ok ready=$($ready -join ',')" -ForegroundColor Green
+exit (0)
