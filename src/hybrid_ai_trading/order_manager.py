@@ -12,6 +12,7 @@ def _blockg_guard_if_live(symbol: str) -> None:
     sym = str(symbol or "").upper().strip()
     if sym in ("NVDA", "SPY", "QQQ"):
         require_blockg_ready_for_live(sym)
+
 class OrderManager:
     def __init__(self) -> None:
         self.broker = make_broker()
