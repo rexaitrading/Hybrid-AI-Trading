@@ -213,6 +213,12 @@ $spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday
 $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
 $reasons = New-Object System.Collections.Generic.List[string]
 
+# GateScore policy note (holiday/weekend-safe)
+if ($gsAsOf -ne $today) {
+  $reasons.Add(("gatescore_session_date_mismatch today=" + $today + " session=" + $gsAsOf)) | Out-Null
+}
+
+
 # Per-symbol GateScore diagnostics (for operator clarity)
 $reasons.Add(("NVDA_GS_OK_TODAY=" + $gsNVDA.okToday)) | Out-Null
 $reasons.Add(("SPY_GS_OK_TODAY="  + $gsSPY.okToday))  | Out-Null
@@ -235,7 +241,7 @@ $payload = [ordered]@{
     ev_hard_session_ok = $evSessionOk
     phase4_ok_today         = $phase4Ok
 
-    gatescore_fresh_today   = $gsFresh
+    gatescore_fresh_today   = (($gsAsOf -eq $today) -and $gsFresh)
 
     gatescore_as_of_date = $gsAsOf
     gatescore_fresh_for_session = $gsFresh
@@ -290,4 +296,5 @@ Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
 
 exit 0
+
 
