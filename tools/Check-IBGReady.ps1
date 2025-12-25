@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [string]$IbHost = "127.0.0.1",
   [int]$Port = 4002,
@@ -8,6 +8,10 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+
+$toolsDir = Split-Path -Parent $PSCommandPath
+$repoRoot = Split-Path -Parent $toolsDir
 
 function Fail([string]$msg){
   Write-Host ("IBG_READY=0 :: " + $msg) -ForegroundColor Red
@@ -35,8 +39,7 @@ $env:IB_CLIENT_ID    = "$ClientId"
 $smoke = Join-Path $RepoRoot "tools\ibg_repo_smoke_readonly.py"
 if(-not (Test-Path $smoke)){ Fail "missing $smoke" }
 
-python $smoke | Out-Host
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "python.ps1") $smoke | Out-Host
 
 Write-Host "IBG_READY=1" -ForegroundColor Green
 exit 0
-

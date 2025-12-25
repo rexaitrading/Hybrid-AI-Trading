@@ -1,8 +1,12 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+
+$toolsDir = Split-Path -Parent $PSCommandPath
+$repoRoot = Split-Path -Parent $toolsDir
 
 function Step([string]$name, [scriptblock]$b){
   Write-Host ("`n=== " + $name + " ===") -ForegroundColor Cyan
@@ -14,7 +18,7 @@ $okAll = $true
 
 # Phase-0 / Infra
 $okAll = (Step "Infra: Python compile critical modules" {
-  python -c "import py_compile; py_compile.compile('src/hybrid_ai_trading/broker/ib_safe.py', doraise=True); py_compile.compile('src/hybrid_ai_trading/execution/blockg_enforce.py', doraise=True); print('PY_COMPILE_OK')"
+  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "python.ps1") -c "import py_compile; py_compile.compile('src/hybrid_ai_trading/broker/ib_safe.py', doraise=True); py_compile.compile('src/hybrid_ai_trading/execution/blockg_enforce.py', doraise=True); print('PY_COMPILE_OK')"
 }) -and $okAll
 
 # Phase-5 Safety spine (IBG + BlockG)
@@ -30,13 +34,13 @@ $okAll = (Step "Phase5: BlockG build + NVDA ready" {
 }) -and $okAll
 
 $okAll = (Step "Phase5: BlockG tests" {
-  python -m pytest -q tests\test_blockg_risk_flatten_guard.py
-  python -m pytest -q tests\test_blockg_chokepoint_blocks_live.py
+  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "python.ps1") -m pytest -q tests\test_blockg_risk_flatten_guard.py
+  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "python.ps1") -m pytest -q tests\test_blockg_chokepoint_blocks_live.py
 }) -and $okAll
 
 # Phase-1 replay (presence + basic runner import)
 $okAll = (Step "Phase1: replay runner import" {
-  python -c "import importlib; importlib.import_module('hybrid_ai_trading.runners.backtest_replay'); print('PHASE1_IMPORT_OK')"
+  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "python.ps1") -c "import importlib; importlib.import_module('hybrid_ai_trading.runners.backtest_replay'); print('PHASE1_IMPORT_OK')"
 }) -and $okAll
 
 # Phase-2/3/4/6/7 are project-specific; we at least check tool presence
