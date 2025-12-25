@@ -63,7 +63,7 @@ if(($st.as_of_date + "") -ne $today){
   $st = [pscustomobject]@{
     as_of_date = $today
     nvda_live_ready = $false
-    reasons_not_ready = @("stamp_stale")
+    reasons_not_ready = @("stamp_stale") + @($st.reasons_not_ready)
   }
 }
 
@@ -99,7 +99,13 @@ $out = [ordered]@{
   gatescore_threshold_ok_today = [bool]$bg.gatescore_threshold_ok_today
   gatescore_ok_today       = [bool]$bg.gatescore_ok_today
 
-  reasons_not_ready = @($bg.reasons_not_ready)
+  reasons_not_ready = (
+    @(
+      if(-not (([bool]$st.nvda_live_ready -and [bool]$bg.nvda_blockg_ready))){"nvda_live_allowed=false"}
+    ) +
+    @(@($st.reasons_not_ready) | ForEach-Object { "stamp:" + ($_ + "") }) +
+    @(@($bg.reasons_not_ready) | ForEach-Object { "bg:" + ($_ + "") })
+  ) | Where-Object { $_ -and ($_ + "").Trim().Length -gt 0 } | Select-Object -Unique
 
   # Evidence pointers (for debugging / audit trail)
   paths = @{
