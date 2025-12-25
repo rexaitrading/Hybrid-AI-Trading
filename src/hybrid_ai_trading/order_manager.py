@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+from typing import Any, Dict, Optional
+
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
+
+from .brokers.factory import make_broker
+
+
 def _blockg_guard_if_live(symbol: str) -> None:
     # Defense-in-depth: blocks live sends even if broker layer is bypassed.
     sym = str(symbol or "").upper().strip()
     if sym in ("NVDA", "SPY", "QQQ"):
         require_blockg_ready_for_live(sym)
-from typing import Any, Dict, Optional
-
-from .brokers.factory import make_broker
-
-
 class OrderManager:
     def __init__(self) -> None:
         self.broker = make_broker()
