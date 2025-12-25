@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import argparse
@@ -72,7 +72,7 @@ def main() -> int:
                 total_decisions += len(decisions)
                 for d in decisions:
                     try:
-                        logger.log(d)
+                        logger.info("decision", decision=d)
                     except Exception:
                         pass
                     if isinstance(d, dict) and _decision_is_actionable(d.get("decision")):
@@ -86,7 +86,7 @@ def main() -> int:
             total_decisions += len(decisions)
             for d in decisions:
                 try:
-                    logger.log(d)
+                    logger.info("decision", decision=d)
                 except Exception:
                     pass
                 if isinstance(d, dict) and _decision_is_actionable(d.get("decision")):
@@ -109,3 +109,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
