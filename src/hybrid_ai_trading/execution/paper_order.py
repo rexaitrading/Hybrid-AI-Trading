@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 def _paper_only_guard() -> None:
     # FAIL-CLOSED: paper_order must never touch IB in live mode.
@@ -233,9 +233,7 @@ def place_bracket(
     _paper_only_guard()
 
     tr_parent = ib.placeOrder(contract, parent)
-    _paper_only_guard()
     tr_take = ib.placeOrder(contract, take)
-    _paper_only_guard()
     tr_stop = ib.placeOrder(contract, stop)
     ib.sleep(0.8)
     return tr_parent, tr_take, tr_stop
@@ -521,3 +519,4 @@ def main(argv: Optional[list[str]] = None) -> None:
 
 if __name__ == "__main__":
     main()
+
