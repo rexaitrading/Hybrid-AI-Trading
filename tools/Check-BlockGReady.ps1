@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
@@ -60,6 +60,8 @@ if (-not $statusPath) { $statusPath = $defaultPath }
 $st = Read-Json $statusPath
 if (-not $st) { Fail "Missing/invalid Block-G status JSON at: $statusPath" }
 
+# --- GateScore session-age policy (contract-only; do not recompute) ---
+$MAX_GS_AGE_DAYS = 3
 # 3) Validate required daily quality fields (fail-closed)
 # NOTE: contract defines these booleans (default false if absent)
 $reqFields = @(
@@ -73,6 +75,10 @@ foreach ($k in $reqFields) {
   if (-not [bool]$st.$k) { Fail "$k=false" }
 }
 
+# GateScore age policy (fail-closed)
+if (-not [bool]$st.gatescore_recent_enough) { Fail "gatescore_recent_enough=false" }
+try { $age = [int]$st.gatescore_age_days } catch { Fail "gatescore_age_days invalid" }
+if ($age -gt $MAX_GS_AGE_DAYS) { Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
 # Optional: min_samples_ok_today if present must be true
 if ($st.PSObject.Properties.Name -contains "min_samples_ok_today") {
   if (-not [bool]$st.min_samples_ok_today) { Fail "min_samples_ok_today=false" }
@@ -96,4 +102,3 @@ if ($s -eq "ALL") {
 
 Write-Host "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath" -ForegroundColor Green
 exit 0
-
