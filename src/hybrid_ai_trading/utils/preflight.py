@@ -30,7 +30,7 @@ def require_paper(ib):
 
 def _now_et():
     if ZoneInfo is None:
-        return dt.datetime.utcnow().replace(tzinfo=None)
+        return dt.datetime.now(timezone.utc).replace(tzinfo=None)
     return dt.datetime.now(tz=ZoneInfo("America/New_York"))
 
 

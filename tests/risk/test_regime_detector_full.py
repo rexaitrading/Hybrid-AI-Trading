@@ -1,9 +1,7 @@
 """
 Unit Tests: RegimeDetector (Hybrid AI Quant Pro Ã¢â‚¬â€œ 100% Coverage, Branch-Safe)
 """
-
-from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import pytest
 
@@ -16,7 +14,7 @@ class DummyPrice:
     def __init__(self, close, symbol="AAPL", timestamp=None):
         self.close = close
         self.symbol = symbol
-        self.timestamp = timestamp or datetime.utcnow()
+        self.timestamp = timestamp or datetime.now(timezone.utc)
 
 
 class DummySession:
@@ -218,7 +216,7 @@ def test_detect_with_metrics_normal(monkeypatch):
 
 
 def test_get_prices_db_success(monkeypatch):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     dummy_prices = [
         DummyPrice(100, timestamp=now - timedelta(days=2)),
         DummyPrice(110, timestamp=now - timedelta(days=1)),
