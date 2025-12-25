@@ -53,7 +53,10 @@ if (Test-Path $pnlPath) {
     if ($dates.Count -gt 0) { $gsAsOf = ($dates | Sort-Object | Select-Object -Last 1) }
   } catch { $gsAsOf = "" }
 }
-if (-not $gsAsOf) { $gsAsOf = $today }
+if (-not $gsAsOf) {
+  # No reliable GateScore session available (holiday/off-session). Keep blank to avoid false "today".
+  $gsAsOf = ""
+}
 # ---- Phase4 ----
     $phase4Ok = Get-Phase4OkToday $repoRoot $today
 $phase4Path = Join-Path $logsDir "phase4_validation_passed.json"
@@ -216,6 +219,8 @@ $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and 
 $spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday
 $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
 $reasons = New-Object System.Collections.Generic.List[string]
+if (-not $gsAsOf) { $reasons.Add("gatescore_missing_source_data") | Out-Null }
+
 
 # GateScore policy (session-age based; holiday/weekend safe)
 $MAX_GS_AGE_DAYS = 3
