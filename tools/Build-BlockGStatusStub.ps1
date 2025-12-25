@@ -213,15 +213,21 @@ $spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday
 $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
 $reasons = New-Object System.Collections.Generic.List[string]
 
-# GateScore policy note (holiday/weekend-safe)
-if ($gsAsOf -ne $today) {
-  $reasons.Add(("gatescore_session_date_mismatch today=" + $today + " session=" + $gsAsOf)) | Out-Null
+# GateScore policy (session-age based; holiday/weekend safe)
+$MAX_GS_AGE_DAYS = 3
+$gsAgeDays = 9999
+try {
+  if ($gsAsOf) {
+    $d0 = [datetime]::ParseExact(($gsAsOf + ""), "yyyy-MM-dd", $null)
+    $d1 = [datetime]::ParseExact(($today + ""), "yyyy-MM-dd", $null)
+    $gsAgeDays = [int]([math]::Floor(($d1 - $d0).TotalDays))
+  }
+} catch { $gsAgeDays = 9999 }
+
+$gsRecentEnough = ($gsAgeDays -le $MAX_GS_AGE_DAYS)
+if (-not $gsRecentEnough) {
+  $reasons.Add(("gatescore_too_old age_days=" + $gsAgeDays + " max=" + $MAX_GS_AGE_DAYS + " session=" + $gsAsOf + " today=" + $today)) | Out-Null
 }
-
-
-# Per-symbol GateScore diagnostics (for operator clarity)
-$reasons.Add(("NVDA_GS_OK_TODAY=" + $gsNVDA.okToday)) | Out-Null
-# SPY_GS_OK_TODAY omitted for NVDA-only readiness
 # QQQ_GS_OK_TODAY omitted for NVDA-only readiness
 if (-not $phase23Ok) { $reasons.Add("phase23_health_ok_today=false") }
 if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
@@ -297,8 +303,3 @@ Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
 
 exit 0
-
-
-
-
-
