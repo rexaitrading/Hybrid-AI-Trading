@@ -29,15 +29,6 @@ if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Fo
 
 $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 # ---- GateScore session date (weekend-safe): derive from pnl summary ----
-$pnlPath = Join-Path $logsDir "gatescore_pnl_summary.csv"
-$gsAsOf = ""
-if (Test-Path $pnlPath) {
-  try {
-    $pnlRows = @(Import-Csv $pnlPath)
-    $gsAsOf = @($pnlRows | ForEach-Object { Slice-Date ([string]$_.as_of_date) } | Where-Object { $_ }) | Sort-Object | Select-Object -Last 1
-  } catch { $gsAsOf = "" }
-}
-if (-not $gsAsOf) { $gsAsOf = $today }
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 $statusPath = Join-Path $logsDir "blockg_status_stub.json"
 
@@ -52,6 +43,17 @@ function Slice-Date([string]$d) {
     return $d
 }
 
+# ---- GateScore session date (weekend/holiday-safe): derive from pnl summary ----
+$pnlPath = Join-Path $logsDir "gatescore_pnl_summary.csv"
+$gsAsOf = ""
+if (Test-Path $pnlPath) {
+  try {
+    $pnlRows = @(Import-Csv $pnlPath)
+    $dates = @($pnlRows | ForEach-Object { Slice-Date ([string]$_.as_of_date) } | Where-Object { $_ })
+    if ($dates.Count -gt 0) { $gsAsOf = ($dates | Sort-Object | Select-Object -Last 1) }
+  } catch { $gsAsOf = "" }
+}
+if (-not $gsAsOf) { $gsAsOf = $today }
 # ---- Phase4 ----
     $phase4Ok = Get-Phase4OkToday $repoRoot $today
 $phase4Path = Join-Path $logsDir "phase4_validation_passed.json"
