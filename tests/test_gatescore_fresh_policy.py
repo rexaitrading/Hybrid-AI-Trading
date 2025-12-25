@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import subprocess
@@ -27,15 +27,21 @@ def test_gatescore_fresh_today_vs_session_policy(tmp_path: Path, monkeypatch):
     # fresh_for_session can be True on weekends/holidays (session date != today_utc)
     # fresh_today must only be True if session date == as_of_date (UTC today)
     today = st.get("as_of_date")
-    gs_asof = st.get("gatescore_as_of_date")
+gs_asof = st.get("gatescore_as_of_date")
 
-    assert isinstance(today, str) and len(today) >= 10
-    assert isinstance(gs_asof, str) and len(gs_asof) >= 10
+assert isinstance(today, str) and len(today) >= 10
+assert isinstance(gs_asof, str)
 
-    fresh_session = bool(st.get("gatescore_fresh_for_session"))
-    fresh_today = bool(st.get("gatescore_fresh_today"))
+fresh_session = bool(st.get("gatescore_fresh_for_session"))
+fresh_today = bool(st.get("gatescore_fresh_today"))
 
-    if gs_asof != today:
+# Institutional policy: if GateScore source data is missing, builder sets gs_asof=""
+# In that case, both freshness flags must be False.
+if gs_asof == "":
+    assert fresh_session is False
+    assert fresh_today is False
+else:
+    assert len(gs_asof) >= 10if gs_asof != today:
         assert fresh_today is False, "fresh_today must be False when session != today"
     else:
         # If same day, fresh_today must mirror fresh_for_session
