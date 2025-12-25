@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
@@ -65,7 +65,7 @@ if (-not $st) { Fail "Missing/invalid Block-G status JSON at: $statusPath" }
 $reqFields = @(
   "phase4_ok_today",
   "ev_hard_daily_ok_today",
-  "gatescore_fresh_today"
+  "gatescore_fresh_for_session"
 )
 
 foreach ($k in $reqFields) {
@@ -96,3 +96,4 @@ if ($s -eq "ALL") {
 
 Write-Host "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath" -ForegroundColor Green
 exit 0
+
