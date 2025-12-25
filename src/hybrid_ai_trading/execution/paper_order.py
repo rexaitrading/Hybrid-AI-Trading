@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+def _paper_only_guard() -> None:
+    # FAIL-CLOSED: paper_order must never touch IB in live mode.
+    import os
+    if str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0":
+        raise RuntimeError("paper_order is PAPER-ONLY; refused because HAT_IS_PAPER=0 (live)")
+
 import argparse
 import json
 import os
@@ -145,6 +151,7 @@ def whatif_validate(
     trial.algoStrategy = getattr(order, "algoStrategy", None)
     trial.algoParams = getattr(order, "algoParams", None)
     trial.whatIf = True
+    _paper_only_guard()
     tr = ib.placeOrder(contract, trial)
     ib.sleep(0.6)
     err = None
@@ -223,8 +230,12 @@ def place_bracket(
     stop.outsideRth = bool(outside_rth)
     stop.orderRef = order_ref
 
+    _paper_only_guard()
+
     tr_parent = ib.placeOrder(contract, parent)
+    _paper_only_guard()
     tr_take = ib.placeOrder(contract, take)
+    _paper_only_guard()
     tr_stop = ib.placeOrder(contract, stop)
     ib.sleep(0.8)
     return tr_parent, tr_take, tr_stop
