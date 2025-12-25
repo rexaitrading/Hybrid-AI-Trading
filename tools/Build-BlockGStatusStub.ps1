@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [ValidateSet("NVDA","SPY","QQQ","ALL")]
     [string]$Symbol = "ALL"
@@ -27,7 +27,7 @@ $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
 if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
+$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 # ---- GateScore session date (weekend-safe): derive from pnl summary ----
 $pnlPath = Join-Path $logsDir "gatescore_pnl_summary.csv"
 $gsAsOf = ""
@@ -288,3 +288,4 @@ Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
 
 exit 0
+
