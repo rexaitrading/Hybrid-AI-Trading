@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [int]$TimeoutSec = 60,
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
@@ -8,7 +8,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
-$root = (Resolve-Path ".").Path
+$toolsDir = Split-Path -Parent $PSCommandPath
+$root = Split-Path -Parent $toolsDir
 Set-Location $root
 
 $py = Join-Path $root ".venv\Scripts\python.exe"
@@ -29,10 +30,10 @@ $csv = Join-Path $root "logs\gatescore_daily_summary.csv"
 if (-not (Test-Path $csv)) { throw "[GS-BUILD] missing input csv: $csv" }
 
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
-
+$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 function Has-TodayRow([string]$sym){
-  return (Select-String -Path $csv -Pattern ("^" + [regex]::Escape($today) + "," + [regex]::Escape($sym) + ",") -Quiet)
+  $pat = ("^" + [regex]::Escape($sym) + ",.*," + [regex]::Escape($today) + "$")
+  return (Select-String -Path $csv -Pattern $pat -Quiet)
 }
 
 # Fail-closed: if no today row, do not spawn python (prevents freeze + false data).
@@ -104,3 +105,4 @@ $rc = RunPyTimeout @("-I","-X","faulthandler","-c",$code,"--csv",$csv,"--symbol"
 
 Write-Host "[GS-BUILD] OK symbols=$($syms -join ',') logs=$logDir" -ForegroundColor Green
 exit 0
+
