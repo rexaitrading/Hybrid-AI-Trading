@@ -1,35 +1,35 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from datetime import date
-from pathlib import Path
 from typing import Optional
+from pathlib import Path
+import os
 
 
 @dataclass(frozen=True)
 class RunContext:
     """
-    Canonical runtime context shared by:
-      - pre-market routines
-      - sim/paper/live runners
-      - exporters (Notion/CSV)
+    Unified runtime context for all phases.
+    FAIL-CLOSED defaults:
+      - is_paper defaults to True unless explicitly set to "0"
+      - blockg_status_path defaults to repo logs stub path if provided, else None
     """
-
     as_of_date: str
     mode: str                 # "paper" | "live" | "backtest"
-    is_paper: bool            # derived from mode / flags; keep for backward compat
+    is_paper: bool
     symbol: str
     regime: str
     repo_root: Path
-
-    # Contract paths (deterministic, env-overridable)
     blockg_status_path: Path
-
     @staticmethod
+    def from_env() -> "RunContext":
+        # Convenience: preserve older API by producing a full context with safe defaults.
+        v = str(os.environ.get("HAT_IS_PAPER", "")).strip()
+        m = "live" if v == "0" else "paper"
+        return RunContext.from_env_and_args(symbol="NVDA", regime="unknown", mode=m)@staticmethod
     def _repo_root() -> Path:
-        # repo_root = .../src/hybrid_ai_trading/runtime/run_context.py -> repo root
+        # .../src/hybrid_ai_trading/runtime/run_context.py -> repo root
         return Path(__file__).resolve().parents[3]
 
     @staticmethod
@@ -40,10 +40,7 @@ class RunContext:
         return repo_root / "logs" / "blockg_status_stub.json"
 
     @staticmethod
-    def today(symbol: str, regime: str, is_paper: bool) -> "RunContext":
-        """
-        Backward-compatible constructor used by older call sites.
-        """
+    def today(symbol: str = "NVDA", regime: str = "unknown", is_paper: bool = True) -> "RunContext":
         root = RunContext._repo_root()
         mode = "paper" if bool(is_paper) else "live"
         return RunContext(
@@ -66,21 +63,13 @@ class RunContext:
         as_of_date: Optional[str] = None,
         repo_root: Optional[Path] = None,
     ) -> "RunContext":
-        """
-        Canonical producer. Priority order (fail-safe defaults):
-          - mode: explicit arg > env:HAT_MODE > derived from is_paper/env:HAT_IS_PAPER > "paper"
-          - as_of_date: explicit arg > env:HAT_AS_OF_DATE > today
-        """
         root = repo_root or RunContext._repo_root()
 
-        # date
         d = (as_of_date or os.environ.get("HAT_AS_OF_DATE", "").strip() or date.today().isoformat())
         d = d[:10] if len(d) >= 10 else d
 
-        # mode
         m = (mode or os.environ.get("HAT_MODE", "").strip().lower())
         if m not in ("paper", "live", "backtest"):
-            # derive from is_paper or env:HAT_IS_PAPER (default paper-safe)
             if is_paper is not None:
                 m = "paper" if bool(is_paper) else "live"
             else:
