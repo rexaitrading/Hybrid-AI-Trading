@@ -24,6 +24,9 @@ class BlockGStatus:
     phase4_ok_today: bool = False
     ev_hard_daily_ok_today: bool = False
     gatescore_fresh_today: bool = False
+    gatescore_fresh_for_session: bool = False
+    gatescore_recent_enough: bool = False
+    gatescore_age_days: int = 0
     min_samples_ok_today: bool = False
 
     @staticmethod
@@ -36,6 +39,9 @@ class BlockGStatus:
             phase4_ok_today=bool(d.get("phase4_ok_today", False)),
             ev_hard_daily_ok_today=bool(d.get("ev_hard_daily_ok_today", False)),
             gatescore_fresh_today=bool(d.get("gatescore_fresh_today", False)),
+            gatescore_fresh_for_session=bool(d.get("gatescore_fresh_for_session", False)),
+            gatescore_recent_enough=bool(d.get("gatescore_recent_enough", False)),
+            gatescore_age_days=int(d.get("gatescore_age_days", 0) or 0),
             min_samples_ok_today=bool(d.get("min_samples_ok_today", False)),
         )
 
@@ -151,8 +157,18 @@ def ensure_symbol_blockg_ready(symbol: str,
     if hasattr(st, "phase23_health_ok_today") and (not bool(getattr(st, "phase23_health_ok_today", False))):
         raise BlockGNotReady("BLOCK-G: phase23_health_ok_today false")
 
-    if not bool(getattr(st, "gatescore_fresh_today", False)):
-        raise BlockGNotReady("BLOCK-G: gatescore_fresh_today false")
+    if not bool(getattr(st, "gatescore_fresh_for_session", False)):
+        raise BlockGNotReady("BLOCK-G: gatescore_fresh_for_session false")
+    if not bool(getattr(st, "gatescore_recent_enough", False)):
+        raise BlockGNotReady("BLOCK-G: gatescore_recent_enough false")
+    # Defense-in-depth: if age field is present, enforce max=3 days
+    try:
+        age = int(getattr(st, "gatescore_age_days", 0))
+        if age > 3:
+            raise BlockGNotReady(f"BLOCK-G: gatescore_age_days too old ({age} > 3)")
+    except Exception:
+        if hasattr(st, "gatescore_age_days"):
+            raise BlockGNotReady("BLOCK-G: gatescore_age_days invalid")
     if hasattr(st, "gatescore_samples_ok") and (not bool(getattr(st, "gatescore_samples_ok", False))):
         raise BlockGNotReady("BLOCK-G: gatescore_samples_ok false")
     if hasattr(st, "gatescore_threshold_ok_today") and (not bool(getattr(st, "gatescore_threshold_ok_today", False))):

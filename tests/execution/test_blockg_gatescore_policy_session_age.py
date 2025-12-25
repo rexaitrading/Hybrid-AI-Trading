@@ -23,6 +23,7 @@ def test_gatescore_session_age_policy_allows_fresh_for_session(tmp_path: Path, m
         "gatescore_age_days": 2,
         "gatescore_samples_ok": True,
         "gatescore_threshold_ok_today": True,
+        "gatescore_ok_today": True,
         "min_samples_ok_today": True,
         "nvda_blockg_ready": True,
     }
