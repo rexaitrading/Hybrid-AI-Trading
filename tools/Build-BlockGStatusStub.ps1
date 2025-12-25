@@ -240,6 +240,11 @@ if (-not $gsFresh)   { $reasons.Add("gatescore_fresh_today=false") }
 if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
 if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
 
+# Recompute per-symbol readiness AFTER GateScore age policy (StrictMode-safe)
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and $gsRecentEnough
+$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday -and $gsRecentEnough
+$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday -and $gsRecentEnough
+
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
