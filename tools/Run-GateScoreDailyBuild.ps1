@@ -2,7 +2,8 @@
 param(
   [int]$TimeoutSec = 60,
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
-  [string]$Symbol = "ALL"
+  [string]$Symbol = "ALL",
+  [switch]$RunPython
 )
 
 Set-StrictMode -Version Latest
@@ -103,6 +104,11 @@ foreach($s in $syms){
   }
 }
 
+if (-not $RunPython) {
+  Write-Host "[GS-BUILD] OK (no-python) symbols=$($syms -join ',') csv=$csv" -ForegroundColor Green
+  exit 0
+}
+
 foreach($s in $syms){
   $code = "import sys,runpy; sys.path.insert(0,r'$env:PYTHONPATH'); runpy.run_module('hybrid_ai_trading.gatescore.daily_build', run_name='__main__')"
   $rc = RunPyTimeout @("-I","-X","faulthandler","-c",$code,"--csv",$csv,"--symbol",$s) $TimeoutSec
@@ -112,5 +118,5 @@ foreach($s in $syms){
   }
 }
 
-Write-Host "[GS-BUILD] OK symbols=$($syms -join ',') logs=$logDir" -ForegroundColor Green
+Write-Host "[GS-BUILD] OK (python) symbols=$($syms -join ',') logs=$logDir" -ForegroundColor Green
 exit 0
