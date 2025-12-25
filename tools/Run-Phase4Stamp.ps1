@@ -9,7 +9,7 @@ $ErrorActionPreference="Stop"
 $root = (Resolve-Path ".").Path
 Set-Location $root
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
+$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 $tsUtc  = (Get-Date).ToUniversalTime().ToString("o")
 
 $logDir = Join-Path $root "logs"
@@ -112,3 +112,4 @@ $payloadJson = $payload | ConvertTo-Json -Depth 6
 
 Write-Host "[PHASE4] wrote $outJson ok=$ok today=$today" -ForegroundColor Green
 exit 0
+
