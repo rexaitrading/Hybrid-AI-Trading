@@ -1,36 +1,33 @@
 from __future__ import annotations
 
-import os
 import sys
-from pathlib import Path
-
-
-def _detect_repo_root(start: Path) -> Path:
-    p = start.resolve()
-    for _ in range(12):
-        if (p / "pyproject.toml").exists() or (p / ".git").exists():
-            return p
-        if p.parent == p:
-            break
-        p = p.parent
-    return start.resolve()
-
-
-REPO_ROOT = _detect_repo_root(Path(__file__).parent)
-
-# Ensure imports resolve from THIS repo (C:\HAT), not any other checkout
-SRC = REPO_ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
-# Hard-disable user site packages for test runs (prevents cross-env leakage)
-os.environ.setdefault("PYTHONNOUSERSITE", "1")
-
-print(f"[conftest] exe={sys.executable} importable=True root={REPO_ROOT}")
-
 import pytest
 
-@pytest.fixture
+
+@pytest.fixture(autouse=True)
+def _restore_algos_modules():
+    """
+    Prevent cross-test leakage via sys.modules injection for hybrid_ai_trading.algos.*.
+    Many tests replace sys.modules entries to simulate algo executors; this fixture
+    snapshots and restores those entries around each test.
+    """
+    prefix = "hybrid_ai_trading.algos."
+    before = {k: sys.modules.get(k) for k in list(sys.modules.keys()) if k.startswith(prefix)}
+    yield
+    # Remove new keys
+    after_keys = [k for k in list(sys.modules.keys()) if k.startswith(prefix)]
+    for k in after_keys:
+        if k not in before:
+            sys.modules.pop(k, None)
+    # Restore prior objects
+    for k, v in before.items():
+        if v is None:
+            sys.modules.pop(k, None)
+        else:
+            sys.modules[k] = v
+
+
+@pytest.fixture()
 def TradeEngineClass():
     # TODO: update import path to where TradeEngine actually lives
     from hybrid_ai_trading.trade_engine import TradeEngine

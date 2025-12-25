@@ -69,10 +69,8 @@ def _install_algo(monkeypatch, name, executor_cls):
     path = f"hybrid_ai_trading.algos.{key}"
     m = types.ModuleType(path)
     setattr(m, cls_name, executor_cls)
-    # hard-replace module and invalidate caches so importlib sees our module
-    if path in sys.modules:
-        del sys.modules[path]
-    sys.modules[path] = m
+    # hard-replace module for this test only (auto-restored by monkeypatch)
+    monkeypatch.setitem(sys.modules, path, m)
     importlib.invalidate_caches()
 
 
