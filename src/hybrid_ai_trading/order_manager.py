@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+def _blockg_guard_if_live(symbol: str) -> None:
+    # Defense-in-depth: blocks live sends even if broker layer is bypassed.
+    sym = str(symbol or "").upper().strip()
+    if sym in ("NVDA", "SPY", "QQQ"):
+        require_blockg_ready_for_live(sym)
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from typing import Any, Dict, Optional
 
 from .brokers.factory import make_broker
@@ -20,6 +26,7 @@ class OrderManager:
     def buy_market(
         self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
+        _blockg_guard_if_live(symbol)
         oid, info = self.broker.place_order(symbol, "BUY", qty, "MARKET", meta=meta)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
@@ -29,6 +36,7 @@ class OrderManager:
     def sell_market(
         self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
+        _blockg_guard_if_live(symbol)
         oid, info = self.broker.place_order(symbol, "SELL", qty, "MARKET", meta=meta)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
@@ -42,6 +50,7 @@ class OrderManager:
         limit_price: float,
         meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        _blockg_guard_if_live(symbol)
         oid, info = self.broker.place_order(
             symbol, "BUY", qty, "LIMIT", limit_price=limit_price, meta=meta
         )
@@ -57,6 +66,7 @@ class OrderManager:
         limit_price: float,
         meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        _blockg_guard_if_live(symbol)
         oid, info = self.broker.place_order(
             symbol, "SELL", qty, "LIMIT", limit_price=limit_price, meta=meta
         )
