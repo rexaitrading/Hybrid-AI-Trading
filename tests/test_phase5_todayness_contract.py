@@ -49,6 +49,8 @@ def test_phase5_todayness_trusts_blockg_checker(nvda_ready: bool, expected: int)
         "phase4_ok_today": True,
 
         "gatescore_as_of_date": today,
+        "gatescore_age_days": 0,
+        "gatescore_recent_enough": True,
         "gatescore_fresh_today": True,
         "gatescore_fresh_for_session": True,
         "gatescore_samples_ok": True,
