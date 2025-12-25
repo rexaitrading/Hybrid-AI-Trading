@@ -1,0 +1,50 @@
+name: CI Risk-First
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  risk_first:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Create venv
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python -m pip install --upgrade pip
+
+      - name: Install deps (best-effort)
+        shell: pwsh
+        run: |
+          if(Test-Path "requirements.txt"){
+            .\.venv\Scripts\python -m pip install -r requirements.txt
+          } elseif(Test-Path "requirements-dev.txt"){
+            .\.venv\Scripts\python -m pip install -r requirements-dev.txt
+          } else {
+            .\.venv\Scripts\python -m pip install -e .
+          }
+          .\.venv\Scripts\python -m pip install pytest
+
+      - name: Guardrail: no raw python in tools
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Check-NoRawPythonTools.ps1
+
+      - name: Risk-first: BlockG pack
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\python.ps1 -m pytest -q -k "blockg"
+
+      - name: Risk suite
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\python.ps1 -m pytest -q tests\risk
