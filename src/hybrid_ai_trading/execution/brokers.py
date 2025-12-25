@@ -100,7 +100,7 @@ class IBKRClient(BrokerClient):
             if order_type.upper() == "MARKET"
             else LimitOrder(side, abs(qty), limit_px)
         )
-        t = self.ib_place_order_chokepoint(ib, c, o)
+        t = ib_place_order_chokepoint(self.ib, c, o, meta=meta0)
         self.ib.sleep(0.5)
         order_id = str(t.order.orderId)
         fills = [

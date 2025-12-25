@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from hybrid_ai_trading.runtime.run_context import RunContext
@@ -6,7 +6,7 @@ from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_rea
 import os
 import random
 import time
-from typing import Any, Callable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
