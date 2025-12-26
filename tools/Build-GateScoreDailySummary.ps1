@@ -15,10 +15,20 @@ function Write-Utf8NoBomLf([string]$Path,[string]$Text){
   $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
   $Text = $Text -replace "`r`n","`n"
   if ($Text.Length -gt 0 -and $Text[-1] -ne "`n") { $Text += "`n" }
-  [System.IO.File]::WriteAllText((Resolve-Path $Path).Path, $Text, $utf8NoBom)
+  $full = [System.IO.Path]::GetFullPath($Path)
+  [System.IO.File]::WriteAllText($full, $Text, $utf8NoBom)
 }
 
 if (-not (Test-Path -LiteralPath $src)) {
+
+if($emitTodayCarryForward){
+  foreach ($r in ($use | Sort-Object symbol)) {
+    $lines.Add(("{0},{1},{2},{3},{4},{5},{6}" -f
+      $r.symbol,$r.count_signals,$r.mean_edge_ratio,$r.mean_micro_score,$r.pnl_samples,$r.mean_pnl,$today
+    )) | Out-Null
+  }
+}
+
   Write-Utf8NoBomLf -Path $out -Text "symbol,count_signals,mean_edge_ratio,mean_micro_score,pnl_samples,mean_pnl,as_of_date"
   Write-Host "[GS-DAILY] FAIL-CLOSED: missing $src (wrote header only)" -ForegroundColor Yellow
   exit 2
@@ -34,6 +44,11 @@ if (-not $rows -or $rows.Count -eq 0) {
 # Latest available session date (YYYY-MM-DD string sort is OK)
 $latestDate = ($rows | Sort-Object as_of_date -Descending | Select-Object -First 1).as_of_date
 $use = @($rows | Where-Object { ($_.as_of_date + "") -eq ($latestDate + "") })
+
+$today = (Get-Date).ToString("yyyy-MM-dd")
+
+# Holiday/session policy: EV-hard expects a TODAY row. If latest session != today, emit a carry-forward TODAY row.
+$emitTodayCarryForward = (($latestDate + "") -ne ($today + ""))
 
 if (-not $use -or $use.Count -eq 0) {
   Write-Utf8NoBomLf -Path $out -Text "symbol,count_signals,mean_edge_ratio,mean_micro_score,pnl_samples,mean_pnl,as_of_date"
