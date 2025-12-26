@@ -43,7 +43,8 @@ if(-not (Test-Path $StatusPath)){
 $raw = Get-Content -LiteralPath $StatusPath -Raw -Encoding utf8
 $st  = $raw | ConvertFrom-Json
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
+$today = (($st.as_of_date) + "").Trim()
+if(-not $today){ $today = (Get-Date).ToString("yyyy-MM-dd") }
 $okDate = (($st.as_of_date + "") -eq $today)
 
 $ready = [bool]($st.nvda_blockg_ready) -and $okDate
