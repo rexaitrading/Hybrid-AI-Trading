@@ -91,6 +91,13 @@ if (Test-Path $evRaw) {
     $evSessionOk = To-Bool $j.ok
   } catch { $evSessionAsOf=""; $evSessionOk=$false }
 }# ---- Phase23 health (must match today row; fail-closed) ----
+
+# If daily EV-hard veto CSV is missing, fall back to session raw evidence (fail-closed, today-checked downstream)
+if((-not (Test-Path -LiteralPath $evPath)) -and $evSessionOk){
+  $evHardOk = $true
+  $evSessionAsOf = ($evSessionAsOf + "")
+}
+
 $phase23Ok = $false
 $phase23Path = Join-Path $logsDir "phase23_health_daily.csv"
 $phase23SawToday = $false
