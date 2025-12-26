@@ -34,6 +34,7 @@ foreach($ln in $lines){
 
 # --- Alias mapping (keeps backward compatibility across modules) ---
 if (-not $env:POLYGON_KEY -and $env:POLYGON_API_KEY) { $env:POLYGON_KEY = $env:POLYGON_API_KEY }
+
 if (-not $env:ALPACA_KEY_ID -and $env:ALPACA_KEY) { $env:ALPACA_KEY_ID = $env:ALPACA_KEY }
 if (-not $env:ALPACA_SECRET_KEY -and $env:ALPACA_SECRET) { $env:ALPACA_SECRET_KEY = $env:ALPACA_SECRET }
 
