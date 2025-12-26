@@ -32,6 +32,16 @@ $env:PYTHONPATH = $repoRoot
 $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
 $rss = Join-Path $repoRoot "scripts\get_news_rss.py"
+
+# --- (1b) YouTube feed (API key; IBG-off safe) ---
+$ytOut = Join-Path $intelPath "youtube_feed.jsonl"
+$yt = Join-Path $repoRoot "scripts\get_youtube_feed.py"
+if (Test-Path $yt) {
+  & $py $yt --out $ytOut --lookbackHours 48 --maxPerQuery 5 | Out-Host
+} else {
+  Write-Host "[INTEL-FULL] WARN: scripts\get_youtube_feed.py missing; skipping YouTube." -ForegroundColor Yellow
+}
+
 if (Test-Path $rss) {
   & $py $rss --out $newsOut --lookbackMin $LookbackMinutes --maxItems 50 | Out-Host
 } else {
