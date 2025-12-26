@@ -25,6 +25,11 @@ jobs:
           # Install project (editable) + test deps
           if (Test-Path .\requirements-dev.txt) {
             .\.venv\Scripts\python -m pip install -r .\requirements-dev.txt
+      - name: Install CI optional deps (dotenv/ccxt/feedparser)
+        shell: pwsh
+        run: |
+          .\.venv\Scripts\python -m pip install --upgrade python-dotenv ccxt feedparser
+
           } else {
             .\.venv\Scripts\python -m pip install pytest
           }
