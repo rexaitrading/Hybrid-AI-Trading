@@ -1,0 +1,41 @@
+name: ci-gates
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Create venv + install deps
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python -m pip install --upgrade pip
+          # Install project (editable) + test deps
+          if (Test-Path .\requirements-dev.txt) {
+            .\.venv\Scripts\python -m pip install -r .\requirements-dev.txt
+          } else {
+            .\.venv\Scripts\python -m pip install pytest
+          }
+          # CI optional deps (used by some modules/tests)
+          .\.venv\Scripts\python -m pip install --upgrade python-dotenv ccxt feedparser
+          .\.venv\Scripts\python -m pip install -e .
+      - name: Run institutional gate tests (fast)
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: "utf-8"
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+        run: |
+          .\.venv\Scripts\python -m pytest -q tests\execution\test_nvda_live_stamp_gate.py tests\execution\test_ib_safe_chokepoint_blockg.py tests\execution\test_order_manager_blockg_defense_in_depth.py tests\execution\test_blockg_order_manager_guard.py tests\execution\test_blockg_ib_placeorder_guard.py tests\execution\test_blockg_gatescore_policy_session_age.py

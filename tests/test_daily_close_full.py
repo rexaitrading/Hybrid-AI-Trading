@@ -68,7 +68,7 @@ def test_ms_to_iso_valid_and_invalid():
 def test_core_crypto_success_and_error(mock_batch, tmp_path, monkeypatch):
     mock_batch.return_value = {"BTC": {"asof": "t", "open": 1, "status": "OK"}}
     monkeypatch.setattr(
-        "hybrid_ai_trading.pipelines.daily_close.PolygonClient", lambda: MagicMock()
+        "hybrid_ai_trading.pipelines.daily_close.PolygonClient", lambda *a, **k: MagicMock()
     )
     monkeypatch.chdir(tmp_path)
 
@@ -104,7 +104,7 @@ def test_polygon_branch_success_no_data_and_error(tmp_path, monkeypatch):
             raise Exception("fail")
 
     monkeypatch.setattr(
-        "hybrid_ai_trading.pipelines.daily_close.PolygonClient", lambda: FakeClient()
+        "hybrid_ai_trading.pipelines.daily_close.PolygonClient", lambda *a, **k: FakeClient()
     )
     monkeypatch.chdir(tmp_path)
     daily_close.Core_Stocks[:] = ["OK", "NONE", "FAIL"]
@@ -120,7 +120,7 @@ def test_polygon_branch_success_no_data_and_error(tmp_path, monkeypatch):
 def test_export_failures(monkeypatch, tmp_path, caplog):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
-        "hybrid_ai_trading.pipelines.daily_close.PolygonClient", lambda: MagicMock()
+        "hybrid_ai_trading.pipelines.daily_close.PolygonClient", lambda *a, **k: MagicMock()
     )
     monkeypatch.setattr(
         "hybrid_ai_trading.pipelines.daily_close.batch_prev_close",
@@ -157,6 +157,7 @@ def test_main_entrypoint_runs(tmp_path):
 
     env = os.environ.copy()
     env["COINAPI_STUB"] = "1"
+    env["POLYGON_ALLOW_MISSING"] = "1"
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
     env["PYTHONPATH"] = project_root
 

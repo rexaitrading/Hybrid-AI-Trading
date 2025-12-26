@@ -2,10 +2,10 @@ import argparse
 import json
 import os
 import sys
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 
 from ib_insync import IB, LimitOrder, MarketOrder, Stock
-
-
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 def parse_args():
     p = argparse.ArgumentParser("ah_once: place a single stock order (paper/live)")
     p.add_argument("--symbol", required=True)
@@ -65,8 +65,9 @@ def main():
         order = LimitOrder(
             side, args.qty, lmtPrice=lmt, outsideRth=args.outside_rth, tif=args.tif
         )
-
-    tr = ib.placeOrder(contract, order)
+    # Block-G: fail-closed for LIVE intent (CLI must not bypass contract)
+    require_blockg_ready_for_live(args.symbol)
+    tr = ib_place_order_chokepoint(ib, contract, order)
     for _ in range(max(1, int(args.wait_sec))):
         ib.sleep(1.0)
         if tr.orderStatus.status in ("Filled", "Cancelled", "Inactive"):

@@ -13,8 +13,7 @@ Includes:
 """
 
 import logging
-from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, timezone
 import numpy as np
 import pytest
 
@@ -93,7 +92,7 @@ class DummyPrice:
     def __init__(self, close, symbol="AAPL", timestamp=None):
         self.close = close
         self.symbol = symbol
-        self.timestamp = timestamp or datetime.utcnow()
+        self.timestamp = timestamp or datetime.now(timezone.utc)
 
 
 class DummySession:
@@ -198,7 +197,7 @@ class DummyPrice:
     def __init__(self, close, symbol="AAPL", timestamp=None):
         self.close = close
         self.symbol = symbol
-        self.timestamp = timestamp or datetime.utcnow()
+        self.timestamp = timestamp or datetime.now(timezone.utc)
 
 
 class DummySession:
@@ -340,7 +339,7 @@ def test_reset_day_with_and_without_portfolio(caplog):
 # RegimeDetector DB Tests
 # ----------------------------------------------------------------------
 def test_regime_detector_db_success_and_error(monkeypatch):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     dummy_prices = [
         DummyPrice(100, timestamp=now - timedelta(days=2)),
         DummyPrice(105, timestamp=now - timedelta(days=1)),

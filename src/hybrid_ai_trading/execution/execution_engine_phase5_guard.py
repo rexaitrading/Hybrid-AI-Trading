@@ -1,14 +1,16 @@
 from __future__ import annotations
+from hybrid_ai_trading.execution.blockg_contract_reader import require_blockg_ready_for_live_symbol
 
 from dataclasses import asdict
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from typing import Any, Dict
+from hybrid_ai_trading.runtime.run_context import RunContext
 
+from hybrid_ai_trading.portfolio.halts import require_portfolio_halt_ok
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
 from hybrid_ai_trading.execution.blockg_contract import (
     ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready,
 )
-
-
 def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
     """
     Thin shim so tests and callers have a single place to hook Phase-5 guards.
@@ -84,6 +86,14 @@ def place_order_phase5_with_guard(
       - function returns a dict when risk is allowed
       - Block-G failure for NVDA raises and place_order_phase5 is never called.
     """
+    # 0) Hard Block-G enforcement for LIVE orders (fail-closed)
+    try:
+        is_paper = bool(getattr(engine, "is_paper", True))
+    except Exception:
+        is_paper = True
+    if not is_paper:
+        # Block-G: env-aware single gate (fail-closed for live)
+        require_blockg_ready_for_live(symbol)
     trade = {
         "symbol": symbol,
         "side": side,
@@ -97,6 +107,26 @@ def place_order_phase5_with_guard(
     # 1) Block-G for NVDA (tests monkeypatch ensure_symbol_blockg_ready)
     if symbol.upper() == "NVDA":
         ensure_symbol_blockg_ready(symbol.upper())
+    # 1.5) Phase-6 Portfolio Halt (optional; fail-closed when enabled)
+    try:
+        cfg = {}
+        try:
+            if hasattr(engine, "config") and isinstance(getattr(engine, "config"), dict):
+                cfg = dict(engine.config.get("portfolio_halt", {}))
+        except Exception:
+            cfg = {}
+        # default behavior: disabled unless explicitly enabled
+        if bool(cfg.get("enabled", False)):
+            metrics = {}
+            try:
+                if hasattr(engine, "portfolio_tracker"):
+                    metrics = dict(engine.portfolio_tracker.report())
+            except Exception:
+                metrics = {}
+            require_portfolio_halt_ok(metrics=metrics, cfg=cfg)
+    except Exception as e:
+        # Fail-closed: block trade if portfolio halt trips or metrics unavailable when enabled
+        return {"status": "blocked", "reason": f"portfolio_halt:{e}"}
 
     # 2) RiskManager Phase-5 guard
     rm = getattr(engine, "risk_manager", None)

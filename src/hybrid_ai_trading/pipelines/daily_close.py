@@ -7,6 +7,7 @@ Daily Close Exporter (Hybrid AI Quant Pro v6.8 Ã¢â‚¬â€œ OE Grade, Poli
 - Exports results to CSV + JSON in ./data folder.
 """
 
+import os
 import csv
 import json
 import logging
@@ -42,7 +43,8 @@ def _ms_to_iso(ms: int) -> str:
 # Main Exporter
 # ----------------------------------------------------------------------
 def main() -> None:
-    client = PolygonClient()
+    allow_missing = os.getenv("POLYGON_ALLOW_MISSING", "0") == "1"
+    client = PolygonClient(allow_missing=allow_missing)
 
     asset_groups: Dict[str, List[str]] = {
         "Core_Stocks": Core_Stocks,

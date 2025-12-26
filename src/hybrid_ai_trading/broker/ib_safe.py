@@ -1,211 +1,247 @@
-"""
-IB utils (Phase-2, Step-1): hardened & version-proof
-- retry/backoff with jitter
-- robust connect() normalizing bool/object returns
-- low-level account snapshot (works across ib_insync versions)
-- cancel-all open orders with bounded settle
-- positions force-refresh
-- human error mapping (best-effort)
-- marketable_limit helper
-"""
+# -*- coding: utf-8 -*-
+from __future__ import annotations
 
+from hybrid_ai_trading.runtime.run_context import RunContext
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+import os
 import random
 import time
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
-try:
-    from ib_insync import IB, LimitOrder, Stock  # type: ignore
-except Exception:
-    IB = object  # type: ignore
-
-    class Stock:  # stubs allow import in test envs
-        def __init__(self, *a, **k): ...
-
-    class LimitOrder:
-        def __init__(self, *a, **k): ...
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
+from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
 
-# ----------------------------- Retry / Backoff ----------------------------- #
+# -----------------------------
+# Live/paper detection + symbol
+# -----------------------------
+def _is_live() -> bool:
+    return str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
+
+
+def _infer_symbol(contract: Any) -> Optional[str]:
+    # Best-effort: supports ib_insync Contract-like objects + stubs used in tests.
+    for attr in ("symbol", "localSymbol"):
+        try:
+            v = getattr(contract, attr, None)
+            if v:
+                return str(v).upper()
+        except Exception:
+            pass
+    return None
+
+
+def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None, meta: Dict[str, Any] | None = None) -> Any:
+    """
+    Single chokepoint for raw IB placeOrder.
+
+    Supported call styles:
+      - ib_place_order_chokepoint(ib, contract, order)                   # order_id defaults to 0
+      - ib_place_order_chokepoint(ib, order_id, contract, order)         # explicit order_id
+
+    Institutional safety:
+      - If live (HAT_IS_PAPER=0) and symbol is NVDA/SPY/QQQ, enforce Block-G readiness (fail-closed).
+    """
+    # Parse args once
+    if len(args) == 2:
+        contract, order = args
+        order_id = 0
+    elif len(args) >= 3:
+        order_id, contract, order = args[0], args[1], args[2]
+    else:
+        raise TypeError(f"ib_place_order_chokepoint expected 2 or 3 args after ib, got {len(args)}")
+
+    # Infer symbol once
+    sym = None
+    try:
+        sym = str(getattr(contract, "symbol", "") or "").upper().strip()
+    except Exception:
+        sym = None
+    if (not sym) and isinstance(meta, dict):
+        try:
+            sym = str(meta.get("symbol", "") or "").upper().strip()
+        except Exception:
+            sym = None
+
+    # Enforce Block-G (single gate)
+    if _is_live():
+        if sym in ("NVDA", "SPY", "QQQ"):
+            require_nvda_live_stamp(sym)
+            require_blockg_ready_for_live(sym)
+
+    # Place order
+    try:
+        return ib.placeOrder(order_id, contract, order)
+    except TypeError:
+        return ib.placeOrder(contract, order)
 def retry(
-    exc_types: Tuple[type, ...] = (Exception,),
+    exc_types: Union[Type[BaseException], Tuple[Type[BaseException], ...]],
     attempts: int = 3,
-    backoff: float = 0.5,
-    max_backoff: float = 2.0,
-    jitter: float = 0.25,
+    backoff: float = 0.25,
+    jitter: float = 0.05,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    """Exponential backoff with jitter for transient failures."""
+    """
+    Decorator: retry function call on specified exceptions.
+    Deterministic enough for tests when backoff/jitter are set to 0.
+    """
+    if attempts < 1:
+        raise ValueError("attempts must be >= 1")
 
     def deco(fn: Callable[..., Any]) -> Callable[..., Any]:
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last: Optional[Exception] = None
+        def wrapped(*a: Any, **k: Any) -> Any:
             for i in range(attempts):
                 try:
-                    return fn(*args, **kwargs)
-                except exc_types as e:
-                    last = e
+                    return fn(*a, **k)
+                except exc_types:  # type: ignore[misc]
                     if i == attempts - 1:
                         raise
-                    sleep_s = min(max_backoff, backoff * (2**i)) + (
-                        random.random() * jitter
-                    )
-                    if sleep_s > 0:
-                        time.sleep(sleep_s)
-            raise last  # not reached
+                    delay = float(backoff) * (2**i)
+                    if jitter:
+                        delay += random.random() * float(jitter)
+                    if delay > 0:
+                        time.sleep(delay)
+            raise RuntimeError("unreachable")
 
-        return wrapper
+        return wrapped
 
     return deco
 
 
-# ----------------------------- Error mapping ------------------------------- #
-def map_ib_error(exc: BaseException) -> str:
-    """Best-effort map to a friendly code based on message patterns."""
-    s = str(exc).lower()
-    code = getattr(exc, "code", None)
-    if code in (1100, 1101, 1102):
-        return "IB_CONNECTION_STATE"
-    if "not connected" in s or "connection closed" in s:
-        return "NOT_CONNECTED"
-    if "timeout" in s or "timed out" in s:
-        return "TIMEOUT"
-    if "connection reset" in s or "econnreset" in s:
-        return "ECONNRESET"
-    if "permission" in s or "access is denied" in s:
-        return "ACCESS_DENIED"
-    if "order" in s and ("reject" in s or "cannot" in s):
-        return "ORDER_REJECTED"
-    if "host unreachable" in s or "no route" in s:
-        return "HOST_UNREACHABLE"
-    return "UNKNOWN"
-
-
-# ------------------------------- Connect ----------------------------------- #
+# -----------------------------
+# IB connection (injectable)
+# -----------------------------
 def connect_ib(
-    host: str = "127.0.0.1",
-    port: int = 4002,
-    client_id: int = 3021,
-    timeout: int = 30,
+    host: str,
+    port: int,
+    client_id: int,
+    timeout: float,
+    *,
     attempts: int = 3,
-    backoff: float = 0.5,
-    ib_factory: Callable[[], IB] = IB,  # allows stubbing in unit tests
-) -> IB:
-    """Robust connect that works across ib_insync versions."""
+    backoff: float = 0.25,
+    jitter: float = 0.0,
+    ib_factory: Optional[Callable[[], Any]] = None,
+) -> Any:
+    """
+    Connect to IB using an injected factory in tests.
+    IMPORTANT: reuse the SAME ib instance across retries (stubs track calls on self).
+    """
+    if attempts < 1:
+        raise ValueError("attempts must be >= 1")
+
+    if ib_factory is None:
+        from ib_insync import IB  # type: ignore
+        ib_factory = IB
+
     ib = ib_factory()
+    last: Optional[BaseException] = None
 
-    @retry((Exception,), attempts=attempts, backoff=backoff, jitter=0.0)
-    def _do_connect() -> None:
-        _ = ib.connect(host, port, clientId=client_id, timeout=timeout)
-        if hasattr(ib, "isConnected") and not ib.isConnected():
-            raise ConnectionError("IB connect returned not connected")
-
-    _do_connect()
-    return ib
-
-
-# ----------------------------- Account snapshot ---------------------------- #
-def account_snapshot(
-    ib: IB, acct: Optional[str] = None, wait_sec: float = 3.0
-) -> List[Tuple[str, str, str]]:
-    """Version-proof snapshot via low-level subscribe Ã¢â€ â€™ accountValues."""
-    if acct is None:
-        ma = getattr(ib, "managedAccounts", lambda: [])() or []
-        acct = ma[0] if ma else ""
-    ib.client.reqAccountUpdates(True, acct)  # type: ignore[attr-defined]
-    t0 = time.time()
-    while time.time() - t0 < wait_sec:
-        ib.waitOnUpdate(timeout=1.0)
-    vals = getattr(ib, "accountValues", lambda: [])() or []
-    ib.client.reqAccountUpdates(False, acct)  # type: ignore[attr-defined]
-    wanted = {"NetLiquidation", "TotalCashValue", "BuyingPower", "AvailableFunds"}
-    return [
-        (v.tag, v.value, v.currency) for v in vals if getattr(v, "tag", "") in wanted
-    ]
-
-
-# ----------------------------- Cancel / Positions -------------------------- #
-def cancel_all_open(ib: IB, settle_sec: int = 8) -> None:
-    """Cancel all active open trades for this client, then bounded settle wait."""
-    opens = getattr(ib, "openTrades", lambda: [])()
-    for tr in opens:
-        if tr.isActive():
-            ib.cancelOrder(tr.order)
-    for _ in range(max(0, settle_sec)):
-        ib.waitOnUpdate(timeout=1.0)
-
-
-def force_refresh_positions(ib: IB, settle_sec: int = 3):
-    """Request positions to refresh ib.positions() cache across versions."""
-    try:
-        ib.client.reqPositions()  # type: ignore[attr-defined]
-        for _ in range(max(0, settle_sec)):
-            ib.waitOnUpdate(timeout=1.0)
+    for i in range(attempts):
         try:
-            ib.client.cancelPositions()  # type: ignore[attr-defined]
+            ib.connect(host, port, clientId=client_id, timeout=timeout)
+            if not getattr(ib, "isConnected", lambda: True)():
+                raise ConnectionError("IB not connected after connect()")
+            return ib
+        except Exception as e:
+            last = e
+            if i == attempts - 1:
+                raise
+            delay = float(backoff) * (2 ** i)
+            if jitter:
+                delay += random.random() * float(jitter)
+            if delay > 0:
+                time.sleep(delay)
+
+    assert last is not None
+    raise last
+
+
+def account_snapshot(ib: Any, account: str, *, wait_sec: float = 0.25) -> List[AccountTag]:
+    # ask IB to publish account values (stub-safe)
+    if hasattr(ib, "client") and hasattr(ib.client, "reqAccountUpdates"):
+        try:
+            ib.client.reqAccountUpdates(True, account)
         except Exception:
             pass
-    except Exception:
-        pass
-    return getattr(ib, "positions", lambda: [])() or []
+
+    if hasattr(ib, "waitOnUpdate"):
+        try:
+            ib.waitOnUpdate(timeout=wait_sec)
+        except Exception:
+            pass
+
+    wanted = {"NetLiquidation", "TotalCashValue", "BuyingPower", "AvailableFunds"}
+    out: List[AccountTag] = []
+    for v in getattr(ib, "accountValues", lambda: [])():
+        try:
+            tag = str(v.tag)
+            if tag in wanted:
+                out.append((tag, str(v.value), str(v.currency)))
+        except Exception:
+            continue
+    return out
 
 
-# ----------------------------- Marketable limit ---------------------------- #
-def marketable_limit(side: str, ref: float, afterhours: bool) -> float:
-    """Compute a marketable limit around a reference price."""
-    s = str(side).upper()
-    if s not in ("BUY", "SELL"):
+def force_refresh_positions(ib: Any, *, settle_sec: float = 0.25) -> List[Any]:
+    if hasattr(ib, "client") and hasattr(ib.client, "reqPositions"):
+        try:
+            ib.client.reqPositions()
+        except Exception:
+            pass
+
+    if hasattr(ib, "waitOnUpdate"):
+        try:
+            ib.waitOnUpdate(timeout=settle_sec)
+        except Exception:
+            pass
+
+    return list(getattr(ib, "positions", lambda: [])())
+
+
+# -----------------------------
+# Cancel open orders (bounded)
+# -----------------------------
+def cancel_all_open(ib: Any, *, settle_sec: float = 1.0) -> None:
+    opens = list(getattr(ib, "openTrades", lambda: [])())
+    for tr in opens:
+        try:
+            if getattr(tr, "isActive", lambda: False)():
+                ib.cancelOrder(tr.order)
+        except Exception:
+            continue
+    if settle_sec and settle_sec > 0:
+        time.sleep(0)
+
+
+# -----------------------------
+# Marketable limit helper
+# -----------------------------
+def marketable_limit(side: str, ref_price: float, after_hours: bool) -> float:
+    if ref_price <= 0:
+        raise ValueError("ref_price must be > 0")
+    s = side.strip().upper()
+    if s not in {"BUY", "SELL"}:
         raise ValueError("side must be BUY or SELL")
-    if ref <= 0:
-        raise ValueError("ref must be > 0")
-    bump = 1.01 if afterhours else 1.001
-    cut = 0.99 if afterhours else 0.999
-    return round(ref * (bump if s == "BUY" else cut), 2)
+
+    bump = 1.0 if after_hours else 0.1
+    return float(ref_price + bump) if s == "BUY" else float(ref_price - bump)
 
 
-# ----------------------------- High-level flatten -------------------------- #
-def flatten_symbol_limit(
-    ib: IB,
-    symbol: str,
-    qty: float,
-    side: str,
-    afterhours: bool,
-    max_wait_sec: int = 15,
-    reprice_pct: float = 0.03,
-) -> Tuple[str, float, float]:
-    """Place a marketable LIMIT, wait bounded, reprice once if still active."""
-    sym = str(symbol).upper()
-    c = Stock(sym, "SMART", "USD")  # type: ignore[name-defined]
-    ib.qualifyContracts(c)
-    t = ib.reqMktData(c, "", False, False)
-    ib.sleep(1.0)
+# -----------------------------
+# Error mapping (string-based)
+# -----------------------------
+def map_ib_error(err: BaseException) -> str:
+    msg = str(err).lower()
 
-    s = str(side).upper()
-    ref = (
-        (getattr(t, "ask", None) if s == "BUY" else getattr(t, "bid", None))
-        or getattr(t, "close", None)
-        or 200.0
-    )
-    lmt = marketable_limit(s, ref, afterhours)
-
-    o = LimitOrder(s, qty, lmt)  # type: ignore[name-defined]
-    o.outsideRth = True
-    o.tif = "DAY"
-
-    tr = ib.placeOrder(c, o)
-    deadline = time.time() + max_wait_sec
-    while time.time() < deadline and tr.isActive():
-        ib.waitOnUpdate(timeout=1.0)
-
-    if tr.isActive():
-        new_ref = (
-            getattr(t, "ask", None) if s == "BUY" else getattr(t, "bid", None)
-        ) or ref
-        o.lmtPrice = round(
-            new_ref * (1 + reprice_pct) if s == "BUY" else new_ref * (1 - reprice_pct),
-            2,
-        )
-        ib.placeOrder(c, o)
-        for _ in range(8):
-            ib.waitOnUpdate(timeout=1.0)
-
-    st = tr.orderStatus
-    return st.status, st.filled, st.avgFillPrice
+    if "connection reset" in msg:
+        return "ECONNRESET"
+    if "not connected" in msg:
+        return "NOT_CONNECTED"
+    if "timed out" in msg or "timeout" in msg:
+        return "TIMEOUT"
+    if "access is denied" in msg or "permission" in msg:
+        return "ACCESS_DENIED"
+    if "rejected" in msg:
+        return "ORDER_REJECTED"
+    if "unreachable" in msg:
+        return "HOST_UNREACHABLE"
+    return "UNKNOWN"

@@ -104,3 +104,17 @@ _reports/
 .quarantine/
 .pytest_cache/
 **/__pycache__/
+# runtime artifacts
+audit.csv
+backup.csv
+# local patch backups
+*.bak_*
+*.bak
+*.CORRUPTED_*.bak
+
+# Allow tracked Block-G contract template
+!docs/contracts/blockg_status_stub.template.json
+
+tools/Kill-Spammers.ps1
+# local runtime outputs
+.hat/

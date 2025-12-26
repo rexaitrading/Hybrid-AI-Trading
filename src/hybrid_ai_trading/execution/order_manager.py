@@ -1,3 +1,6 @@
+from hybrid_ai_trading.runtime.run_context_reader import load_run_context
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+from hybrid_ai_trading.runtime.run_context import RunContext
 """
 OrderManager (minimal, test-friendly)
 
@@ -20,8 +23,29 @@ import logging
 import uuid
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live, BlockGNotReady
+from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
 logger = logging.getLogger(__name__)
+
+
+def _get_ctx_cached(obj: object):
+    """
+    Cache and return RunContext. If unavailable, returns None.
+    Live intent enforcement remains fail-closed in blockg_contract.
+    """
+    try:
+        cur = getattr(obj, "_ctx", None)
+        if cur is not None:
+            return cur
+    except Exception:
+        return None
+    try:
+        rc = load_run_context()
+        setattr(obj, "_ctx", rc)
+        return rc
+    except Exception:
+        return None
 
 
 class OrderManager:
@@ -281,8 +305,20 @@ class OrderManager:
         return None
 
     def place_order(
-        self, symbol: str, side: str, qty: float, notional: float
+        self,
+        symbol: str,
+        side: str,
+        qty: float = 0.0,
+        notional: float = 0.0,
+        size: float = 0.0,
+            ctx: RunContext | None = None,
+        price: float = 0.0,
     ) -> Dict[str, Any]:
+        # --- Compatibility: accept engine-style (size, price) or legacy (qty, notional)
+        if size and (not qty):
+            qty = float(size)
+        if (not notional) and price and qty:
+            notional = float(price) * float(qty)
         # VALIDATION
         if not symbol or not isinstance(symbol, str):
             return {
@@ -478,6 +514,17 @@ class OrderManager:
         # LIVE PATH
         if not self.dry_run and self.live_client is not None:
             try:
+                # Block-G lowest-layer enforcement (IB-only live path)
+                # For non-IB brokers (Alpaca/Binance/Polygon mocks), do NOT require Block-G contract file.
+                sym_u = str(symbol).upper()
+                require_nvda_live_stamp(sym_u)
+                client = self.live_client
+                client_name = (client.__class__.__name__ if client is not None else "")
+                client_mod  = (getattr(client.__class__, "__module__", "") if client is not None else "")
+                is_ib_like = (hasattr(client, "placeOrder") or ("ib" in (client_name + " " + client_mod).lower()))
+                if is_ib_like and sym_u in ("NVDA","SPY","QQQ"):
+                    ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=_get_ctx_cached(self))
+
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
@@ -507,6 +554,9 @@ class OrderManager:
                     "order_id": oid,
                     "raw": raw,
                 }
+            except BlockGNotReady as e:
+                # FAIL-CLOSED: never swallow Block-G failure in live path
+                raise
             except Exception as e:
                 logger.error("OrderManager live submit error: %s", e)
                 return {

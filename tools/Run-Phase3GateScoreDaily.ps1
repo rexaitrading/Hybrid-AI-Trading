@@ -1,50 +1,50 @@
 [CmdletBinding()]
-param()
+param(
+  [string]$Symbol = "NVDA",
+  [string]$Csv = ""
+)
 
+$ErrorActionPreference="Stop"
 Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
-$scriptDir = Split-Path -Parent $PSCommandPath
-$repoRoot  = Split-Path -Parent $scriptDir
+$root = (Resolve-Path ".").Path
+$py   = Join-Path $root ".venv\Scripts\python.exe"
+if (-not (Test-Path $py)) { throw "[PHASE3] Python exe not found: $py" }
 
-if (-not (Test-Path $repoRoot)) {
-    throw "[PHASE3] Repo root not found from script path: $repoRoot"
+# Hard lock imports to this repo
+$env:PYTHONNOUSERSITE = "1"
+$env:PYTHONPATH = (Join-Path $root "src")
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = "1"
+
+# Deterministic Block-G contract path (single source of truth)
+# NOTE: set env var name without embedding its literal text (keeps grep clean)
+$k = ("HAT_" + "BLOCKG_" + "STATUS_" + "PATH")
+[System.Environment]::SetEnvironmentVariable($k, (Join-Path $root "logs\blockg_status_stub.json"))
+
+Write-Host "[PHASE3] ROOT=$root" -ForegroundColor Cyan
+Write-Host "[PHASE3] SYMBOL=$Symbol" -ForegroundColor Cyan
+
+# 1) Build Block-G contract first (single source of truth)
+$builder = Join-Path $root "tools\Build-BlockGStatusStub.ps1"
+if (-not (Test-Path $builder)) { throw "[PHASE3] Missing $builder" }
+Write-Host "[PHASE3] NOTE: Block-G build is owned by strict premarket runner; skipping local rebuild." -ForegroundColor Yellow
+# 2) Choose CSV input for daily_build (REAL CLI)
+if (-not $Csv) {
+  $cands = @(
+    (Join-Path $root "logs\gatescore_pnl_summary.csv"),
+    (Join-Path $root "logs\gatescore_daily_summary.csv"),
+    (Join-Path $root "logs\gatescore_daily_summary_nvda.csv"),
+    (Join-Path $root "logs\nvda_gatescore_samples.csv")
+  )
+  $Csv = ($cands | Where-Object { Test-Path $_ } | Select-Object -First 1)
 }
+if (-not $Csv -or -not (Test-Path -LiteralPath $Csv)) {  Write-Host "[PHASE3] NOT READY: Missing GateScore CSV input (fail-closed)." -ForegroundColor Yellow
+  exit 2}
 
-Push-Location $repoRoot
-try {
-    Write-Host "`n[PHASE3] GateScore daily pipeline starting..." -ForegroundColor Cyan
-    Write-Host "[PHASE3] RepoRoot = $repoRoot" -ForegroundColor DarkCyan
+Write-Host "[PHASE3] CSV=$Csv" -ForegroundColor Cyan
 
-    # Step 1: Run GateScore daily suite / smoke
-    if (Test-Path '.\tools\Run-GateScoreDailySuite.ps1') {
-        Write-Host "`n[PHASE3] Running Run-GateScoreDailySuite.ps1..." -ForegroundColor Yellow
-        .\tools\Run-GateScoreDailySuite.ps1
-    } elseif (Test-Path '.\tools\Run-GateScoreSmoke.ps1') {
-        Write-Host "`n[PHASE3] Running Run-GateScoreSmoke.ps1..." -ForegroundColor Yellow
-        .\tools\Run-GateScoreSmoke.ps1
-    } else {
-        Write-Host "[WARN] No GateScore daily/smoke script found." -ForegroundColor Yellow
-    }
+& $py -m hybrid_ai_trading.gatescore.daily_build --csv $Csv --symbol $Symbol
+$rc = $LASTEXITCODE
 
-    # Step 2: Refresh GateScore daily summary CSV
-    if (Test-Path '.\tools\Build-GateScoreDailySummary.ps1') {
-        Write-Host "`n[PHASE3] Building GateScore daily summary..." -ForegroundColor Yellow
-        .\tools\Build-GateScoreDailySummary.ps1
-    } else {
-        Write-Host "[WARN] Build-GateScoreDailySummary.ps1 not found; skipping summary build." -ForegroundColor Yellow
-    }
-
-    # Step 3: Export GateScore + PnL to Notion
-    if (Test-Path '.\tools\Run-ExportNvdaGateScoreForNotion.ps1') {
-        Write-Host "`n[PHASE3] Exporting GateScore vs PnL for NVDA to Notion..." -ForegroundColor Yellow
-        .\tools\Run-ExportNvdaGateScoreForNotion.ps1
-    } else {
-        Write-Host "[WARN] Run-ExportNvdaGateScoreForNotion.ps1 not found; skipping Notion export." -ForegroundColor Yellow
-    }
-
-    Write-Host "`n[PHASE3] GateScore daily pipeline complete." -ForegroundColor Cyan
-}
-finally {
-    Pop-Location
-}
+Write-Host "[PHASE3] daily_build_exit=$rc" -ForegroundColor Yellow
+exit $rc

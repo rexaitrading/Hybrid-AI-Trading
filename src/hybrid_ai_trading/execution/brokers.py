@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Tuple
 
 
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 class BrokerError(Exception):
     pass
 
@@ -69,6 +71,28 @@ class IBKRClient(BrokerClient):
         limit_px: Optional[float] = None,
         meta: Optional[Dict[str, Any]] = None,
     ):
+        # Block-G lowest-layer enforcement (fail-closed for LIVE NVDA)
+        # LIVE is determined by:
+        #   - meta["is_paper"] == False  OR  env:HAT_IS_PAPER == "0"
+        # Default is paper (safe). Production live callers must set meta.is_paper=False.
+        try:
+            meta0 = meta or {}
+            is_paper = bool(meta0.get("is_paper", True))
+        except Exception:
+            is_paper = True
+        try:
+            env_flag = str(__import__("os").environ.get("HAT_IS_PAPER", "")).strip()
+            if env_flag in ("0", "false", "False", "NO", "no"):
+                is_paper = False
+        except Exception:
+            pass
+        # Block-G single chokepoint (ctx/json/env precedence inside contract)
+        ensure_symbol_blockg_ready(
+            symbol,
+            allow_paper=True,
+            is_paper=(meta0.get("is_paper", None) if isinstance(meta0, dict) else None),
+            ctx=(meta0.get("ctx", None) if isinstance(meta0, dict) else None),
+        )
         c = self._contract(symbol)
         side = side.upper()
         o = (
@@ -76,7 +100,7 @@ class IBKRClient(BrokerClient):
             if order_type.upper() == "MARKET"
             else LimitOrder(side, abs(qty), limit_px)
         )
-        t = self.ib.placeOrder(c, o)
+        t = ib_place_order_chokepoint(self.ib, c, o, meta=meta0)
         self.ib.sleep(0.5)
         order_id = str(t.order.orderId)
         fills = [

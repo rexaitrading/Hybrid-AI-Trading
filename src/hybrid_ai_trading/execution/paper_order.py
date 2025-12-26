@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+def _paper_only_guard() -> None:
+    # FAIL-CLOSED: paper_order must never touch IB in live mode.
+    import os
+    if str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0":
+        raise RuntimeError("paper_order is PAPER-ONLY; refused because HAT_IS_PAPER=0 (live)")
+
 import argparse
 import json
 import os
 import time
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -67,6 +74,9 @@ def clamp_limit(
     side: str, q: Quotes, slip_pct: float, ticks_clamp: int, fallback_ticks: int
 ) -> float:
     side = side.upper()
+    # Block-G: place_bracket live guard (fail-closed)
+    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and str(getattr(contract, "symbol", symbol)).upper() in ("NVDA","SPY","QQQ"):
+        require_blockg_ready_for_live(str(getattr(contract, "symbol", symbol)).upper())
     tick = max(q.minTick, 0.01)
     if side == "BUY":
         base = q.ask if (q.ask and q.ask > 0) else (q.last or q.close or 10.0)
@@ -105,6 +115,9 @@ def dedupe_open_orders(
     ib: IB, symbol: str, side: str, mode: str = "cancel_older"
 ) -> Tuple[list[Trade], list[Trade]]:
     side = side.upper()
+    # Block-G: place_bracket live guard (fail-closed)
+    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and str(getattr(contract, "symbol", symbol)).upper() in ("NVDA","SPY","QQQ"):
+        require_blockg_ready_for_live(str(getattr(contract, "symbol", symbol)).upper())
     same = [
         t
         for t in ib.reqOpenOrders()
@@ -138,6 +151,7 @@ def whatif_validate(
     trial.algoStrategy = getattr(order, "algoStrategy", None)
     trial.algoParams = getattr(order, "algoParams", None)
     trial.whatIf = True
+    _paper_only_guard()
     tr = ib.placeOrder(contract, trial)
     ib.sleep(0.6)
     err = None
@@ -167,6 +181,9 @@ def place_bracket(
     order_ref: str,
 ) -> Tuple[Trade, Trade, Trade]:
     side = side.upper()
+    # Block-G: place_bracket live guard (fail-closed)
+    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and str(getattr(contract, "symbol", symbol)).upper() in ("NVDA","SPY","QQQ"):
+        require_blockg_ready_for_live(str(getattr(contract, "symbol", symbol)).upper())
     assert side in ("BUY", "SELL")
     parent_id = ib.client.getReqId()
     tp_id = parent_id + 1
@@ -213,6 +230,8 @@ def place_bracket(
     stop.outsideRth = bool(outside_rth)
     stop.orderRef = order_ref
 
+    _paper_only_guard()
+
     tr_parent = ib.placeOrder(contract, parent)
     tr_take = ib.placeOrder(contract, take)
     tr_stop = ib.placeOrder(contract, stop)
@@ -255,6 +274,10 @@ def run(
     contract = Stock(symbol, "SMART", "USD")
     ib.qualifyContracts(contract)
 
+
+    # Block-G: paper_order live guard (fail-closed)
+    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and symbol.upper() in ("NVDA","SPY","QQQ"):
+        require_blockg_ready_for_live(symbol.upper())
     # Cooldown
     now_ts = int(time.time())
     cooldowns: Dict[str, int] = {}

@@ -1,7 +1,25 @@
 from __future__ import annotations
 
+from hybrid_ai_trading.runtime.run_context import RunContext
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+
 from typing import Any, Dict, List, Optional, Protocol, Tuple
 
+def _blockg_guard_live(symbol: str, ctx: RunContext | None = None) -> None:
+    # Fail-closed for live NVDA/SPY/QQQ at the broker interface layer.
+    sym = str(symbol).upper().strip()
+    if sym not in ("NVDA","SPY","QQQ"):
+        return
+
+    # Determine LIVE intent from ctx.mode (authoritative) or ctx.is_paper.
+    mode = str(getattr(ctx, "mode", "") or "").lower() if ctx is not None else ""
+    ctx_is_paper = getattr(ctx, "is_paper", None) if ctx is not None else None
+    env_live = (__import__("os").environ.get("HAT_IS_PAPER", "1").strip() == "0")
+    live = (mode == "live") or (ctx_is_paper is False) or ((ctx is None) and env_live)
+
+    if live:
+        # Contract owner (ctx-aware). Single source of truth.
+        ensure_symbol_blockg_ready(sym, allow_paper=True, is_paper=False, ctx=ctx)
 
 class Broker(Protocol):
     def connect(self) -> bool: ...

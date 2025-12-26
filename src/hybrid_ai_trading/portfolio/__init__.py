@@ -1,11 +1,4 @@
-"""
-Hybrid AI Trading Ã¢â‚¬â€œ Portfolio Package (Hedge Fund Grade v2.2)
--------------------------------------------------------------
-Responsibilities:
-- PortfolioTracker: track holdings, equity, and exposure
-- Allocation strategies for balancing assets
-- Performance metrics and risk analytics
-"""
+from __future__ import annotations
 
 from .portfolio_tracker import PortfolioTracker
 

@@ -1,8 +1,10 @@
 import asyncio
+import sys
 import math
 import os
 import pathlib
 import sys
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 from datetime import datetime, timezone
 
 # Windows selector loop is more reliable for ib_insync networking
@@ -13,7 +15,9 @@ if sys.platform.startswith("win"):
         pass
 
 import yaml
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 from ib_insync import IB, Stock
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 from hybrid_ai_trading.utils.edges import decide_signal
 from hybrid_ai_trading.utils.exec import gc_stale_orders
@@ -24,6 +28,34 @@ UNIVERSE_FILE = "config/universe_equities.yaml"
 POLL_SEC = 0.5
 
 
+
+LOCK_PATH = os.path.join("logs", "runner_stream.lock")
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        if pid <= 0:
+            return False
+        # Windows: os.kill(pid, 0) works for existence checks
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+def enforce_single_instance() -> None:
+    os.makedirs("logs", exist_ok=True)
+    pid = os.getpid()
+    try:
+        if os.path.exists(LOCK_PATH):
+            txt = pathlib.Path(LOCK_PATH).read_text(encoding="utf-8", errors="ignore").strip()
+            old = int(txt) if txt.isdigit() else -1
+            if _pid_alive(old):
+                print(f"[FATAL] runner_stream already running pid={old}; refusing to start", flush=True)
+                raise SystemExit(2)
+    except Exception:
+        # fail-closed: if lock can't be read, still continue (but we prefer not to crash)
+        pass
+
+    pathlib.Path(LOCK_PATH).write_text(str(pid), encoding="utf-8")
 def _nz(x, default=0.0):
     try:
         if x is None:
@@ -64,9 +96,19 @@ async def connect_with_retry(
     for i in range(1, attempts + 1):
         try:
             await ib.connectAsync(host, port, clientId=cid, timeout=timeout)
+
             # sanity handshake so we know the API finished starting
             await ib.reqCurrentTimeAsync()
             return True
+
+        except asyncio.CancelledError as e:
+            # Treat as a normal connect failure (avoid propagating cancellation as KeyboardInterrupt)
+            print(f"API connection failed: CancelledError({e})")
+            try:
+                ib.disconnect()
+            except Exception:
+                pass
+            raise Exception("connect cancelled")
         except Exception as e:
             try:
                 ib.disconnect()
@@ -82,8 +124,15 @@ async def connect_with_retry(
 
 
 async def main():
+    # UTF-8 console safety (avoid UnicodeEncodeError on Windows cp1252)
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
     host = os.getenv("IB_HOST", "127.0.0.1")
-    port = int(os.getenv("IB_PORT", "7497"))
+    port = int(os.getenv("IB_PORT", "4002"))
     cid = int(os.getenv("IB_CLIENT_ID", os.getenv("CLIENT_ID", "3021")))
 
     ib = IB()
@@ -172,7 +221,9 @@ async def main():
                                 return
                         except Exception:
                             return
-                    ib.placeOrder(c, sig.order)
+                    if os.getenv("HAT_IS_PAPER","1").strip() == "0" and c.symbol.upper() in ("NVDA","SPY","QQQ"):
+                        require_blockg_ready_for_live(c.symbol.upper())
+                    ib_place_order_chokepoint(ib, c, sig.order)
 
         except Exception as e:
             # log and move on; do not let Event loop die

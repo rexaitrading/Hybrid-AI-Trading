@@ -1,98 +1,34 @@
-# conftest: ensure repo/src is importable in any CI working dir / interpreter
-import importlib.util
-import os
-import pathlib
-import sys
+from __future__ import annotations
 
+import sys
 import pytest
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]  # project root (tests/..)
-CANDIDATES = [ROOT / "src", ROOT]
-for p in CANDIDATES:
-    sp = str(p)
-    if sp not in sys.path:
-        sys.path.insert(0, sp)
-spec = importlib.util.find_spec("hybrid_ai_trading")
-sys.stderr.write(
-    f"[conftest] exe={sys.executable} importable={bool(spec)} root={ROOT}\\n"
-)
-if spec is None:
-    # leave path injected; test files also prepend a tiny shim as last resort
-    pass
 
-
-# === IB_INSYNC_TEST_SHIM_BEGIN ===
-# Minimal ib_insync stub for smoke tests when real package is absent.
-try:
-    import ib_insync  # type=ignore
-except Exception:
-    import sys
-    import types
-
-    m = types.ModuleType("ib_insync")
-
-    class _IBDummy:
-        def __init__(self, *a, **k):
-            pass
-
-        def __call__(self, *a, **k):
-            return self
-
-        def __getattr__(self, _):
-            return self
-
-    class IB(_IBDummy):
-        def connect(self, *a, **k):
-            return True
-
-        def disconnect(self, *a, **k):
-            return None
-
-    class Contract(_IBDummy):
-        pass
-
-    class Stock(_IBDummy):
-        pass
-
-    class Forex(_IBDummy):
-        pass
-
-    class MarketOrder(_IBDummy):
-        pass
-
-    class LimitOrder(_IBDummy):
-        pass
-
-    class ContractDetails(_IBDummy):
-        pass
-
-    class Ticker(_IBDummy):
-        pass
-
-    class util(_IBDummy):
-        pass
-
-    m.IB = IB
-    m.Contract = Contract
-    m.Stock = Stock
-    m.Forex = Forex
-    m.MarketOrder = MarketOrder
-    m.LimitOrder = LimitOrder
-    m.ContractDetails = ContractDetails
-    m.Ticker = Ticker
-    m.util = util
-
-    def _ibins_getattr(name):  # catch-all for any other symbol (Order, TagValue, etc.)
-        return _IBDummy()
-
-    m.__getattr__ = _ibins_getattr
-    sys.modules["ib_insync"] = m
-# === IB_INSYNC_TEST_SHIM_END ===
+@pytest.fixture(autouse=True)
+def _restore_algos_modules():
+    """
+    Prevent cross-test leakage via sys.modules injection for hybrid_ai_trading.algos.*.
+    Many tests replace sys.modules entries to simulate algo executors; this fixture
+    snapshots and restores those entries around each test.
+    """
+    prefix = "hybrid_ai_trading.algos."
+    before = {k: sys.modules.get(k) for k in list(sys.modules.keys()) if k.startswith(prefix)}
+    yield
+    # Remove new keys
+    after_keys = [k for k in list(sys.modules.keys()) if k.startswith(prefix)]
+    for k in after_keys:
+        if k not in before:
+            sys.modules.pop(k, None)
+    # Restore prior objects
+    for k, v in before.items():
+        if v is None:
+            sys.modules.pop(k, None)
+        else:
+            sys.modules[k] = v
 
 
 @pytest.fixture()
 def TradeEngineClass():
-    # Minimal import to satisfy tests that expect this fixture
+    # TODO: update import path to where TradeEngine actually lives
     from hybrid_ai_trading.trade_engine import TradeEngine
-
     return TradeEngine

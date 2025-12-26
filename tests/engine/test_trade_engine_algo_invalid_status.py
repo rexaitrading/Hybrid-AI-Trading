@@ -18,9 +18,7 @@ def _install(monkeypatch, name, executor_cls):
     path = f"hybrid_ai_trading.algos.{key}"
     m = types.ModuleType(path)
     setattr(m, cls, executor_cls)
-    if path in sys.modules:
-        del sys.modules[path]
-    sys.modules[path] = m
+    monkeypatch.setitem(sys.modules, path, m)
     importlib.invalidate_caches()
 
 

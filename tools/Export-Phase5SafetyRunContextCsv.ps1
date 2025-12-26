@@ -4,6 +4,17 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Invoke-BlockGReady {
+  [CmdletBinding()]
+  param(
+    [ValidateSet("NVDA","SPY","QQQ")]
+    [string]$Symbol
+  )
+  $checker = Join-Path (Split-Path -Parent $PSCommandPath) "Check-BlockGReady.ps1"
+  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol | Out-Host
+  return $LASTEXITCODE
+}
+
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
@@ -52,10 +63,9 @@ $mode    = Get-FieldSafe -Obj $runCtx -Name "phase5_mode"
 $phase23 = Get-FieldSafe -Obj $runCtx -Name "phase23_health_ok_today"
 $evHard  = Get-FieldSafe -Obj $runCtx -Name "ev_hard_daily_ok_today"
 $gsFresh = Get-FieldSafe -Obj $runCtx -Name "gatescore_fresh_today"
-
-$nvdaReady = Get-FieldSafe -Obj $runCtx -Name "nvda_blockg_ready"
-$spyReady  = Get-FieldSafe -Obj $runCtx -Name "spy_blockg_ready"
-$qqqReady  = Get-FieldSafe -Obj $runCtx -Name "qqq_blockg_ready"
+$nvdaReady = ((Invoke-BlockGReady -Symbol "NVDA") -eq 0)
+$spyReady  = ((Invoke-BlockGReady -Symbol "SPY") -eq 0)
+$qqqReady  = ((Invoke-BlockGReady -Symbol "QQQ") -eq 0)
 
 $row = [PSCustomObject]@{
     as_of_date          = $asOf

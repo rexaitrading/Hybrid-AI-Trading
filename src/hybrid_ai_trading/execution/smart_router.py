@@ -13,10 +13,12 @@ Smart Order Router (Hybrid AI Quant Pro v5.2 - Hedge-Fund OE Grade, Test-Friendl
 
 import logging
 import os
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 import time
 from typing import Any, Callable, Dict, List, Optional
 
 from hybrid_ai_trading.execution.latency_monitor import LatencyMonitor
+from hybrid_ai_trading.runtime.run_context import RunContext
 
 logger = logging.getLogger("hybrid_ai_trading.execution.smart_router")
 
@@ -110,6 +112,7 @@ class SmartOrderRouter:
         side: str,
         size: float,
         price: float,
+        ctx: RunContext | None = None,
         timeout_sec: Optional[float] = None,
     ) -> Dict[str, Any]:
         ranked_brokers = self.rank_brokers()
@@ -124,8 +127,14 @@ class SmartOrderRouter:
             for attempt in range(1, self.max_retries + 1):
 
                 def submit():
+                    # --- Block-G hard gate for LIVE routed orders (fail-closed)
+                    sym_u = str(symbol).upper()
+                    is_paper = bool(getattr(client, "paper", getattr(client, "is_paper", True)))
+                    if (not self.test_mode) and (not is_paper) and sym_u in ("NVDA","SPY","QQQ"):
+                        require_blockg_ready_for_live(sym_u)
+
                     return self._timeout_wrapper(
-                        client.submit_order,
+                        submit_order_fn,
                         symbol=symbol,
                         qty=size,
                         side=side.lower(),

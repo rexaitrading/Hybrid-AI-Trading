@@ -1,6 +1,20 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
+from hybrid_ai_trading.runtime.run_context import RunContext
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
+
+def require_blockg_ready_for_live(symbol: str) -> None:
+    """
+    Backwards-compatible monkeypatch hook for tests.
+    Single source of truth: blockg_contract.ensure_symbol_blockg_ready (fail-closed).
+    """
+    contract_ensure_symbol_blockg_ready(
+        symbol=str(symbol).upper(),
+        allow_paper=False,
+        is_paper=False,
+    )
 
 from .base import Broker
 
@@ -55,6 +69,7 @@ class IBAdapter(Broker):
         order_type: str = "MARKET",
         limit_price: Optional[float] = None,
         meta: Optional[Dict[str, Any]] = None,
+        ctx: RunContext | None = None,
     ) -> Tuple[int, Dict[str, Any]]:
         contract = Stock(symbol, "SMART", "USD")
         if order_type.upper() == "LIMIT":
@@ -63,7 +78,33 @@ class IBAdapter(Broker):
             order = LimitOrder(side.upper(), qty, limit_price)
         else:
             order = MarketOrder(side.upper(), qty)
-        trade = self.ib.placeOrder(contract, order)
+        # Block-G: hard fail-closed for LIVE orders (double-gate)
+        # LIVE is determined by (highest precedence first):
+        #   1) meta["is_paper"] == False
+        #   2) env:HAT_IS_PAPER == "0"
+        #   3) ctx.mode == "live"
+        # Default is paper-safe.
+        meta0 = meta or {}
+        is_paper = True
+        try:
+            if "is_paper" in meta0:
+                is_paper = bool(meta0.get("is_paper", True))
+            else:
+                env_flag = str(__import__("os").environ.get("HAT_IS_PAPER", "")).strip()
+                if env_flag == "0":
+                    is_paper = False
+                elif ctx is not None and getattr(ctx, "mode", ""):
+                    is_paper = str(getattr(ctx, "mode", "")).strip().lower() != "live"
+        except Exception:
+            is_paper = True
+        # Block-G single chokepoint (ctx/json/env precedence inside contract)
+        contract_ensure_symbol_blockg_ready(
+            symbol,
+            allow_paper=True,
+            is_paper=(meta0.get("is_paper", None) if isinstance(meta0, dict) else None),
+            ctx=ctx,
+        )
+        trade = ib_place_order_chokepoint(self.ib, contract, order, ctx=ctx, meta=meta0)
         # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)
         st = trade.orderStatus

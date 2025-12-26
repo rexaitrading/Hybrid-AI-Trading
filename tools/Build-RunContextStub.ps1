@@ -1,8 +1,21 @@
 [CmdletBinding()]
-param()
+param(
+    [string]$Symbol = "NVDA"
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+function Invoke-BlockGReady {
+  [CmdletBinding()]
+  param(
+    [ValidateSet("NVDA","SPY","QQQ")]
+    [string]$Symbol
+  )
+  $checker = Join-Path (Split-Path -Parent $PSCommandPath) "Check-BlockGReady.ps1"
+  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol | Out-Host
+  return $LASTEXITCODE
+}
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
@@ -12,8 +25,9 @@ if (-not (Test-Path $logsDir)) {
     New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
 }
 
-$statusPath   = Join-Path $logsDir "blockg_status_stub.json"
-$runCtxPath   = Join-Path $logsDir "runcontext_phase5_stub.json"
+$statusPath    = Join-Path $logsDir "blockg_status_stub.json"
+$runCtxPath    = Join-Path $logsDir "run_context.json"            # canonical
+$runCtxLegacy  = Join-Path $logsDir "runcontext_phase5_stub.json" # legacy compat
 
 if (-not (Test-Path $statusPath)) {
     Write-Host "[RUNCTX] ERROR: Block-G status JSON not found at $statusPath" -ForegroundColor Red
@@ -35,32 +49,40 @@ function Get-StatusFieldSafe {
         [Parameter(Mandatory = $true)]$Status,
         [Parameter(Mandatory = $true)][string]$Name
     )
-
     $prop = $Status.PSObject.Properties[$Name]
-    if ($prop -ne $null) {
-        return $prop.Value
-    }
+    if ($prop -ne $null) { return $prop.Value }
     return $null
 }
 
-$asOf     = Get-StatusFieldSafe -Status $status -Name "as_of_date"
+$today = (Get-Date).ToString("yyyy-MM-dd")
+$asOf  = Get-StatusFieldSafe -Status $status -Name "as_of_date"
 if (-not $asOf) { $asOf = Get-StatusFieldSafe -Status $status -Name "date" }
 if (-not $asOf) { $asOf = Get-StatusFieldSafe -Status $status -Name "trading_day" }
+if (-not $asOf) { $asOf = $today }
 
-$phase23  = Get-StatusFieldSafe -Status $status -Name "phase23_health_ok_today"
-$evHard   = Get-StatusFieldSafe -Status $status -Name "ev_hard_daily_ok_today"
-$gsFresh  = Get-StatusFieldSafe -Status $status -Name "gatescore_fresh_today"
+$phase23   = Get-StatusFieldSafe -Status $status -Name "phase23_health_ok_today"
+$evHard    = Get-StatusFieldSafe -Status $status -Name "ev_hard_daily_ok_today"
+$gsFresh   = Get-StatusFieldSafe -Status $status -Name "gatescore_fresh_today"
+$nvdaReady = ((Invoke-BlockGReady -Symbol "NVDA") -eq 0)
+$spyReady  = ((Invoke-BlockGReady -Symbol "SPY") -eq 0)
+$qqqReady  = ((Invoke-BlockGReady -Symbol "QQQ") -eq 0)
 
-$nvdaReady = Get-StatusFieldSafe -Status $status -Name "nvda_blockg_ready"
-$spyReady  = Get-StatusFieldSafe -Status $status -Name "spy_blockg_ready"
-$qqqReady  = Get-StatusFieldSafe -Status $status -Name "qqq_blockg_ready"
+# Derive mode from env flag (default paper-safe)
+$mode = "paper"
+try {
+    $envFlag = [string]$env:HAT_IS_PAPER
+    if ($envFlag -eq "0") { $mode = "live" }
+} catch { $mode = "paper" }
 
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
 $payload = [ordered]@{
     ts_utc                  = $tsUtc
     as_of_date              = $asOf
+    mode                    = $mode
+    symbol                  = $Symbol
     phase5_mode             = "Phase5-Safety"
+    blockg_status_path      = "logs/blockg_status_stub.json"
     phase23_health_ok_today = $phase23
     ev_hard_daily_ok_today  = $evHard
     gatescore_fresh_today   = $gsFresh
@@ -69,10 +91,16 @@ $payload = [ordered]@{
     qqq_blockg_ready        = $qqqReady
 }
 
-$payloadJson = $payload | ConvertTo-Json -Depth 4
+$payloadJson = $payload | ConvertTo-Json -Depth 6
+$enc = New-Object System.Text.UTF8Encoding($false)
 
-Write-Host "[RUNCTX] Writing Phase-5 RunContext stub to $runCtxPath" -ForegroundColor Cyan
-$payloadJson | Set-Content -Path $runCtxPath -Encoding UTF8
+# Write canonical + legacy
+[System.IO.File]::WriteAllText($runCtxPath,   $payloadJson + "`n", $enc)
+[System.IO.File]::WriteAllText($runCtxLegacy, $payloadJson + "`n", $enc)
 
+Write-Host "[RUNCTX] Writing RunContext to $runCtxPath (and legacy $runCtxLegacy)" -ForegroundColor Cyan
 Write-Host "[RUNCTX] RunContext snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
+
+exit 0
+

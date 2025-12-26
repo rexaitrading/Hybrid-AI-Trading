@@ -1,0 +1,26 @@
+{
+    "DEFAULT":  {
+                    "min_signals":  100,
+                    "min_pnl_samples":  300,
+                    "min_edge_ratio":  0.03,
+                    "min_micro_score":  0.55
+                },
+    "NVDA":  {
+                 "min_signals":  100,
+                 "min_pnl_samples":  300,
+                 "min_edge_ratio":  0.03,
+                 "min_micro_score":  0.55
+             },
+    "SPY":  {
+                "min_signals":  50,
+                "min_pnl_samples":  100,
+                "min_edge_ratio":  0,
+                "min_micro_score":  0.20
+            },
+    "QQQ":  {
+                "min_signals":  30,
+                "min_pnl_samples":  30,
+                "min_edge_ratio":  0,
+                "min_micro_score":  0.15
+            }
+}

@@ -6,37 +6,84 @@ $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
+Set-Location $repoRoot
 
-$srcPath = Join-Path $repoRoot "logs\\gatescore_pnl_summary.csv"
-$outPath = Join-Path $repoRoot "logs\\gatescore_daily_summary.csv"
+$logs = Join-Path $repoRoot "logs"
+$src  = Join-Path $logs "gatescore_pnl_summary.csv"
+$out  = Join-Path $logs "gatescore_daily_summary.csv"
 
-if (-not (Test-Path $srcPath)) {
-    Write-Host "GateScore daily summary: source CSV not found at $srcPath" -ForegroundColor Yellow
-    return
+function Write-Utf8NoBomLf([string]$Path,[string]$Text){
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+  $t = $Text.TrimStart([char]0xFEFF) -replace "`r`n","`n"
+  if ($t.Length -gt 0 -and $t[-1] -ne "`n") { $t += "`n" }
+  $full = [System.IO.Path]::GetFullPath($Path)
+  $dir = Split-Path -Parent $full
+  if($dir -and -not (Test-Path $dir)){ New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+  [System.IO.File]::WriteAllText($full, $t, $utf8NoBom)
 }
 
-Write-Host "GateScore daily summary: loading $srcPath" -ForegroundColor Cyan
-$rows = Import-Csv -Path $srcPath
-
-# Normalize to array to avoid StrictMode issues on Count
-$rowArray = @($rows)
-
-if ($rowArray.Count -eq 0) {
-    Write-Host "GateScore daily summary: no rows found in $srcPath" -ForegroundColor Yellow
-    return
+# Canonical ASOF: Phase4 stamp wins; else BlockG wins; else local date
+$asOf = (Get-Date).ToString("yyyy-MM-dd")
+$p4 = Join-Path $logs "phase4_validation_passed.json"
+if(Test-Path -LiteralPath $p4){
+  try{
+    $j = Get-Content -LiteralPath $p4 -Raw -Encoding utf8 | ConvertFrom-Json
+    $d = (($j.as_of_date) + "").Trim()
+    if($d){ $asOf = $d }
+  } catch {}
+}
+$bg = Join-Path $logs "blockg_status_stub.json"
+if(Test-Path -LiteralPath $bg){
+  try{
+    $b = Get-Content -LiteralPath $bg -Raw -Encoding utf8 | ConvertFrom-Json
+    $d2 = (($b.as_of_date) + "").Trim()
+    if($d2){ $asOf = $d2 }
+  } catch {}
 }
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
+$header = "symbol,count_signals,mean_edge_ratio,mean_micro_score,pnl_samples,mean_pnl,as_of_date"
 
-# Attach as_of_date to each row
-$rowArray | ForEach-Object {
-    $_ | Add-Member -NotePropertyName "as_of_date" -NotePropertyValue $today -Force
+if (-not (Test-Path -LiteralPath $src)) {
+  Write-Utf8NoBomLf -Path $out -Text $header
+  Write-Host "[GS-DAILY] FAIL-CLOSED: missing gatescore_pnl_summary.csv (header only)" -ForegroundColor Yellow
+  exit 2
 }
 
-Write-Host "GateScore daily summary: writing $outPath" -ForegroundColor Cyan
-$rowArray | Export-Csv -Path $outPath -NoTypeInformation -Encoding UTF8
+$rows = @(Import-Csv -LiteralPath $src)
+if (-not $rows -or $rows.Count -eq 0) {
+  Write-Utf8NoBomLf -Path $out -Text $header
+  Write-Host "[GS-DAILY] FAIL-CLOSED: zero rows in gatescore_pnl_summary.csv (header only)" -ForegroundColor Yellow
+  exit 2
+}
 
-Write-Host "GateScore daily summary: sample rows:" -ForegroundColor Yellow
-$rowArray |
-    Select-Object -First 5 symbol, count_signals, mean_edge_ratio, mean_micro_score, pnl_samples, mean_pnl, as_of_date |
-    Format-Table -AutoSize
+# Latest available session date (YYYY-MM-DD string sort OK)
+$latestDate = ($rows | Sort-Object as_of_date -Descending | Select-Object -First 1).as_of_date
+$use = @($rows | Where-Object { ($_.as_of_date + "") -eq ($latestDate + "") })
+
+if (-not $use -or $use.Count -eq 0) {
+  Write-Utf8NoBomLf -Path $out -Text $header
+  Write-Host "[GS-DAILY] FAIL-CLOSED: no rows for latestDate=$latestDate (header only)" -ForegroundColor Yellow
+  exit 2
+}
+
+$lines = New-Object System.Collections.Generic.List[string]
+$lines.Add($header) | Out-Null
+
+foreach ($r in ($use | Sort-Object symbol)) {
+  $lines.Add(("{0},{1},{2},{3},{4},{5},{6}" -f
+    $r.symbol,$r.count_signals,$r.mean_edge_ratio,$r.mean_micro_score,$r.pnl_samples,$r.mean_pnl,$r.as_of_date
+  )) | Out-Null
+}
+
+# Carry-forward row for canonical ASOF (holiday/weekend / midnight-boundary safe)
+if(($latestDate + "") -ne ($asOf + "")){
+  foreach ($r in ($use | Sort-Object symbol)) {
+    $lines.Add(("{0},{1},{2},{3},{4},{5},{6}" -f
+      $r.symbol,$r.count_signals,$r.mean_edge_ratio,$r.mean_micro_score,$r.pnl_samples,$r.mean_pnl,$asOf
+    )) | Out-Null
+  }
+}
+
+Write-Utf8NoBomLf -Path $out -Text ($lines -join "`n")
+Write-Host "[GS-DAILY] OK wrote $out rows=$($lines.Count-1) latestDate=$latestDate asOf=$asOf" -ForegroundColor Green
+exit 0

@@ -1,4 +1,31 @@
+from __future__ import annotations
+
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
+import os
 from ib_insync import IB, MarketOrder
+
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
+
+
+def _blockg_guard_live_risk_flatten(symbol: str) -> None:
+    """
+    Fail-closed Block-G guard for any direct direct IB order placement usage in utils.risk flatten path.
+
+    Policy:
+    - Only enforce for NVDA/SPY/QQQ (extend later).
+    - Enforce only when live intent (HAT_IS_PAPER=0).
+    - If env cannot be read, fail-closed (treat as live).
+    """
+    sym_u = str(symbol or "").upper()
+    if sym_u not in ("NVDA", "SPY", "QQQ"):
+        return
+    try:
+        env_flag = os.environ.get("HAT_IS_PAPER", "1").strip()
+        is_live = (env_flag == "0")
+    except Exception:
+        is_live = True
+    if is_live:
+        require_blockg_ready_for_live(sym_u)
 
 
 def intraday_risk_checks(
@@ -24,4 +51,6 @@ def _flatten(ib: IB, positions):
 
 def _flatten_one(ib: IB, p):
     side = "SELL" if p.position > 0 else "BUY"
-    ib.placeOrder(p.contract, MarketOrder(side, abs(int(p.position))))
+    # Block-G: do not allow live bypass on flatten
+    _blockg_guard_live_risk_flatten(getattr(p.contract, "symbol", ""))
+    ib_place_order_chokepoint(ib, p.contract, MarketOrder(side, abs(int(p.position))))

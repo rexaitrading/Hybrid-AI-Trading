@@ -1,8 +1,9 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $false)]
-    [ValidateSet("NVDA","SPY","QQQ")]
-    [string]$Symbol = "NVDA"
+  [ValidateSet("NVDA","SPY","QQQ","ALL")]
+  [string]$Symbol = "NVDA",
+
+  [switch]$Build
 )
 
 Set-StrictMode -Version Latest
@@ -11,120 +12,93 @@ $ErrorActionPreference = "Stop"
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 
-# Prefer logs\blockg_status_stub.json (used by Test-BlockGDateSanity), fallback to .intel
-$logsStatus  = Join-Path $repoRoot "logs\\blockg_status_stub.json"
-$intelStatus = Join-Path $repoRoot ".intel\\blockg_status_stub.json"
+function Write-Utf8NoBom {
+  param([string]$Path, [string]$Text)
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+  $Text = $Text -replace "`r`n", "`n"
+  if ($Text.Length -gt 0 -and $Text[-1] -ne "`n") { $Text += "`n" }
+  [System.IO.File]::WriteAllText((Resolve-Path $Path).Path, $Text, $utf8NoBom)
+}
 
-if (Test-Path $logsStatus) {
-    $statusPath = $logsStatus
-} elseif (Test-Path $intelStatus) {
-    $statusPath = $intelStatus
+function Read-Json {
+  param([string]$Path)
+  if (-not (Test-Path -LiteralPath $Path)) { return $null }
+  $raw = Get-Content -LiteralPath $Path -Encoding utf8 -Raw
+  if (-not $raw) { return $null }
+  return ($raw | ConvertFrom-Json -ErrorAction Stop)
+}
+
+function Fail-Contract([string]$Msg) {
+  Write-Host "[BLOCKG] NOT READY: $Msg" -ForegroundColor Red
+  exit 2
+}
+
+
+function Fail([string]$Msg) {
+  # Backward-compatible shim: treat any Fail() usage as contract failure (exit 2)
+  Fail-Contract $Msg
+}
+function Fail-Script([string]$Msg) {
+  Write-Host "[BLOCKG] ERROR: $Msg" -ForegroundColor Yellow
+  exit 1
+}
+# 1) Optional build step (single semantic owner)
+if ($Build) {
+  $builder = Join-Path $toolsDir "Build-BlockGStatusStub.ps1"
+  if (-not (Test-Path -LiteralPath $builder)) { Fail "Missing builder: $builder" }
+
+  Write-Host "[BLOCKG] Build requested: running Build-BlockGStatusStub.ps1" -ForegroundColor Cyan
+  powershell -NoProfile -ExecutionPolicy Bypass -File $builder | Out-Host
+  if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub.ps1 failed exit=$LASTEXITCODE" }
+}
+
+# 2) Load contract JSON (contract-only validation)
+$defaultPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
+$statusPath = $env:HAT_BLOCKG_STATUS_PATH
+if (-not $statusPath) { $statusPath = $defaultPath }
+
+$st = Read-Json $statusPath
+if (-not $st) { Fail "Missing/invalid Block-G status JSON at: $statusPath" }
+
+# --- GateScore session-age policy (contract-only; do not recompute) ---
+$MAX_GS_AGE_DAYS = 3
+# 3) Validate required daily quality fields (fail-closed)
+# NOTE: contract defines these booleans (default false if absent)
+$reqFields = @(
+  "phase4_ok_today",
+  "ev_hard_daily_ok_today",
+  "gatescore_fresh_today"
+)
+
+foreach ($k in $reqFields) {
+  if (-not ($st.PSObject.Properties.Name -contains $k)) { Fail "Missing field: $k" }
+  if (-not [bool]$st.$k) { Fail "$k=false" }
+}
+
+# GateScore age policy (fail-closed)
+if (-not [bool]$st.gatescore_recent_enough) { Fail "gatescore_recent_enough=false" }
+try { $age = [int]$st.gatescore_age_days } catch { Fail "gatescore_age_days invalid" }
+if ($age -gt $MAX_GS_AGE_DAYS) { Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
+# Optional: min_samples_ok_today if present must be true
+if ($st.PSObject.Properties.Name -contains "min_samples_ok_today") {
+  if (-not [bool]$st.min_samples_ok_today) { Fail "min_samples_ok_today=false" }
+}
+
+# 4) Per-symbol readiness (fail-closed)
+function SymReady([string]$sym) {
+  $key = ($sym.ToLower() + "_blockg_ready")
+  if (-not ($st.PSObject.Properties.Name -contains $key)) { return $false }
+  return [bool]$st.$key
+}
+
+$s = $Symbol.ToUpper()
+if ($s -eq "ALL") {
+  foreach ($sym in @("NVDA","SPY","QQQ")) {
+    if (-not (SymReady $sym)) { Fail "$sym not ready ($($sym.ToLower())_blockg_ready=false)" }
+  }
 } else {
-    Write-Error "BLOCK-G: status JSON not found (.intel or logs)."
-    exit 1
+  if (-not (SymReady $s)) { Fail "$s not ready ($($s.ToLower())_blockg_ready=false)" }
 }
 
-Write-Host "BLOCK-G: using status JSON at $statusPath" -ForegroundColor Cyan
-
-try {
-    $raw = Get-Content -Path $statusPath -Raw -Encoding UTF8
-    $status = $raw | ConvertFrom-Json
-} catch {
-    Write-Error "BLOCK-G: failed to parse status JSON at $statusPath. $_"
-    exit 1
-}
-
-function Get-AsOfDateString {
-    param([Parameter(Mandatory = $true)]$Payload)
-
-    # Use PSObject.Properties to avoid StrictMode issues
-    $props = $Payload.PSObject.Properties
-
-    $candidate = $null
-    foreach ($name in @("as_of_date","date","trading_day")) {
-        $prop = $props[$name]
-        if ($prop -ne $null -and $prop.Value -ne $null -and $prop.Value -ne "") {
-            $candidate = [string]$prop.Value
-            break
-        }
-    }
-
-    if (-not $candidate) {
-        return $null
-    }
-
-    if ($candidate.Length -ge 10) {
-        return $candidate.Substring(0,10)
-    }
-    return $candidate
-}
-
-function To-StrictBool {
-    param([Parameter(Mandatory = $true)]$Value)
-
-    if ($null -eq $Value) { return $false }
-    if ($Value -is [bool]) { return [bool]$Value }
-
-    if ($Value -is [string]) {
-        $v = $Value.Trim().ToLowerInvariant()
-        if ($v -in @("1","true","yes","y"))  { return $true }
-        if ($v -in @("0","false","no","n")) { return $false }
-    }
-
-    return [bool]$Value
-}
-
-# 1) Today-ness
-$asOf = Get-AsOfDateString -Payload $status
-if (-not $asOf) {
-    Write-Error "BLOCK-G: status JSON missing as_of_date/date/trading_day."
-    exit 1
-}
-
-$today = (Get-Date).ToString("yyyy-MM-dd")
-
-if ($asOf -ne $today) {
-    Write-Error "BLOCK-G: status JSON date mismatch. as_of_date=$asOf, today=$today."
-    exit 1
-}
-
-# 2) Global health flags
-$phase23Ok = To-StrictBool $status.phase23_health_ok_today
-$evHardOk  = To-StrictBool $status.ev_hard_daily_ok_today
-$gsFresh   = To-StrictBool $status.gatescore_fresh_today
-
-if (-not $phase23Ok) {
-    Write-Error "BLOCK-G: phase23_health_ok_today is FALSE."
-    exit 1
-}
-if (-not $evHardOk) {
-    Write-Error "BLOCK-G: ev_hard_daily_ok_today is FALSE."
-    exit 1
-}
-if (-not $gsFresh) {
-    Write-Error "BLOCK-G: gatescore_fresh_today is FALSE."
-    exit 1
-}
-
-# 3) Per-symbol flag
-$symbolUpper = $Symbol.ToUpperInvariant()
-$readyFlag = $null
-
-switch ($symbolUpper) {
-    "NVDA" { $readyFlag = $status.nvda_blockg_ready }
-    "SPY"  { $readyFlag = $status.spy_blockg_ready }
-    "QQQ"  { $readyFlag = $status.qqq_blockg_ready }
-    default {
-        # Unknown symbol -> conservative: treat as not ready
-        Write-Error "BLOCK-G: unknown symbol '$Symbol' for Block-G check."
-        exit 1
-    }
-}
-
-if (-not (To-StrictBool $readyFlag)) {
-    Write-Error "BLOCK-G: per-symbol ready flag is FALSE for $Symbol."
-    exit 1
-}
-
-Write-Host "BLOCK-G: READY for symbol=$Symbol (date=$asOf)." -ForegroundColor Green
+Write-Host "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath" -ForegroundColor Green
 exit 0

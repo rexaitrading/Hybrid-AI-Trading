@@ -1,0 +1,63 @@
+name: CI Risk-First
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  risk_first:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Create venv
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python -m pip install --upgrade pip
+
+      - name: Install deps (best-effort)
+        shell: pwsh
+        run: |
+          if(Test-Path "requirements.txt"){
+            .\.venv\Scripts\python -m pip install -r requirements.txt
+          }
+          if(Test-Path "requirements-dev.txt"){
+            .\.venv\Scripts\python -m pip install -r requirements-dev.txt
+          }
+          if((-not (Test-Path "requirements.txt")) -and (-not (Test-Path "requirements-dev.txt"))){
+            .\.venv\Scripts\python -m pip install -e .
+          }
+          .\.venv\Scripts\python -m pip install pytest
+
+      - name: Guardrail: no raw python in tools
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Check-NoRawPythonTools.ps1
+
+      - name: Risk-first: BlockG pack
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\python.ps1 -m pytest -q -k "blockg"
+
+
+      - name: Gates: NVDA stamp + BlockG defense-in-depth
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\python.ps1 -m pytest -q `
+            tests\execution\test_nvda_live_stamp_gate.py `
+            tests\execution\test_ib_safe_chokepoint_blockg.py `
+            tests\execution\test_order_manager_blockg_defense_in_depth.py `
+            tests\execution\test_blockg_order_manager_guard.py `
+            tests\execution\test_blockg_ib_placeorder_guard.py `
+            tests\execution\test_blockg_gatescore_policy_session_age.py
+      - name: Risk suite
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\python.ps1 -m pytest -q tests\risk
