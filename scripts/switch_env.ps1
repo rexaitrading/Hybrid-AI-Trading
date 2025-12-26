@@ -1,23 +1,29 @@
+[CmdletBinding()]
 param(
   [Parameter(Mandatory=$true)]
-  [ValidateSet('paper-gateway','paper-tws','live-gateway','live-tws')]
+  [ValidateSet("paper-gateway","paper-tws","live-gateway","live-tws")]
   [string]$target
 )
 
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
 $map = @{
-  'paper-gateway' = '.env.paper.ibg'   # 127.0.0.1:4002 (IB Gateway Paper)
-  'paper-tws'     = '.env.paper'       # 127.0.0.1:7497 (TWS Paper)
-  'live-gateway'  = '.env.live.ibg'    # 127.0.0.1:4001 (IB Gateway Live) - create later
-  'live-tws'      = '.env.live'        # 127.0.0.1:7496 (TWS Live) - create later
+  "paper-gateway" = ".env.paper.ibg"
+  "paper-tws"     = ".env.paper.tws"
+  "live-gateway"  = ".env.live.ibg"
+  "live-tws"      = ".env.live"
 }
 
-if (-not $map.ContainsKey($target)) { Write-Error "Unknown target: $target"; exit 1 }
-if (-not (Test-Path $map[$target])) { Write-Error "Config $($map[$target]) not found."; exit 1 }
+if (-not $map.ContainsKey($target)) { throw "Unknown target: $target" }
 
-$stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-if (Test-Path '.env') { Copy-Item -Force '.env' ".env.backup_$stamp" }
-Copy-Item -Force $map[$target] '.env'
+$src = $map[$target]
+if (-not (Test-Path -LiteralPath $src)) { throw "Config $src not found." }
 
-Write-Host "Ã¢Å“â€¦ Switched to $target"
-Write-Host '---'
-Get-Content '.env' | ForEach-Object { "  $_" }
+$stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+if (Test-Path ".env") { Copy-Item -Force ".env" (".env.backup_" + $stamp) }
+
+Copy-Item -Force $src ".env"
+
+Write-Host (" Switched to {0} (contents suppressed for safety)." -f $target) -ForegroundColor Green
+exit 0

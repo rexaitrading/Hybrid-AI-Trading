@@ -118,3 +118,9 @@ backup.csv
 tools/Kill-Spammers.ps1
 # local runtime outputs
 .hat/
+
+# Local secrets (DO NOT COMMIT)
+.secrets/
+.env
+.env.*
+
