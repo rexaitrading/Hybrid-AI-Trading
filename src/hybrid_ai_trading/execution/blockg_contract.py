@@ -50,7 +50,7 @@ def load_blockg_status(path: Optional[str] = None) -> BlockGStatus:
     p = path or os.environ.get(_DEFAULT_ENV_KEY) or _DEFAULT_PATH
     try:
 
-        with open(p, "r", encoding="utf-8") as f:
+        with open(p, "r", encoding="utf-8-sig") as f:
 
             d = json.load(f)
 
