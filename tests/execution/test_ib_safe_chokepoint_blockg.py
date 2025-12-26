@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -54,9 +55,21 @@ def _write_status(tmp_path: Path, *, nvda_ready: bool) -> Path:
     )
     return p
 
+def _write_nvda_stamp_ready(tmp_path: Path) -> Path:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    p = tmp_path / "nvda_live_ready_stamp.json"
+    p.write_text(
+        json.dumps({"ts_utc": "2025-01-01T00:00:00Z", "as_of_date": today, "nvda_live_ready": True}),
+        encoding="utf-8",
+    )
+    return p
+
+
 
 def test_ib_chokepoint_blocks_live_when_blockg_not_ready(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("HAT_IS_PAPER", "0")  # live
+    stamp = _write_nvda_stamp_ready(tmp_path)
+    monkeypatch.setenv("HAT_LIVE_READY_STAMP_PATH", str(stamp))
     p = _write_status(tmp_path, nvda_ready=False)
     monkeypatch.setenv("HAT_BLOCKG_STATUS_PATH", str(p))
 
@@ -72,6 +85,8 @@ def test_ib_chokepoint_blocks_live_when_blockg_not_ready(tmp_path: Path, monkeyp
 
 def test_ib_chokepoint_allows_live_when_blockg_ready(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("HAT_IS_PAPER", "0")  # live
+    stamp = _write_nvda_stamp_ready(tmp_path)
+    monkeypatch.setenv("HAT_LIVE_READY_STAMP_PATH", str(stamp))
     p = _write_status(tmp_path, nvda_ready=True)
     monkeypatch.setenv("HAT_BLOCKG_STATUS_PATH", str(p))
 
