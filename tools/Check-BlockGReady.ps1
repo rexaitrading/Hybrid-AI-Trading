@@ -47,7 +47,9 @@ if ($Build) {
   $builder = Join-Path $toolsDir "Build-BlockGStatusStub.ps1"
   if (-not (Test-Path -LiteralPath $builder)) { Fail "Missing builder: $builder" }
 
-  Write-Host "[BLOCKG] Build requested: running Build-BlockGStatusStub.ps1" -ForegroundColor Cyan
+if ($env:HAT_BLOCKG_BUILT_ONCE -ne "1" -and $env:HAT_BLOCKG_QUIET -ne "1") {
+  Write-Host "[BLOCKG] Build requested: running Build-BlockGStatusStub.ps1"
+}
   powershell -NoProfile -ExecutionPolicy Bypass -File $builder | Out-Host
   if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub.ps1 failed exit=$LASTEXITCODE" }
 }
@@ -100,5 +102,7 @@ if ($s -eq "ALL") {
   if (-not (SymReady $s)) { Fail "$s not ready ($($s.ToLower())_blockg_ready=false)" }
 }
 
-Write-Host "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath" -ForegroundColor Green
+if ($env:HAT_BLOCKG_QUIET -ne "1") {
+  Write-Host "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath"
+}
 exit 0

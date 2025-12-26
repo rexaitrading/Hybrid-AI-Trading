@@ -7,6 +7,16 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# --- Dedup: only build BlockG once per process ---
+if ($env:HAT_BLOCKG_BUILT_ONCE -eq "1") {
+  if ($env:HAT_BLOCKG_QUIET -ne "1") {
+    Write-Host "[BLOCK-G] Skipping rebuild (HAT_BLOCKG_BUILT_ONCE=1)" -ForegroundColor DarkGray
+  }
+  exit 0
+}
+$env:HAT_BLOCKG_BUILT_ONCE = "1"
+
+
 function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
   $path = Join-Path $RepoRoot "logs\phase4_validation_passed.json"
   if(-not (Test-Path $path)){ return $false }
