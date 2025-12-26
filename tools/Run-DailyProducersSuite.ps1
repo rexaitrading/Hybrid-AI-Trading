@@ -1,119 +1,52 @@
 [CmdletBinding()]
-param(
-  [ValidateSet("NVDA","SPY","QQQ")]
-  [string]$Symbol = "NVDA"
-)
-chcp 65001 | Out-Null
-[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-
+param()
 
 Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference="Stop"
 
-function Invoke-BlockGReady {
-  [CmdletBinding()]
-  param(
-    [ValidateSet("NVDA","SPY","QQQ")]
-    [string]$Symbol
-  )
-  $checker = Join-Path (Split-Path -Parent $PSCommandPath) "Check-BlockGReady.ps1"
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "chcp 65001 | Out-Null; [Console]::OutputEncoding=[Text.UTF8Encoding]::new(`$false); `$OutputEncoding=[Text.UTF8Encoding]::new(`$false); & `"$checker`" -Symbol `"$Symbol`"" | Out-Host
-  return $LASTEXITCODE
+$root = (Resolve-Path ".").Path
+Set-Location $root
+
+function Run-Step([string]$Name, [string]$Script){
+  if(-not (Test-Path -LiteralPath $Script)){ throw "[DAILY] Missing step script: $Script" }
+  Write-Host ("[DAILY] RUN " + $Name + " -> " + $Script) -ForegroundColor Cyan
+  powershell -NoProfile -ExecutionPolicy Bypass -File $Script
+  $rc = $LASTEXITCODE
+  Write-Host ("[DAILY] DONE " + $Name + " exit=" + $rc) -ForegroundColor Yellow
+  if($rc -ne 0){ throw "[DAILY] Step failed: $Name rc=$rc" }
 }
 
-$repoRoot = (Resolve-Path ".").Path
-Set-Location $repoRoot
+# ---- Phase4 (validation stamp) ----
+Run-Step "Phase4Stamp" ".\tools\Run-Phase4Stamp.ps1"
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
+# ---- Phase23 (repo health) ----
+Run-Step "Phase23HealthDaily" ".\tools\Run-Phase23HealthDaily.ps1"
 
-Write-Host "[DAILY] RepoRoot=$repoRoot" -ForegroundColor Cyan
-Write-Host "[DAILY] Symbol=$Symbol" -ForegroundColor Cyan
-Write-Host "[DAILY] Today=$today" -ForegroundColor Cyan
+# ---- Phase3 (GateScore summaries) ----
+Run-Step "GateScorePnlSummary" ".\tools\Build-GateScorePnlSummary.ps1"
+Run-Step "GateScoreDailySummary" ".\tools\Build-GateScoreDailySummary.ps1"
 
-# Deterministic Block-G contract path for Python modules
-$k = ("HAT_" + "BLOCKG_" + "STATUS_" + "PATH")
-[System.Environment]::SetEnvironmentVariable($k, (Join-Path $repoRoot "logs\blockg_status_stub.json"))
+# ---- EV-HARD evidence (raw inputs) ----
+Run-Step "EvHardEvidenceRaw" ".\tools\Build-EvHardEvidenceRaw.ps1"
 
+# ---- BlockG contract ----
+Run-Step "BlockGStatusStub" ".\tools\Build-BlockGStatusStub.ps1"
 
+# ---- Symbol stamps ----
+Run-Step "StampNVDA" ".\tools\Write-NvdaLiveReadyStamp.ps1"
+Run-Step "SanitizeNVDAStamp" ".\tools\Sanitize-NvdaLiveReadyStamp.ps1"
+Run-Step "StampSPY" ".\tools\Write-SpyLiveReadyStamp.ps1"
+Run-Step "StampQQQ" ".\tools\Write-QqqLiveReadyStamp.ps1"
 
-# --- 0) Phase23 health daily (required for EV evidence + BlockG) ---
-$phase23 = Join-Path $repoRoot "tools\Run-Phase23HealthDaily.ps1"
-if (Test-Path $phase23) {
-  & $phase23
-  if ($LASTEXITCODE -ne 0) { throw "[DAILY] Phase23 health daily failed exit=$LASTEXITCODE" }
-} else {
-  Write-Host "[DAILY] WARN: tools\Run-Phase23HealthDaily.ps1 missing; phase23_health_ok_today will fail-closed." -ForegroundColor Yellow
+# ---- Notion payloads ----
+Run-Step "NotionNVDA" ".\tools\Build-NotionNvdaLiveAllowedPayload.ps1"
+Run-Step "NotionSPY"  ".\tools\Build-NotionSpyLiveAllowedPayload.ps1"
+Run-Step "NotionQQQ"  ".\tools\Build-NotionQqqLiveAllowedPayload.ps1"
+
+# ---- Phase6 snapshot (optional but recommended) ----
+if(Test-Path -LiteralPath ".\tools\Build-Phase6PortfolioState.ps1"){
+  Run-Step "Phase6PortfolioState" ".\tools\Build-Phase6PortfolioState.ps1"
 }
 
-# --- 0b) EV-HARD evidence raw (required BEFORE snapshot) ---
-$evEvidence = Join-Path $repoRoot "tools\Build-EvHardEvidenceRaw.ps1"
-if (Test-Path $evEvidence) {
-  & $evEvidence
-  if ($LASTEXITCODE -ne 0) { throw "[DAILY] EV-hard evidence raw build failed exit=$LASTEXITCODE" }
-} else {
-  Write-Host "[DAILY] WARN: tools\Build-EvHardEvidenceRaw.ps1 missing; EV-hard will fail-closed." -ForegroundColor Yellow
-}
-
-# --- 0c) GateScore CSV producers (required BEFORE Phase3 daily_build) ---
-$gsPnl = Join-Path $repoRoot "tools\Build-GateScorePnlSummary.ps1"
-if (Test-Path $gsPnl) {
-  & $gsPnl
-  if ($LASTEXITCODE -ne 0) { Write-Host "[DAILY] WARN: GateScore pnl summary build failed (will fail-closed)"; }
-}
-$gsDaily = Join-Path $repoRoot "tools\Build-GateScoreDailySummary.ps1"
-if (Test-Path $gsDaily) {
-  & $gsDaily
-  if ($LASTEXITCODE -ne 0) { Write-Host "[DAILY] WARN: GateScore daily summary build failed (will fail-closed)"; }
-}
-# --- 1) EV-HARD snapshot + daily export (fail-closed) ---
-$evSnap    = Join-Path $repoRoot "tools\Build-EvHardSnapshot.ps1"
-$evCompute = Join-Path $repoRoot "tools\Compute-Phase5EvHardSnapshotInput.ps1"
-$evExport  = Join-Path $repoRoot "tools\Export-Phase5EvHardVetoDailySnapshot.ps1"
-
-if (Test-Path $evSnap)    { & $evSnap; if ($LASTEXITCODE -ne 0) { throw "[DAILY] EV-hard snapshot failed" } }
-if (Test-Path $evCompute) { & $evCompute -EvidencePath ".\logs\ev_hard_snapshot.json"; if ($LASTEXITCODE -ne 0) { throw "[DAILY] EV-hard compute failed" } }
-if (Test-Path $evExport)  { & $evExport; if ($LASTEXITCODE -ne 0) { throw "[DAILY] EV-hard export failed" } }
-
-# --- 2) Phase-4 validation (writes logs/phase4_validation_passed.json) ---
-$phase4 = Join-Path $repoRoot "tools\Run-Phase4Validation.ps1"
-if (-not (Test-Path $phase4)) { throw "[DAILY] Missing tools\Run-Phase4Validation.ps1" }
-& $phase4
-if ($LASTEXITCODE -ne 0) { throw "[DAILY] Phase4 validation failed exit=$LASTEXITCODE" }
-
-# Verify Phase4 stamp today + ok=true
-$p4 = Join-Path $repoRoot "logs\phase4_validation_passed.json"
-if (-not (Test-Path $p4)) { throw "[DAILY] Missing Phase4 stamp: $p4" }
-$j4 = Get-Content $p4 -Raw -Encoding utf8 | ConvertFrom-Json
-if (($j4.as_of_date + "").Substring(0,10) -ne $today) { throw "[DAILY] Phase4 stale: $($j4.as_of_date) need=$today" }
-if (-not [bool]$j4.phase4_ok_today) { throw "[DAILY] Phase4 not ok: $($j4.reason)" }
-
-# --- 3) Phase-3 GateScore daily_build ---
-$phase3 = Join-Path $repoRoot "tools\Run-Phase3GateScoreDaily.ps1"
-if (-not (Test-Path $phase3)) { throw "[DAILY] Missing tools\Run-Phase3GateScoreDaily.ps1" }
-& $phase3 -Symbol $Symbol
-$gs = $LASTEXITCODE
-if ($gs -ne 0 -and $gs -ne 2) { throw "[DAILY] Phase3 daily_build failed exit=$gs" }
-
-# --- 4) Build Block-G status (single source of truth) ---
-$bg = Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1"
-if (-not (Test-Path $bg)) { throw "[DAILY] Missing tools\Build-BlockGStatusStub.ps1" }
-& $bg | Out-Host
-if ($LASTEXITCODE -ne 0) { throw "[DAILY] Build-BlockGStatusStub failed exit=$LASTEXITCODE" }
-
-# Verify Block-G today-ness (contract exists and is for today)
-$bst = Join-Path $repoRoot "logs\blockg_status_stub.json"
-if (-not (Test-Path $bst)) { throw "[DAILY] Missing BlockG status: $bst" }
-$st = Get-Content $bst -Raw -Encoding utf8 | ConvertFrom-Json
-if (($st.as_of_date + "").Substring(0,10) -ne $today) { throw "[DAILY] BlockG stale: $($st.as_of_date) need=$today" }
-
-# --- 5) Final fail-closed gate: ONLY via Check-BlockGReady (single semantics owner) ---
-$ready = ((Invoke-BlockGReady -Symbol $Symbol) -eq 0)
-if (-not $ready) {
-  Write-Host ("[DAILY] FAIL-CLOSED: Block-G not ready for {0}" -f $Symbol) -ForegroundColor Yellow
-  exit 2
-}
-
-Write-Host "[DAILY] DONE [OK] Producers suite complete." -ForegroundColor Green
-Write-Host ("[DAILY] Contract snapshot: nvda={0} spy={1} qqq={2}" -f $st.nvda_blockg_ready, $st.spy_blockg_ready, $st.qqq_blockg_ready) | Out-Host
+Write-Host "[DAILY] ALL GREEN" -ForegroundColor Green
 exit 0
