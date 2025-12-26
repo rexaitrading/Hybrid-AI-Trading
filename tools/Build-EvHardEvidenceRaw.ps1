@@ -18,11 +18,19 @@ function Write-Utf8NoBom([string]$Path, [string]$Text) {
   [System.IO.File]::WriteAllText($full, $Text, $enc)
 }
 
+$phase4Path = ".\logs\phase4_validation_passed.json"
 $today = (Get-Date).ToString("yyyy-MM-dd")
+# Canonical as-of: follow Phase4 stamp if present (prevents midnight boundary mismatch)
+if(Test-Path $phase4Path){
+  try {
+    $j0 = (Get-Content $phase4Path -Raw) | ConvertFrom-Json
+    $d0 = (($j0.as_of_date) + "").Trim()
+    if($d0){ $today = $d0 }
+  } catch {}
+}
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
 # ---- Phase4 ----
-$phase4Path = ".\logs\phase4_validation_passed.json"
 $phase4Ok = $false
 $phase4AsOf = ""
 if (Test-Path $phase4Path) {
