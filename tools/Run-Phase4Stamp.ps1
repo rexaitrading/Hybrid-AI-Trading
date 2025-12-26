@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [int]$TimeoutSec = 60
 )
@@ -78,12 +78,14 @@ sys.exit(0 if ok else 2)
 "@
   $r = RunPyTimeout $code $TimeoutSec
   if ($r.rc -eq 0 -and $r.out -match "py_compile_ok\s+True") {
-    $ok = $true
+    $compile_ok = $true
     $notes.Add("py_compile_ok") | Out-Null
   } elseif ($r.rc -eq 124) {
-
-$notes.Add("py_compile_timeout") | Out-Null
+    $compile_ok = $false
+    $notes.Add("py_compile_timeout") | Out-Null
+    $notes.Add("py_compile_failed") | Out-Null
   } else {
+    $compile_ok = $false
     $notes.Add("py_compile_failed") | Out-Null
   }
 }
@@ -93,13 +95,24 @@ try {
   $pytest = Join-Path $root ".venv\Scripts\python.exe"
   if (Test-Path $pytest) {
     & $pytest -m pytest -q tests\test_blockg_risk_flatten_guard.py tests\test_blockg_chokepoint_blocks_live.py tests\test_gatescore_fresh_policy.py | Out-Host
-    if ($LASTEXITCODE -ne 0) { $notes.Add("pytest_slice_fail") | Out-Null; $ok = $false } else { $notes.Add("pytest_slice_ok") | Out-Null; $ok = $true }
+    if ($LASTEXITCODE -ne 0) {
+      $pytest_ok = $false
+      $notes.Add("pytest_slice_fail") | Out-Null
+    } else {
+      $pytest_ok = $true
+      $notes.Add("pytest_slice_ok") | Out-Null
+    }
   } else {
-    $notes.Add("pytest_python_missing") | Out-Null; $ok = $false
+    $notes.Add("pytest_python_missing") | Out-Null; $pytest_ok = $false
   }
 } catch {
-  $notes.Add("pytest_slice_exception") | Out-Null; $ok = $false
+  $notes.Add("pytest_slice_exception") | Out-Null; $pytest_ok = $false
 }
+
+# --- FINAL STRICT PHASE-4 POLICY (fail-closed) ---
+$ok = ($compile_ok -and $pytest_ok)
+if(-not $compile_ok){ $notes.Add("strict_compile_gate_blocked") | Out-Null }
+if(-not $pytest_ok){  $notes.Add("strict_pytest_gate_blocked")  | Out-Null }
 
 $payload = [ordered]@{
   ts_utc = $tsUtc
@@ -111,6 +124,4 @@ $payloadJson = $payload | ConvertTo-Json -Depth 6
 [System.IO.File]::WriteAllText($outJson, ($payloadJson + "`n"), (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "[PHASE4] wrote $outJson ok=$ok today=$today" -ForegroundColor Green
-exit 0
-
-
+if ($ok) { exit 0 } else { exit 2 }
