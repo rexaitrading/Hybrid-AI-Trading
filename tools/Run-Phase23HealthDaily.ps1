@@ -7,7 +7,19 @@ $ErrorActionPreference="Stop"
 $root = (Resolve-Path ".").Path
 Set-Location $root
 
+$logDir = Join-Path $root "logs"
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+
 $today = (Get-Date).ToString("yyyy-MM-dd")
+$p4 = Join-Path $logDir "phase4_validation_passed.json"
+if(Test-Path -LiteralPath $p4){
+  try {
+    $j = Get-Content -LiteralPath $p4 -Raw -Encoding utf8 | ConvertFrom-Json
+    $d = (($j.as_of_date) + "").Trim()
+    if($d){ $today = $d }
+  } catch {}
+}
 $logDir = Join-Path $root "logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $outCsv = Join-Path $logDir "phase23_health_daily.csv"
