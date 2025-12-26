@@ -1,3 +1,4 @@
+    # Loop control
 from __future__ import annotations
 
 import json
@@ -163,6 +164,27 @@ def main(argv=None) -> int:
     _chdir_repo_root()
     args = parse_args(argv)
 
+    # --- Fallback: honor --ticks/--sleep-sec even if parser didn't attach attrs ---
+    raw = list(argv) if argv is not None else sys.argv[1:]
+    try:
+        if "--ticks" in raw:
+            j = raw.index("--ticks")
+            if j + 1 < len(raw):
+                setattr(args, "ticks", int(raw[j+1]))
+        if "--sleep-sec" in raw:
+            j = raw.index("--sleep-sec")
+            if j + 1 < len(raw):
+                setattr(args, "sleep_sec", float(raw[j+1]))
+    except Exception:
+        pass
+
+    # For visibility
+    try:
+        print(f"[PaperRunner] loopctl ticks={getattr(args, 'ticks', None)} sleep_sec={getattr(args, 'sleep_sec', None)}")
+    except Exception:
+        pass
+
+
     # Hard enforce paper mode for anything downstream
     os.environ["HAT_IS_PAPER"] = "1"
 
@@ -208,7 +230,11 @@ def main(argv=None) -> int:
             if not _market_open_allowed(args):
                 raise RuntimeError("ib_snapshots_denied: market_closed (use --snapshots-when-closed to override)")
             try:
-                price_map = _build_ib_snapshot_price_map(symbols, args)
+                try:
+                    price_map = _build_ib_snapshot_price_map(symbols, args)
+                except Exception as e:
+                    print(f"[PaperRunner] IB snapshots failed, falling back to provider prices: {e!r}")
+                    price_map = _build_provider_price_map(symbols, cfg, args)
             except Exception as e:
                 # Fail-safe: fall back to provider prices when IB has no subscription / missing snapshot
                 print(f"[PaperRunner] IB snapshots failed, falling back to provider prices: {e!r}")

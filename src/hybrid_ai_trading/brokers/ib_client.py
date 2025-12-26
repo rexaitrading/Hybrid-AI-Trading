@@ -125,7 +125,13 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
     from ib_insync import IB, Stock  # type: ignore
 
     ib = IB()
-    ib.connect(host, port, clientId=int(client_id))
+    import os as _os
+    try:
+      ib.connect(host, port, clientId=int(client_id))
+    except Exception:
+      # Fallback to a unique clientId (avoids Error 326 client id already in use)
+      _cid = 30000 + (_os.getpid() % 10000)
+      ib.connect(host, port, clientId=int(_cid))
     try:
       out = {}
       for sym in symbols:
