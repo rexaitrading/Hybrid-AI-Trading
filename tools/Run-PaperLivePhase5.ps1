@@ -8,7 +8,7 @@ param(
   [int]$SleepMs = 500,
 
   # Optional: path to a YAML/JSON config if your runner expects it
-  [string]$Config = ""
+  [string]$Config = "config/paper_runner.yaml"
 )
 
 Set-StrictMode -Version Latest
@@ -54,20 +54,14 @@ try {
 $py = Join-Path $repoRoot ".venv\Scripts\python.exe"
 if(-not (Test-Path -LiteralPath $py)){ throw "Missing venv python: $py" }
 
-# We try a few known runner patterns; if none exist, we stop with a clear error.
-$entryCandidates = @(
-  (Join-Path $repoRoot "src\hybrid_ai_trading\runners\paper_live_phase5.py"),
-  (Join-Path $repoRoot "src\hybrid_ai_trading\runners\paper_live_without_ibg_spy_phase5.py"),
-  (Join-Path $repoRoot "tools\paper_live_without_ibg_spy_phase5.py")
-)
+$runner = Join-Path $repoRoot "src\hybrid_ai_trading\runners\paper_runner.py"
+if(-not (Test-Path -LiteralPath $runner)){ throw "[PAPER-LIVE] Missing runner: $runner" }
 
-$entry = $entryCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-if(-not $entry){
-  throw "[PAPER-LIVE] No paper-live runner found. Create src\hybrid_ai_trading\runners\paper_live_phase5.py (recommended)."
-}
+if(-not $Config){ throw "[PAPER-LIVE] Missing -Config (expected config/paper_runner.yaml or similar)." }
 
-Write-Host ("[PAPER-LIVE] Runner={0}" -f $entry) -ForegroundColor Cyan
+Write-Host ("[PAPER-LIVE] Runner={0}" -f $runner) -ForegroundColor Cyan
+Write-Host ("[PAPER-LIVE] Config={0}" -f $Config) -ForegroundColor Cyan
 
-# ---- Run loop: we pass Symbol/Iterations/SleepMs/Config as args (runner may ignore extras safely) ----
-& $py $entry --symbol $Symbol --iterations $Iterations --sleep-ms $SleepMs $(if($Config){ @("--config",$Config) } else { @() })
+# SAFE default: provider-only tick (no IB). Remove --provider-only later to hit IB paper path.
+& $py $runner --config $Config --once --provider-only
 exit $LASTEXITCODE
