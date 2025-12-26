@@ -33,6 +33,25 @@ if (-not (Test-Path $csv)) { throw "[GS-BUILD] missing input csv: $csv" }
 
 $todayUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 
+# --- TODAY-ONLY NORMALIZE (institutional hygiene) ---
+try {
+  $rowsAll = @(Import-Csv -LiteralPath $csv)
+  $rowsToday = @($rowsAll | Where-Object { ([string]$_.as_of_date).Substring(0,10) -eq $todayUtc })
+  if ($rowsToday.Count -gt 0) {
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    $out = ($rowsToday | ConvertTo-Csv -NoTypeInformation) -join "`n"
+    if ($out.Length -gt 0 -and $out[-1] -ne "`n") { $out += "`n" }
+    [System.IO.File]::WriteAllText($csv, $out, $utf8NoBom)
+    Write-Host "[GS-BUILD] today-only normalized: $csv rows=$($rowsToday.Count) as_of_date=$todayUtc" -ForegroundColor Cyan
+  } else {
+    Write-Host "[GS-BUILD] WARNING: no today rows found in $csv (kept as-is)" -ForegroundColor Yellow
+  }
+} catch {
+  Write-Host "[GS-BUILD] WARNING: today-only normalization failed: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+# --- END TODAY-ONLY NORMALIZE ---
+
+
 function Get-SessionDate([string]$sym){
   $rows = @(Import-Csv -LiteralPath $csv)
   $r = $rows | Where-Object { $_.symbol -eq $sym } | Sort-Object as_of_date -Descending | Select-Object -First 1
