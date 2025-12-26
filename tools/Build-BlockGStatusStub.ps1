@@ -329,6 +329,28 @@ $payload = [ordered]@{
     reasons_not_ready = @($reasons)
 }
 
+
+# --- LLM advisory gate (tighten-only; never loosens) ---
+$llmTool = Join-Path $repoRoot "tools\Get-LLMAdvisoryGate.ps1"
+$llm = $null
+try {
+  if(Test-Path $llmTool){ $llm = & powershell -NoProfile -ExecutionPolicy Bypass -File $llmTool -Symbol "ALL" | ConvertFrom-Json }
+} catch { $llm = $null }
+
+if($null -ne $llm){
+  $payload["llm_action"] = ($llm.action + "")
+  $payload["llm_ok_today"] = [bool]$llm.ok
+  if(-not [bool]$llm.ok){
+    $rn = @()
+    if($payload.Contains("reasons_not_ready") -and $null -ne $payload["reasons_not_ready"]){ $rn = @($payload["reasons_not_ready"]) }
+    if($null -ne $llm.reasons){ $rn += @($llm.reasons) }
+    $payload["reasons_not_ready"] = $rn
+  }
+} else {
+  $payload["llm_action"] = "none"
+  $payload["llm_ok_today"] = $true
+}
+
 $payloadJson = $payload | ConvertTo-Json -Depth 6
 Write-Host "[BLOCK-G] Writing Block-G status stub to $statusPath" -ForegroundColor Cyan
 
