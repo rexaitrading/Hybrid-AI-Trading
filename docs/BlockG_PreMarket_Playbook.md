@@ -17,4 +17,4 @@ $ErrorActionPreference="Continue"; Set-StrictMode -Version Latest
 
 .\tools\Run-PreMarketBlockG-Smart.ps1 -Symbol NVDA
 "PREMARKET_BLOCKG_RC=$LASTEXITCODE" | Out-Host
-``r
+```
