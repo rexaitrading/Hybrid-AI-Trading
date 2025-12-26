@@ -157,6 +157,7 @@ def test_main_entrypoint_runs(tmp_path):
 
     env = os.environ.copy()
     env["COINAPI_STUB"] = "1"
+    env["POLYGON_ALLOW_MISSING"] = "1"
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
     env["PYTHONPATH"] = project_root
 

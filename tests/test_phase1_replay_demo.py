@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+import csv
 
 
 def test_nvda_replay_demo_creates_summary(tmp_path, monkeypatch):
@@ -17,7 +18,14 @@ def test_nvda_replay_demo_creates_summary(tmp_path, monkeypatch):
     data_dir = repo_root / "data"
     sample_csv = data_dir / "NVDA_1m.csv"
 
-    assert sample_csv.exists(), f"Sample NVDA CSV not found at {sample_csv}"
+    if not sample_csv.exists():
+        # CI-safe: generate a tiny synthetic CSV so the replay demo is self-contained
+        sample_csv = tmp_path / "NVDA_1m.csv"
+        with sample_csv.open("w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["ts","symbol","price"])
+            for k in range(60):
+                w.writerow([f"2025-01-01T00:{k:02d}:00Z", "NVDA", 100.0 + k])
 
     session = "NVDA_REPLAY_TEST"
     summary_path = repo_root / f"replay_summary_NVDA_{session}.json"
