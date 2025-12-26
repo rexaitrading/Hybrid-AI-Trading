@@ -31,5 +31,13 @@ foreach($ln in $lines){
   $set++
 }
 
+
+# --- Alias mapping (keeps backward compatibility across modules) ---
+if (-not $env:POLYGON_KEY -and $env:POLYGON_API_KEY) { $env:POLYGON_KEY = $env:POLYGON_API_KEY }
+if (-not $env:ALPACA_KEY_ID -and $env:ALPACA_KEY) { $env:ALPACA_KEY_ID = $env:ALPACA_KEY }
+if (-not $env:ALPACA_SECRET_KEY -and $env:ALPACA_SECRET) { $env:ALPACA_SECRET_KEY = $env:ALPACA_SECRET }
+
+# YouTube: allow either name
+if (-not $env:YOUTUBE_API_KEY -and $env:YOUTUBE_DATA_API_KEY) { $env:YOUTUBE_API_KEY = $env:YOUTUBE_DATA_API_KEY }
 Write-Host ("[SECRETS] loaded {0} keys from {1}" -f $set, $VaultPath) -ForegroundColor Green
 exit 0
