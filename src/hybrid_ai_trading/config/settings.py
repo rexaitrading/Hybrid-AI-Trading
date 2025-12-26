@@ -7,6 +7,7 @@ Central utility for loading and accessing the YAML configuration file.
 
 import logging
 import os
+import pathlib
 from typing import Any, Dict
 
 import yaml
@@ -21,9 +22,13 @@ CONFIG_PATH = os.path.join(PROJECT_ROOT, "config", "config.yaml")
 
 
 def _find_config_path() -> str:
-    """Return absolute path to config/config.yaml."""
-    return CONFIG_PATH
-
+    """Resolve config/config.yaml relative to repo root (not src/)."""
+    try:
+        here = pathlib.Path(__file__).resolve()
+        repo_root = here.parents[3]  # settings.py -> config -> hybrid_ai_trading -> src -> repo
+        return str(repo_root / "config" / "config.yaml")
+    except Exception:
+        return CONFIG_PATH
 
 def load_config(force: bool = False) -> Dict[str, Any]:
     """
