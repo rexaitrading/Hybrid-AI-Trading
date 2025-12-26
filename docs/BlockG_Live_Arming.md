@@ -20,3 +20,16 @@ NVDA is allowed to send live orders only if ALL are true:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Arm-NVDA-Live.ps1
 "arm_exit=$LASTEXITCODE" | Out-Host
 Get-Content .\logs\nvda_live_ready_stamp.json -Raw -Encoding utf8 | Out-Host
+```
+
+## Disarm NVDA Live (fail-closed)
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Disarm-NVDA-Live.ps1
+"disarm_exit=$LASTEXITCODE" | Out-Host
+Get-Content .\logs\nvda_live_ready_stamp.json -Raw -Encoding utf8 | Out-Host
+
+# Optional: delete stamp
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Disarm-NVDA-Live.ps1 -DeleteStamp
+"disarm_exit=$LASTEXITCODE" | Out-Host
+```
+
