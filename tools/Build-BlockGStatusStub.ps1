@@ -257,6 +257,11 @@ $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and 
 $spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
 $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
 
+
+# Audit: include per-symbol not-ready flags (even if NVDA is ready)
+if (-not $spyReady) { $reasons.Add("spy_blockg_ready=false") | Out-Null }
+if (-not $qqqReady) { $reasons.Add("qqq_blockg_ready=false") | Out-Null }
+
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
