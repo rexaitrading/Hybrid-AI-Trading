@@ -66,9 +66,11 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
     # Enforce Block-G (single gate)
     if _is_live():
         if sym in ("NVDA", "SPY", "QQQ"):
-            require_nvda_live_stamp(sym)
             require_blockg_ready_for_live(sym)
 
+
+
+            require_nvda_live_stamp(sym)
     # Place order
     try:
         return ib.placeOrder(order_id, contract, order)
