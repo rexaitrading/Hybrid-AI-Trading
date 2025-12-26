@@ -38,10 +38,4 @@ jobs:
           PYTHONIOENCODING: "utf-8"
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
         run: |
-          .\.venv\Scripts\python -m pytest -q 
-            tests\execution\test_nvda_live_stamp_gate.py 
-            tests\execution\test_ib_safe_chokepoint_blockg.py 
-            tests\execution\test_order_manager_blockg_defense_in_depth.py 
-            tests\execution\test_blockg_order_manager_guard.py 
-            tests\execution\test_blockg_ib_placeorder_guard.py 
-            tests\execution\test_blockg_gatescore_policy_session_age.py
+          .\.venv\Scripts\python -m pytest -q tests\execution\test_nvda_live_stamp_gate.py tests\execution\test_ib_safe_chokepoint_blockg.py tests\execution\test_order_manager_blockg_defense_in_depth.py tests\execution\test_blockg_order_manager_guard.py tests\execution\test_blockg_ib_placeorder_guard.py tests\execution\test_blockg_gatescore_policy_session_age.py
