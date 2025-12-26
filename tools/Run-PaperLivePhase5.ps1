@@ -73,6 +73,7 @@ Write-Host ("[PAPER-LIVE] Config={0}" -f $Config) -ForegroundColor Cyan
 
 # SAFE default: provider-only tick (no IB). Remove --provider-only later to hit IB paper path.
 $argsRunner = @("--config", $Config, "--once")
+  $argsRunner += @("--universe", $Symbol)
 if($UseIBSnapshots){
   # IB snapshots path (paper only)  will fail-closed if IBG down or market closed (unless override flag is set in config/CLI)
   $argsRunner += @("--ib-snapshots")

@@ -207,7 +207,12 @@ def main(argv=None) -> int:
         if use_ib:
             if not _market_open_allowed(args):
                 raise RuntimeError("ib_snapshots_denied: market_closed (use --snapshots-when-closed to override)")
-            price_map = _build_ib_snapshot_price_map(symbols, args)
+            try:
+                price_map = _build_ib_snapshot_price_map(symbols, args)
+            except Exception as e:
+                # Fail-safe: fall back to provider prices when IB has no subscription / missing snapshot
+                print(f"[PaperRunner] IB snapshots failed, falling back to provider prices: {e!r}")
+                price_map = _build_provider_price_map(symbols, cfg, args)
         else:
             price_map = _build_provider_price_map(symbols, cfg, args)
 
