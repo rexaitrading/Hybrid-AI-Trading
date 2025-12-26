@@ -21,11 +21,14 @@ function Write-Utf8NoBomLf([string]$Path,[string]$Text){
 
 if (-not (Test-Path -LiteralPath $src)) {
 
-if($emitTodayCarryForward){
-  foreach ($r in ($use | Sort-Object symbol)) {
-    $lines.Add(("{0},{1},{2},{3},{4},{5},{6}" -f
-      $r.symbol,$r.count_signals,$r.mean_edge_ratio,$r.mean_micro_score,$r.pnl_samples,$r.mean_pnl,$today
-    )) | Out-Null
+}
+
+
+# Holiday/session policy: EV-hard expects a TODAY row. If latest session != today, emit carry-forward TODAY rows.
+$today = (Get-Date).ToString("yyyy-MM-dd")
+if(($latestDate + "") -ne ($today + "")){
+  foreach($r in ($use | Sort-Object symbol)){
+    $lines.Add(("{0},{1},{2},{3},{4},{5},{6}" -f $r.symbol,$r.count_signals,$r.mean_edge_ratio,$r.mean_micro_score,$r.pnl_samples,$r.mean_pnl,$today)) | Out-Null
   }
 }
 
