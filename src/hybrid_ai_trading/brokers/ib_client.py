@@ -116,3 +116,43 @@ class IBClient:
             "initAfter": str(st.initMarginAfter),
             "commission": str(st.commission),
         }
+def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", port: int = 4002, wait_sec: float = 2.0):
+    """
+    Paper-safe snapshot prices using IBKR via ib_insync reqMktData(snapshot=True).
+    Returns dict {SYM: float_price}. Fail-closed if any symbol missing.
+    """
+    # Local import to avoid hard dependency at module import time for non-IB paths
+    from ib_insync import IB, Stock  # type: ignore
+
+    ib = IB()
+    ib.connect(host, port, clientId=int(client_id))
+    try:
+      out = {}
+      for sym in symbols:
+        c = Stock(str(sym), "SMART", "USD")
+        t = ib.reqMktData(c, "", snapshot=True)
+        ib.sleep(float(wait_sec))
+        px = None
+
+        # Prefer last; then close; then marketPrice
+        if hasattr(t, "last") and t.last is not None:
+          px = t.last
+        elif hasattr(t, "close") and t.close is not None:
+          px = t.close
+        elif hasattr(t, "marketPrice"):
+          try:
+            mp = t.marketPrice()
+            if mp is not None:
+              px = mp
+          except Exception:
+            pass
+
+        if px is None:
+          raise RuntimeError(f"ib_snapshot_missing_price: {sym}")
+        out[str(sym).upper()] = float(px)
+      return out
+    finally:
+      try:
+        ib.disconnect()
+      except Exception:
+        pass

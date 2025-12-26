@@ -1,9 +1,22 @@
 from __future__ import annotations
 
 import json
+import pathlib
 import os
+
+# --- Ensure CWD is repo root (prevents src\\config rebasing) ---
+def _chdir_repo_root() -> None:
+    try:
+        here = pathlib.Path(__file__).resolve()
+        # .../src/hybrid_ai_trading/runners/paper_runner.py -> repo root is 4 parents up
+        repo = here.parents[3]
+        os.chdir(str(repo))
+    except Exception:
+        pass
+
 import sys
 import time
+import socket
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -84,13 +97,70 @@ def _build_provider_price_map(symbols: list[str], cfg: Dict[str, Any], args: Any
     return out
 
 
+
+def _ib_gateway_up(host: str = "127.0.0.1", port: int = 4002, timeout_s: float = 0.5) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=timeout_s):
+            return True
+    except Exception:
+        return False
+
+
+def _build_ib_snapshot_price_map(symbols: list[str], args: Any) -> Dict[str, float]:
+    """
+    Build price_map using IB snapshots (paper). Guarded by:
+      - HAT_IS_PAPER=1 (paper only)
+      - IB Gateway port up (4002)
+      - market-open policy handled by caller (unless snapshots_when_closed)
+    Returns dict {SYM: float}. Fail-closed if any missing.
+    """
+    import os
+    from typing import Dict
+
+    if os.environ.get("HAT_IS_PAPER", "1") != "1":
+        raise RuntimeError("ib_snapshots_denied: HAT_IS_PAPER!=1")
+
+    if not _ib_gateway_up("127.0.0.1", 4002, timeout_s=0.5):
+        raise RuntimeError("ib_gateway_down: 127.0.0.1:4002 not reachable")
+
+    # Repo-native snapshot helper
+    from hybrid_ai_trading.brokers.ib_client import get_last_prices
+
+    mp = get_last_prices(symbols=symbols, client_id=getattr(args, "client_id", 3021))
+    if not isinstance(mp, dict):
+        raise RuntimeError("ib_snapshot_helper_bad_return: expected dict")
+
+    out: Dict[str, float] = {}
+    for s in symbols:
+        v = mp.get(str(s).upper()) if isinstance(s, str) else mp.get(s)
+        if v is None:
+            # also try raw key
+            v = mp.get(str(s))
+        if v is None:
+            raise RuntimeError(f"ib_snapshot_missing_symbol: {s}")
+        out[str(s).upper()] = float(v)
+    return out
+
+def _market_open_allowed(args: Any) -> bool:
+    """
+    Minimal market-open gate.
+    If --snapshots-when-closed is set, allow snapshots anytime.
+    Otherwise, allow only during local market hours (09:30-16:00).
+    """
+    if bool(getattr(args, "snapshots_when_closed", False)):
+        return True
+    now = datetime.now().astimezone()
+    hhmm = now.hour * 60 + now.minute
+    open_m = 9 * 60 + 30
+    close_m = 16 * 60
+    return open_m <= hhmm <= close_m
+
 def _append_jsonl(path: str, obj: Dict[str, Any]) -> None:
     line = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
     with open(path, "a", encoding="utf-8") as f:
         f.write(line + "\n")
-
-
 def main(argv=None) -> int:
+    _chdir_repo_root()
     args = parse_args(argv)
 
     # Hard enforce paper mode for anything downstream
@@ -132,11 +202,16 @@ def main(argv=None) -> int:
 
     # One tick (safe) or small loop
     def do_tick() -> int:
-        # Provider-only: safe price map (no IB)
-        price_map = _build_provider_price_map(symbols, cfg, args)
+        # Choose price source (Phase-6 enhancement)
+        use_ib = bool(getattr(args, "ib_snapshots", False)) and (not bool(getattr(args, "provider_only", False)))
+        if use_ib:
+            if not _market_open_allowed(args):
+                raise RuntimeError("ib_snapshots_denied: market_closed (use --snapshots-when-closed to override)")
+            price_map = _build_ib_snapshot_price_map(symbols, args)
+        else:
+            price_map = _build_provider_price_map(symbols, cfg, args)
 
         try:
-            # This is the Phase-6 "real paper execution loop" call:
             out = qc.run_once(symbols, price_map, risk_mgr)
         except Exception as e:
             rec = {

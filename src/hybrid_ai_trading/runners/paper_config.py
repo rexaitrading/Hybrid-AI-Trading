@@ -59,6 +59,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip IB session and use provider prices only.",
     )
+    ap.add_argument(
+        "--ib-snapshots",
+        action="store_true",
+        help="Use IBKR paper session snapshots to build price_map (guarded, fail-closed).",
+    )
+
     return ap
 
 

@@ -8,7 +8,8 @@ param(
   [int]$SleepMs = 500,
 
   # Optional: path to a YAML/JSON config if your runner expects it
-  [string]$Config = "config/config.yaml"
+  [string]$Config = "config/config.yaml",
+  [switch]$UseIBSnapshots
 )
 
 Set-StrictMode -Version Latest
@@ -16,6 +17,14 @@ $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
+
+# Resolve config to absolute path (prevents src\config rebasing bugs)
+if($Config){
+  $cfgPath = Join-Path $repoRoot $Config
+  if(Test-Path -LiteralPath $cfgPath){
+    $Config = (Resolve-Path -LiteralPath $cfgPath).Path
+  }
+}
 
 function Write-Utf8NoBom {
   param([string]$Path, [string]$Text)
@@ -63,5 +72,12 @@ Write-Host ("[PAPER-LIVE] Runner={0}" -f $runner) -ForegroundColor Cyan
 Write-Host ("[PAPER-LIVE] Config={0}" -f $Config) -ForegroundColor Cyan
 
 # SAFE default: provider-only tick (no IB). Remove --provider-only later to hit IB paper path.
-& $py -m hybrid_ai_trading.runners.paper_runner --config $Config --once --provider-only
+$argsRunner = @("--config", $Config, "--once")
+if($UseIBSnapshots){
+  # IB snapshots path (paper only)  will fail-closed if IBG down or market closed (unless override flag is set in config/CLI)
+  $argsRunner += @("--ib-snapshots")
+} else {
+  $argsRunner += @("--provider-only")
+}
+& $py -m hybrid_ai_trading.runners.paper_runner @argsRunner
 exit $LASTEXITCODE
