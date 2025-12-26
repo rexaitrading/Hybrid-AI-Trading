@@ -222,9 +222,9 @@ $gsRecentEnough = $false
 
 # ---- Per-symbol ready (institutional) ----
 # NOTE: GateScore global fields remain NVDA-based for compatibility; readiness is per-symbol.
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and $gsRecentEnough
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
+$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
+$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
 $reasons = New-Object System.Collections.Generic.List[string]
 if (-not $gsAsOf) { $reasons.Add("gatescore_missing_source_data") | Out-Null }
 
@@ -248,14 +248,14 @@ if (-not $gsRecentEnough) {
 if (-not $phase23Ok) { $reasons.Add("phase23_health_ok_today=false") }
 if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
 if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }
-if (-not $gsFresh)   { $reasons.Add("gatescore_fresh_today=false") }
+if (-not $gsAsOf -or $gsAsOf -ne $today) { $reasons.Add("gatescore_fresh_today=false") }
 if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
 if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
 
 # Recompute per-symbol readiness AFTER GateScore age policy (StrictMode-safe)
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and $gsRecentEnough
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday -and $gsRecentEnough
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday -and $gsRecentEnough
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
+$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
+$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
 
 $payload = [ordered]@{
     ts_utc = $tsUtc
@@ -267,12 +267,12 @@ $payload = [ordered]@{
     ev_hard_session_ok = $evSessionOk
     phase4_ok_today         = $phase4Ok
 
-    gatescore_fresh_today   = (($gsAsOf -eq $today) -and $gsFresh)
+    gatescore_fresh_today   = (($gsAsOf -ne "") -and ($gsAsOf -eq $today))
 
     gatescore_as_of_date = $gsAsOf
     gatescore_age_days = $gsAgeDays
     gatescore_recent_enough = $gsRecentEnough
-    gatescore_fresh_for_session = $gsFresh
+    gatescore_fresh_for_session = [bool]$gsRecentEnough
     gatescore_samples_ok    = $gsSamplesOk
     min_samples_ok_today   = $gsSamplesOk
     gatescore_threshold_ok_today = $gsThreshOk

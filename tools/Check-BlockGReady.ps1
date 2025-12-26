@@ -67,7 +67,7 @@ $MAX_GS_AGE_DAYS = 3
 $reqFields = @(
   "phase4_ok_today",
   "ev_hard_daily_ok_today",
-  "gatescore_fresh_for_session"
+  "gatescore_fresh_today"
 )
 
 foreach ($k in $reqFields) {
