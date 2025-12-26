@@ -53,7 +53,7 @@ def main() -> int:
 
     now = _now_utc()
 
-    feeds = [u.strip() for u in (args.feeds or "").split(",") if u.strip()]
+    feeds = [u.strip() for u in (args.feeds or "").split(";") if u.strip()]
     if not feeds:
         print("No feeds provided.", file=sys.stderr)
         return 2
