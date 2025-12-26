@@ -108,7 +108,7 @@ $out = [ordered]@{
     ) +
     @(@($st.reasons_not_ready) | ForEach-Object { "stamp:" + ($_ + "") }) +
     @(@($bg.reasons_not_ready) | ForEach-Object { "bg:" + ($_ + "") })
-  ) | Where-Object { $_ -and ($_ + "").Trim().Length -gt 0 } | Select-Object -Unique
+  ) | Where-Object { $_ -and ($_ + "").Trim().Length -gt 0 -and (($_ + "") -notmatch '=true$') } | Select-Object -Unique
 
   # Evidence pointers (for debugging / audit trail)
   paths = @{
