@@ -9,6 +9,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
+from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
 
 # -----------------------------
@@ -65,6 +66,7 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
     # Enforce Block-G (single gate)
     if _is_live():
         if sym in ("NVDA", "SPY", "QQQ"):
+            require_nvda_live_stamp(sym)
             require_blockg_ready_for_live(sym)
 
     # Place order

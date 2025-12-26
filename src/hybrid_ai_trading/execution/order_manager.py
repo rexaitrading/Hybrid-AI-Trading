@@ -24,6 +24,7 @@ import uuid
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live, BlockGNotReady
+from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
 logger = logging.getLogger(__name__)
 
@@ -516,6 +517,7 @@ class OrderManager:
                 # Block-G lowest-layer enforcement (IB-only live path)
                 # For non-IB brokers (Alpaca/Binance/Polygon mocks), do NOT require Block-G contract file.
                 sym_u = str(symbol).upper()
+                require_nvda_live_stamp(sym_u)
                 client = self.live_client
                 client_name = (client.__class__.__name__ if client is not None else "")
                 client_mod  = (getattr(client.__class__, "__module__", "") if client is not None else "")
