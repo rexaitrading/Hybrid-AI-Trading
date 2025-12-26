@@ -246,13 +246,26 @@ def main(argv=None) -> int:
     if args.once:
         return do_tick()
 
-    # Default: 3 ticks (safe)
-    for i in range(3):
-        print(f"[PaperRunner] tick {i+1}")
-        rc = do_tick()
-        if rc != 0:
-            return rc
-        time.sleep(0.1)
+    # Loop control
+    ticks = int(getattr(args, "ticks", 3) or 0)
+    sleep_sec = float(getattr(args, "sleep_sec", 0.25) or 0.0)
+
+    if ticks == 0:
+        i = 0
+        while True:
+            i += 1
+            print(f"[PaperRunner] tick {i}")
+            rc = do_tick()
+            if rc != 0:
+                return rc
+            time.sleep(max(0.0, sleep_sec))
+    else:
+        for i in range(ticks):
+            print(f"[PaperRunner] tick {i+1}")
+            rc = do_tick()
+            if rc != 0:
+                return rc
+            time.sleep(max(0.0, sleep_sec))
 
     print("[PaperRunner] done.")
     return 0
