@@ -8,7 +8,7 @@ param(
   [int]$SleepMs = 500,
 
   # Optional: path to a YAML/JSON config if your runner expects it
-  [string]$Config = "config/paper_runner.yaml"
+  [string]$Config = "config/config.yaml"
 )
 
 Set-StrictMode -Version Latest
@@ -63,5 +63,5 @@ Write-Host ("[PAPER-LIVE] Runner={0}" -f $runner) -ForegroundColor Cyan
 Write-Host ("[PAPER-LIVE] Config={0}" -f $Config) -ForegroundColor Cyan
 
 # SAFE default: provider-only tick (no IB). Remove --provider-only later to hit IB paper path.
-& $py $runner --config $Config --once --provider-only
+& $py -m hybrid_ai_trading.runners.paper_runner --config $Config --once --provider-only
 exit $LASTEXITCODE
