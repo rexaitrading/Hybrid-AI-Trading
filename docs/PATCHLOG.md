@@ -106,7 +106,7 @@ ERROR tests/engine/test_trade_engine_alert_branches.py
 - reset_day(): return reason + exact log string
 - Encoding/line-endings: UTF-8 no-BOM, LF
 [2025-11-07] Phase 6/7: CodeQL advanced-only; branch-protection contexts; PreMarket smoke; paper runner tests.
-## 2025-12-22 � Block-G institutional hardening (Phase5/6/7)
+## 2025-12-22 � Block-G institutional hardening (Phase5/6/7)
 
 **Goal:** No live NVDA order may bypass Block-G contract (fail-closed).
 
@@ -130,3 +130,39 @@ ERROR tests/engine/test_trade_engine_alert_branches.py
   - 90053d5c (daily stamp fail-closed)
   - 513acb9f (stamp path banner)
   - 4e25a5ee (stamp writer path fix)
+
+## 2025-12-26 12:23:20 -08:00 — CHECKPOINT_20251226_122033 — BlockG: strict live fail-closed + NVDA live-ready stamp gate + CI gates (#42)
+- Merge head: 20e5ab92b7a17b512a8e5ce73dfb58a51c244447
+- Scope: Phase-5 safety stack (Block-G contract enforced in live path) + NVDA live-ready stamp gate + CI gates hardening
+- Key outcomes:
+  - Live orders fail-closed unless Block-G readiness is true
+  - NVDA live orders additionally require a valid live-ready stamp (daily arming)
+  - ci-gates now runs the institutional gate slice (fast) and is Windows-runner reliable
+
+### Files touched (from merge commit)
+.github/workflows/ci-gates.yml
+.github/workflows/ci-risk-first.yml
+docs/BlockG_Live_Arming.md
+docs/BlockG_PreMarket_Playbook.md
+docs/Phase5_BlockG_GateScorePolicy.md
+src/hybrid_ai_trading/execution/live_ready_stamp.py
+src/hybrid_ai_trading/broker/ib_safe.py
+src/hybrid_ai_trading/execution/blockg_enforce.py
+src/hybrid_ai_trading/execution/blockg_contract*.py
+tests/execution/test_nvda_live_stamp_gate.py
+tests/execution/test_ib_safe_chokepoint_blockg.py
+tools/Run-PreMarketBlockG-Smart.ps1
+tools/Arm-NVDA-Live.ps1
+tools/Disarm-NVDA-Live.ps1
+
+
+
+### Diffstat (from merge commit)
+ See PR #42 for full diffstat.
+
+
+
+### Validation
+- GitHub Checks: CI Risk-First + ci-gates ✅ (PR #42)
+- Local spot-check: tests/execution/test_nvda_live_stamp_gate.py ✅
+
