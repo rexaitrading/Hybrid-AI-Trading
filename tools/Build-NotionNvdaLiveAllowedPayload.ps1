@@ -108,14 +108,21 @@ $out = [ordered]@{
     ) +
     @(@($st.reasons_not_ready) | ForEach-Object { "stamp:" + ($_ + "") }) +
     @(@($bg.reasons_not_ready) | ForEach-Object { "bg:" + ($_ + "") })
-  ) | Where-Object { $_ -and ($_ + "").Trim().Length -gt 0 -and (($_ + "") -notmatch '=true$') } | Select-Object -Unique
+  ) | ForEach-Object { [string]$_ } | Where-Object { $_ -and $_.Trim().Length -gt 0 -and ($_ -notmatch '=true$') } | Select-Object -Unique
 
   # Evidence pointers (for debugging / audit trail)
   paths = @{
     blockg_status = $BlockGPath
     nvda_stamp    = $StampPath
   }
-} | ConvertTo-Json -Depth 10
+}
+
+# Normalize reasons_not_ready to a real array (avoids blank PSCustomObject artifacts on ConvertFrom-Json)
+$outObj = $out
+$outObj.reasons_not_ready = @($outObj.reasons_not_ready) | ForEach-Object { [string]$_ } | Where-Object { $_ -and $_.Trim().Length -gt 0 }
+if(-not $outObj.reasons_not_ready){ $outObj.reasons_not_ready = @() }
+$out = $outObj | ConvertTo-Json -Depth 10
+
 
 Write-Utf8NoBom -Path $OutPath -Text $out
 Write-Host "[NOTION] wrote payload -> $OutPath" -ForegroundColor Green
