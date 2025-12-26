@@ -25,8 +25,12 @@ jobs:
           # Install project (editable) + test deps
           if (Test-Path .\requirements-dev.txt) {
             .\.venv\Scripts\python -m pip install -r .\requirements-dev.txt
-            # CI optional deps (used by some modules/tests)
-            .\.venv\Scripts\python -m pip install --upgrade python-dotenv ccxt feedparser
+          } else {
+            .\.venv\Scripts\python -m pip install pytest
+          }
+          # CI optional deps (used by some modules/tests)
+          .\.venv\Scripts\python -m pip install --upgrade python-dotenv ccxt feedparser
+          .\.venv\Scripts\python -m pip install -e .
       - name: Run institutional gate tests (fast)
         shell: pwsh
         env:
