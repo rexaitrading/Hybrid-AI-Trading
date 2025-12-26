@@ -44,7 +44,7 @@ function Slice-Date([string]$d) {
 }
 
 # ---- GateScore session date (weekend/holiday-safe): derive from pnl summary ----
-$pnlPath = Join-Path $logsDir "gatescore_pnl_summary.csv"
+$pnlPath = Join-Path $logsDir "gatescore_daily_summary.csv"
 $gsAsOf = ""
 if (Test-Path $pnlPath) {
   try {
@@ -164,7 +164,7 @@ function Get-ThresholdsFor([string]$sym) {
 }
 
 # ---- GateScore daily summary (per-symbol today row) ----
-$gsPath = $pnlPath  # source-of-truth: gatescore_pnl_summary.csv
+$gsPath = $pnlPath  # source-of-truth: gatescore_daily_summary.csv
 $gsRows = @()
 if (Test-Path $gsPath) { $gsRows = @(Import-Csv $gsPath) }
 
