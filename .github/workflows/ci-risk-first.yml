@@ -14,7 +14,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Create venv
         shell: pwsh
@@ -27,9 +27,11 @@ jobs:
         run: |
           if(Test-Path "requirements.txt"){
             .\.venv\Scripts\python -m pip install -r requirements.txt
-          } elseif(Test-Path "requirements-dev.txt"){
+          }
+          if(Test-Path "requirements-dev.txt"){
             .\.venv\Scripts\python -m pip install -r requirements-dev.txt
-          } else {
+          }
+          if((-not (Test-Path "requirements.txt")) -and (-not (Test-Path "requirements-dev.txt"))){
             .\.venv\Scripts\python -m pip install -e .
           }
           .\.venv\Scripts\python -m pip install pytest
@@ -44,6 +46,17 @@ jobs:
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\python.ps1 -m pytest -q -k "blockg"
 
+
+      - name: Gates: NVDA stamp + BlockG defense-in-depth
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\python.ps1 -m pytest -q `
+            tests\execution\test_nvda_live_stamp_gate.py `
+            tests\execution\test_ib_safe_chokepoint_blockg.py `
+            tests\execution\test_order_manager_blockg_defense_in_depth.py `
+            tests\execution\test_blockg_order_manager_guard.py `
+            tests\execution\test_blockg_ib_placeorder_guard.py `
+            tests\execution\test_blockg_gatescore_policy_session_age.py
       - name: Risk suite
         shell: pwsh
         run: |
