@@ -62,8 +62,17 @@ function Get-SessionDate([string]$sym){
 function Has-SessionRow([string]$sym){
   $sd = Get-SessionDate -sym $sym
   if (-not $sd) { return $false }
-  $pat = ("^" + [regex]::Escape($sym) + ",.*," + [regex]::Escape($sd) + "$")
-  return (Select-String -Path $csv -Pattern $pat -Quiet)
+  try {
+    $rows = @(Import-Csv -LiteralPath $csv)
+    $symU = $sym.ToUpperInvariant()
+    $sd10 = ([string]$sd).Substring(0,10)
+    return ($rows | Where-Object {
+      ($_.symbol + "").ToUpperInvariant() -eq $symU -and
+      (([string]$_.as_of_date).Substring(0,10)) -eq $sd10
+    } | Measure-Object).Count -gt 0
+  } catch {
+    return $false
+  }
 }
 
 $startUtc = (Get-Date).ToUniversalTime()
