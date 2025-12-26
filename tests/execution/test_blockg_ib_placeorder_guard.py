@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -23,6 +24,16 @@ class _IB:
         self.called = True
         return None
 
+
+
+def _write_nvda_stamp_ready(tmp_path: Path) -> Path:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    p = tmp_path / "nvda_live_ready_stamp.json"
+    p.write_text(
+        json.dumps({"ts_utc": "2025-01-01T00:00:00Z", "as_of_date": today, "nvda_live_ready": True}),
+        encoding="utf-8",
+    )
+    return p
 
 def _write_blockg(path: Path, *, nvda_ready: bool) -> None:
     payload = {
@@ -53,6 +64,8 @@ def _write_blockg(path: Path, *, nvda_ready: bool) -> None:
 def test_ib_placeorder_blocks_live_nvda_when_not_ready(tmp_path: Path, monkeypatch):
     # Force LIVE
     monkeypatch.setenv("HAT_IS_PAPER", "0")
+    stamp = _write_nvda_stamp_ready(tmp_path)
+    monkeypatch.setenv("HAT_LIVE_READY_STAMP_PATH", str(stamp))
 
     # Point contract reader to our temp JSON
     status_path = tmp_path / "blockg_status_stub.json"
@@ -71,6 +84,8 @@ def test_ib_placeorder_blocks_live_nvda_when_not_ready(tmp_path: Path, monkeypat
 
 def test_ib_placeorder_allows_live_nvda_when_ready(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("HAT_IS_PAPER", "0")
+    stamp = _write_nvda_stamp_ready(tmp_path)
+    monkeypatch.setenv("HAT_LIVE_READY_STAMP_PATH", str(stamp))
     status_path = tmp_path / "blockg_status_stub.json"
     _write_blockg(status_path, nvda_ready=True)
     monkeypatch.setenv("HAT_BLOCKG_STATUS_PATH", str(status_path))

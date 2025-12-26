@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -51,9 +52,21 @@ def _write_blockg(path: Path, *, nvda_ready: bool) -> None:
     }
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
+def _write_nvda_stamp_ready(tmp_path: Path) -> Path:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    p = tmp_path / "nvda_live_ready_stamp.json"
+    p.write_text(
+        json.dumps({"ts_utc": "2025-01-01T00:00:00Z", "as_of_date": today, "nvda_live_ready": True}) + "\n",
+        encoding="utf-8",
+    )
+    return p
+
+
 
 def test_order_manager_blocks_live_nvda_before_submit(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("HAT_IS_PAPER", "0")
+    stamp = _write_nvda_stamp_ready(tmp_path)
+    monkeypatch.setenv("HAT_LIVE_READY_STAMP_PATH", str(stamp))
 
     status_path = tmp_path / "blockg_status_stub.json"
     _write_blockg(status_path, nvda_ready=False)
@@ -70,6 +83,8 @@ def test_order_manager_blocks_live_nvda_before_submit(tmp_path: Path, monkeypatc
 
 def test_order_manager_allows_live_nvda_when_ready(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("HAT_IS_PAPER", "0")
+    stamp = _write_nvda_stamp_ready(tmp_path)
+    monkeypatch.setenv("HAT_LIVE_READY_STAMP_PATH", str(stamp))
 
     status_path = tmp_path / "blockg_status_stub.json"
     _write_blockg(status_path, nvda_ready=True)
