@@ -1,0 +1,12 @@
+{
+  "currency": "CAD",
+  "caps_monthly": {
+    "IBKR_market_data": 200,
+    "TMX_datalinx": 2500,
+    "QuoteMedia": 400,
+    "Barchart": 100,
+    "Notion": 25,
+    "Benzinga": 0
+  },
+  "notes": "Benzinga=0 because already paid; raise caps only when scaling symbol universes."
+}
