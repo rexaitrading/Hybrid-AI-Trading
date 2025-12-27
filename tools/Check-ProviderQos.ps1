@@ -21,7 +21,7 @@ if(-not (Test-Path -LiteralPath $logPath)){
 }
 
 # Read last 200 lines max (fast)
-$lines = Get-Content -LiteralPath $logPath -Tail 200 -Encoding utf8
+  $lines = @(Get-Content -LiteralPath $logPath -Tail 200 -Encoding utf8)
 if($lines.Count -eq 0){ Fail "PROVIDER_QOS_EMPTY: $logPath" }
 
 $bad = @()
