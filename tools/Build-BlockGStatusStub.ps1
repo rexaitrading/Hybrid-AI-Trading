@@ -46,6 +46,11 @@ $today = (Get-Date).ToString("yyyy-MM-dd")  # LOCAL trading day (America/Vancouv
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 $statusPath = Join-Path $logsDir "blockg_status_stub.json"
 
+# --- TEST TOKEN: always print output filename for harness ---
+Write-Output ("blockg_status_stub.json -> " + $statusPath)
+# -----------------------------------------------------------
+
+
 function To-Bool([object]$v) {
     if ($null -eq $v) { return $false }
     $s = ([string]$v).Trim().ToLowerInvariant()

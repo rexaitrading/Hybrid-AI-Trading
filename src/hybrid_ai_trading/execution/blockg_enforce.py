@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .blockg_contract import BlockGNotReady  # single source of truth
 
 from datetime import date
 from pathlib import Path
