@@ -382,7 +382,11 @@ def main(argv=None) -> int:
                 return 130
             if rc != 0:
                 return rc
-            time.sleep(max(0.0, sleep_sec))
+            try:
+                time.sleep(max(0.0, sleep_sec))
+            except KeyboardInterrupt:
+                print("[PaperRunner] CTRL+C received, exiting cleanly.")
+                return 130
     else:
         for i in range(ticks):
             print(f"[PaperRunner] tick {i+1}")
@@ -393,8 +397,11 @@ def main(argv=None) -> int:
                 return 130
             if rc != 0:
                 return rc
-            time.sleep(max(0.0, sleep_sec))
-
+            try:
+                time.sleep(max(0.0, sleep_sec))
+            except KeyboardInterrupt:
+                print("[PaperRunner] CTRL+C received, exiting cleanly.")
+                return 130
     print("[PaperRunner] done.")
     return 0
 
