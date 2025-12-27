@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import json
-
+from datetime import datetime, timezone
 import os
 from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
@@ -60,6 +60,39 @@ def _sym_ready_key(symbol: str) -> str:
     return ""
 
 
+def _assert_ibg_health_ok(max_age_sec: int = 120) -> None:
+    """
+    LIVE-only IBG health gate. Reads JSON at env HAT_IBG_STATUS_PATH.
+    Requires portUp==True and timestamp freshness <= max_age_sec.
+    """
+    p = (os.environ.get("HAT_IBG_STATUS_PATH", "") or "").strip()
+    if not p:
+        raise BlockGNotReady("IBG: missing env HAT_IBG_STATUS_PATH (fail-closed)")
+
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as e:
+        raise BlockGNotReady(f"IBG: status read fail: {e!r}")
+
+    if not bool(data.get("portUp", False)):
+        raise BlockGNotReady("IBG: portUp=false (fail-closed)")
+
+    ts = data.get("timestamp")
+    if not ts:
+        raise BlockGNotReady("IBG: missing timestamp (fail-closed)")
+
+    try:
+        dt = datetime.fromisoformat(str(ts))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds()
+    except Exception:
+        raise BlockGNotReady("IBG: bad timestamp (fail-closed)")
+
+    if age > float(max_age_sec):
+        raise BlockGNotReady(f"IBG: status stale ageSec={int(age)} max={max_age_sec} (fail-closed)")
+
 def require_blockg_ready_for_live(symbol: str, status: Optional[Dict[str, Any]] = None) -> None:
     """
     Public stable gate (kept for backward compatibility).
@@ -80,6 +113,8 @@ def require_blockg_ready_for_live(symbol: str, status: Optional[Dict[str, Any]] 
 
     # Delegate to contract (env/run_context aware)
     is_live = os.environ.get("HAT_IS_PAPER", "").strip() == "0"
+    # IBG_HEALTH_IN_REQUIRE_BLOCKG (LIVE only; observe-only; no kills)
+    _assert_ibg_health_ok(max_age_sec=120)
     if not is_live:
         return
     ensure_symbol_blockg_ready(symbol, allow_paper=False, is_paper=False, ctx=None)
