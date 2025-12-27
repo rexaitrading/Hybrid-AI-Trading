@@ -132,7 +132,7 @@ def _build_ib_snapshot_price_map(symbols: list[str], args: Any) -> Dict[str, flo
     # Repo-native snapshot helper
     from hybrid_ai_trading.brokers.ib_client import get_last_prices
 
-        import math
+    import math
     mp = None
     last_err = None
     for _try in range(3):
