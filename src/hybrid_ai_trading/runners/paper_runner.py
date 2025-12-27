@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import pathlib
 import os
+from hybrid_ai_trading.runtime.run_context import RunContext
 
 # --- Ensure CWD is repo root (prevents src\\config rebasing) ---
 def _chdir_repo_root() -> None:
@@ -170,12 +171,14 @@ def _write_heartbeat(symbols: list[str], tick_no: int, price_source: str, log_fi
         p = pathlib.Path("logs") / "paper_live_heartbeat.json"
         p.parent.mkdir(parents=True, exist_ok=True)
         rec = {
+            "ctx": {                 "as_of_date": str(ctx.as_of_date),                 "mode": str(ctx.mode),                 "is_paper": bool(ctx.is_paper),                 "symbol": str(ctx.symbol),                 "regime": str(ctx.regime),                 "blockg_status_path": str(ctx.blockg_status_path),             },
             "ts_utc": iso_utc_now(),
             "symbols": symbols,
             "tick": int(tick_no),
             "price_source": price_source,
             "ibg_up": bool(_ib_gateway_up()),
             "log_file": log_file,
+            "blockg_status_path": str(os.environ.get("HAT_BLOCKG_STATUS_PATH","")),             "mode": str(os.environ.get("HAT_MODE","")),
         }
         p.write_text(json.dumps(rec, ensure_ascii=False, separators=(",", ":")) + "\\n", encoding="utf-8")
     except Exception:
