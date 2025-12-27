@@ -3,9 +3,7 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
-  [switch]$Build,
-
-  [switch]$Quiet
+  [switch]$Build
 )
 
 Set-StrictMode -Version Latest
@@ -13,18 +11,6 @@ $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
-
-# If -Quiet is used, propagate to any child scripts via env var
-if($Quiet){ $env:HAT_BLOCKG_QUIET = "1" }
-
-
-# --- Quiet-aware info output (failures remain noisy) ---
-function Write-BlockGInfo {
-  param([Parameter(ValueFromRemainingArguments=$true)][object[]]$Args)
-  if($Quiet -or ($env:HAT_BLOCKG_QUIET -eq "1")){ return }
-  Write-Host @Args
-}
-
 
 function Write-Utf8NoBom {
   param([string]$Path, [string]$Text)
@@ -49,7 +35,7 @@ function Read-Json {
 }
 
 function Fail-Contract([string]$Msg) {
-  Write-BlockGInfo "[BLOCKG] NOT READY: $Msg" -ForegroundColor Red
+  Write-Host "[BLOCKG] NOT READY: $Msg" -ForegroundColor Red
   exit 2
 }
 
@@ -59,7 +45,7 @@ function Fail([string]$Msg) {
   Fail-Contract $Msg
 }
 function Fail-Script([string]$Msg) {
-  Write-BlockGInfo "[BLOCKG] ERROR: $Msg" -ForegroundColor Yellow
+  Write-Host "[BLOCKG] ERROR: $Msg" -ForegroundColor Yellow
   exit 1
 }
 # 1) Optional build step (single semantic owner)
@@ -68,9 +54,7 @@ if ($Build) {
   if (-not (Test-Path -LiteralPath $builder)) { Fail "Missing builder: $builder" }
 
 if ($env:HAT_BLOCKG_BUILT_ONCE -ne "1" -and $env:HAT_BLOCKG_QUIET -ne "1") {
-if((-not $Quiet) -and ($env:HAT_BLOCKG_QUIET -ne "1")){
-  Write-BlockGInfo "[BLOCKG] Build requested: running Build-BlockGStatusStub.ps1"
-}
+  Write-Host "[BLOCKG] Build requested: running Build-BlockGStatusStub.ps1"
 }
   powershell -NoProfile -ExecutionPolicy Bypass -File $builder | Out-Host
   if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub.ps1 failed exit=$LASTEXITCODE" }
@@ -126,8 +110,6 @@ if ($s -eq "ALL") {
 }
 
 if ($env:HAT_BLOCKG_QUIET -ne "1") {
-if((-not $Quiet) -and ($env:HAT_BLOCKG_QUIET -ne "1")){
-  Write-BlockGInfo "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath"
-}
+  Write-Host "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath"
 }
 exit 0

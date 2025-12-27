@@ -380,9 +380,7 @@ try {
       $status.gatescore_age_days = 0
       $status.gatescore_fresh_today = $true
       $status.reasons_not_ready = @($status.reasons_not_ready | Where-Object { $_ -ne "gatescore_fresh_today=false" })
-if ($env:HAT_BLOCKG_QUIET -ne "1") {
       Write-Host "[BLOCK-G] GateScore midnight fix applied (utc+1 -> local)" -ForegroundColor Yellow
-}
       # Recompute readiness using local-day gatescore_as_of_date (midnight fix changes it)
       $gsAsOfLocal = ($payload.gatescore_as_of_date + "")
       $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOfLocal -ne "" -and $gsAsOfLocal -eq $today)
@@ -408,9 +406,7 @@ try {
       $payload.gatescore_as_of_date = $payload.as_of_date
       $payload.gatescore_age_days = 0
       $payload.gatescore_fresh_today = $true
-if ($env:HAT_BLOCKG_QUIET -ne "1") {
       Write-Host "[BLOCK-G] GateScore midnight fix applied (utc+1 -> local)" -ForegroundColor Yellow
-}
     }
   }
 } catch { }
@@ -442,16 +438,12 @@ $payload.reasons_not_ready = @($rn)
 # ====================================================================
 
 $payloadJson = $payload | ConvertTo-Json -Depth 6
-if ($env:HAT_BLOCKG_QUIET -ne "1") {
 Write-Host "[BLOCK-G] Writing Block-G status stub to $statusPath" -ForegroundColor Cyan
-}
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($statusPath, $payloadJson, $utf8NoBom)
 
-if ($env:HAT_BLOCKG_QUIET -ne "1") {
 Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
-}
 
 exit 0
