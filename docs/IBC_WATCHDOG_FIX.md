@@ -13,3 +13,5 @@ Rollback:
 - Restore the backup file created during patch:
   C:\IBC\Watch-IBG-Paper.ps1.bak_safe_restart_YYYYMMDD_HHMMSS
 Root cause: Stop-IBG scheduled task + non-persistent watcher caused IBG downtime. Fix: disable Stop-IBG task; run watcher as scheduled task; harden watcher startup logging.
+
+Fix: Rebuilt C:\IBC\Watch-IBG-Paper.ps1 with valid [CmdletBinding()] + param at top; watcher tasks no longer exit=1; log file now created.
