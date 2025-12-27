@@ -264,19 +264,15 @@ def main(argv=None) -> int:
         # fall back to parser default if something went wrong
         u = getattr(args, "universe", "") or ""
         symbols = [s.strip().upper() for s in u.split(",") if s.strip()]
-# Diagnostics
+
+    # Diagnostics
     # RunContext unification (single source of truth; fail-closed)
-    # paper_runner hard-enforces paper via env, but we still build ctx for consistent downstream state.
     ctx = RunContext.from_env_and_args(
         symbol=(symbols[0] if symbols else "NVDA"),
         regime="unknown",
         mode="paper",
     )
-
-info = {
-        'ctx_mode': ctx.mode,
-        'ctx_as_of_date': ctx.as_of_date,
-        'ctx_symbol': ctx.symbol,
+    info = {
         "ts_utc": iso_utc_now(),
         "config_path": args.config,
         "config_error": cfg.get("_error"),
@@ -293,6 +289,7 @@ info = {
     }
     print("[PaperRunner] args:", json.dumps(info, ensure_ascii=False))
 
+    print("[PaperRunner] ctx:", json.dumps({"as_of_date": ctx.as_of_date, "mode": ctx.mode, "is_paper": ctx.is_paper, "symbol": ctx.symbol}, ensure_ascii=False))
     # Build risk manager (Phase-6 step)
     try:
         risk_mgr = _build_risk_mgr(cfg)
@@ -418,4 +415,3 @@ info = {
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
