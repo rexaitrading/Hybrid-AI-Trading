@@ -195,23 +195,25 @@ def _append_jsonl(path: str, obj: Dict[str, Any]) -> None:
         f.write(line + "\n")
 
 def _write_heartbeat(symbols: list[str], tick_no: int, price_source: str, log_file: str | None) -> None:
+    """
+    Heartbeat file for ops visibility.
+    Writes a single JSON object (NOT JSONL), valid JSON (no literal \\n suffix).
+    Must never crash runner.
+    """
     try:
         p = pathlib.Path("logs") / "paper_live_heartbeat.json"
         p.parent.mkdir(parents=True, exist_ok=True)
         rec = {
-            "ctx": {                 "as_of_date": str(ctx.as_of_date),                 "mode": str(ctx.mode),                 "is_paper": bool(ctx.is_paper),                 "symbol": str(ctx.symbol),                 "regime": str(ctx.regime),                 "blockg_status_path": str(ctx.blockg_status_path),             },
             "ts_utc": iso_utc_now(),
-            "symbols": symbols,
+            "symbols": list(symbols),
             "tick": int(tick_no),
-            "price_source": price_source,
+            "price_source": str(price_source),
             "ibg_up": bool(_ib_gateway_up()),
             "log_file": log_file,
-            "blockg_status_path": str(os.environ.get("HAT_BLOCKG_STATUS_PATH","")),             "mode": str(os.environ.get("HAT_MODE","")),
         }
-        p.write_text(json.dumps(rec, ensure_ascii=False, separators=(",", ":")) + "\\n", encoding="utf-8")
+        p.write_text(json.dumps(rec, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     except Exception:
         pass
-
 def main(argv=None) -> int:
     _chdir_repo_root()
     args = parse_args(argv)
