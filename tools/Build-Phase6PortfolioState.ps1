@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [string]$OutPath = ".\logs\phase6_portfolio_state.json"
 )
@@ -9,6 +9,14 @@ $ErrorActionPreference="Stop"
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $toolsDir = Join-Path $repoRoot "tools"
 $checker  = Join-Path $toolsDir "Check-BlockGReady.ps1"
+
+# --- ENV FALLBACK (fail-closed): ensure current Process sees HAT_IBG_STATUS_PATH if set in User env ---
+if([string]::IsNullOrWhiteSpace(C:\IBC\status\ibg_status.json)){
+  C:\IBC\status\ibg_status.json = [Environment]::GetEnvironmentVariable('HAT_IBG_STATUS_PATH','User')
+  if(-not [string]::IsNullOrWhiteSpace(C:\IBC\status\ibg_status.json)){
+    C:\IBC\status\ibg_status.json = C:\IBC\status\ibg_status.json
+  }
+}
 
 $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
