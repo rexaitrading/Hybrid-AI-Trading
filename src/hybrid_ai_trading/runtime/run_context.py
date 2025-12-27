@@ -22,12 +22,20 @@ class RunContext:
     regime: str
     repo_root: Path
     blockg_status_path: Path
+
+    @property
+    def is_live(self) -> bool:
+        return self.mode == "live" and (not self.is_paper)
+
+    @property
+    def blockg_status_path_str(self) -> str:
+        return str(self.blockg_status_path)
     @staticmethod
-    def from_env() -> "RunContext":
-        # Convenience: preserve older API by producing a full context with safe defaults.
+    def from_env(symbol: str = "NVDA", regime: str = "unknown") -> "RunContext":
+        # Safe defaults, env-driven mode; does not assume live unless HAT_IS_PAPER=="0"
         v = str(os.environ.get("HAT_IS_PAPER", "")).strip()
         m = "live" if v == "0" else "paper"
-        return RunContext.from_env_and_args(symbol="NVDA", regime="unknown", mode=m)
+        return RunContext.from_env_and_args(symbol=symbol, regime=regime, mode=m)
 
     @staticmethod
     def _repo_root() -> Path:
