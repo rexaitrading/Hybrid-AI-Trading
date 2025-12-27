@@ -114,7 +114,8 @@ def require_blockg_ready_for_live(symbol: str, status: Optional[Dict[str, Any]] 
     # Delegate to contract (env/run_context aware)
     is_live = os.environ.get("HAT_IS_PAPER", "").strip() == "0"
     # IBG_HEALTH_IN_REQUIRE_BLOCKG (LIVE only; observe-only; no kills)
-    _assert_ibg_health_ok(max_age_sec=120)
+    if is_live:
+        _assert_ibg_health_ok(max_age_sec=120)
     if not is_live:
         return
     ensure_symbol_blockg_ready(symbol, allow_paper=False, is_paper=False, ctx=None)
