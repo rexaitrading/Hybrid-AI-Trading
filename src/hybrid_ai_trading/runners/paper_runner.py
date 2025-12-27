@@ -258,33 +258,27 @@ def main(argv=None) -> int:
         return 2
 
     # One tick (safe) or small loop
-    def do_tick() -> int:
-        # Choose price source (Phase-6 enhancement)
+    def do_tick(tick_no: int = 1) -> int:
+        # Provider-first init (always defined; provider-only safe)
+        price_source = "provider_only" if bool(getattr(args, "provider_only", False)) else "provider"
+        price_map = _build_provider_price_map(symbols, cfg, args)
+
+        # Optional IB snapshot override (paper only, guarded, fail-closed fallback)
         use_ib = bool(getattr(args, "ib_snapshots", False)) and (not bool(getattr(args, "provider_only", False)))
         if use_ib:
             if not _market_open_allowed(args):
-                # Market closed: fall back to provider prices (Option A)
-                price_map = _build_provider_price_map(symbols, cfg, args)
-                price_source = "provider_fallback"
-            try:
+                price_source = "provider_fallback_closed"
+            else:
                 try:
                     price_map = _build_ib_snapshot_price_map(symbols, args)
                     price_source = "ib_snapshot"
                 except Exception as e:
-                    # Option A: never abort loop; fallback to provider
-                    print(f"[PaperRunner] IB snapshots failed -> provider fallback: {e!r}")
+                    global _ib_err_count
+                    _ib_err_count += 1
+                    if (_ib_err_count % _IB_ERR_EVERY_N) == 1:
+                        print(f"[PaperRunner] IB snapshots failed (rate-limited), fallback to provider: {e!r}")
                     price_map = _build_provider_price_map(symbols, cfg, args)
                     price_source = "provider_fallback"
-                price_source = "ib_snapshot"
-            except Exception as e:
-                global _ib_err_count
-                _ib_err_count += 1
-                if (_ib_err_count % _IB_ERR_EVERY_N) == 1:
-                    print(f"[PaperRunner] IB snapshots failed (rate-limited), fallback to provider: {e!r}")
-                price_map = _build_provider_price_map(symbols, cfg, args)
-                price_source = "provider_fallback"
-
-            price_map = _build_provider_price_map(symbols, cfg, args)
 
         try:
             out = qc.run_once(symbols, price_map, risk_mgr)
@@ -295,6 +289,7 @@ def main(argv=None) -> int:
                 "error": repr(e),
                 "symbols": symbols,
                 "price_map": price_map,
+                "price_source": price_source,
             }
             if args.log_file:
                 _append_jsonl(args.log_file, rec)
@@ -312,8 +307,9 @@ def main(argv=None) -> int:
         if args.log_file:
             _append_jsonl(args.log_file, rec)
         print("[PaperRunner] tick OK:", json.dumps({"status": "ok", "symbols": symbols}, ensure_ascii=False))
+
         # heartbeat (each tick)
-        _write_heartbeat(symbols, i, price_source, getattr(args, "log_file", None))
+        _write_heartbeat(symbols, int(tick_no), price_source, getattr(args, "log_file", None))
         try:
             print(f"[PaperRunner] price_source={price_source}")
         except Exception:
@@ -321,8 +317,7 @@ def main(argv=None) -> int:
         return 0
 
     if args.once:
-        return do_tick()
-
+        return do_tick(1)
     # Loop control
     ticks = int(getattr(args, "ticks", 3) or 0)
     sleep_sec = float(getattr(args, "sleep_sec", 0.25) or 0.0)
@@ -332,14 +327,14 @@ def main(argv=None) -> int:
         while True:
             i += 1
             print(f"[PaperRunner] tick {i}")
-            rc = do_tick()
+            rc = do_tick(i)
             if rc != 0:
                 return rc
             time.sleep(max(0.0, sleep_sec))
     else:
         for i in range(ticks):
             print(f"[PaperRunner] tick {i+1}")
-            rc = do_tick()
+            rc = do_tick(i)
             if rc != 0:
                 return rc
             time.sleep(max(0.0, sleep_sec))
