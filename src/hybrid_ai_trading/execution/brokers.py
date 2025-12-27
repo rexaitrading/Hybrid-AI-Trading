@@ -7,6 +7,22 @@ from typing import Any, Dict, Optional, Tuple
 
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
+def _ensure_ctx(meta0: dict, symbol: str) -> dict:
+    """
+    Attach RunContext into meta0['ctx'] if missing.
+    Must NOT throw; fail-closed by leaving ctx unset.
+    """
+    try:
+        if isinstance(meta0, dict) and meta0.get("ctx") is None:
+            meta0["ctx"] = RunContext.from_env_and_args(
+                symbol=str(symbol),
+                regime=str(meta0.get("regime", "unknown")),
+                mode=None,
+            )
+    except Exception:
+        pass
+    return meta0
+from hybrid_ai_trading.runtime.run_context import RunContext
 class BrokerError(Exception):
     pass
 
@@ -79,6 +95,7 @@ class IBKRClient(BrokerClient):
         # Default is paper (safe). Production live callers must set meta.is_paper=False.
         try:
             meta0 = meta or {}
+            meta0 = _ensure_ctx(meta0, symbol)
             is_paper = bool(meta0.get("is_paper", True))
         except Exception:
             is_paper = True

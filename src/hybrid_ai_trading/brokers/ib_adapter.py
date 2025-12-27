@@ -87,6 +87,12 @@ class IBAdapter(Broker):
         #   3) ctx.mode == "live"
         # Default is paper-safe.
         meta0 = meta or {}
+        # RunContext unification: ensure ctx exists (single source of truth)
+        if ctx is None:
+            try:
+                ctx = RunContext.from_env_and_args(symbol=str(symbol), regime=str(meta0.get('regime','unknown')), mode=None)
+            except Exception:
+                ctx = None
         is_paper = True
         try:
             if "is_paper" in meta0:
@@ -148,3 +154,4 @@ class IBAdapter(Broker):
                 }
             )
         return pos
+
