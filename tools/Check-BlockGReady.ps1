@@ -16,6 +16,13 @@ $repoRoot = Split-Path -Parent $toolsDir
 
 # If -Quiet is used, propagate to any child scripts via env var
 if($Quiet){ $env:HAT_BLOCKG_QUIET = "1" }
+# HAT_IBG_HEALTH_GATE_MIN (exit 3; observe-only; no kills)
+$ibgTool = Join-Path $toolsDir "Get-IBGHealth.ps1"
+if(Test-Path -LiteralPath $ibgTool){
+  $ibg = & $ibgTool
+  if(-not $ibg.ok){ if(-not $Quiet){ Write-Host "[BLOCKG] IBG NOT HEALTHY" -ForegroundColor Red; Write-Host ($ibg.reasons -join "; ") -ForegroundColor Red }; exit 3 }
+}
+
 
 
 # --- Quiet-aware info output (failures remain noisy) ---
