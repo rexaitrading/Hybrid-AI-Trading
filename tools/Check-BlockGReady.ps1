@@ -23,9 +23,15 @@ function Write-Utf8NoBom {
 function Read-Json {
   param([string]$Path)
   if (-not (Test-Path -LiteralPath $Path)) { return $null }
-  $raw = Get-Content -LiteralPath $Path -Encoding utf8 -Raw
-  if (-not $raw) { return $null }
-  return ($raw | ConvertFrom-Json -ErrorAction Stop)
+  try {
+    $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $Path).Path)
+    $text  = [System.Text.Encoding]::UTF8.GetString($bytes)
+    if($text.Length -gt 0 -and [int]$text[0] -eq 0xFEFF){ $text = $text.Substring(1) } # BOM
+    if (-not $text) { return $null }
+    return ($text | ConvertFrom-Json -ErrorAction Stop)
+  } catch {
+    return $null
+  }
 }
 
 function Fail-Contract([string]$Msg) {
@@ -67,11 +73,12 @@ $MAX_GS_AGE_DAYS = 3
 # 3) Validate required daily quality fields (fail-closed)
 # NOTE: contract defines these booleans (default false if absent)
 $reqFields = @(
-  "phase4_ok_today",
+  "phase23_health_ok_today",
   "ev_hard_daily_ok_today",
+  "phase4_ok_today",
+  "gatescore_ok_today",
   "gatescore_fresh_today"
 )
-
 foreach ($k in $reqFields) {
   if (-not ($st.PSObject.Properties.Name -contains $k)) { Fail "Missing field: $k" }
   if (-not [bool]$st.$k) { Fail "$k=false" }
