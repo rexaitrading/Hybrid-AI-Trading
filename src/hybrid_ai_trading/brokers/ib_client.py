@@ -127,7 +127,10 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
     ib = IB()
     import os as _os
     try:
-      ib.connect(host, port, clientId=int(client_id))
+      import os as _os
+      # Always use a unique clientId for snapshot helper to avoid collisions
+      _cid = 30000 + (_os.getpid() % 10000)
+      ib.connect(host, port, clientId=int(_cid))
     except Exception:
       # Fallback to a unique clientId (avoids Error 326 client id already in use)
       _cid = 30000 + (_os.getpid() % 10000)
