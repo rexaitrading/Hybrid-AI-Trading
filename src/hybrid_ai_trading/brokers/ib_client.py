@@ -176,25 +176,37 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
         _time.sleep(float(wait_sec))
         px = None
 
-        # Prefer last; then close; then marketPrice
-        if hasattr(t, "last") and t.last is not None:
-          px = t.last
-        elif hasattr(t, "close") and t.close is not None:
-          px = t.close
-        elif hasattr(t, "marketPrice"):
+        # Robust snapshot price pick (reject NaN/<=0 early)
+        def _valid(x):
           try:
-            mp = t.marketPrice()
-            if mp is not None:
-              px = mp
+            fx = float(x)
           except Exception:
-            pass
+            return None
+          if fx != fx or fx <= 0.0:  # NaN check: fx != fx
+            return None
+          return fx
+
+        # Prefer: last -> marketPrice() -> close -> mid(bid,ask) -> lastClose
+        px = _valid(getattr(t, "last", None))
+        if px is None and hasattr(t, "marketPrice"):
+          try:
+            px = _valid(t.marketPrice())
+          except Exception:
+            px = None
+        if px is None:
+          px = _valid(getattr(t, "close", None))
+        if px is None:
+          b = _valid(getattr(t, "bid", None))
+          a = _valid(getattr(t, "ask", None))
+          if b is not None and a is not None:
+            px = float((b + a) / 2.0)
+        if px is None:
+          px = _valid(getattr(t, "lastClose", None))
 
         if px is None:
           raise RuntimeError(f"ib_snapshot_missing_price: {sym}")
-        # Fail-closed: reject NaN/<=0 prices (forces caller fallback)
+
         fpx = float(px)
-        if math.isnan(fpx) or fpx <= 0.0:
-          raise RuntimeError(f"ib_snapshot_bad_price: {sym}={fpx}")
         out[str(sym).upper()] = fpx
       return out
     finally:
