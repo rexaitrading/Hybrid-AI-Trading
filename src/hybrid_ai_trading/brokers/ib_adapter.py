@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from hybrid_ai_trading.execution.blockg_contract import assert_nvda_live_ready
+
 from typing import Any, Dict, List, Optional, Tuple
 from hybrid_ai_trading.runtime.run_context import RunContext
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready
@@ -62,6 +64,8 @@ class IBAdapter(Broker):
             return None
 
     def place_order(
+        # --- BLOCK-G HARD GATE (Phase-6, live only) ---
+        assert_nvda_live_ready()
         self,
         symbol: str,
         side: str,

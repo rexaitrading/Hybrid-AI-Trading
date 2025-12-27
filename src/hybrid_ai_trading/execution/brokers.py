@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from hybrid_ai_trading.execution.blockg_contract import assert_nvda_live_ready
+
 from typing import Any, Dict, Optional, Tuple
 
 
@@ -24,6 +26,8 @@ class BrokerClient:
     name: str
 
     def submit_order(
+        # --- BLOCK-G HARD GATE (Phase-6, live only) ---
+        assert_nvda_live_ready()
         self,
         symbol: str,
         side: str,
@@ -63,6 +67,8 @@ class IBKRClient(BrokerClient):
         raise BrokerError(f"Unsupported IBKR asset_class={self.asset_class}")
 
     def submit_order(
+        # --- BLOCK-G HARD GATE (Phase-6, live only) ---
+        assert_nvda_live_ready()
         self,
         symbol: str,
         side: str,
@@ -135,6 +141,8 @@ class BinanceClient(BrokerClient):
             self.ex.secret = secret
 
     def submit_order(
+        # --- BLOCK-G HARD GATE (Phase-6, live only) ---
+        assert_nvda_live_ready()
         self,
         symbol: str,
         side: str,
@@ -182,6 +190,8 @@ class KrakenClient(BrokerClient):
             self.ex.secret = secret
 
     def submit_order(
+        # --- BLOCK-G HARD GATE (Phase-6, live only) ---
+        assert_nvda_live_ready()
         self,
         symbol: str,
         side: str,
