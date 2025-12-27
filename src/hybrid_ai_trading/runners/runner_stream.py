@@ -2,6 +2,7 @@ import asyncio
 import sys
 import math
 import os
+from hybrid_ai_trading.runtime.run_context import RunContext
 import pathlib
 import sys
 from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
@@ -190,6 +191,10 @@ async def main():
         "HAT_READONLY"
     )  # never place orders when delayed
 
+
+    # RunContext unification (single source of truth; fail-closed)
+    # runner_stream may be delayed or realtime; ctx decides live/paper based on env.
+    ctx = RunContext.from_env_and_args(symbol="NVDA", regime="unknown", mode=None)
     def on_tick(tkr):
         try:
             c = tkr.contract
@@ -221,10 +226,9 @@ async def main():
                                 return
                         except Exception:
                             return
-                    if os.getenv("HAT_IS_PAPER","1").strip() == "0" and c.symbol.upper() in ("NVDA","SPY","QQQ"):
+                    if ctx.is_live and c.symbol.upper() in ("NVDA","SPY","QQQ"):
                         require_blockg_ready_for_live(c.symbol.upper())
-                    ib_place_order_chokepoint(ib, c, sig.order)
-
+                    ib_place_order_chokepoint(ib, c, sig.order, ctx=ctx, meta={"ctx": ctx, "is_paper": (not ctx.is_live), "symbol": c.symbol})
         except Exception as e:
             # log and move on; do not let Event loop die
             print(f"[on_tick] {type(e).__name__}: {e}", flush=True)
@@ -244,3 +248,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
