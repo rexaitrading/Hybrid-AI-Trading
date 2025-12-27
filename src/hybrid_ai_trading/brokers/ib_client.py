@@ -125,6 +125,21 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
     from ib_insync import IB, Stock  # type: ignore
 
     ib = IB()
+    
+    # Mute IB market-data subscription spam (10089) for this snapshot helper
+    def _on_err(reqId, errorCode, errorString, *_):
+        try:
+            if int(errorCode) == 10089:
+                return
+        except Exception:
+            pass
+        # allow other errors to surface normally
+        return
+    try:
+        ib.errorEvent += _on_err  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    
     import os as _os
     try:
       import os as _os
@@ -161,6 +176,10 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
         out[str(sym).upper()] = float(px)
       return out
     finally:
+      try:
+        ib.errorEvent -= _on_err  # type: ignore[attr-defined]
+      except Exception:
+        pass
       try:
         ib.disconnect()
       except Exception:
