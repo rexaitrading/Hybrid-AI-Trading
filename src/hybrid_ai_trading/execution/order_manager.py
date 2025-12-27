@@ -307,15 +307,13 @@ class OrderManager:
         return None
 
     def place_order(
-        # --- BLOCK-G HARD GATE (Phase-6, live only) ---
-        assert_nvda_live_ready()
         self,
         symbol: str,
         side: str,
         qty: float = 0.0,
         notional: float = 0.0,
         size: float = 0.0,
-            ctx: RunContext | None = None,
+        ctx: RunContext | None = None,
         price: float = 0.0,
     ) -> Dict[str, Any]:
         # --- Compatibility: accept engine-style (size, price) or legacy (qty, notional)
