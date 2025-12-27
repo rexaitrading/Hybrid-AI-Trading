@@ -132,10 +132,38 @@ def _build_ib_snapshot_price_map(symbols: list[str], args: Any) -> Dict[str, flo
     # Repo-native snapshot helper
     from hybrid_ai_trading.brokers.ib_client import get_last_prices
 
-    mp = get_last_prices(symbols=symbols, client_id=getattr(args, "client_id", 3021))
-    if not isinstance(mp, dict):
-        raise RuntimeError("ib_snapshot_helper_bad_return: expected dict")
+        import math
+    mp = None
+    last_err = None
+    for _try in range(3):
+        try:
+            mp = get_last_prices(symbols=symbols, client_id=getattr(args, "client_id", 3021))
+            last_err = None
+        except Exception as e:
+            mp = None
+            last_err = e
 
+        # If we got a dict, validate it
+        if isinstance(mp, dict):
+            bad = []
+            for s in symbols:
+                keyU = str(s).upper()
+                v = mp.get(keyU, mp.get(str(s), None))
+                try:
+                    fv = float(v)
+                except Exception:
+                    fv = float("nan")
+                if v is None or math.isnan(fv) or fv <= 0.0:
+                    bad.append((keyU, v))
+            if not bad:
+                break
+            last_err = RuntimeError(f"ib_snapshot_bad_price: {bad}")
+            mp = None
+
+        # backoff between tries
+        time.sleep(0.35)
+    if not isinstance(mp, dict):
+        raise RuntimeError(f"ib_snapshot_helper_bad_return: {last_err!r}") if last_err else RuntimeError("ib_snapshot_helper_bad_return: expected dict")
     out: Dict[str, float] = {}
     for s in symbols:
         v = mp.get(str(s).upper()) if isinstance(s, str) else mp.get(s)
@@ -294,7 +322,7 @@ def main(argv=None) -> int:
                     global _ib_err_count
                     _ib_err_count += 1
                     if (_ib_err_count % _IB_ERR_EVERY_N) == 1:
-                        print(f"[PaperRunner] IB snapshots failed (rate-limited), fallback to provider: {e!r}")
+                        print(f"[PaperRunner] IB snapshots failed, fallback to provider: {e!r}")
                     price_map = _build_provider_price_map(symbols, cfg, args)
                     price_source = "provider_fallback"
 
