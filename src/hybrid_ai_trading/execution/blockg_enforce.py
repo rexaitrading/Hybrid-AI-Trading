@@ -83,3 +83,8 @@ def require_blockg_ready_for_live(symbol: str, status: Optional[Dict[str, Any]] 
     if not is_live:
         return
     ensure_symbol_blockg_ready(symbol, allow_paper=False, is_paper=False, ctx=None)
+from . import blockg_contract as _bc
+
+
+# --- Single source of truth (runtime alias) ---
+BlockGNotReady = _bc.BlockGNotReady
