@@ -124,3 +124,6 @@ tools/Kill-Spammers.ps1
 .env
 .env.*
 
+
+# Allow tracked paper runner config
+!config/paper_runner.yaml

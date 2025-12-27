@@ -1,0 +1,11 @@
+# HybridAITrading - Paper Runner Config
+# UTF-8 (no BOM) + LF
+
+prices:
+  NVDA: 450.0
+
+default_price: 450.0
+
+snapshots_when_closed: false
+prefer_providers: false
+enforce_riskhub: false
