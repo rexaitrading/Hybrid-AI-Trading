@@ -125,6 +125,22 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
     from ib_insync import IB, Stock  # type: ignore
 
     ib = IB()
+    import time as _time
+    # Suppress ib_insync console spam for error 10089 (no subscription)
+    _orig_err = getattr(ib.wrapper, "error", None)
+    def _err(reqId, errorCode, errorString, contract=None):
+        try:
+            if int(errorCode) == 10089:
+                return
+        except Exception:
+            pass
+        if _orig_err is not None:
+            return _orig_err(reqId, errorCode, errorString, contract)
+    try:
+        ib.wrapper.error = _err
+    except Exception:
+        pass
+
     
     # Mute IB market-data subscription spam (10089) for this snapshot helper
     def _on_err(reqId, errorCode, errorString, *_):
@@ -154,8 +170,9 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
       out = {}
       for sym in symbols:
         c = Stock(str(sym), "SMART", "USD")
+        ib.reqMarketDataType(3)  # 3=delayed (reduces 10089 spam)
         t = ib.reqMktData(c, "", snapshot=True)
-        ib.sleep(float(wait_sec))
+        _time.sleep(float(wait_sec))
         px = None
 
         # Prefer last; then close; then marketPrice
@@ -176,6 +193,11 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
         out[str(sym).upper()] = float(px)
       return out
     finally:
+      try:
+        if _orig_err is not None:
+          ib.wrapper.error = _orig_err
+      except Exception:
+        pass
       try:
         ib.errorEvent -= _on_err  # type: ignore[attr-defined]
       except Exception:

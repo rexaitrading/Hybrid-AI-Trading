@@ -236,7 +236,14 @@ def main(argv=None) -> int:
                 price_map = _build_provider_price_map(symbols, cfg, args)
                 price_source = "provider_fallback"
             try:
-                price_map = _build_ib_snapshot_price_map(symbols, args)
+                try:
+                    price_map = _build_ib_snapshot_price_map(symbols, args)
+                    price_source = "ib_snapshot"
+                except Exception as e:
+                    # Option A: never abort loop; fallback to provider
+                    print(f"[PaperRunner] IB snapshots failed -> provider fallback: {e!r}")
+                    price_map = _build_provider_price_map(symbols, cfg, args)
+                    price_source = "provider_fallback"
                 price_source = "ib_snapshot"
             except Exception as e:
                 global _ib_err_count
