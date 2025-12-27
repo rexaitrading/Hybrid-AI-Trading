@@ -11,13 +11,12 @@ $toolsDir = Join-Path $repoRoot "tools"
 $checker  = Join-Path $toolsDir "Check-BlockGReady.ps1"
 
 # --- ENV FALLBACK (fail-closed): ensure current Process sees HAT_IBG_STATUS_PATH if set in User env ---
-if([string]::IsNullOrWhiteSpace(C:\IBC\status\ibg_status.json)){
-  C:\IBC\status\ibg_status.json = [Environment]::GetEnvironmentVariable('HAT_IBG_STATUS_PATH','User')
-  if(-not [string]::IsNullOrWhiteSpace(C:\IBC\status\ibg_status.json)){
-    C:\IBC\status\ibg_status.json = C:\IBC\status\ibg_status.json
+if([string]::IsNullOrWhiteSpace($env:HAT_IBG_STATUS_PATH)){
+  $u = [Environment]::GetEnvironmentVariable('HAT_IBG_STATUS_PATH','User')
+  if(-not [string]::IsNullOrWhiteSpace($u)){
+    $env:HAT_IBG_STATUS_PATH = $u
   }
 }
-
 $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
@@ -53,3 +52,4 @@ if($dir -and -not (Test-Path $dir)){ New-Item -ItemType Directory -Force -Path $
 
 Write-Host "[PHASE6] wrote $full ok=$ok ready=$($ready -join ',')" -ForegroundColor Green
 exit (0)
+
