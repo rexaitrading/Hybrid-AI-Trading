@@ -16,6 +16,11 @@ def _chdir_repo_root() -> None:
 
 import sys
 import time
+
+# --- rate limit noisy IB snapshot errors ---
+_IB_ERR_EVERY_N = 60
+_ib_err_count = 0
+
 import socket
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -234,7 +239,10 @@ def main(argv=None) -> int:
                 price_map = _build_ib_snapshot_price_map(symbols, args)
                 price_source = "ib_snapshot"
             except Exception as e:
-                print(f"[PaperRunner] IB snapshots failed, falling back to provider prices: {e!r}")
+                global _ib_err_count
+                _ib_err_count += 1
+                if (_ib_err_count % _IB_ERR_EVERY_N) == 1:
+                    print(f"[PaperRunner] IB snapshots failed (rate-limited), fallback to provider: {e!r}")
                 price_map = _build_provider_price_map(symbols, cfg, args)
                 price_source = "provider_fallback"
 
