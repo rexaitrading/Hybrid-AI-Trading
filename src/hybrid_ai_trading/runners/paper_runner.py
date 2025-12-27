@@ -276,10 +276,15 @@ def main(argv=None) -> int:
             "symbols": symbols,
             "price_map": price_map,
             "result": out,
+            "price_source": price_source,
         }
         if args.log_file:
             _append_jsonl(args.log_file, rec)
         print("[PaperRunner] tick OK:", json.dumps({"status": "ok", "symbols": symbols}, ensure_ascii=False))
+        try:
+            print(f"[PaperRunner] price_source={price_source}")
+        except Exception:
+            pass
         return 0
 
     if args.once:
