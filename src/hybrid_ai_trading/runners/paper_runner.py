@@ -271,6 +271,21 @@ def main(argv=None) -> int:
             else:
                 try:
                     price_map = _build_ib_snapshot_price_map(symbols, args)
+                    # Fail-closed: None/NaN/<=0 triggers provider fallback
+                    import math
+                    bad = []
+                    for s in symbols:
+                        v = price_map.get(s)
+                        if v is None:
+                            bad.append((s, v)); continue
+                        try:
+                            fv = float(v)
+                        except Exception:
+                            bad.append((s, v)); continue
+                        if math.isnan(fv) or fv <= 0.0:
+                            bad.append((s, fv))
+                    if bad:
+                        raise RuntimeError(f"ib_snapshot_bad_prices: {bad}")
                     price_source = "ib_snapshot"
                 except Exception as e:
                     global _ib_err_count
