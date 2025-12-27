@@ -64,8 +64,6 @@ class IBAdapter(Broker):
             return None
 
     def place_order(
-        # --- BLOCK-G HARD GATE (Phase-6, live only) ---
-        assert_nvda_live_ready()
         self,
         symbol: str,
         side: str,
@@ -101,6 +99,10 @@ class IBAdapter(Broker):
                     is_paper = str(getattr(ctx, "mode", "")).strip().lower() != "live"
         except Exception:
             is_paper = True
+        # Additional hard gate: if LIVE, require NVDA live stamp/readiness (fail-closed)
+        if not is_paper and str(symbol).upper() == "NVDA":
+            assert_nvda_live_ready()
+
         # Block-G single chokepoint (ctx/json/env precedence inside contract)
         contract_ensure_symbol_blockg_ready(
             symbol,
