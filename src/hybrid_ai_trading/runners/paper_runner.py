@@ -194,6 +194,20 @@ def main(argv=None) -> int:
 
     cfg: Dict[str, Any] = load_config(args.config)
 
+    # --- Auto daily rollover log file ---
+    try:
+        if getattr(args, "log_file", None) == "auto":
+            day = datetime.now().astimezone().date().isoformat()
+            sym = "ALL"
+            try:
+                sym = "_".join(symbols) if symbols else "ALL"
+            except Exception:
+                sym = "ALL"
+            args.log_file = f"logs/paper_live_{sym}_{day}.jsonl"
+    except Exception:
+        pass
+
+
     # Universe
     symbols = list(getattr(args, "universe_list", []) or [])
     if not symbols:
