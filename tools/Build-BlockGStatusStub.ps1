@@ -37,7 +37,7 @@ $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
 if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
-$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+$today = (Get-Date).ToString("yyyy-MM-dd")  # LOCAL trading day (America/Vancouver)
 # ---- GateScore session date (weekend-safe): derive from pnl summary ----
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 $statusPath = Join-Path $logsDir "blockg_status_stub.json"
