@@ -1,4 +1,3 @@
-    # Loop control
 from __future__ import annotations
 
 import json
@@ -230,16 +229,13 @@ def main(argv=None) -> int:
             if not _market_open_allowed(args):
                 raise RuntimeError("ib_snapshots_denied: market_closed (use --snapshots-when-closed to override)")
             try:
-                try:
-                    price_map = _build_ib_snapshot_price_map(symbols, args)
-                except Exception as e:
-                    print(f"[PaperRunner] IB snapshots failed, falling back to provider prices: {e!r}")
-                    price_map = _build_provider_price_map(symbols, cfg, args)
+                price_map = _build_ib_snapshot_price_map(symbols, args)
+                price_source = "ib_snapshot"
             except Exception as e:
-                # Fail-safe: fall back to provider prices when IB has no subscription / missing snapshot
                 print(f"[PaperRunner] IB snapshots failed, falling back to provider prices: {e!r}")
                 price_map = _build_provider_price_map(symbols, cfg, args)
-        else:
+                price_source = "provider_fallback"
+
             price_map = _build_provider_price_map(symbols, cfg, args)
 
         try:
@@ -267,6 +263,10 @@ def main(argv=None) -> int:
         if args.log_file:
             _append_jsonl(args.log_file, rec)
         print("[PaperRunner] tick OK:", json.dumps({"status": "ok", "symbols": symbols}, ensure_ascii=False))
+        try:
+            print(f"[PaperRunner] price_source={price_source}")
+        except Exception:
+            pass
         return 0
 
     if args.once:
