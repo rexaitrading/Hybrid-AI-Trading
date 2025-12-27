@@ -6,6 +6,28 @@ from hybrid_ai_trading.runtime.run_context import RunContext
 
 import os
 
+
+# -----------------------------
+# HARD SAFETY: paper-only lock
+# -----------------------------
+def _env(name: str) -> str:
+    v = os.environ.get(name, "")
+    if v is None:
+        return ""
+    return str(v).strip()
+
+def _is_live() -> bool:
+    # Live means explicitly HAT_IS_PAPER=0. Missing/blank => NOT live (fail-closed).
+    return _env("HAT_IS_PAPER") == "0"
+
+def _assert_live_allowed() -> None:
+    # Block live trading when HAT_LIVE_DISABLED=1 unless explicit break-glass confirm is provided.
+    if not _is_live():
+        return
+    if _env("HAT_LIVE_DISABLED") == "1":
+        token = _env("HAT_CONFIRM_LIVE")
+        if token != "I_UNDERSTAND_THIS_SENDS_LIVE_ORDERS":
+            raise RuntimeError("LIVE BLOCKED: HAT_LIVE_DISABLED=1 (set HAT_CONFIRM_LIVE to break-glass token to override intentionally)")
 import random
 
 import time
@@ -53,6 +75,9 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
     else:
         raise TypeError(f"ib_place_order_chokepoint expected 2 or 3 args after ib, got {len(args)}")
 
+
+    # HARD paper-only safety (blocks accidental live)
+    _assert_live_allowed()
     # Infer symbol once
     sym = None
     try:
