@@ -6,9 +6,7 @@ $ErrorActionPreference="Stop"
 
 $root = (Resolve-Path ".").Path
 Set-Location $root
-
 $today = (Get-Date).ToString("yyyy-MM-dd")
-
 $logDir = Join-Path $root "logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $outCsv = Join-Path $logDir "phase5_ev_hard_veto_daily.csv"

@@ -9,7 +9,8 @@ $ErrorActionPreference="Stop"
 $toolsDir = Split-Path -Parent $PSCommandPath
 $root = Split-Path -Parent $toolsDir
 Set-Location $root
-$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+Remove-Item Env:HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
+$today = (Get-Date).ToString("yyyy-MM-dd")
 $tsUtc  = (Get-Date).ToUniversalTime().ToString("o")
 
 $logDir = Join-Path $root "logs"
