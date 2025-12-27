@@ -376,11 +376,7 @@ def main(argv=None) -> int:
             i += 1
             print(f"[PaperRunner] tick {i}")
             try:
-        try:
-            rc = do_tick(i)
-        except KeyboardInterrupt:
-            print("[PaperRunner] CTRL+C received, exiting cleanly.")
-            return 130
+                rc = do_tick(i)
             except KeyboardInterrupt:
                 print("[PaperRunner] CTRL+C received, exiting cleanly.")
                 return 130
@@ -391,11 +387,7 @@ def main(argv=None) -> int:
         for i in range(ticks):
             print(f"[PaperRunner] tick {i+1}")
             try:
-        try:
-            rc = do_tick(i)
-        except KeyboardInterrupt:
-            print("[PaperRunner] CTRL+C received, exiting cleanly.")
-            return 130
+                rc = do_tick(i)
             except KeyboardInterrupt:
                 print("[PaperRunner] CTRL+C received, exiting cleanly.")
                 return 130
