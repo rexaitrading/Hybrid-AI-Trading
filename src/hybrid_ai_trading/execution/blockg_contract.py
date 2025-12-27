@@ -31,7 +31,7 @@ def read_blockg_status() -> Dict[str, Any]:
     if not fp.exists():
         return {"nvda_blockg_ready": False, "reasons_not_ready": ["blockg_status_missing"]}
     try:
-        return json.loads(fp.read_text(encoding="utf-8"))
+        return json.loads(fp.read_bytes().decode("utf-8-sig"))  # tolerate UTF-8 BOM
     except Exception:
         return {"nvda_blockg_ready": False, "reasons_not_ready": ["blockg_status_unreadable"]}
 
