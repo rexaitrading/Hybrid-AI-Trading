@@ -117,7 +117,7 @@ class IBClient:
             "initAfter": str(st.initMarginAfter),
             "commission": str(st.commission),
         }
-def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", port: int = 4002, wait_sec: float = 2.0):
+def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", port: int = 4002, wait_sec: float = 3.0):
     """
     Paper-safe snapshot prices using IBKR via ib_insync reqMktData(snapshot=True).
     Returns dict {SYM: float_price}. Fail-closed if any symbol missing.
@@ -173,7 +173,7 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
         c = Stock(str(sym), "SMART", "USD")
         ib.reqMarketDataType(3)  # 3=delayed (reduces 10089 spam)
         t = ib.reqMktData(c, "", snapshot=True)
-        _time.sleep(float(wait_sec))
+        ib.sleep(float(wait_sec))
         px = None
 
         # Robust snapshot price pick (reject NaN/<=0 early)
