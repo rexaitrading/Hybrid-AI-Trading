@@ -1,3 +1,7 @@
+# BLOCKG_AUTHORITY_VERSION = 1
+# Authority: summary flags ONLY (phase23, ev_hard, phase4, gatescore)
+# Do NOT trust per-symbol GateScore internals here
+
 [CmdletBinding()]
 param(
     [ValidateSet("NVDA","SPY","QQQ","ALL")]
@@ -269,8 +273,21 @@ $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and 
 
 
 # Audit: include per-symbol not-ready flags (even if NVDA is ready)
-if (-not $spyReady) { $reasons.Add("spy_blockg_ready=false") | Out-Null }
-if (-not $qqqReady) { $reasons.Add("qqq_blockg_ready=false") | Out-Null }
+# --- Target symbols (default NVDA-only). Set HAT_BLOCKG_SYMBOLS="NVDA,SPY,QQQ" to include others ---
+$wantNvda = $true
+$wantSpy  = $false
+$wantQqq  = $false
+$symEnv = [System.Environment]::GetEnvironmentVariable("HAT_BLOCKG_SYMBOLS","Process")
+if([string]::IsNullOrWhiteSpace($symEnv)){ $symEnv = [System.Environment]::GetEnvironmentVariable("HAT_BLOCKG_SYMBOLS","User") }
+if(-not [string]::IsNullOrWhiteSpace($symEnv)){
+  $ss = @($symEnv.Split(",") | ForEach-Object { ($_+"").Trim().ToUpperInvariant() } | Where-Object { $_ })
+  $wantNvda = $ss -contains "NVDA"
+  $wantSpy  = $ss -contains "SPY"
+  $wantQqq  = $ss -contains "QQQ"
+}
+
+if ($wantSpy -and -not $spyReady) { $reasons.Add("spy_blockg_ready=false") | Out-Null }
+if ($wantQqq -and -not $qqqReady) { $reasons.Add("qqq_blockg_ready=false") | Out-Null }
 
 $payload = [ordered]@{
     ts_utc = $tsUtc
@@ -350,6 +367,75 @@ if($null -ne $llm){
   $payload["llm_action"] = "none"
   $payload["llm_ok_today"] = $true
 }
+
+
+# --- GateScore midnight-boundary fix (outside hash literal) ---
+try {
+  if(($status.gatescore_as_of_date) -and ($status.as_of_date)){
+    $gs = [datetime]::ParseExact(($status.gatescore_as_of_date+""), "yyyy-MM-dd", $null)
+    $as = [datetime]::ParseExact(($status.as_of_date+""), "yyyy-MM-dd", $null)
+    $delta = [int]($gs.Date - $as.Date).TotalDays
+    if($delta -eq 1 -and ($status.gatescore_fresh_today -eq $false) -and ($status.gatescore_ok_today -eq $true)){
+      $status.gatescore_as_of_date = $status.as_of_date
+      $status.gatescore_age_days = 0
+      $status.gatescore_fresh_today = $true
+      $status.reasons_not_ready = @($status.reasons_not_ready | Where-Object { $_ -ne "gatescore_fresh_today=false" })
+      Write-Host "[BLOCK-G] GateScore midnight fix applied (utc+1 -> local)" -ForegroundColor Yellow
+      # Recompute readiness using local-day gatescore_as_of_date (midnight fix changes it)
+      $gsAsOfLocal = ($payload.gatescore_as_of_date + "")
+      $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOfLocal -ne "" -and $gsAsOfLocal -eq $today)
+      $spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOfLocal -ne "" -and $gsAsOfLocal -eq $today)
+      $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOfLocal -ne "" -and $gsAsOfLocal -eq $today)
+      $payload.nvda_blockg_ready = [bool]$nvdaReady
+      $payload.spy_blockg_ready  = [bool]$spyReady
+      $payload.qqq_blockg_ready  = [bool]$qqqReady
+      # Remove stale reason if present
+      if($payload.reasons_not_ready){ $payload.reasons_not_ready = @($payload.reasons_not_ready | Where-Object { $_ -ne "gatescore_fresh_today=false" }) }
+    }
+  }
+} catch { }
+
+
+# --- GateScore midnight-boundary fix (payload; utc+1 -> local) ---
+try {
+  if(($payload.gatescore_as_of_date) -and ($payload.as_of_date)){
+    $gs = [datetime]::ParseExact(($payload.gatescore_as_of_date+""), "yyyy-MM-dd", $null)
+    $as = [datetime]::ParseExact(($payload.as_of_date+""), "yyyy-MM-dd", $null)
+    $delta = [int]($gs.Date - $as.Date).TotalDays
+    if($delta -eq 1 -and ($payload.gatescore_fresh_today -eq $false) -and ($payload.gatescore_ok_today -eq $true)){
+      $payload.gatescore_as_of_date = $payload.as_of_date
+      $payload.gatescore_age_days = 0
+      $payload.gatescore_fresh_today = $true
+      Write-Host "[BLOCK-G] GateScore midnight fix applied (utc+1 -> local)" -ForegroundColor Yellow
+    }
+  }
+} catch { }
+
+
+# ================= FINAL BLOCK-G READINESS AUTHORITY =================
+# Single source of truth. Overrides all earlier derived readiness.
+
+$payload.nvda_blockg_ready =
+  [bool]$payload.phase23_health_ok_today -and
+  [bool]$payload.ev_hard_daily_ok_today  -and
+  [bool]$payload.phase4_ok_today         -and
+  [bool]$payload.gatescore_ok_today      -and
+  [bool]$payload.gatescore_fresh_today
+
+# SPY / QQQ disabled by default (explicit opt-in only)
+$payload.spy_blockg_ready = $false
+$payload.qqq_blockg_ready = $false
+
+# Rebuild reasons cleanly (no stale state allowed)
+$rn = @()
+if(-not $payload.phase23_health_ok_today){ $rn += "phase23_health_ok_today=false" }
+if(-not $payload.ev_hard_daily_ok_today){ $rn += "ev_hard_daily_ok_today=false" }
+if(-not $payload.phase4_ok_today){ $rn += "phase4_ok_today=false" }
+if(-not $payload.gatescore_ok_today){ $rn += "gatescore_ok_today=false" }
+if(-not $payload.gatescore_fresh_today){ $rn += "gatescore_fresh_today=false" }
+if(-not $payload.nvda_blockg_ready){ $rn += "nvda_blockg_ready=false" }
+$payload.reasons_not_ready = @($rn)
+# ====================================================================
 
 $payloadJson = $payload | ConvertTo-Json -Depth 6
 Write-Host "[BLOCK-G] Writing Block-G status stub to $statusPath" -ForegroundColor Cyan

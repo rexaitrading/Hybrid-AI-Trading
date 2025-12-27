@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
+from hybrid_ai_trading.execution.blockg_contract import assert_nvda_live_ready
 
 from hybrid_ai_trading.runtime.run_context import RunContext
-from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+
 import os
+
 import random
+
 import time
+
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
-from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
+from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
 # -----------------------------
 # Live/paper detection + symbol
 # -----------------------------
 def _is_live() -> bool:
     return str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
-
 
 def _infer_symbol(contract: Any) -> Optional[str]:
     # Best-effort: supports ib_insync Contract-like objects + stubs used in tests.
@@ -29,7 +32,6 @@ def _infer_symbol(contract: Any) -> Optional[str]:
         except Exception:
             pass
     return None
-
 
 def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None, meta: Dict[str, Any] | None = None) -> Any:
     """
@@ -68,13 +70,13 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
         if sym in ("NVDA", "SPY", "QQQ"):
             require_blockg_ready_for_live(sym)
 
-
-
             require_nvda_live_stamp(sym)
     # Place order
     try:
+        assert_nvda_live_ready()
         return ib.placeOrder(order_id, contract, order)
     except TypeError:
+        assert_nvda_live_ready()
         return ib.placeOrder(contract, order)
 def retry(
     exc_types: Union[Type[BaseException], Tuple[Type[BaseException], ...]],
@@ -107,7 +109,6 @@ def retry(
         return wrapped
 
     return deco
-
 
 # -----------------------------
 # IB connection (injectable)
@@ -156,7 +157,6 @@ def connect_ib(
     assert last is not None
     raise last
 
-
 def account_snapshot(ib: Any, account: str, *, wait_sec: float = 0.25) -> List[AccountTag]:
     # ask IB to publish account values (stub-safe)
     if hasattr(ib, "client") and hasattr(ib.client, "reqAccountUpdates"):
@@ -182,7 +182,6 @@ def account_snapshot(ib: Any, account: str, *, wait_sec: float = 0.25) -> List[A
             continue
     return out
 
-
 def force_refresh_positions(ib: Any, *, settle_sec: float = 0.25) -> List[Any]:
     if hasattr(ib, "client") and hasattr(ib.client, "reqPositions"):
         try:
@@ -198,7 +197,6 @@ def force_refresh_positions(ib: Any, *, settle_sec: float = 0.25) -> List[Any]:
 
     return list(getattr(ib, "positions", lambda: [])())
 
-
 # -----------------------------
 # Cancel open orders (bounded)
 # -----------------------------
@@ -213,7 +211,6 @@ def cancel_all_open(ib: Any, *, settle_sec: float = 1.0) -> None:
     if settle_sec and settle_sec > 0:
         time.sleep(0)
 
-
 # -----------------------------
 # Marketable limit helper
 # -----------------------------
@@ -226,7 +223,6 @@ def marketable_limit(side: str, ref_price: float, after_hours: bool) -> float:
 
     bump = 1.0 if after_hours else 0.1
     return float(ref_price + bump) if s == "BUY" else float(ref_price - bump)
-
 
 # -----------------------------
 # Error mapping (string-based)

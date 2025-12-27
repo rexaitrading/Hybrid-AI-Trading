@@ -26,6 +26,8 @@ from typing import Any, Dict, Optional
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live, BlockGNotReady
 from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
+from hybrid_ai_trading.execution.blockg_contract import assert_nvda_live_ready
+
 logger = logging.getLogger(__name__)
 
 
@@ -305,6 +307,8 @@ class OrderManager:
         return None
 
     def place_order(
+        # --- BLOCK-G HARD GATE (Phase-6, live only) ---
+        assert_nvda_live_ready()
         self,
         symbol: str,
         side: str,
