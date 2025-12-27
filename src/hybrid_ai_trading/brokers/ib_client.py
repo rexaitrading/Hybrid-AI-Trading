@@ -173,7 +173,39 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
         c = Stock(str(sym), "SMART", "USD")
         ib.reqMarketDataType(3)  # 3=delayed (reduces 10089 spam)
         t = ib.reqMktData(c, "", snapshot=True)
-        ib.sleep(float(wait_sec))
+        # Poll in small slices (more responsive than one long sleep)
+        # Break early once we have a valid price.
+        deadline = _time.time() + float(wait_sec)
+        while _time.time() < deadline:
+          # pump ib_insync event loop in short bursts
+          try:
+            ib.sleep(0.2)
+          except KeyboardInterrupt:
+            raise
+          # attempt to pick a valid price ASAP
+          px_try = None
+          try:
+            px_try = _valid(getattr(t, "last", None))
+            if px_try is None and hasattr(t, "marketPrice"):
+              try:
+                px_try = _valid(t.marketPrice())
+              except Exception:
+                px_try = None
+            if px_try is None:
+              px_try = _valid(getattr(t, "close", None))
+            if px_try is None:
+              b = _valid(getattr(t, "bid", None))
+              a = _valid(getattr(t, "ask", None))
+              if b is not None and a is not None:
+                px_try = float((b + a) / 2.0)
+            if px_try is None:
+              px_try = _valid(getattr(t, "lastClose", None))
+          except Exception:
+            px_try = None
+
+          if px_try is not None:
+            px = px_try
+            break
         px = None
 
         # Robust snapshot price pick (reject NaN/<=0 early)
