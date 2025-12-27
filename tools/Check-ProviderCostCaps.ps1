@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 
-$capsPath = Join-Path $repoRoot "configs\provider_cost_caps.json"
+  $capsPath = Join-Path $repoRoot "docs\provider_cost_caps.json"
 $actualsPath = Join-Path $repoRoot "logs\provider_cost_actuals.json"
 
 function Info([string]$m){ if(-not $Quiet){ Write-Host $m } }
