@@ -164,6 +164,23 @@ def _append_jsonl(path: str, obj: Dict[str, Any]) -> None:
     line = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
     with open(path, "a", encoding="utf-8") as f:
         f.write(line + "\n")
+
+def _write_heartbeat(symbols: list[str], tick_no: int, price_source: str, log_file: str | None) -> None:
+    try:
+        p = pathlib.Path("logs") / "paper_live_heartbeat.json"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        rec = {
+            "ts_utc": iso_utc_now(),
+            "symbols": symbols,
+            "tick": int(tick_no),
+            "price_source": price_source,
+            "ibg_up": bool(_ib_gateway_up()),
+            "log_file": log_file,
+        }
+        p.write_text(json.dumps(rec, ensure_ascii=False, separators=(",", ":")) + "\\n", encoding="utf-8")
+    except Exception:
+        pass
+
 def main(argv=None) -> int:
     _chdir_repo_root()
     args = parse_args(argv)
@@ -295,6 +312,8 @@ def main(argv=None) -> int:
         if args.log_file:
             _append_jsonl(args.log_file, rec)
         print("[PaperRunner] tick OK:", json.dumps({"status": "ok", "symbols": symbols}, ensure_ascii=False))
+        # heartbeat (each tick)
+        _write_heartbeat(symbols, i, price_source, getattr(args, "log_file", None))
         try:
             print(f"[PaperRunner] price_source={price_source}")
         except Exception:
