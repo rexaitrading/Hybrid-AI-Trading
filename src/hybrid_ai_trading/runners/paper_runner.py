@@ -200,7 +200,7 @@ def main(argv=None) -> int:
             day = datetime.now().astimezone().date().isoformat()
             sym = "ALL"
             try:
-                sym = "_".join(symbols) if symbols else "ALL"
+                sym = "_".join(getattr(args, "universe_list", []) or []) or "ALL"
             except Exception:
                 sym = "ALL"
             args.log_file = f"logs/paper_live_{sym}_{day}.jsonl"
