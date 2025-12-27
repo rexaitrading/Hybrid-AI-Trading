@@ -191,7 +191,11 @@ def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", por
 
         if px is None:
           raise RuntimeError(f"ib_snapshot_missing_price: {sym}")
-        out[str(sym).upper()] = float(px)
+        # Fail-closed: reject NaN/<=0 prices (forces caller fallback)
+        fpx = float(px)
+        if math.isnan(fpx) or fpx <= 0.0:
+          raise RuntimeError(f"ib_snapshot_bad_price: {sym}={fpx}")
+        out[str(sym).upper()] = fpx
       return out
     finally:
       try:
