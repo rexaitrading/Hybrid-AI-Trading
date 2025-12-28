@@ -5,6 +5,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
 . (Join-Path (Split-Path -Parent $PSCommandPath) "RepoRoot.ps1")
+if(-not (Get-Command Get-RepoRoot -ErrorAction SilentlyContinue)){
+  throw "RepoRoot.ps1 did not load Get-RepoRoot (fail-closed)"
+}
 $repoRoot = Get-RepoRoot
 # -----------------------------
 # Run-once-per-day stamp (avoid duplicate spam)
@@ -62,6 +65,7 @@ try{
 
 Write-Host "[DAILY-OPS] DONE (paper-locked)" -ForegroundColor Green
 exit 0
+
 
 
 
