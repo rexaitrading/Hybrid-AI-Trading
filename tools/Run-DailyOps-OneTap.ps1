@@ -4,10 +4,8 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
-
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
-
-
+. (Join-Path (Split-Path -Parent $PSCommandPath) "RepoRoot.ps1")
+$repoRoot = Get-RepoRoot
 # -----------------------------
 # Run-once-per-day stamp (avoid duplicate spam)
 # -----------------------------
@@ -64,6 +62,8 @@ try{
 
 Write-Host "[DAILY-OPS] DONE (paper-locked)" -ForegroundColor Green
 exit 0
+
+
 
 
 
