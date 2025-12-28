@@ -53,17 +53,18 @@ try{
 # Write stamp (only after success)
 try{
   $stampObj = [ordered]@{
-    as_of_date = $today
-    ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
-    symbol    = "NVDA"
-    mode      = "paper_locked"
-  } | ConvertTo-Json -Depth 5
+  as_of_date = $today
+  ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
+  symbol     = "NVDA"
+  mode       = "paper_locked"
+} | ConvertTo-Json -Depth 5
   $enc = New-Object System.Text.UTF8Encoding($false)
   [System.IO.File]::WriteAllText($stamp, (($stampObj -replace "`r`n","`n") + "`n"), $enc)
 }catch{ }
 
 Write-Host "[DAILY-OPS] DONE (paper-locked)" -ForegroundColor Green
 exit 0
+
 
 
 
