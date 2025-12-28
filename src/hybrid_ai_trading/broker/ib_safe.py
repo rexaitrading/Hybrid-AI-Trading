@@ -16,13 +16,25 @@ def _env(name: str) -> str:
         return ""
     return str(v).strip()
 
-def _is_live() -> bool:
-    # Live means explicitly HAT_IS_PAPER=0. Missing/blank => NOT live (fail-closed).
+def _is_live(ctx: RunContext | None = None) -> bool:
+    """ctx-first live detection; env fallback (fail-closed)."""
+    try:
+        if ctx is not None:
+            m = str(getattr(ctx, "mode", "") or "").lower()
+            if m == "live":
+                return True
+            ip = getattr(ctx, "is_paper", None)
+            if ip is False:
+                return True
+            if ip is True:
+                return False
+    except Exception:
+        pass
     return _env("HAT_IS_PAPER") == "0"
 
-def _assert_live_allowed() -> None:
+def _assert_live_allowed(ctx: RunContext | None = None) -> None:
     # Block live trading when HAT_LIVE_DISABLED=1 unless explicit break-glass confirm is provided.
-    if not _is_live():
+    if not _is_live(ctx):
         return
     # HARD BLOCK: no live orders on weekends (fail-closed)
     import datetime as _dt
@@ -45,9 +57,6 @@ from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 # -----------------------------
 # Live/paper detection + symbol
 # -----------------------------
-def _is_live() -> bool:
-    return str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
-
 def _infer_symbol(contract: Any) -> Optional[str]:
     # Best-effort: supports ib_insync Contract-like objects + stubs used in tests.
     for attr in ("symbol", "localSymbol"):
@@ -80,9 +89,7 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
         raise TypeError(f"ib_place_order_chokepoint expected 2 or 3 args after ib, got {len(args)}")
 
 
-    # HARD paper-only safety (blocks accidental live)
-    _assert_live_allowed()
-    # Infer symbol once
+    # HARD paper-only safety (blocks accidental live)    _assert_live_allowed(ctx)# Infer symbol once
     sym = None
     try:
         sym = str(getattr(contract, "symbol", "") or "").upper().strip()
@@ -95,18 +102,18 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
             sym = None
 
     # Enforce Block-G (single gate)
-    if _is_live():
+    if _is_live(ctx):
         if sym in ("NVDA", "SPY", "QQQ"):
             require_blockg_ready_for_live(sym)
 
             require_nvda_live_stamp(sym)
     # Place order
     try:
-        if _is_live() and sym == "NVDA":
+        if _is_live(ctx) and sym == "NVDA":
             assert_nvda_live_ready()
         return ib.placeOrder(order_id, contract, order)
     except TypeError:
-        if _is_live() and sym == "NVDA":
+        if _is_live(ctx) and sym == "NVDA":
             assert_nvda_live_ready()
         return ib.placeOrder(contract, order)
 def retry(
