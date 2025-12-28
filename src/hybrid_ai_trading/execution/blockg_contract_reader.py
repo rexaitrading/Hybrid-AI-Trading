@@ -30,3 +30,12 @@ def symbol_ready(contract: Dict[str, Any], symbol: str) -> bool:
     key = f"{str(symbol).strip().lower()}_blockg_ready"
     v = contract.get(key, False)
     return bool(v)
+
+def require_blockg_ready_for_live_symbol(symbol: str) -> None:
+    """
+    Back-compat shim for execution_engine_phase5_guard.py.
+    Fail-closed: if contract missing/unreadable or symbol not ready, raise RuntimeError.
+    """
+    c = read_contract()
+    if not symbol_ready(c, symbol):
+        raise RuntimeError(f"BLOCK-G DENY (live): {str(symbol).upper()}_blockg_ready!=True")

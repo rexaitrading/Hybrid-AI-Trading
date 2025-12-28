@@ -4,27 +4,21 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Dict
-
-
 class BlockGNotReady(RuntimeError):
     pass
-
 
 def _repo_root() -> Path:
     # src/hybrid_ai_trading/execution/blockg_contract.py -> repo root
     return Path(__file__).resolve().parents[3]
 
-
 def is_paper_env() -> bool:
     return os.getenv("HAT_IS_PAPER", "1").strip() == "1"
-
 
 def blockg_status_path() -> Path:
     p = os.getenv("HAT_BLOCKG_STATUS_PATH", "").strip()
     if p:
         return Path(p)
     return _repo_root() / "logs" / "blockg_status_stub.json"
-
 
 def read_blockg_status() -> Dict[str, Any]:
     fp = blockg_status_path()
@@ -34,7 +28,6 @@ def read_blockg_status() -> Dict[str, Any]:
         return json.loads(fp.read_bytes().decode("utf-8-sig"))  # tolerate UTF-8 BOM
     except Exception:
         return {"nvda_blockg_ready": False, "reasons_not_ready": ["blockg_status_unreadable"]}
-
 
 def ensure_symbol_blockg_ready(
     symbol: str,
@@ -74,7 +67,6 @@ def ensure_symbol_blockg_ready(
     if not ok:
         reasons = st.get("reasons_not_ready", [])
         raise BlockGNotReady(f"BLOCK-G DENY (live): {k}!=True reasons={reasons}")
-
 
 def assert_nvda_live_ready() -> None:
     # Back-compat wrapper used by order path patches
