@@ -185,11 +185,6 @@ def main() -> None:
     summary = {
         "as_of_date": as_of,
         "phase2_avg_cost_bps": avg_cost_bps,
-                bool(blockg.get("nvda_blockg_ready", False)),
-                bool(blockg.get("spy_blockg_ready", False)),
-                bool(blockg.get("qqq_blockg_ready", False)),
-                bool(ph.get("ok", False)),
-                str(ph.get("reason", "")),
         "phase5_realized_pnl_by_symbol": pnl_by_sym,
         "phase5_pnl_source": pnl_source,
         "gatescore_by_symbol": gs_by_sym,
