@@ -39,9 +39,45 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
+
+# --- Effective as_of_date policy (weekend carry-forward) ---
+$TODAY_CAL = (Get-Date).ToString("yyyy-MM-dd")
+$dow = (Get-Date).DayOfWeek
+$isWeekend = ($dow -eq "Saturday" -or $dow -eq "Sunday")
+$dates = New-Object System.Collections.Generic.List[string]
+try {
+  $gs = Join-Path $logsDir "gatescore_daily_summary.csv"
+  if(Test-Path -LiteralPath $gs){
+    $d = (Import-Csv $gs | ForEach-Object { $_.as_of_date } | Sort-Object | Select-Object -Last 1)
+    if($d){ $dates.Add(($d+"").Trim()) }
+  }
+} catch {}
+try {
+  $p4 = Join-Path $logsDir "phase4_validation_passed.json"
+  if(Test-Path -LiteralPath $p4){
+    $j = (Get-Content -LiteralPath $p4 -Raw -Encoding utf8 | ConvertFrom-Json)
+    $d = (($j.as_of_date + "").Trim())
+    if($d){ $dates.Add($d) }
+  }
+} catch {}
+
+$EFFECTIVE_ASOF = $TODAY_CAL
+if($isWeekend -and $dates.Count -gt 0){
+  $EFFECTIVE_ASOF = ($dates | Sort-Object | Select-Object -Last 1)
+}
+if(-not $EFFECTIVE_ASOF){ $EFFECTIVE_ASOF = $TODAY_CAL }
+
+# IMPORTANT: unify variable names used later in this script
+$today = $EFFECTIVE_ASOF
+$asOfDate = $today
+# --- end effective as_of_date policy ---
+
+
+
 if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
-$today = (Get-Date).ToString("yyyy-MM-dd")  # LOCAL trading day (America/Vancouver)
+$today = $EFFECTIVE_ASOF  # LOCAL trading day (weekend carry-forward)
+$asOfDate = $today
 # ---- GateScore session date (weekend-safe): derive from pnl summary ----
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 $statusPath = Join-Path $logsDir "blockg_status_stub.json"
