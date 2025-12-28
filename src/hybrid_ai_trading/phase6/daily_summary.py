@@ -151,10 +151,10 @@ def main() -> None:
 
     trade_csvs = [Path(x.strip()) for x in str(args.phase5_trade_csvs).split(",") if x.strip()]
     trade_csvs = [p for p in trade_csvs if p.exists()]
-
+    # If no trade CSVs, we still produce a report using GateScore proxy (no-trade-day).
+    # Keep fail-closed on GateScore/Phase2 inputs instead.
     if not trade_csvs:
-        raise SystemExit("phase6: no Phase5 trade CSVs found (fail-closed)")
-
+        trade_csvs = []
     ph2j = _read_json(ph2)
     avg_cost_bps = float(ph2j.get("avg_cost_bps", 0.0) or 0.0)
     if avg_cost_bps <= 0:
