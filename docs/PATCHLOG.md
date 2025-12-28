@@ -166,3 +166,9 @@ tools/Disarm-NVDA-Live.ps1
 - GitHub Checks: CI Risk-First + ci-gates ✅ (PR #42)
 - Local spot-check: tests/execution/test_nvda_live_stamp_gate.py ✅
 
+## 2025-12-28 11:17 — Final Lock + CI lock
+
+- Added tools/Run-FinalLock.ps1 (WEEKEND carry-forward safe, CI mode supported)
+- Added Phase-6 readiness post-merge of blockg_status
+- Added CI workflow: .github/workflows/ci-final-lock.yml running Run-FinalLock -Mode CI on PR/push
+- Tag: FINAL_LOCK_20251228

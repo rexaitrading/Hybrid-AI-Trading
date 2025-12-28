@@ -7,3 +7,10 @@
 ## Phase-7 (Portfolio Optimizer)
 - Stub exists (fail-closed when enabled). Tests enforce safety.
 
+## Next Perfect Steps (Lock Roadmap)
+
+- Lock-1: CI FinalLock smoke (Run-FinalLock -Mode CI) ✅
+- Lock-2: Unify RunContext (ctx authoritative, env fallback only)
+- Lock-3: Weekday PreMarket one-tap runs Phase4+Risk tests before FinalLock
+- Lock-4: Live guard integration test (deny live orders when Block-G not ready)
+- Lock-5: Docs lock (this section)
