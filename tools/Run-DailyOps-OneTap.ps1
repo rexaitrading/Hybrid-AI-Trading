@@ -12,7 +12,7 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 # Run-once-per-day stamp (avoid duplicate spam)
 # -----------------------------
 $stamp = Join-Path $repoRoot "logs\daily_ops_onetap_last_ok.json"
-$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")  # boot value; later replaced by Phase6 as_of_date
 try{
   if(Test-Path -LiteralPath $stamp){
     $j = Get-Content -LiteralPath $stamp -Raw -Encoding utf8 | ConvertFrom-Json
@@ -43,11 +43,20 @@ if([string]::IsNullOrWhiteSpace($env:HAT_IBG_STATUS_PATH)){
 
 # -------- Phase-6 state + CSV + Notion upsert --------
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Run-Phase6OneTap-Notion.ps1")
+# Derive "today" from Phase6 output (single source of truth)
+try{
+  $p6 = Get-Content -LiteralPath (Join-Path $repoRoot "logs\phase6_portfolio_state.json") -Raw -Encoding utf8 | ConvertFrom-Json
+  if($p6 -and $p6.PSObject.Properties.Name -contains "as_of_date"){
+    $today = ([string]$p6.as_of_date).Trim()
+  }
+}catch{ }
 # Write stamp (only after success)
 try{
   $stampObj = [ordered]@{
     as_of_date = $today
     ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
+    symbol    = "NVDA"
+    mode      = "paper_locked"
   } | ConvertTo-Json -Depth 5
   $enc = New-Object System.Text.UTF8Encoding($false)
   [System.IO.File]::WriteAllText($stamp, (($stampObj -replace "`r`n","`n") + "`n"), $enc)
@@ -55,6 +64,8 @@ try{
 
 Write-Host "[DAILY-OPS] DONE (paper-locked)" -ForegroundColor Green
 exit 0
+
+
 
 
 
