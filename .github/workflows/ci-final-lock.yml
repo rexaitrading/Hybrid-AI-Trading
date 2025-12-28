@@ -1,0 +1,32 @@
+name: CI Final Lock Smoke
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  final-lock-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Create venv + install
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+          if (Test-Path .\requirements.txt) { .\.venv\Scripts\python.exe -m pip install -r .\requirements.txt }
+          .\.venv\Scripts\python.exe -m pip install -e .
+
+      - name: Run FinalLock CI
+        shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          Set-StrictMode -Version Latest
+          chcp 65001 | Out-Null
+          .\tools\Run-FinalLock.ps1 -Mode CI -Symbols NVDA -SkipNotionExport

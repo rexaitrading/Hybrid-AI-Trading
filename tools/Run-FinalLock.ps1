@@ -77,6 +77,15 @@ $Global:FINAL_ASOF = $asof
 # Enforce mode sanity
 if(($Mode -eq "PREMARKET") -and (IsWeekend)){
   Fail-Closed "premarket_on_weekend_use_mode_weekend" @{ today=$today }
+
+# CI mode: deterministic offline smoke (no IBG, no Notion, paper-only)
+if($Mode -eq "CI"){
+  $SkipNotionExport = $true
+  $StrictPhase7 = $false
+  $env:HAT_IS_PAPER = "1"
+  # Do not require IBG health in CI
+}
+
 }
 
 # Optional opt-in for SPY/QQQ readiness computation
@@ -90,12 +99,15 @@ if($EnableSpyQqq){
 Remove-Item Env:\HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
 
 # 1) IBG health (observe-only gate)
+if($Mode -ne "CI"){
 $ibgTool = Join-Path $toolsDir "Get-IBGHealth.ps1"
 if(Test-Path -LiteralPath $ibgTool){
   $ibg = & $ibgTool
   if(-not $ibg.ok){
     Fail-Closed "ibg_not_healthy" @{ reasons=$ibg.reasons; status_path=$ibg.status_path } 3
   }
+}
+
 }
 
 # 2) Block-G check (build + verify)
@@ -114,6 +126,22 @@ if($rc -ne 0){
 
 # WEEKEND mode: use Block-G effective as_of_date (carry-forward) for Phase-6/7 steps
 if($Mode -eq "WEEKEND"){
+  try {
+    $bgPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
+    if(Test-Path -LiteralPath $bgPath){
+      $bg = Get-Content -LiteralPath $bgPath -Raw -Encoding utf8 | ConvertFrom-Json
+      $eff = (($bg.as_of_date + "").Trim())
+      if(-not [string]::IsNullOrWhiteSpace($eff)){
+        $asof = $eff
+        $Global:FINAL_ASOF = $asof
+      }
+    }
+  } catch { }
+}
+
+
+# CI mode: align as_of_date to Block-G effective as_of_date (carry-forward safe)
+if($Mode -eq "CI"){
   try {
     $bgPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
     if(Test-Path -LiteralPath $bgPath){
