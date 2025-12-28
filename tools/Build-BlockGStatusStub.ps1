@@ -468,7 +468,7 @@ $payload.nvda_blockg_ready =
   [bool]$payload.gatescore_fresh_today
 
 # SPY / QQQ computed only when explicitly enabled (fail-closed by default)
-$enableSpyQqq = (__import__("os").environ.get("HAT_BLOCKG_ENABLE_SPYQQQ","0").strip() == "1")
+$enableSpyQqq = ($env:HAT_BLOCKG_ENABLE_SPYQQQ -eq "1")
 if($enableSpyQqq){
   $payload.spy_blockg_ready =
     [bool]$payload.phase23_health_ok_today -and
