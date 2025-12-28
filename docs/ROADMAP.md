@@ -14,3 +14,5 @@
 - Lock-3: Weekday PreMarket one-tap runs Phase4+Risk tests before FinalLock
 - Lock-4: Live guard integration test (deny live orders when Block-G not ready)
 - Lock-5: Docs lock (this section)
+
+- Hygiene: clear Dependabot alerts (7 vulns reported 2025-12-28)
