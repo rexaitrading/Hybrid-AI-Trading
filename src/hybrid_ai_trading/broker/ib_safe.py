@@ -24,6 +24,10 @@ def _assert_live_allowed() -> None:
     # Block live trading when HAT_LIVE_DISABLED=1 unless explicit break-glass confirm is provided.
     if not _is_live():
         return
+    # HARD BLOCK: no live orders on weekends (fail-closed)
+    import datetime as _dt
+    if _dt.datetime.now().weekday() >= 5:
+        raise RuntimeError("LIVE BLOCKED: weekend (no live orders allowed)")
     if _env("HAT_LIVE_DISABLED") == "1":
         token = _env("HAT_CONFIRM_LIVE")
         if token != "I_UNDERSTAND_THIS_SENDS_LIVE_ORDERS":
