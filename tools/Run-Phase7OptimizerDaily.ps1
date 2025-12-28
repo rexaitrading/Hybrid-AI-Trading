@@ -11,6 +11,7 @@ param(
 )
 
 Set-StrictMode -Version Latest
+$env:HAT_PHASE7_REQUIRE_BLOCKG = "0"  # offline optimizer mode (no IBG dependency)
 $ErrorActionPreference = "Stop"
 
 function Write-Utf8NoBom {

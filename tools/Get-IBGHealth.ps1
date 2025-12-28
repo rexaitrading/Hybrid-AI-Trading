@@ -7,6 +7,16 @@ param(
 $ok = $true
 $reasons = New-Object System.Collections.Generic.List[string]
 
+# --- StatusPath fallback (process env -> user env -> default path) ---
+if([string]::IsNullOrWhiteSpace($StatusPath)){
+  $u = [System.Environment]::GetEnvironmentVariable("HAT_IBG_STATUS_PATH","User")
+  if(-not [string]::IsNullOrWhiteSpace($u)){
+    $StatusPath = $u
+  } else {
+    $StatusPath = "C:\IBC\status\ibg_status.json"
+  }
+}
+
 if([string]::IsNullOrWhiteSpace($StatusPath)){
   $ok = $false; $reasons.Add("missing_env:HAT_IBG_STATUS_PATH")
 } elseif(-not (Test-Path -LiteralPath $StatusPath)){

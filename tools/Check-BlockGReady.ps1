@@ -19,7 +19,11 @@ if($Quiet){ $env:HAT_BLOCKG_QUIET = "1" }
 # HAT_IBG_HEALTH_GATE_MIN (exit 3; observe-only; no kills)
 $ibgTool = Join-Path $toolsDir "Get-IBGHealth.ps1"
 if(Test-Path -LiteralPath $ibgTool){
-  $ibg = & $ibgTool
+  $p = [string]$env:HAT_IBG_STATUS_PATH
+  if([string]::IsNullOrWhiteSpace($p)){
+    $p = [System.Environment]::GetEnvironmentVariable("HAT_IBG_STATUS_PATH","User")
+  }
+  $ibg = & $ibgTool -StatusPath $p
   if(-not $ibg.ok){ if(-not $Quiet){ Write-Host "[BLOCKG] IBG NOT HEALTHY" -ForegroundColor Red; Write-Host ($ibg.reasons -join "; ") -ForegroundColor Red }; exit 3 }
 }
 

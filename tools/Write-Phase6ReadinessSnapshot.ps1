@@ -10,12 +10,30 @@ $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
-$env:HAT_REPO_ROOT = $repoRoot
 $py = Join-Path $repoRoot ".venv\Scripts\python.exe"
 if(-not (Test-Path -LiteralPath $py)){ $py = "python" }
 
-# Build a temp python runner (quoting-proof)
-$tmp = Join-Path $env:TEMP ("hat_phase6_readiness_" + [guid]::NewGuid().ToString("N") + ".py")
+# Read cfg from env (JSON). Default {}.
+$cfgJson = ($env:HAT_PORTFOLIO_HALT_CFG_JSON + "")
+if([string]::IsNullOrWhiteSpace($cfgJson)){ $cfgJson = "{}" }
+
+# Load portfolio metrics snapshot deterministically (PowerShell side)
+$metricsPath = Join-Path $repoRoot "logs\phase6_portfolio_metrics.json"
+$metricsJson = "{}"
+if(Test-Path -LiteralPath $metricsPath){
+  $metricsJson = Get-Content -LiteralPath $metricsPath -Raw -Encoding utf8
+  if([string]::IsNullOrWhiteSpace($metricsJson)){ $metricsJson = "{}" }
+}
+
+# Temp python runner + temp metrics file (no quoting traps)
+$tmpPy = Join-Path $env:TEMP ("hat_phase6_readiness_" + [guid]::NewGuid().ToString("N") + ".py")
+$tmpMetrics = Join-Path $env:TEMP ("hat_phase6_metrics_" + [guid]::NewGuid().ToString("N") + ".json")
+
+# Write temp metrics (UTF-8 no BOM)
+[System.IO.File]::WriteAllText($tmpMetrics, ($metricsJson -replace "`r`n","`n").TrimEnd() + "`n", (New-Object System.Text.UTF8Encoding($false)))
+
+# Point python to this explicit metrics file
+$env:HAT_PHASE6_PORTFOLIO_METRICS_PATH = $tmpMetrics
 
 $pyLines = @(
   'import json, os',
@@ -28,28 +46,30 @@ $pyLines = @(
   'except Exception:',
   '    cfg = {}',
   '',
-  'repo_root = Path(__file__).resolve().parents[3]',
-  'mp = repo_root / "logs" / "phase6_portfolio_metrics.json"',
+  'mp = os.environ.get("HAT_PHASE6_PORTFOLIO_METRICS_PATH", "") or ""',
   'metrics = {}',
   'try:',
-  '    if mp.exists():',
-  '        metrics = json.loads(mp.read_text(encoding="utf-8-sig"))',
-  '        if not isinstance(metrics, dict):',
-  '            metrics = {}',
+  '    if mp:',
+  '        p = Path(mp)',
+  '        if p.exists():',
+  '            metrics = json.loads(p.read_text(encoding="utf-8-sig"))',
+  '            if not isinstance(metrics, dict):',
+  '                metrics = {}',
   'except Exception:',
   '    metrics = {}',
   '',
   'p = w(portfolio_metrics=metrics, portfolio_cfg=cfg)',
   'print(str(p))'
 )
-
 $pyCode = ($pyLines -join "`n") + "`n"
-[System.IO.File]::WriteAllText($tmp, $pyCode, (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::WriteAllText($tmpPy, $pyCode, (New-Object System.Text.UTF8Encoding($false)))
 
 try {
-  & $py $tmp
+  & $py $tmpPy
   exit $LASTEXITCODE
 }
 finally {
-  Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $tmpPy -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $tmpMetrics -Force -ErrorAction SilentlyContinue
+  Remove-Item Env:\HAT_PHASE6_PORTFOLIO_METRICS_PATH -ErrorAction SilentlyContinue
 }
