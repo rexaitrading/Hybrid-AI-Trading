@@ -29,7 +29,12 @@ def build_readiness_snapshot(
         dec = evaluate_portfolio_halt(metrics=pm, cfg=pcfg)
         dec_obj = {"ok": bool(dec.ok), "reason": str(dec.reason), "details": (dec.details or None)}
     except Exception as e:
-        dec_obj = {"ok": False, "reason": f"portfolio_halt_eval_error:{e}", "details": None}
+        msg = str(e)
+        if "portfolio_halt_metrics_missing" in msg:
+            dec_obj = {"ok": False, "reason": "portfolio_halt_metrics_missing", "details": None}
+        else:
+            dec_obj = {"ok": False, "reason": f"portfolio_halt_eval_error:{e}", "details": None}
+
 
     return {
         "blockg_status": dict(st),
