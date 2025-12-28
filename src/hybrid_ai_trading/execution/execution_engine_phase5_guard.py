@@ -117,12 +117,19 @@ def place_order_phase5_with_guard(
             cfg = {}
         # default behavior: disabled unless explicitly enabled
         if bool(cfg.get("enabled", False)):
-            metrics = {}
+            # Fail-closed when enabled: metrics MUST be available.
+            metrics = None
             try:
-                if hasattr(engine, "portfolio_tracker"):
-                    metrics = dict(engine.portfolio_tracker.report())
+                if hasattr(engine, "portfolio_tracker") and engine.portfolio_tracker is not None:
+                    m = engine.portfolio_tracker.report()
+                    if isinstance(m, dict) and len(m) > 0:
+                        metrics = dict(m)
             except Exception:
-                metrics = {}
+                metrics = None
+
+            if not isinstance(metrics, dict) or len(metrics) == 0:
+                raise RuntimeError("portfolio_halt_metrics_missing")
+
             require_portfolio_halt_ok(metrics=metrics, cfg=cfg)
     except Exception as e:
         # Fail-closed: block trade if portfolio halt trips or metrics unavailable when enabled
