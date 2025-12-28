@@ -79,3 +79,63 @@ def _ctx_from_dict(d: Dict[str, Any]) -> RunContext:
         mode=mode,
         as_of_date=as_of_date,
     )
+
+def get_ctx(
+    symbol: str = "NVDA",
+    meta: Any = None,
+    mode_hint: Optional[str] = None,
+    path: Optional[str] = None,
+    allow_missing: bool = True,
+) -> RunContext:
+    """
+    Unified RunContext acquisition (single source of truth).
+    Priority:
+      1) RunContext JSON via load_run_context (premarket-built)
+      2) If missing and allow_missing=True: env-driven safe fallback (paper by default)
+
+    - Never throws when allow_missing=True (fail-closed).
+    - symbol/regime/mode may be hinted from meta for convenience.
+    """
+    # hints
+    try:
+        if isinstance(meta, dict):
+            if not symbol:
+                symbol = str(meta.get("symbol") or "NVDA")
+            if mode_hint is None and meta.get("mode"):
+                mode_hint = str(meta.get("mode"))
+    except Exception:
+        pass
+
+    # 1) try load from JSON (strict premarket contract)
+    try:
+        ctx = load_run_context(path=path)
+        # best-effort override symbol if caller asked (do NOT change mode/is_paper)
+        try:
+            if symbol and str(ctx.symbol).upper() != str(symbol).upper():
+                return RunContext.from_env_and_args(
+                    symbol=str(symbol),
+                    regime=str(getattr(ctx, "regime", "unknown")),
+                    mode=str(getattr(ctx, "mode", "paper")),
+                    is_paper=bool(getattr(ctx, "is_paper", True)),
+                    as_of_date=str(getattr(ctx, "as_of_date", "") or None),
+                )
+        except Exception:
+            pass
+        return ctx
+    except Exception:
+        if not allow_missing:
+            raise
+
+    # 2) fail-closed fallback
+    try:
+        regime = "unknown"
+        if isinstance(meta, dict):
+            regime = str(meta.get("regime", regime))
+        return RunContext.from_env_and_args(
+            symbol=str(symbol or "NVDA"),
+            regime=str(regime),
+            mode=(mode_hint if mode_hint else None),
+        )
+    except Exception:
+        # ultimate fail-closed: paper
+        return RunContext.from_env_and_args(symbol=str(symbol or "NVDA"), regime="unknown", mode="paper")
