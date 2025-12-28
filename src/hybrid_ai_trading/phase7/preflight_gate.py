@@ -2,6 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+
+# --- Phase-7 preflight mode gate ---
+# For optimizer daily (offline analytics), allow bypassing per-symbol Block-G readiness.
+# Live/order paths must still enforce Block-G elsewhere (execution guards).
+def _phase7_require_blockg() -> bool:
+    v = os.getenv("HAT_PHASE7_REQUIRE_BLOCKG", "1").strip().lower()
+    return v not in ("0","false","no","off")
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
@@ -61,16 +68,18 @@ def ensure_phase7_ready(*, required_symbols: Iterable[str] = ("NVDA",), as_of_da
     if missing:
         raise RuntimeError(f"PHASE7_PREFLIGHT_DENY: gatescore_missing_symbols missing={missing}")
 
-    # blockg checks for known symbols (strict for NVDA; optional for SPY/QQQ if asked)
-    for s in req_syms:
-        if s == "NVDA":
-            if not bool(blockg.get("nvda_blockg_ready", False)):
-                raise RuntimeError("PHASE7_PREFLIGHT_DENY: blockg_nvda_not_ready")
-        elif s == "SPY":
-            if "spy_blockg_ready" in blockg and not bool(blockg.get("spy_blockg_ready", False)):
-                raise RuntimeError("PHASE7_PREFLIGHT_DENY: blockg_spy_not_ready")
-        elif s == "QQQ":
-            if "qqq_blockg_ready" in blockg and not bool(blockg.get("qqq_blockg_ready", False)):
-                raise RuntimeError("PHASE7_PREFLIGHT_DENY: blockg_qqq_not_ready")
+    if _phase7_require_blockg():
+        # blockg checks for known symbols (strict for NVDA; optional for SPY/QQQ if asked)
+        for s in req_syms:
+            if s == "NVDA":
+                if not bool(blockg.get("nvda_blockg_ready", False)):
+                    raise RuntimeError("PHASE7_PREFLIGHT_DENY: blockg_nvda_not_ready")
+            elif s == "SPY":
+                if "spy_blockg_ready" in blockg and not bool(blockg.get("spy_blockg_ready", False)):
+                    raise RuntimeError("PHASE7_PREFLIGHT_DENY: blockg_spy_not_ready")
+            elif s == "QQQ":
+                if "qqq_blockg_ready" in blockg and not bool(blockg.get("qqq_blockg_ready", False)):
+                    raise RuntimeError("PHASE7_PREFLIGHT_DENY: blockg_qqq_not_ready")
+    
 
     return d
