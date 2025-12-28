@@ -1,3 +1,4 @@
+from hybrid_ai_trading.phase7.preflight_gate import ensure_phase7_ready
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 

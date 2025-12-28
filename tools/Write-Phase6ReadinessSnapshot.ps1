@@ -10,6 +10,7 @@ $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+$env:HAT_REPO_ROOT = $repoRoot
 $py = Join-Path $repoRoot ".venv\Scripts\python.exe"
 if(-not (Test-Path -LiteralPath $py)){ $py = "python" }
 
