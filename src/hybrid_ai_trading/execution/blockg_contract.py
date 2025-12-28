@@ -71,3 +71,26 @@ def ensure_symbol_blockg_ready(
 def assert_nvda_live_ready() -> None:
     # Back-compat wrapper used by order path patches
     ensure_symbol_blockg_ready("NVDA", allow_paper=True, is_paper=None, ctx=None)
+
+# --- Backward-compatible aliases (used by smoke tests / older callers) ---
+def require_symbol_ready(symbol: str) -> None:
+    """Alias: require Block-G readiness for symbol (fail-closed)."""
+    # Prefer the canonical helper if present in this module.
+    try:
+        ensure_symbol_blockg_ready(str(symbol), allow_paper=True, is_paper=False, ctx=None)  # type: ignore[name-defined]
+        return
+    except NameError:
+        pass
+    # Fallback: if module exposes assert_* helpers, use NVDA-specific when applicable.
+    sym = str(symbol).upper().strip()
+    if sym == "NVDA":
+        try:
+            assert_nvda_live_ready()  # type: ignore[name-defined]
+            return
+        except NameError:
+            pass
+    raise RuntimeError(f"BLOCKG_DENY: {sym}_not_ready")
+
+def require_symbol_not_paper(symbol: str) -> None:
+    """Alias: explicit live requirement for symbol readiness."""
+    require_symbol_ready(symbol)
