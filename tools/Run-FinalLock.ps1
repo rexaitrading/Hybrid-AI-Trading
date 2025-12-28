@@ -111,6 +111,22 @@ if($rc -ne 0){
   Fail-Closed "blockg_not_ready" @{ rc=$rc; symbol=$targetSym } 2
 }
 
+
+# WEEKEND mode: use Block-G effective as_of_date (carry-forward) for Phase-6/7 steps
+if($Mode -eq "WEEKEND"){
+  try {
+    $bgPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
+    if(Test-Path -LiteralPath $bgPath){
+      $bg = Get-Content -LiteralPath $bgPath -Raw -Encoding utf8 | ConvertFrom-Json
+      $eff = (($bg.as_of_date + "").Trim())
+      if(-not [string]::IsNullOrWhiteSpace($eff)){
+        $asof = $eff
+        $Global:FINAL_ASOF = $asof
+      }
+    }
+  } catch { }
+}
+
 # 3) Phase-6 readiness snapshot (must succeed)
 $w6 = Join-Path $toolsDir "Write-Phase6ReadinessSnapshot.ps1"
 if(-not (Test-Path -LiteralPath $w6)){ Fail-Closed "missing_Write-Phase6ReadinessSnapshot" @{ path=$w6 } 2 }
