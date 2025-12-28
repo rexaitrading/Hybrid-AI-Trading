@@ -7,18 +7,17 @@ from typing import Any, Dict, Optional, Tuple
 
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
+from hybrid_ai_trading.runtime.run_context_reader import get_ctx
+
 def _ensure_ctx(meta0: dict, symbol: str) -> dict:
     """
     Attach RunContext into meta0['ctx'] if missing.
+    Single source of truth: runtime.run_context_reader.get_ctx()
     Must NOT throw; fail-closed by leaving ctx unset.
     """
     try:
         if isinstance(meta0, dict) and meta0.get("ctx") is None:
-            meta0["ctx"] = RunContext.from_env_and_args(
-                symbol=str(symbol),
-                regime=str(meta0.get("regime", "unknown")),
-                mode=None,
-            )
+            meta0["ctx"] = get_ctx(symbol=str(symbol), meta=meta0, allow_missing=True)
     except Exception:
         pass
     return meta0
@@ -98,6 +97,7 @@ class IBKRClient(BrokerClient):
             meta0 = _ensure_ctx(meta0, symbol)
             is_paper = bool(meta0.get("is_paper", True))
         except Exception:
+            meta0 = meta or {}
             is_paper = True
         try:
             env_flag = str(__import__("os").environ.get("HAT_IS_PAPER", "")).strip()
@@ -223,3 +223,5 @@ class KrakenClient(BrokerClient):
             resp.get("id") or resp.get("txid") or resp.get("clientOrderId") or "unknown"
         )
         return oid, {"raw": resp}
+
+
