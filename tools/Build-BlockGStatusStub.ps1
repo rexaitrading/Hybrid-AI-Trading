@@ -467,9 +467,34 @@ $payload.nvda_blockg_ready =
   [bool]$payload.gatescore_ok_today      -and
   [bool]$payload.gatescore_fresh_today
 
-# SPY / QQQ disabled by default (explicit opt-in only)
-$payload.spy_blockg_ready = $false
-$payload.qqq_blockg_ready = $false
+# SPY / QQQ computed only when explicitly enabled (fail-closed by default)
+$enableSpyQqq = (__import__("os").environ.get("HAT_BLOCKG_ENABLE_SPYQQQ","0").strip() == "1")
+if($enableSpyQqq){
+  $payload.spy_blockg_ready =
+    [bool]$payload.phase23_health_ok_today -and
+    [bool]$payload.ev_hard_daily_ok_today  -and
+    [bool]$payload.phase4_ok_today         -and
+    [bool]$payload.gatescore_fresh_today   -and
+    [bool]$payload.gatescore_recent_enough -and
+    [bool]$payload.gatescore_samples_ok    -and
+    [bool]$payload.gatescore_threshold_ok_today -and
+    [bool]$payload.gatescore_ok_today      -and
+    ([bool]$payload.gatescore_by_symbol.SPY.ok_today)
+
+  $payload.qqq_blockg_ready =
+    [bool]$payload.phase23_health_ok_today -and
+    [bool]$payload.ev_hard_daily_ok_today  -and
+    [bool]$payload.phase4_ok_today         -and
+    [bool]$payload.gatescore_fresh_today   -and
+    [bool]$payload.gatescore_recent_enough -and
+    [bool]$payload.gatescore_samples_ok    -and
+    [bool]$payload.gatescore_threshold_ok_today -and
+    [bool]$payload.gatescore_ok_today      -and
+    ([bool]$payload.gatescore_by_symbol.QQQ.ok_today)
+} else {
+  $payload.spy_blockg_ready = $false
+  $payload.qqq_blockg_ready = $false
+}
 
 # Rebuild reasons cleanly (no stale state allowed)
 $rn = @()
