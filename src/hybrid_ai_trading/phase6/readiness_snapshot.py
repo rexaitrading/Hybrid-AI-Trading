@@ -23,6 +23,9 @@ def build_readiness_snapshot(
 
     # Portfolio halt decision (Notion-friendly)
     try:
+        # Fail-closed: if halt is enabled, metrics must be present
+        if bool(pcfg.get("enabled", False)) and (not isinstance(pm, dict) or len(pm) == 0):
+            raise RuntimeError("portfolio_halt_metrics_missing")
         dec = evaluate_portfolio_halt(metrics=pm, cfg=pcfg)
         dec_obj = {"ok": bool(dec.ok), "reason": str(dec.reason), "details": (dec.details or None)}
     except Exception as e:

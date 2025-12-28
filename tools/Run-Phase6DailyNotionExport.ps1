@@ -19,6 +19,9 @@ if([string]::IsNullOrWhiteSpace($AsOfDate)){
 }
 
 # 1) Readiness snapshot (expects HAT_PORTFOLIO_HALT_CFG_JSON optionally set by caller)
+# 0.5) Portfolio metrics snapshot (required when portfolio_halt enabled)
+& (Join-Path $repoRoot "tools\Write-Phase6PortfolioMetricsSnapshot.ps1")
+if($LASTEXITCODE -ne 0){ throw "Phase6 portfolio metrics snapshot failed rc=$LASTEXITCODE" }
 & (Join-Path $repoRoot "tools\Write-Phase6ReadinessSnapshot.ps1")
 if($LASTEXITCODE -ne 0){ throw "Phase6 readiness snapshot failed rc=$LASTEXITCODE" }
 
