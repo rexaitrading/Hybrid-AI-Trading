@@ -10,6 +10,17 @@ $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+
+# Load Block-G status stub (single source of truth) and pass into readiness snapshot
+$blockgPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
+$blockgJson = "{}"
+if(Test-Path -LiteralPath $blockgPath){
+  $blockgJson = Get-Content -LiteralPath $blockgPath -Raw -Encoding utf8
+  if([string]::IsNullOrWhiteSpace($blockgJson)){ $blockgJson = "{}" }
+}
+$tmpBlockG = Join-Path $env:TEMP ("hat_blockg_" + [guid]::NewGuid().ToString("N") + ".json")
+[System.IO.File]::WriteAllText($tmpBlockG, ($blockgJson -replace "`r`n","`n").TrimEnd() + "`n", (New-Object System.Text.UTF8Encoding($false)))
+$env:HAT_PHASE6_BLOCKG_STATUS_PATH = $tmpBlockG
 $py = Join-Path $repoRoot ".venv\Scripts\python.exe"
 if(-not (Test-Path -LiteralPath $py)){ $py = "python" }
 
@@ -66,6 +77,27 @@ $pyCode = ($pyLines -join "`n") + "`n"
 
 try {
   & $py $tmpPy
+  # --- Post-merge: inject Block-G status stub into readiness snapshot (PowerShell-owned) ---
+  if($LASTEXITCODE -eq 0){
+    try {
+      $rsPath = Join-Path $repoRoot "logs\phase6_readiness_snapshot.json"
+      $bgPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
+      if(Test-Path -LiteralPath $rsPath -and Test-Path -LiteralPath $bgPath){
+        $rs = Get-Content -LiteralPath $rsPath -Raw -Encoding utf8 | ConvertFrom-Json
+        $bg = Get-Content -LiteralPath $bgPath -Raw -Encoding utf8 | ConvertFrom-Json
+        # overwrite / set blockg_status to the live stub
+        $rs | Add-Member -NotePropertyName "blockg_status" -NotePropertyValue $bg -Force
+        $json = ($rs | ConvertTo-Json -Depth 20)
+        # write UTF-8 no BOM + LF
+        $enc = New-Object System.Text.UTF8Encoding($false)
+        $json = ($json -replace "`r`n","`n").TrimEnd() + "`n"
+        [System.IO.File]::WriteAllText($rsPath, $json, $enc)
+      }
+    } catch {
+      # fail-closed: do not mask python errors, but do not crash readiness writer either
+    }
+  }
+  # --- end post-merge ---
   exit $LASTEXITCODE
 }
 finally {
