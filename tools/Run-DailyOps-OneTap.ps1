@@ -1,8 +1,8 @@
 [CmdletBinding()]
 param(
-  [switch]$Quiet,
-
+  [switch]$Quiet
 )
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
@@ -13,16 +13,22 @@ if(-not (Get-Command Get-RepoRoot -ErrorAction SilentlyContinue)){
 }
 $repoRoot = Get-RepoRoot
 
+$stamp  = Join-Path $repoRoot "logs\daily_ops_onetap_last_ok.json"
+$rcFile = Join-Path $repoRoot "logs\daily_ops_onetap_rc.txt"
+
 function Write-Step([string]$msg){
   if(-not $Quiet){ Write-Host $msg }
 }
 
-function Return-WithCode([int]$code){
+function Set-RC([int]$code){
   $global:LASTEXITCODE = $code
-  return
+  try {
+    $enc = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($rcFile, ("{0}`n" -f $code), $enc)
+  } catch { }
 }
-  return
-}function Invoke-PSFile {
+
+function Invoke-PSFile {
   [CmdletBinding()]
   param(
     [Parameter(Mandatory=$true)][string]$Path,
@@ -32,56 +38,48 @@ function Return-WithCode([int]$code){
   if(-not (Test-Path -LiteralPath $Path)){ throw "Missing file: $Path" }
 
   Write-Step ("[DAILY-OPS] -> {0}" -f $StepName)
-  if($Quiet){
-  & powershell -NoProfile -ExecutionPolicy Bypass -File $Path @Args 1>$null
-}else{
-  & powershell -NoProfile -ExecutionPolicy Bypass -File $Path @Args
-}
-  $rc = $LASTEXITCODE
 
+  if($Quiet){
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $Path @Args 1>$null
+  } else {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $Path @Args
+  }
+
+  $rc = $LASTEXITCODE
   if($rc -ne 0){
     throw ("DAILY_OPS_FAIL: {0} rc={1} file={2}" -f $StepName, $rc, $Path)
   }
-  return 0
 }
 
-# -----------------------------
-# Run-once-per-day stamp (avoid duplicate spam)
-# Only skip if last run was OK for same as_of_date
-# -----------------------------
-$stamp = Join-Path $repoRoot "logs\daily_ops_onetap_last_ok.json"
-$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")  # boot value; later replaced by Phase6 as_of_date
+# Default rc is fail unless we complete everything
+Set-RC 2
 
+# Run-once-per-day skip (only if last status=ok AND same as_of_date)
+$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 try{
   if(Test-Path -LiteralPath $stamp){
     $j = Get-Content -LiteralPath $stamp -Raw -Encoding utf8 | ConvertFrom-Json
     $last = ([string]$j.as_of_date).Trim()
     $status = ""
     if($j.PSObject.Properties.Name -contains "status"){ $status = ([string]$j.status).Trim() }
-
     if(($status -eq "ok") -and ($last -eq $today)){
       Write-Step ("[DAILY-OPS] already ran today (as_of_date={0}). Skipping." -f $today)
-      Return-WithCode 0
+      Set-RC 0
+      return
     }
   }
 }catch{ }
 
-# -----------------------------
 # HARD SAFETY: paper-only lock
-# -----------------------------
 $env:HAT_IS_PAPER="1"
 $env:HAT_LIVE_DISABLED="1"
 Remove-Item Env:HAT_CONFIRM_LIVE -ErrorAction SilentlyContinue
 
-# Ensure key envs are visible in this process
 if([string]::IsNullOrWhiteSpace($env:HAT_IBG_STATUS_PATH)){
   $u = [Environment]::GetEnvironmentVariable("HAT_IBG_STATUS_PATH","User")
   if(-not [string]::IsNullOrWhiteSpace($u)){ $env:HAT_IBG_STATUS_PATH = $u }
 }
 
-# -----------------------------
-# Execute steps (fail-closed)
-# -----------------------------
 $steps = [ordered]@{
   blockg_nvda = $false
   intel       = $false
@@ -107,8 +105,8 @@ try{
     }
   }catch{ }
 
-  # Write success stamp
-  $stampObj = [ordered]@{
+  # Success stamp
+  $obj = [ordered]@{
     status     = "ok"
     as_of_date = $today
     ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
@@ -118,19 +116,20 @@ try{
   } | ConvertTo-Json -Depth 6
 
   $enc = New-Object System.Text.UTF8Encoding($false)
-  [System.IO.File]::WriteAllText($stamp, (($stampObj -replace "`r`n","`n") + "`n"), $enc)
+  [System.IO.File]::WriteAllText($stamp, (($obj -replace "`r`n","`n") + "`n"), $enc)
 
   if(-not $Quiet){
     Write-Host ("[DAILY-OPS] OK as_of={0} mode=paper_locked" -f $today) -ForegroundColor Green
   }
-  Return-WithCode 0
+  Set-RC 0
+  return
 }
 catch{
   $msg = ([string]$_.Exception.Message).Trim()
 
-  # Write failure stamp for observability
+  # Failure stamp
   try{
-    $failObj = [ordered]@{
+    $obj = [ordered]@{
       status     = "fail"
       as_of_date = $today
       ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
@@ -140,9 +139,13 @@ catch{
       steps      = $steps
     } | ConvertTo-Json -Depth 6
     $enc = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($stamp, (($failObj -replace "`r`n","`n") + "`n"), $enc)
+    [System.IO.File]::WriteAllText($stamp, (($obj -replace "`r`n","`n") + "`n"), $enc)
   }catch{ }
-  if(-not $Quiet){ 
-  Write-Host ("[DAILY-OPS] FAIL as_of={0} err={1}" -f $today, $msg) -ForegroundColor Red }
-  Return-WithCode 2
+
+  if(-not $Quiet){
+    Write-Host ("[DAILY-OPS] FAIL as_of={0} err={1}" -f $today, $msg) -ForegroundColor Red
+  }
+
+  Set-RC 2
+  return
 }
