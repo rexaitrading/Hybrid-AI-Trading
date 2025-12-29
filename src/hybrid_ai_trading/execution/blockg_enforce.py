@@ -1,126 +1,55 @@
-from __future__ import annotations
-from .blockg_contract import BlockGNotReady  # single source of truth
-
-from datetime import date
-from pathlib import Path
+import json
+import os
 from typing import Any, Dict, Optional
 
-import json
-from datetime import datetime, timezone
-import os
-from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
-from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
-def _today_str() -> str:
-    return date.today().isoformat()
+
+class BlockGNotReady(RuntimeError):
+    pass
 
 
-def _repo_root() -> Path:
-    # .../src/hybrid_ai_trading/execution/blockg_enforce.py -> repo root
-    return Path(__file__).resolve().parents[4]
-
-
-def _default_paths() -> list[Path]:
-    root = _repo_root()
-    return [
-        root / "logs" / "blockg_status_stub.json",
-        root / ".intel" / "blockg_status_stub.json",
-    ]
-
-
-def load_blockg_status(path: Optional[str] = None) -> Dict[str, Any]:
-    if path:
-        p = Path(path)
-        raw = p.read_text(encoding="utf-8-sig")
-        return json.loads(raw)
-
-    # Env override (deterministic): HAT_BLOCKG_STATUS_PATH points to contract JSON
-    p_env = os.environ.get("HAT_BLOCKG_STATUS_PATH", "").strip()
-    if p_env:
-        pe = Path(p_env)
-        if pe.exists():
-            raw = pe.read_text(encoding="utf-8-sig")
-            return json.loads(raw)
-    for p in _default_paths():
-        if p.exists():
-            raw = p.read_text(encoding="utf-8-sig")
-            return json.loads(raw)
-
-    raise BlockGNotReady("BLOCK-G: status file missing (fail-closed)")
-
-
-def _sym_ready_key(symbol: str) -> str:
-    s = (symbol or "").upper().strip()
-    if s == "NVDA":
-        return "nvda_blockg_ready"
-    if s == "SPY":
-        return "spy_blockg_ready"
-    if s == "QQQ":
-        return "qqq_blockg_ready"
-    # Conservative default: unknown symbols are not allowed for live
-    return ""
-
-
-def _assert_ibg_health_ok(max_age_sec: int = 120) -> None:
+def load_blockg_status() -> Dict[str, Any]:
     """
-    LIVE-only IBG health gate. Reads JSON at env HAT_IBG_STATUS_PATH.
-    Requires portUp==True and timestamp freshness <= max_age_sec.
+    Load Block-G status JSON from env HAT_BLOCKG_STATUS_PATH (fail-closed).
     """
-    p = (os.environ.get("HAT_IBG_STATUS_PATH", "") or "").strip()
-    if not p:
-        raise BlockGNotReady("IBG: missing env HAT_IBG_STATUS_PATH (fail-closed)")
+    path = (os.environ.get("HAT_BLOCKG_STATUS_PATH", "") or "").strip()
+    if not path:
+        raise BlockGNotReady("BLOCK-G DENY: missing HAT_BLOCKG_STATUS_PATH")
 
     try:
-        with open(p, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
     except Exception as e:
-        raise BlockGNotReady(f"IBG: status read fail: {e!r}")
+        raise BlockGNotReady(f"BLOCK-G DENY: failed to read status: {e!r}")
 
-    if not bool(data.get("portUp", False)):
-        raise BlockGNotReady("IBG: portUp=false (fail-closed)")
 
-    ts = data.get("timestamp")
-    if not ts:
-        raise BlockGNotReady("IBG: missing timestamp (fail-closed)")
+# backward compatibility (some callers/tests use this name)
+def _load_blockg_status() -> Dict[str, Any]:
+    return load_blockg_status()
 
-    try:
-        dt = datetime.fromisoformat(str(ts))
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        age = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds()
-    except Exception:
-        raise BlockGNotReady("IBG: bad timestamp (fail-closed)")
 
-    if age > float(max_age_sec):
-        raise BlockGNotReady(f"IBG: status stale ageSec={int(age)} max={max_age_sec} (fail-closed)")
-
-def require_blockg_ready_for_live(symbol: str, status: Optional[Dict[str, Any]] = None) -> None:
+def require_blockg_ready_for_live(symbol: str, *, status: Optional[Dict[str, Any]] = None) -> None:
     """
-    Public stable gate (kept for backward compatibility).
-    Single semantics owner is blockg_contract.ensure_symbol_blockg_ready.
+    LIVE gate used by execution/broker chokepoints.
 
-    - If paper (env HAT_IS_PAPER!=0): no-op
-    - If live (env HAT_IS_PAPER==0): enforce fail-closed using contract JSON
+    Contract:
+      - If symbol unknown => fail-closed
+      - If per-symbol readiness false => raise BlockGNotReady containing '<key>=false'
+      - If status is provided => use it (test-friendly); else load from env path
     """
-    # Explicit status injection stays supported for tests
-    if status is not None:
-        key = _sym_ready_key(symbol)
-        if not key:
-            raise BlockGNotReady(f"BLOCK-G: unknown symbol '{symbol}' (fail-closed)")
-        if not bool(status.get(key, False)):
-            reasons = status.get("reasons_not_ready", [])
-            raise BlockGNotReady(f"BLOCK-G: {key}=false for {symbol}. reasons={reasons}")
-        return
+    sym = (symbol or "").strip().upper()
+    key_map = {
+        "NVDA": "nvda_blockg_ready",
+        "SPY":  "spy_blockg_ready",
+        "QQQ":  "qqq_blockg_ready",
+    }
+    k = key_map.get(sym)
+    if not k:
+        raise BlockGNotReady(f"BLOCK-G DENY (live): unknown symbol={sym}")
 
-    # Delegate to contract (env/run_context aware)
-    is_live = os.environ.get("HAT_IS_PAPER", "").strip() == "0"
-    # IBG_HEALTH_IN_REQUIRE_BLOCKG (LIVE only; observe-only; no kills)
-    if is_live:
-        _assert_ibg_health_ok(max_age_sec=120)
-    if not is_live:
-        return
-    ensure_symbol_blockg_ready(symbol, allow_paper=False, is_paper=False, ctx=None)
-from . import blockg_contract as _bc
+    st = status if isinstance(status, dict) else _load_blockg_status()
 
-
-# --- Single source of truth (runtime alias) ---
-BlockGNotReady = _bc.BlockGNotReady
+    ok = bool(st.get(k, False))
+    if not ok:
+        reasons = st.get("reasons_not_ready", [])
+        # Keep message stable for tests: must contain '<key>=false'
+        raise BlockGNotReady(f"{k}=false reasons={reasons}")

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
+from hybrid_ai_trading.execution.blockg_enforce import BlockGNotReady
 import json
 import os
 from pathlib import Path
 from typing import Any, Dict
-class BlockGNotReady(RuntimeError):
-    pass
-
 def _repo_root() -> Path:
     # src/hybrid_ai_trading/execution/blockg_contract.py -> repo root
     return Path(__file__).resolve().parents[3]
@@ -33,32 +31,56 @@ def ensure_symbol_blockg_ready(
     symbol: str,
     allow_paper: bool = True,
     is_paper: bool | None = None,
-    ctx: Any | None = None,
+    status_path: str | None = None,
+    status: dict | None = None,
+    ctx: any | None = None,
 ) -> None:
     """
-    Single semantics owner for Block-G gating (signature matches blockg_enforce.py).
+    Single semantics owner for Block-G gating.
 
+    - ctx overrides env if provided (paper wins when ctx.is_paper True)
     - If paper and allow_paper=True: no-op
     - If live: fail-closed unless per-symbol readiness is True
-
-    ctx is accepted for API compatibility (RunContext), but not required.
+    - status_path optional for tests; status optional for tests
     """
+    # ctx precedence (paper-safe)
+    try:
+        if ctx is not None:
+            ip = getattr(ctx, "is_paper", None)
+            if ip is True:
+                if allow_paper:
+                    return
+                raise BlockGNotReady("BLOCK-G DENY: allow_paper=False but ctx says paper")
+            if ip is False:
+                is_paper = False
+    except Exception:
+        pass
+
+    # env/default
     if is_paper is None:
-        is_paper = is_paper_env()
+        is_paper = (os.environ.get("HAT_IS_PAPER", "").strip() == "1")
 
     if is_paper:
         if allow_paper:
             return
         raise BlockGNotReady("BLOCK-G DENY: allow_paper=False but running in paper mode")
 
-    st = read_blockg_status()
-    sym = (symbol or "").strip().upper()
+    # Load status
+    st = None
+    if isinstance(status, dict):
+        st = status
+    else:
+        p = (status_path or os.environ.get("HAT_BLOCKG_STATUS_PATH", "") or "").strip()
+        if not p:
+            raise BlockGNotReady("BLOCK-G DENY: missing HAT_BLOCKG_STATUS_PATH")
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                st = json.load(f)
+        except Exception as e:
+            raise BlockGNotReady(f"BLOCK-G DENY: failed to read status: {e!r}")
 
-    key_map = {
-        "NVDA": "nvda_blockg_ready",
-        "SPY":  "spy_blockg_ready",
-        "QQQ":  "qqq_blockg_ready",
-    }
+    sym = (symbol or "").strip().upper()
+    key_map = {"NVDA":"nvda_blockg_ready","SPY":"spy_blockg_ready","QQQ":"qqq_blockg_ready"}
     k = key_map.get(sym)
     if not k:
         raise BlockGNotReady(f"BLOCK-G DENY (live): unknown symbol={sym}")
@@ -66,7 +88,7 @@ def ensure_symbol_blockg_ready(
     ok = bool(st.get(k, False))
     if not ok:
         reasons = st.get("reasons_not_ready", [])
-        raise BlockGNotReady(f"BLOCK-G DENY (live): {k}!=True reasons={reasons}")
+        raise BlockGNotReady(f"{k}=false reasons={reasons}")
 
 def assert_nvda_live_ready() -> None:
     # Back-compat wrapper used by order path patches

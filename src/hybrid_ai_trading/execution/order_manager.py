@@ -30,7 +30,6 @@ from hybrid_ai_trading.execution.blockg_contract import assert_nvda_live_ready
 
 logger = logging.getLogger(__name__)
 
-
 def _get_ctx_cached(obj: object):
     """
     Cache and return RunContext. If unavailable, returns None.
@@ -48,7 +47,6 @@ def _get_ctx_cached(obj: object):
         return rc
     except Exception:
         return None
-
 
 class OrderManager:
     def __init__(
@@ -561,6 +559,9 @@ class OrderManager:
                 raise
             except Exception as e:
                 logger.error("OrderManager live submit error: %s", e)
+
+                if isinstance(e, BlockGNotReady):
+                    raise
                 return {
                     "symbol": symbol,
                     "side": side,
