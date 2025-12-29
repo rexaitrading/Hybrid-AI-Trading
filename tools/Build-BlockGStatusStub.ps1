@@ -524,6 +524,57 @@ if($enableSpyQqq){
   $payload.spy_blockg_ready = $false
   $payload.qqq_blockg_ready = $false
 }
+# --- Institutional NVDA GateScore events integrity (fail-closed) ---
+# If NVDA events are tagged PLACEHOLDER or degenerate_constant_metrics => GateScore must NOT arm.
+try {
+  $p = Join-Path $repoRoot "logs\nvda_gatescore_events.jsonl"
+  if(Test-Path -LiteralPath $p){
+    $today = (Get-Date).ToString("yyyy-MM-dd")
+    $deg = $false
+    foreach($ln in Get-Content -LiteralPath $p -Encoding utf8){
+      if($ln -notmatch $today){ continue }
+
+      # Fast string checks (avoid JSON parse fragility)
+      if($ln -match 'degenerate_constant_metrics'){ $deg = $true; break }
+      if($ln -match '"source"\s*:\s*"PLACEHOLDER"'){ $deg = $true; break }
+
+      # If parse works, also check notes defensively
+      $o = $null
+      try { $o = $ln | ConvertFrom-Json } catch { $o = $null }
+      if($null -ne $o){
+        try {
+          $n = ("" + $o.notes)
+          if($n -match 'degenerate_constant_metrics'){ $deg = $true; break }
+        } catch { }
+      }
+    }
+
+    if($deg){
+      # Force GateScore booleans fail-closed (these flow into payload)
+      $gsSamplesOk = $false
+      $gsThreshOk  = $false
+      $gsOkToday   = $false
+
+      # Force NVDA readiness fail-closed
+      $nvdaReady = $false
+
+      # Ensure reason is visible upstream (before tail reasons rebuild)
+      if($null -ne $reasons){
+        $reasons.Add("gatescore_synthetic_degenerate") | Out-Null
+      }
+    }
+  }
+} catch {
+  # If anything goes wrong reading events, fail-closed
+  $gsSamplesOk = $false
+  $gsThreshOk  = $false
+  $gsOkToday   = $false
+  $nvdaReady   = $false
+  if($null -ne $reasons){
+    $reasons.Add("gatescore_synthetic_degenerate") | Out-Null
+  }
+}
+
 
 # Rebuild reasons cleanly (no stale state allowed)
 $rn = @()
