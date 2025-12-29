@@ -87,6 +87,21 @@ try {
   Invoke-Phase4PyTest -Label "Phase-5 risk + guard slice" -Args $phase5Args
 
   Write-Host "`n[PHASE4] Phase-4 validation harness complete (required slices green / optional slices skipped)." -ForegroundColor Green
+
+# --- Write Phase-4 evidence JSON for Block-G (UTF-8 no-BOM, LF) ---
+$repoRoot = (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+$logsDir = Join-Path $repoRoot "logs"
+if(-not (Test-Path $logsDir)){ New-Item -ItemType Directory -Force -Path $logsDir | Out-Null }
+$today = (Get-Date).ToString("yyyy-MM-dd")
+$ok = ($LASTEXITCODE -eq 0)
+$obj = [ordered]@{ ts_utc=(Get-Date).ToUniversalTime().ToString("o"); as_of_date=$today; phase4_ok_today=[bool]$ok }
+$json = ($obj | ConvertTo-Json -Depth 6)
+$json = ($json -replace "`r`n","`n").TrimEnd()+"`n"
+$path = Join-Path $logsDir "phase4_validation_passed.json"
+$enc = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($path, $json, $enc)
+Write-Host ("[PHASE4] wrote evidence: " + $path) -ForegroundColor DarkCyan
+# --- end evidence ---
   Write-Phase4Stamp -Ok $true -Reason "ok" -ExitCode 0
   exit 0
 }
