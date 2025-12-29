@@ -64,7 +64,6 @@ try {
 
   # 1) Evidence rebuild
   Invoke-PSFile -Path ".\tools\Run-Phase23HealthDaily.ps1" -StepName "Phase23HealthDaily"
-  Invoke-PSFile -Path ".\tools\Build-EvHardEvidenceRaw.ps1" -StepName "EvHardEvidenceRaw"
   Invoke-PSFile -Path ".\tools\Export-Phase5EvHardVetoDailySnapshot.ps1" -StepName "EvHardDailySnapshot"
   Invoke-PSFile -Path ".\tools\Run-EvHardVetoDaily.ps1" -StepName "EvHardVetoDaily"
 
@@ -73,7 +72,7 @@ try {
     $env:PYTEST_ADDOPTS = "--basetemp `"$pytestTmp`""
     Invoke-PSFile -Path ".\tools\Run-Phase4Validation.ps1" -StepName "Phase4Validation"
     Invoke-PSFile -Path ".\tools\Run-Phase4Stamp.ps1" -StepName "Phase4Stamp"
-  } finally {
+  Invoke-PSFile -Path ".\tools\Build-EvHardEvidenceRaw.ps1" -StepName "EvHardEvidenceRaw"  } finally {
     Remove-Item Env:PYTEST_ADDOPTS -ErrorAction SilentlyContinue
   }
 
