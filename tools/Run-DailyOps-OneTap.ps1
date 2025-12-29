@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [switch]$Quiet,
-  [switch]$ExitProcess
+
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
@@ -19,9 +19,8 @@ function Write-Step([string]$msg){
 
 function Return-WithCode([int]$code){
   $global:LASTEXITCODE = $code
-  if($ExitProcess){
-    exit $code
-  }
+  return
+}
   return
 }function Invoke-PSFile {
   [CmdletBinding()]
