@@ -118,10 +118,14 @@ if (-not [System.IO.Path]::IsPathRooted($outFull)) { $outFull = Join-Path $repoR
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 if ($Mode -eq "rewrite") {
-    [System.IO.File]::WriteAllLines($outFull, [string[]]$eventsOut.ToArray([string]), $utf8NoBom)
+    $tmp = New-Object System.Collections.Generic.List[string]
+    foreach($x in $eventsOut){ $tmp.Add(("" + $x)) }
+    [System.IO.File]::WriteAllLines($outFull, $tmp.ToArray(), $utf8NoBom)
 }
 elseif ($Mode -eq "append") {
-    [System.IO.File]::AppendAllLines($outFull, [string[]]$eventsOut.ToArray([string]), $utf8NoBom)
+    $tmp = New-Object System.Collections.Generic.List[string]
+    foreach($x in $eventsOut){ $tmp.Add(("" + $x)) }
+    [System.IO.File]::AppendAllLines($outFull, $tmp.ToArray(), $utf8NoBom)
 }
 else {
     $pd = $PruneDate; if (-not $pd) { $pd = $today }
@@ -138,7 +142,9 @@ else {
     $merged = New-Object System.Collections.ArrayList
     foreach ($k in $kept) { [void]$merged.Add($k) }
     foreach ($n in $eventsOut) { [void]$merged.Add($n) }
-    [System.IO.File]::WriteAllLines($outFull, [string[]]$merged.ToArray([string]), $utf8NoBom)
+    $tmp = New-Object System.Collections.Generic.List[string]
+    foreach($x in $merged){ $tmp.Add(("" + $x)) }
+    [System.IO.File]::WriteAllLines($outFull, $tmp.ToArray(), $utf8NoBom)
 }
 
 Write-Host "[NVDA-GS-EVENTS] Wrote $count events to $outFull (mode=$Mode)" -ForegroundColor Green
