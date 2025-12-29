@@ -527,13 +527,31 @@ if($enableSpyQqq){
 
 # Rebuild reasons cleanly (no stale state allowed)
 $rn = @()
+
+# Preserve earlier reasons_not_ready (do NOT wipe deep reasons)
+try {
+  if($payload -and ($payload.PSObject.Properties.Name -contains "reasons_not_ready") -and $null -ne $payload.reasons_not_ready){
+    foreach($x in @($payload.reasons_not_ready)){ $rn += ("" + $x) }
+  }
+} catch { }
+
+# Canonical tail booleans (still add these)
 if(-not $payload.phase23_health_ok_today){ $rn += "phase23_health_ok_today=false" }
 if(-not $payload.ev_hard_daily_ok_today){ $rn += "ev_hard_daily_ok_today=false" }
 if(-not $payload.phase4_ok_today){ $rn += "phase4_ok_today=false" }
 if(-not $payload.gatescore_ok_today){ $rn += "gatescore_ok_today=false" }
 if(-not $payload.gatescore_fresh_today){ $rn += "gatescore_fresh_today=false" }
 if(-not $payload.nvda_blockg_ready){ $rn += "nvda_blockg_ready=false" }
-$payload.reasons_not_ready = @($rn)
+
+# Dedupe without scriptblocks (StrictMode-safe)
+$hs = New-Object System.Collections.Generic.HashSet[string]
+$rn2 = New-Object System.Collections.Generic.List[string]
+foreach($x in @($rn)){
+  $s = ("" + $x).Trim()
+  if([string]::IsNullOrWhiteSpace($s)){ continue }
+  if($hs.Add($s)){ [void]$rn2.Add($s) }
+}
+$payload.reasons_not_ready = @($rn2)
 # ====================================================================
 
 $payloadJson = $payload | ConvertTo-Json -Depth 6
