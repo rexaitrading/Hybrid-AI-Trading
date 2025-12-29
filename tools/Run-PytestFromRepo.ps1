@@ -33,9 +33,9 @@ if($probe -ne $expected){
   throw "[PYTEST] FAIL: hybrid_ai_trading resolved outside repo. expected=$expected actual=$probe"
 }
 if ($PytestArgs.Count -gt 0) {
-  & $py -m pytest --rootdir $root .\tests @PytestArgs
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 --rootdir $root .\tests @PytestArgs
 } else {
-  & $py -m pytest --rootdir $root -q .\tests -k "execution_engine_full or blockg_enforce or trade_engine_micro_duo" --maxfail=1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 --rootdir $root -q .\tests -k "execution_engine_full or blockg_enforce or trade_engine_micro_duo" --maxfail=1
 }
 
 exit $LASTEXITCODE
