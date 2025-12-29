@@ -70,8 +70,7 @@ def ensure_phase7_ready(*, required_symbols: Iterable[str] = ("NVDA",), as_of_da
     if missing:
         raise RuntimeError(f"PHASE7_PREFLIGHT_DENY: gatescore_missing_symbols missing={missing}")
 
-    if _phase7_require_blockg():
-        # blockg checks for known symbols (strict for NVDA; optional for SPY/QQQ if asked)
+    if _phase7_require_blockg() or bool(os.environ.get("HAT_PHASE6_DAILY_SUMMARY_PATH","").strip()):# blockg checks for known symbols (strict for NVDA; optional for SPY/QQQ if asked)
         for s in req_syms:
             if s == "NVDA":
                 if not bool(blockg.get("nvda_blockg_ready", False)):
