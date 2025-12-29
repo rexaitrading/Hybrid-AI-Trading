@@ -23,5 +23,12 @@ $ready = ""
 if($null -ne $p.ready_symbols){ $ready = [string]::Join(",", @($p.ready_symbols)) }
 Write-Host ("[PHASE6-ONETAP] ok={0} reason={1} ready={2} as_of={3}" -f $p.ok, $p.reason, $ready, $p.as_of_date) -ForegroundColor Cyan
 
+# FAIL-FAST OPS: exit nonzero when phase6 state is not ok
+try {
+  if($null -ne $p -and ($p.PSObject.Properties.Name -contains "ok") -and (-not [bool]$p.ok)){
+    exit 2
+  }
+} catch {
+  exit 2
+}
 exit 0
-
