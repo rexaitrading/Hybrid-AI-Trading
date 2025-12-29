@@ -24,6 +24,9 @@ if([string]::IsNullOrWhiteSpace($env:HAT_NOTION_PHASE6_DB_ID)){ throw "Missing H
 # Phase-6 state + CSV
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Run-Phase6OneTap.ps1")
 
+
+# FAIL-CLOSED: propagate OneTap exit code (automation must see failure)
+if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
 # Notion upsert by as_of_date
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Push-Phase6DailySummary-ToNotion.ps1")
 
@@ -34,4 +37,3 @@ if($null -ne $p.ready_symbols){ $ready = [string]::Join(",", @($p.ready_symbols)
 Write-Host ("[PHASE6-ONETAP+NOTION] ok={0} reason={1} ready={2} as_of={3}" -f $p.ok, $p.reason, $ready, $p.as_of_date) -ForegroundColor Cyan
 
 exit 0
-
