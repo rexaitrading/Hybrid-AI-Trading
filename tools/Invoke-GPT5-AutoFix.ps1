@@ -2,8 +2,8 @@ param(
   [string]$Model         = "gpt-5",
   [ValidateSet("low","medium","high")][string]$Effort = "medium",
   [int]   $MaxTokens     = 1200,
-  [string]$TestCmd       = "python -m pytest -q tests --maxfail=1 --ignore=tests/integration --disable-warnings -s",
-  [string]$RepoRoot      = "C:\Dev\HybridAITrading",
+  [string]$TestCmd       = "powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q tests --maxfail=1 --ignore=tests/integration --disable-warnings -s",
+  [string]$RepoRoot      = (Resolve-Path ".").Path,
   [int]   $MaxIterations = 10
 )
 

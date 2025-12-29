@@ -18,6 +18,7 @@ $ErrorActionPreference = "Stop"
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 
+$choke = Join-Path $repoRoot "tools\Pytest-Chokepoint.ps1"
 # Resolve config to absolute path (prevents src\config rebasing bugs)
 if($Config){
   $cfgPath = Join-Path $repoRoot $Config
@@ -49,7 +50,7 @@ Remove-Item Env:HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
 & (Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1")
 
 # ---- Risk slice (fail-closed) ----
-& (Join-Path $repoRoot "tools\python.ps1") -m pytest -q (Join-Path $repoRoot "tests") -k "blockg or risk or phase5"
+powershell -NoProfile -ExecutionPolicy Bypass -File $choke -q --rootdir $repoRoot .\tests -k "blockg or risk or phase5" --maxfail=1
 if($LASTEXITCODE -ne 0){ throw "[PAPER-LIVE] Risk slice failed; abort." }
 
 # ---- Phase-6 portfolio snapshot (best-effort) ----
