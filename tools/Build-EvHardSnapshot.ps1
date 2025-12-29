@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [string]$EvidencePath = ".\logs\ev_hard_evidence_raw.json",
-  [string]$OutPath = ".\logs\ev_hard_snapshot.json"
+  [string]$OutPath = ".\logs\phase5_ev_hard_veto_snapshot.json"
 )
 
 Set-StrictMode -Version Latest
