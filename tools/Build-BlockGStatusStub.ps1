@@ -13,6 +13,15 @@ $ErrorActionPreference = "Stop"
 
 # --- Dedup: only build BlockG once per process ---
 if ($env:HAT_BLOCKG_BUILT_ONCE -eq "1") {
+  # stdout marker for pytest subprocess capture (host output is not reliable)
+  try {
+    $toolsDir = Split-Path -Parent $PSCommandPath
+    $repoRoot = Split-Path -Parent $toolsDir
+    $logsDir  = Join-Path $repoRoot "logs"
+    $statusPath = Join-Path $logsDir "blockg_status_stub.json"
+    Write-Output ("blockg_status_stub.json -> " + $statusPath)
+  } catch { }
+
   if ($env:HAT_BLOCKG_QUIET -ne "1") {
     Write-Host "[BLOCK-G] Skipping rebuild (HAT_BLOCKG_BUILT_ONCE=1)" -ForegroundColor DarkGray
   }
