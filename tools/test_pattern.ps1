@@ -12,11 +12,11 @@ $env:PYTEST_ADDOPTS = "--maxfail=1"
 
 # Build pytest command: prefer paths; fall back to -k pattern
 $cmd = if ($Paths -and $Paths.Count -gt 0) {
-  "python -m pytest -q {0} {1}" -f (($Paths -join ' '), $ExtraOpts)
+  "powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q {0} {1}" -f (($Paths -join ' '), $ExtraOpts)
 } elseif ($Pattern) {
-  "python -m pytest -q -k `"$Pattern`" $ExtraOpts"
+  "powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q -k `"$Pattern`" $ExtraOpts"
 } else {
-  "python -m pytest -q $ExtraOpts"
+  "powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q $ExtraOpts"
 }
 
 Write-Host ">> $cmd" -ForegroundColor Cyan
