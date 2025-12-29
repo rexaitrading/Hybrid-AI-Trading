@@ -45,13 +45,14 @@ if(Test-Path $p5){
 
 # 4) Final lock (premarket)
 $final = Join-Path $toolsDir "Run-FinalLock.ps1"
-if(-not (Test-Path $final)){ Fail "missing Run-FinalLock.ps1" }
+if(-not (Test-Path -LiteralPath $final)){ Fail "missing Run-FinalLock.ps1" }
 
-if($EnableSpyQqq){
-  powershell -NoProfile -ExecutionPolicy Bypass -File $final -Mode PREMARKET -Symbols $Symbols -EnableSpyQqq -StrictPhase7:$StrictPhase7 | Out-Host
-} else {
-  powershell -NoProfile -ExecutionPolicy Bypass -File $final -Mode PREMARKET -Symbols $Symbols -StrictPhase7:$StrictPhase7 | Out-Host
-}
+# Build args once; add switches only if present (switch-safe, no string coercion)
+$argsFinal = @("-Mode","PREMARKET","-Symbols",$Symbols)
+if($EnableSpyQqq){ $argsFinal += "-EnableSpyQqq" }
+if($StrictPhase7){ $argsFinal += "-StrictPhase7" }
+
+& $final @argsFinal | Out-Host
 if($LASTEXITCODE -ne 0){ Fail "FinalLock premarket failed rc=$LASTEXITCODE" }
 
 Write-Host "[WEEKDAY-LOCK] OK" -ForegroundColor Cyan
