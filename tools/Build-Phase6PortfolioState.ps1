@@ -39,6 +39,8 @@ $payload = [ordered]@{
   as_of_date= $today
   ok        = $ok
   reason    = $reason
+  # Back-compat: single ready symbol (first), while keeping ready_symbols as canonical list
+  ready_symbol  = ( @($ready)[0] + "" )
   ready_symbols = @($ready)
   symbols   = @($syms)
   version   = "phase6.1"
@@ -52,4 +54,3 @@ if($dir -and -not (Test-Path $dir)){ New-Item -ItemType Directory -Force -Path $
 
 Write-Host "[PHASE6] wrote $full ok=$ok ready=$($ready -join ',')" -ForegroundColor Green
 exit (0)
-
