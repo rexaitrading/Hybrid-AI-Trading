@@ -33,14 +33,17 @@ foreach($s in $syms){
 
 $ok = ($ready.Count -gt 0)
 $reason = if($ok){"phase6_state_ok"}else{"phase6_state_no_symbols_ready"}
-
+$readySymbol = ""
+if(@($ready).Count -gt 0){
+  $readySymbol = ("" + @($ready)[0])
+}
 $payload = [ordered]@{
   ts_utc    = $tsUtc
   as_of_date= $today
   ok        = $ok
   reason    = $reason
   # Back-compat: single ready symbol (first), while keeping ready_symbols as canonical list
-  ready_symbol  = ( @($ready)[0] + "" )
+  ready_symbol  = $readySymbol
   ready_symbols = @($ready)
   symbols   = @($syms)
   version   = "phase6.1"
