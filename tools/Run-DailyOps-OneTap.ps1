@@ -20,7 +20,7 @@ try{
     $last = ([string]$j.as_of_date).Trim()
     if($last -eq $today){
       Write-Host "[DAILY-OPS] already ran today ($today). Skipping." -ForegroundColor Yellow
-      exit 0
+$global:LASTEXITCODE = 0; return
     }
   }
 }catch{ }
@@ -64,13 +64,4 @@ try{
 }catch{ }
 
 Write-Host "[DAILY-OPS] DONE (paper-locked)" -ForegroundColor Green
-exit 0
-
-
-
-
-
-
-
-
-
+$global:LASTEXITCODE = 0; return
