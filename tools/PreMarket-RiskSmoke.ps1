@@ -7,6 +7,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$Choke = Join-Path $PSScriptRoot "Pytest-Chokepoint.ps1"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 . 'C:\IBC\Watch-IBG.Functions.ps1'
 
@@ -24,7 +25,7 @@ function Run-TestNode {
   if(Test-Path $Repo){Push-Location $Repo}else{throw "Repo not found: $Repo"}
   try{
     $sw=[Diagnostics.Stopwatch]::StartNew()
-    $output=& $Python -m pytest -q $NodeId -s --maxfail=1 2>&1
+    $output = & powershell -NoProfile -ExecutionPolicy Bypass -File $Choke -q $NodeId -s --maxfail=1 2>&1
     $code=$LASTEXITCODE; $sw.Stop(); $dur=[math]::Round($sw.Elapsed.TotalSeconds,2)
     $status=if($code -eq 0){'pass'}else{'fail'}
     $tail=($output|Select-Object -Last 30) -join "`n"
