@@ -1,9 +1,9 @@
 [CmdletBinding()]
 param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
-  [string]$Symbol="ALL"
+  [string]$Symbol="ALL",
+  [switch]$Quiet
 )
-
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
@@ -54,16 +54,110 @@ foreach($r in $rows){
   }) | Out-Null
 }
 
-# TODO: replace these stub metrics with real daily GateScore build outputs.
-# For now, emit deterministic zeros for today (fail-closed).
+function Get-TodaysMetricsFor([string]$sym,[string]$today,[string]$logDir){
+  $path = Join-Path $logDir (("{0}_gatescore_events.jsonl" -f $sym.ToLowerInvariant()))
+  $cnt = 0
+  $pnlCnt = 0
+  $edgeSum = 0.0
+  $edgeN = 0
+  $microSum = 0.0
+  $microN = 0
+
+  if(-not (Test-Path -LiteralPath $path)){
+    return [pscustomobject]@{ count_signals=0; pnl_samples=0; mean_edge_ratio=0.0; mean_micro_score=0.0; reason="missing_events_jsonl" }
+  }
+
+  $reason = "ok"
+  try{
+    foreach($ln in Get-Content -LiteralPath $path -Encoding utf8){
+      if([string]::IsNullOrWhiteSpace($ln)){ continue }
+      $j = $null
+      try { $j = $ln | ConvertFrom-Json } catch { continue }
+
+      # Date extraction (best-effort)
+      $d = ""
+      foreach($k in @("as_of_date","date","session_date","ts","ts_utc","timestamp","time_utc","time")){
+        if($j.PSObject.Properties.Name -contains $k){
+          $d = [string]($j.$k)
+          break
+        }
+      }
+      if($d.Length -ge 10){ $d = $d.Substring(0,10) }
+      if($d -ne $today){ continue }
+
+      $cnt++
+
+      # PnL sample extraction (best-effort)
+      $pnlVal = $null
+      foreach($k in @("pnl","realized_pnl","pnl_usd","pnl_realized","net_pnl","realizedPnL")){
+        if($j.PSObject.Properties.Name -contains $k){
+          $pnlVal = $j.$k
+          break
+        }
+      }
+      if($null -ne $pnlVal){
+        $tmp = 0.0
+        if([double]::TryParse([string]$pnlVal, [ref]$tmp)){ $pnlCnt++ }
+      }
+
+      # Edge ratio
+      $edgeVal = $null
+      foreach($k in @("edge_ratio","mean_edge_ratio","edge","edgeRatio")){
+        if($j.PSObject.Properties.Name -contains $k){ $edgeVal = $j.$k; break }
+      }
+      if($null -ne $edgeVal){
+        $tmp = 0.0
+        if([double]::TryParse([string]$edgeVal, [ref]$tmp)){
+          $edgeSum += $tmp; $edgeN++
+        }
+      }
+
+      # Micro score
+      $microVal = $null
+      foreach($k in @("micro_score","mean_micro_score","micro","microScore")){
+        if($j.PSObject.Properties.Name -contains $k){ $microVal = $j.$k; break }
+      }
+      if($null -ne $microVal){
+        $tmp = 0.0
+        if([double]::TryParse([string]$microVal, [ref]$tmp)){
+          $microSum += $tmp; $microN++
+        }
+      }
+    }
+  } catch {
+    $reason = "parse_loop_failed"
+  }
+
+  $edgeMean = 0.0
+  if($edgeN -gt 0){ $edgeMean = $edgeSum / [double]$edgeN }
+
+  $microMean = 0.0
+  if($microN -gt 0){ $microMean = $microSum / [double]$microN }
+
+  return [pscustomobject]@{
+    count_signals=$cnt
+    pnl_samples=$pnlCnt
+    mean_edge_ratio=[double]$edgeMean
+    mean_micro_score=[double]$microMean
+    reason=$reason
+  }
+}
+
+# Real daily metrics from per-symbol jsonl event streams (fail-closed if missing/unparseable)
 foreach($sym in $syms){
+  $m = Get-TodaysMetricsFor -sym $sym -today $today -logDir $logDir
+
+  if((-not $Quiet) -and ($m.reason -ne "ok")){
+    Write-Host ("[GS] WARN symbol={0} reason={1}" -f $sym, $m.reason) -ForegroundColor Yellow
+  }
+
   $kept.Add([pscustomobject]@{
     as_of_date = $today
     symbol = $sym
-    count_signals = 0
-    pnl_samples = 0
-    mean_edge_ratio = 0.0
-    mean_micro_score = 0.0
+    count_signals = [int]$m.count_signals
+    pnl_samples = [int]$m.pnl_samples
+    mean_edge_ratio = [double]$m.mean_edge_ratio
+    mean_micro_score = [double]$m.mean_micro_score
   }) | Out-Null
 }
 
@@ -74,6 +168,6 @@ foreach($r in $kept){
   $lines.Add(("{0},{1},{2},{3},{4},{5}" -f $r.as_of_date,$r.symbol,$r.count_signals,$r.pnl_samples,$r.mean_edge_ratio,$r.mean_micro_score)) | Out-Null
 }
 [System.IO.File]::WriteAllLines($outCsv, $lines, (New-Object System.Text.UTF8Encoding($false)))
-
-Write-Host "[GS] wrote $outCsv today=$today symbols=$($syms -join ',')" -ForegroundColor Green
-exit 0
+if(-not $Quiet){ 
+Write-Host "[GS] wrote $outCsv today=$today symbols=$($syms -join ',')" -ForegroundColor Green }
+$global:LASTEXITCODE = 0; return
