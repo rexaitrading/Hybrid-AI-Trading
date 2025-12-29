@@ -12,8 +12,12 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # --- Dedup: only build BlockG once per process ---
+# Policy: we may SKIP rebuild only if the stub already exists AND parses as JSON.
+# If stub is missing/invalid, force rebuild (fail-closed; pytest-safe).
+
 if ($env:HAT_BLOCKG_BUILT_ONCE -eq "1") {
   # stdout marker for pytest subprocess capture (host output is not reliable)
+  $toolsDir = $null; $repoRoot = $null; $logsDir = $null; $statusPath = $null
   try {
     $toolsDir = Split-Path -Parent $PSCommandPath
     $repoRoot = Split-Path -Parent $toolsDir
@@ -22,14 +26,30 @@ if ($env:HAT_BLOCKG_BUILT_ONCE -eq "1") {
     Write-Output ("blockg_status_stub.json -> " + $statusPath)
   } catch { }
 
-  if ($env:HAT_BLOCKG_QUIET -ne "1") {
-    Write-Host "[BLOCK-G] Skipping rebuild (HAT_BLOCKG_BUILT_ONCE=1)" -ForegroundColor DarkGray
+  $reuseOk = $false
+  try {
+    if($statusPath -and (Test-Path -LiteralPath $statusPath)){
+      $raw = Get-Content -LiteralPath $statusPath -Raw -Encoding utf8
+      $null = ($raw | ConvertFrom-Json)  # parse check
+      $reuseOk = $true
+    }
+  } catch { $reuseOk = $false }
+
+  if($reuseOk){
+    if ($env:HAT_BLOCKG_QUIET -ne "1") {
+      Write-Host "[BLOCK-G] Skipping rebuild (HAT_BLOCKG_BUILT_ONCE=1; stub exists+valid)" -ForegroundColor DarkGray
+    }
+    exit 0
   }
-  exit 0
+
+  # Stub missing/invalid -> force rebuild in this process
+  if ($env:HAT_BLOCKG_QUIET -ne "1") {
+    Write-Host "[BLOCK-G] Dedup set but stub missing/invalid; forcing rebuild" -ForegroundColor Yellow
+  }
+  Remove-Item Env:HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
 }
+
 $env:HAT_BLOCKG_BUILT_ONCE = "1"
-
-
 function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
   $path = Join-Path $RepoRoot "logs\phase4_validation_passed.json"
   if(-not (Test-Path $path)){ return $false }
