@@ -12,6 +12,12 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
+# --- ENV CLEAN (tests must target default logs/) ---
+Remove-Item Env:HAT_LOGS_DIR -ErrorAction SilentlyContinue
+Remove-Item Env:HAT_BLOCKG_STATUS_PATH -ErrorAction SilentlyContinue
+Remove-Item Env:HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
+Remove-Item Env:HAT_BLOCKG_QUIET -ErrorAction SilentlyContinue
+# -----------------------------------------------
 $py = Join-Path $repoRoot ".venv\Scripts\python.exe"
 if(-not (Test-Path -LiteralPath $py)){ throw "Missing venv python: $py" }
 

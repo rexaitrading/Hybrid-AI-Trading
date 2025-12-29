@@ -127,3 +127,5 @@ tools/Kill-Spammers.ps1
 
 # Allow tracked paper runner config
 !config/paper_runner.yaml
+
+tools/pytest_safe.ps1

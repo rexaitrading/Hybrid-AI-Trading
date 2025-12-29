@@ -1,151 +1,110 @@
 [CmdletBinding()]
-param(
-  [switch]$Quiet
-)
+param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
 
-. (Join-Path (Split-Path -Parent $PSCommandPath) "RepoRoot.ps1")
-if(-not (Get-Command Get-RepoRoot -ErrorAction SilentlyContinue)){
-  throw "RepoRoot.ps1 did not load Get-RepoRoot (fail-closed)"
-}
-$repoRoot = Get-RepoRoot
-
-$stamp  = Join-Path $repoRoot "logs\daily_ops_onetap_last_ok.json"
-$rcFile = Join-Path $repoRoot "logs\daily_ops_onetap_rc.txt"
-
-function Write-Step([string]$msg){
-  if(-not $Quiet){ Write-Host $msg }
+function Write-Utf8NoBom {
+  param([string]$Path,[string]$Text)
+  $enc = New-Object System.Text.UTF8Encoding($false)
+  $Text = $Text -replace "`r`n","`n"
+  if($Text.Length -gt 0 -and $Text[-1] -ne "`n"){ $Text += "`n" }
+  [System.IO.File]::WriteAllText($Path,$Text,$enc)
 }
 
-function Set-RC([int]$code){
-  $global:LASTEXITCODE = $code
-  try {
-    $enc = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($rcFile, ("{0}`n" -f $code), $enc)
-  } catch { }
-}
+$repoRoot = (Resolve-Path ".").Path
+$logsDir  = Join-Path $repoRoot "logs"
+New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 
-function Invoke-PSFile {
-  [CmdletBinding()]
-  param(
-    [Parameter(Mandatory=$true)][string]$Path,
-    [string[]]$Args = @(),
-    [string]$StepName = "step"
-  )
-  if(-not (Test-Path -LiteralPath $Path)){ throw "Missing file: $Path" }
+$rcPath   = Join-Path $logsDir "daily_ops_onetap_rc.txt"
+$errPath  = Join-Path $logsDir "daily_ops_onetap_err.txt"
+$okJson   = Join-Path $logsDir "daily_ops_onetap_last_ok.json"
 
-  Write-Step ("[DAILY-OPS] -> {0}" -f $StepName)
-
-  if($Quiet){
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $Path @Args 1>$null
-  } else {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $Path @Args
-  }
-
-  $rc = $LASTEXITCODE
-  if($rc -ne 0){
-    throw ("DAILY_OPS_FAIL: {0} rc={1} file={2}" -f $StepName, $rc, $Path)
-  }
-}
-
-# Default rc is fail unless we complete everything
-Set-RC 2
-
-# Run-once-per-day skip (only if last status=ok AND same as_of_date)
-$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
-try{
-  if(Test-Path -LiteralPath $stamp){
-    $j = Get-Content -LiteralPath $stamp -Raw -Encoding utf8 | ConvertFrom-Json
-    $last = ([string]$j.as_of_date).Trim()
-    $status = ""
-    if($j.PSObject.Properties.Name -contains "status"){ $status = ([string]$j.status).Trim() }
-    if(($status -eq "ok") -and ($last -eq $today)){
-      Write-Step ("[DAILY-OPS] already ran today (as_of_date={0}). Skipping." -f $today)
-      Set-RC 0
-      return
-    }
-  }
-}catch{ }
-
-# HARD SAFETY: paper-only lock
+# ---- HARD SAFETY: paper only ----
 $env:HAT_IS_PAPER="1"
 $env:HAT_LIVE_DISABLED="1"
 Remove-Item Env:HAT_CONFIRM_LIVE -ErrorAction SilentlyContinue
 
-if([string]::IsNullOrWhiteSpace($env:HAT_IBG_STATUS_PATH)){
-  $u = [Environment]::GetEnvironmentVariable("HAT_IBG_STATUS_PATH","User")
-  if(-not [string]::IsNullOrWhiteSpace($u)){ $env:HAT_IBG_STATUS_PATH = $u }
+# ---- ENV CLEAN (must never inherit old experiments) ----
+Remove-Item Env:HAT_LOGS_DIR -ErrorAction SilentlyContinue
+Remove-Item Env:HAT_BLOCKG_STATUS_PATH -ErrorAction SilentlyContinue
+Remove-Item Env:HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
+Remove-Item Env:HAT_BLOCKG_QUIET -ErrorAction SilentlyContinue
+
+# Repo-local pytest basetemp to avoid pytest-of-* lock spam
+$pytestTmp = Join-Path $logsDir "_pytest_tmp"
+New-Item -ItemType Directory -Force -Path $pytestTmp | Out-Null
+
+function Invoke-PSFile {
+  param(
+    [Parameter(Mandatory=$true)][string]$Path,
+    [string[]]$Args = @(),
+    [Parameter(Mandatory=$true)][string]$StepName
+  )
+  Write-Host ("[DAILY-OPS] -> {0}" -f $StepName)
+  $p = $Path
+  if(-not [System.IO.Path]::IsPathRooted($p)){ $p = Join-Path $repoRoot $p }
+  if(-not (Test-Path -LiteralPath $p)){ throw "Missing script: $p" }
+
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $p @Args
+  if($LASTEXITCODE -ne 0){ throw ("DAILY_OPS_FAIL: {0} rc={1} file={2}" -f $StepName,$LASTEXITCODE,$p) }
 }
 
-$steps = [ordered]@{
-  blockg_nvda = $false
-  intel       = $false
-  phase6      = $false
-}
-
-try{
-  Invoke-PSFile -Path (Join-Path $repoRoot "tools\Check-BlockGReady.ps1") -Args @("-Symbol","NVDA") -StepName "BlockGReady(NVDA)"
-  $steps.blockg_nvda = $true
-
-  Invoke-PSFile -Path (Join-Path $repoRoot "tools\Run-IntelPipeline.ps1") -StepName "IntelPipeline"
-  $steps.intel = $true
-
-  Invoke-PSFile -Path (Join-Path $repoRoot "tools\Run-Phase6OneTap-Notion.ps1") -StepName "Phase6OneTap+Notion"
-  $steps.phase6 = $true
-
-  # Derive as_of_date from Phase6 output
+# ---- MAIN ----
+$asOf = (Get-Date).ToString("yyyy-MM-dd")
+try {
+  # 0) Pytest first (can clobber logs; must run before evidence build)
   try{
-    $p6 = Get-Content -LiteralPath (Join-Path $repoRoot "logs\phase6_portfolio_state.json") -Raw -Encoding utf8 | ConvertFrom-Json
-    if($p6 -and ($p6.PSObject.Properties.Name -contains "as_of_date")){
-      $t = ([string]$p6.as_of_date).Trim()
-      if(-not [string]::IsNullOrWhiteSpace($t)){ $today = $t }
-    }
-  }catch{ }
-
-  # Success stamp
-  $obj = [ordered]@{
-    status     = "ok"
-    as_of_date = $today
-    ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
-    symbol     = "NVDA"
-    mode       = "paper_locked"
-    steps      = $steps
-  } | ConvertTo-Json -Depth 6
-
-  $enc = New-Object System.Text.UTF8Encoding($false)
-  [System.IO.File]::WriteAllText($stamp, (($obj -replace "`r`n","`n") + "`n"), $enc)
-
-  if(-not $Quiet){
-    Write-Host ("[DAILY-OPS] OK as_of={0} mode=paper_locked" -f $today) -ForegroundColor Green
-  }
-  Set-RC 0
-  return
-}
-catch{
-  $msg = ([string]$_.Exception.Message).Trim()
-
-  # Failure stamp
-  try{
-    $obj = [ordered]@{
-      status     = "fail"
-      as_of_date = $today
-      ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
-      symbol     = "NVDA"
-      mode       = "paper_locked"
-      error      = $msg
-      steps      = $steps
-    } | ConvertTo-Json -Depth 6
-    $enc = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($stamp, (($obj -replace "`r`n","`n") + "`n"), $enc)
-  }catch{ }
-
-  if(-not $Quiet){
-    Write-Host ("[DAILY-OPS] FAIL as_of={0} err={1}" -f $today, $msg) -ForegroundColor Red
+    $env:PYTEST_ADDOPTS = "--basetemp `"$pytestTmp`""
+    Invoke-PSFile -Path ".\tools\pytest.ps1" -Args @("-q") -StepName "Pytest(anti-hijack)"
+  } finally {
+    Remove-Item Env:PYTEST_ADDOPTS -ErrorAction SilentlyContinue
   }
 
-  Set-RC 2
-  return
+  # 1) Evidence rebuild
+  Invoke-PSFile -Path ".\tools\Run-Phase23HealthDaily.ps1" -StepName "Phase23HealthDaily"
+  Invoke-PSFile -Path ".\tools\Build-EvHardEvidenceRaw.ps1" -StepName "EvHardEvidenceRaw"
+  Invoke-PSFile -Path ".\tools\Export-Phase5EvHardVetoDailySnapshot.ps1" -StepName "EvHardDailySnapshot"
+  Invoke-PSFile -Path ".\tools\Run-EvHardVetoDaily.ps1" -StepName "EvHardVetoDaily"
+
+  # Phase4 + stamp (force basetemp again to avoid temp lock spam)
+  try{
+    $env:PYTEST_ADDOPTS = "--basetemp `"$pytestTmp`""
+    Invoke-PSFile -Path ".\tools\Run-Phase4Validation.ps1" -StepName "Phase4Validation"
+    Invoke-PSFile -Path ".\tools\Run-Phase4Stamp.ps1" -StepName "Phase4Stamp"
+  } finally {
+    Remove-Item Env:PYTEST_ADDOPTS -ErrorAction SilentlyContinue
+  }
+
+  Invoke-PSFile -Path ".\tools\Run-GateScoreDailySummary.ps1" -Args @("-Quiet") -StepName "GateScoreDailySummary"
+  Invoke-PSFile -Path ".\tools\Run-GateScoreDailyBuild.ps1" -StepName "GateScoreDailyBuild"
+
+  # 2) Build BlockG stub to canonical logs/ no matter what the builder does internally
+  $env:HAT_BLOCKG_STATUS_PATH = (Join-Path $logsDir "blockg_status_stub.json")
+  Invoke-PSFile -Path ".\tools\Build-BlockGStatusStub.ps1" -StepName "BuildBlockGStatusStub"
+
+  # 3) Final contract check (must be after evidence build)
+  Invoke-PSFile -Path ".\tools\Check-BlockGReady.ps1" -Args @("-Symbol","NVDA") -StepName "BlockGReady(NVDA)"
+
+  # 4) Intel + Phase6
+  Invoke-PSFile -Path ".\tools\Run-IntelPipeline.ps1" -StepName "IntelPipeline"
+  Invoke-PSFile -Path ".\tools\Run-Phase6OneTap-Notion.ps1" -StepName "Phase6OneTap+Notion"
+
+  # Success
+  $ok = [ordered]@{ as_of_date=$asOf; ok=$true; mode="paper_locked"; ts_utc=(Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json -Depth 5
+  Write-Utf8NoBom -Path $okJson -Text $ok
+  Write-Utf8NoBom -Path $rcPath -Text "0"
+  if(Test-Path $errPath){ Remove-Item -LiteralPath $errPath -Force -ErrorAction SilentlyContinue }
+  exit 0
+}
+catch {
+  $msg = ($_ | Out-String).Trim()
+  Write-Utf8NoBom -Path $errPath -Text $msg
+  Write-Utf8NoBom -Path $rcPath -Text "2"
+  Write-Host ("[DAILY-OPS] FAIL as_of={0} err={1}" -f $asOf,$msg) -ForegroundColor Red
+  exit 2
+}
+finally {
+  Remove-Item Env:HAT_BLOCKG_STATUS_PATH -ErrorAction SilentlyContinue
 }
