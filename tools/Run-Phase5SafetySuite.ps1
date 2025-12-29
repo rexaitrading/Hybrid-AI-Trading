@@ -7,8 +7,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path ".").Path
 $py = "C:\HAT\.venv\Scripts\python.exe"
 if(-not (Test-Path $py)){ throw "python not found: $py" }
-
-& $py -m pytest -q `
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q `
   .\tests\test_execution_engine_phase5_guard.py `
   .\tests\test_ib_phase5_guard.py `
   .\tests\test_blockg_broker_base_guard.py `

@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
+$choke = Join-Path $repoRoot "tools\Pytest-Chokepoint.ps1"
 Set-Location $repoRoot
 
 Write-Host "`n[PHASE4] Phase-4 validation harness RUN" -ForegroundColor Cyan
@@ -41,7 +42,7 @@ function Invoke-Phase4PyTest {
     [Parameter(Mandatory)][string]$Label
   )
   Write-Host "`n[PHASE4] $Label" -ForegroundColor Yellow
-  & $pythonExe -m pytest @Args
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $choke @Args
   $code = $LASTEXITCODE
   if ($code -ne 0) { throw "pytest_failed:$Label:exit=$code" }
 }
@@ -90,6 +91,7 @@ try {
 
 # --- Write Phase-4 evidence JSON for Block-G (UTF-8 no-BOM, LF) ---
 $repoRoot = (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+$choke = Join-Path $repoRoot "tools\Pytest-Chokepoint.ps1"
 $logsDir = Join-Path $repoRoot "logs"
 if(-not (Test-Path $logsDir)){ New-Item -ItemType Directory -Force -Path $logsDir | Out-Null }
 $today = (Get-Date).ToString("yyyy-MM-dd")

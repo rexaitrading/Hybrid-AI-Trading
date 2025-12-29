@@ -34,8 +34,7 @@ Write-Host "Symbol=$Symbol" -ForegroundColor DarkGray
 Write-Host "`n[1/4] Gate slice (Phase-5 live boundary)..." -ForegroundColor Yellow
 $py = Join-Path $repoRoot ".venv\Scripts\python.exe"
 if(-not (Test-Path $py)){ Fail "Missing venv python: $py" }
-
-& $py -m pytest -q `
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q `
   tests\execution\test_nvda_live_stamp_gate.py `
   tests\execution\test_ib_safe_chokepoint_blockg.py `
   tests\execution\test_order_manager_blockg_defense_in_depth.py `
