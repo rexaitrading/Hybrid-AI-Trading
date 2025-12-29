@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-  [string]$OutPath = ".\logs\phase6_portfolio_state.json"
+  [string]$OutPath = ".\logs\phase6_portfolio_state.json",
+  [string[]]$Symbols = @("NVDA"),
+  [switch]$AllSymbols
 )
 
 Set-StrictMode -Version Latest
@@ -21,11 +23,14 @@ $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
 function CheckSym([string]$sym){
-  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym 2>$null | Out-Host
+  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym -Quiet 2>$null | Out-Host
   return $LASTEXITCODE
 }
-
-$syms = @("NVDA","SPY","QQQ")
+if($AllSymbols){
+  $syms = @("NVDA","SPY","QQQ")
+} else {
+  $syms = @($Symbols)
+}
 $ready = @()
 foreach($s in $syms){
   if((CheckSym $s) -eq 0){ $ready += $s }
