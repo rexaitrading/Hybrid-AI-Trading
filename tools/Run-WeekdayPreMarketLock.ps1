@@ -3,12 +3,32 @@ param(
   [ValidateSet("NVDA","ALL")]
   [string]$Symbols="NVDA",
   [switch]$EnableSpyQqq,
+  [switch]$EnableSpyOnly,
   [switch]$StrictPhase7
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
+
+# --- PAPER OPS ENV (fail-closed; does NOT affect live runners) ---
+$env:HAT_IS_PAPER = "1"
+# Ensure Block-G rebuild is not skipped in this process when -Build is requested downstream
+Remove-Item Env:HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
+$env:HAT_BLOCKG_BUILT_ONCE = "0"
+# Optionally enable SPY/QQQ readiness checks when requested
+if($EnableSpyQqq){
+  $env:HAT_BLOCKG_ENABLE_SPYQQQ = "1"
+  Remove-Item Env:HAT_BLOCKG_ENABLE_SPYONLY -ErrorAction SilentlyContinue
+} elseif($EnableSpyOnly){
+  $env:HAT_BLOCKG_ENABLE_SPYONLY = "1"
+  Remove-Item Env:HAT_BLOCKG_ENABLE_SPYQQQ -ErrorAction SilentlyContinue
+} else {
+  Remove-Item Env:HAT_BLOCKG_ENABLE_SPYQQQ -ErrorAction SilentlyContinue
+  Remove-Item Env:HAT_BLOCKG_ENABLE_SPYONLY -ErrorAction SilentlyContinue
+}
+# --- end PAPER OPS ENV ---
+
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir

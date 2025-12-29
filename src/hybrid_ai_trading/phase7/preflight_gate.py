@@ -40,6 +40,8 @@ def ensure_phase7_ready(*, required_symbols: Iterable[str] = ("NVDA",), as_of_da
     - Requires readiness.portfolio_halt.ok True
     - Requires gatescore_by_symbol contains required symbols
     """
+    enable_spyqqq = (os.environ.get("HAT_BLOCKG_ENABLE_SPYQQQ","") == "1")
+    enable_spyonly = (os.environ.get("HAT_BLOCKG_ENABLE_SPYONLY","") == "1")
     p = _summary_path()
     if not p.exists():
         raise RuntimeError(f"PHASE7_PREFLIGHT_DENY: missing_phase6_daily_summary path={p}")
@@ -74,10 +76,10 @@ def ensure_phase7_ready(*, required_symbols: Iterable[str] = ("NVDA",), as_of_da
             if s == "NVDA":
                 if not bool(blockg.get("nvda_blockg_ready", False)):
                     raise RuntimeError("PHASE7_PREFLIGHT_DENY: blockg_nvda_not_ready")
-            elif s == "SPY":
+            elif s == "SPY" and (enable_spyqqq or enable_spyonly):
                 if "spy_blockg_ready" in blockg and not bool(blockg.get("spy_blockg_ready", False)):
                     raise RuntimeError("PHASE7_PREFLIGHT_DENY: blockg_spy_not_ready")
-            elif s == "QQQ":
+            elif s == "QQQ" and enable_spyqqq:
                 if "qqq_blockg_ready" in blockg and not bool(blockg.get("qqq_blockg_ready", False)):
                     raise RuntimeError("PHASE7_PREFLIGHT_DENY: blockg_qqq_not_ready")
     

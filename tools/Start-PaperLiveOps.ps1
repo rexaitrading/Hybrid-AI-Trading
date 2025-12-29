@@ -3,121 +3,115 @@ param(
   [ValidateSet("NVDA","SPY","QQQ")]
   [string]$Symbol = "NVDA",
 
-  [string]$Config = "config/config.yaml",
+  [int]$IntelSleepSec = 600,
+  [int]$PaperSleepSec = 5,
 
-  # Loop controls
-  [int]$Ticks = 0,
-  [double]$SleepSec = 0.25,
-
-  # IB snapshots attempt (Option A still safe because runner can fallback)
-  [switch]$UseIBSnapshots,
-
-  # Always log
-  [string]$LogFile = "auto"
+  [switch]$UseIBSnapshotsWhenHealthy
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+chcp 65001 | Out-Null
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
-Set-Location $repoRoot
 
-New-Item -ItemType Directory -Force -Path (Join-Path $repoRoot "logs") | Out-Null
-
-# Resolve config absolute
-$cfgAbs = $Config
-if(-not [System.IO.Path]::IsPathRooted($cfgAbs)){
-  $cfgAbs = Join-Path $repoRoot $cfgAbs
-}
-if(Test-Path -LiteralPath $cfgAbs){
-  $cfgAbs = (Resolve-Path -LiteralPath $cfgAbs).Path
+function Get-UserEnv([string]$name){
+  try { return [System.Environment]::GetEnvironmentVariable($name,"User") } catch { return $null }
 }
 
-# ---- PRE-FLIGHT GATES (fail-closed) ----
-Write-Host "[OPS] Preflight starting..." -ForegroundColor Cyan
+# Build the command that will run inside the INTEL window
+$intelCmd = @"
+`$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
+chcp 65001 | Out-Null
+Set-Location '$repoRoot'
 
-# Paper hard-set
-$env:HAT_IS_PAPER = "1"
-# Ensure our repo src wins
-$env:PYTHONPATH = (Resolve-Path (Join-Path $repoRoot "src")).Path
+# HARD paper-only (never real money)
+`$env:HAT_IS_PAPER='1'
+`$env:HAT_LIVE_DISABLED='1'
+Remove-Item Env:\HAT_CONFIRM_LIVE -ErrorAction SilentlyContinue
 
-# Fresh Block-G
-Remove-Item Env:HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
-& (Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1")
+# Optional: keep IBG status path available for any guards (even if IBKR news is disabled)
+`$env:HAT_IBG_STATUS_PATH = [System.Environment]::GetEnvironmentVariable('HAT_IBG_STATUS_PATH','User')
 
-# ---- Block-G READY check (fail-closed) ----
-$statusPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
-if(-not (Test-Path -LiteralPath $statusPath)){ throw "[OPS] Missing Block-G status stub: $statusPath" }
-$bg = Get-Content $statusPath -Raw -Encoding utf8 | ConvertFrom-Json
-$k = ($Symbol.ToLower() + "_blockg_ready")
-if(-not ($bg.PSObject.Properties.Name -contains $k)){ throw "[OPS] Block-G key missing: $k" }
-if(-not [bool]$bg.$k){
-  $reasons = $bg.reasons_not_ready
-  Write-Host "[OPS] BLOCK-G NOT READY. reasons_not_ready:" -ForegroundColor Red
-  try { $reasons | ConvertTo-Json -Depth 6 | Out-Host } catch { $reasons | Out-Host }
-  throw "[OPS] Preflight failed: Block-G not ready for $Symbol"
+Write-Host '=== INTEL WINDOW STARTED ===' -ForegroundColor Cyan
+Write-Host ('RepoRoot=' + (Get-Location)) -ForegroundColor DarkCyan
+
+while(`$true){
+  `$ts=(Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+  Write-Host ('=== INTEL LOOP @ ' + `$ts + ' ===') -ForegroundColor Cyan
+  try {
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-IntelPipeline.ps1 | Out-Host
+  } catch {
+    Write-Warning ('[INTEL] ERROR: ' + `$_.Exception.Message)
+  }
+  Start-Sleep -Seconds $IntelSleepSec
 }
-Write-Host "[OPS] Block-G READY for $Symbol" -ForegroundColor Green
+"@
 
+# Build the command that will run inside the PAPER-LIVE window
+$paperCmd = @"
+`$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
+chcp 65001 | Out-Null
+Set-Location '$repoRoot'
 
-# Risk slice
-& (Join-Path $repoRoot "tools\python.ps1") -m pytest -q (Join-Path $repoRoot "tests") -k "blockg or risk or phase5"
-if($LASTEXITCODE -ne 0){ throw "[OPS] Preflight failed: pytest risk slice not green." }
+# HARD paper-only (never real money)
+`$env:HAT_IS_PAPER='1'
+`$env:HAT_LIVE_DISABLED='1'
+Remove-Item Env:\HAT_CONFIRM_LIVE -ErrorAction SilentlyContinue
 
-# Optional Phase-6 snapshot (best-effort)
-try { & (Join-Path $repoRoot "tools\Build-Phase6PortfolioState.ps1") } catch {}
+# Ensure IBG status path exists in THIS process (pytest + guards)
+`$env:HAT_IBG_STATUS_PATH = [System.Environment]::GetEnvironmentVariable('HAT_IBG_STATUS_PATH','User')
 
-Write-Host "[OPS] Preflight OK." -ForegroundColor Green
+Write-Host '=== PAPER-LIVE WINDOW STARTED ===' -ForegroundColor Green
+Write-Host ('RepoRoot=' + (Get-Location)) -ForegroundColor DarkGreen
+Write-Host ('PROC_HAT_IBG_STATUS_PATH=' + [string]`$env:HAT_IBG_STATUS_PATH) -ForegroundColor DarkGreen
+`$useIBSnapshotsWhenHealthy = __USE_IBSNAP__  # injected literal ($true/$false); never True/False
 
-# ---- DETACHED RUN ----
-$py = Join-Path $repoRoot ".venv\Scripts\python.exe"
-if(-not (Test-Path -LiteralPath $py)){ throw "Missing venv python: $py" }
+while(`$true){
+  `$ts=(Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
 
-$day = (Get-Date).ToString("yyyy-MM-dd")
-$stdout = Join-Path $repoRoot ("logs\paper_live_{0}_{1}.stdout.txt" -f $Symbol,$day)
-$stderr = Join-Path $repoRoot ("logs\paper_live_{0}_{1}.stderr.txt" -f $Symbol,$day)
+  `$ibgOk = `$false
+  try { `$ibgOk = [bool]((.\tools\Get-IBGHealth.ps1).ok) } catch { `$ibgOk = `$false }
 
-$args = @(
-  "-m","hybrid_ai_trading.runners.paper_runner",
-  "--config",$cfgAbs,
-  "--universe",$Symbol,
-  "--ticks",$Ticks.ToString(),
-  "--sleep-sec",$SleepSec.ToString(),
-  "--log-file",$LogFile
-)
+  if(`$useIBSnapshotsWhenHealthy -and `$ibgOk){
+    Write-Host ('=== PAPER-LIVE @ ' + `$ts + ' (IB SNAPSHOT) ===') -ForegroundColor Green
+    .\tools\Run-PaperLivePhase5.ps1 -Symbol $Symbol -UseIBSnapshots
+  } else {
+    if(`$ibgOk){
+      Write-Host ('=== PAPER-LIVE @ ' + `$ts + ' (PROVIDER-ONLY; IB SNAPSHOT DISABLED) ===') -ForegroundColor Yellow
+    } else {
+      Write-Host ('=== PAPER-LIVE @ ' + `$ts + ' (PROVIDER-ONLY FALLBACK; IBG DOWN) ===') -ForegroundColor Yellow
+      [console]::beep(800,200); [console]::beep(600,200)
+    }
+    .\tools\Run-PaperLivePhase5.ps1 -Symbol $Symbol
+  }
 
-if($UseIBSnapshots){ $args += @("--ib-snapshots") }
-
-$cmdLine = "$py " + ($args -join " ")
-
-Write-Host "[OPS] Starting detached paper-live..." -ForegroundColor Cyan
-Write-Host "[OPS] $cmdLine" -ForegroundColor DarkGray
-
-$p = Start-Process -FilePath $py `
-  -ArgumentList $args `
-  -WorkingDirectory $repoRoot `
-  -WindowStyle Minimized `
-  -RedirectStandardOutput $stdout `
-  -RedirectStandardError $stderr `
-  -PassThru
-
-# Write PID file
-$pidPath = Join-Path $repoRoot "logs\paper_live_pid.json"
-$rec = [ordered]@{
-  ts_utc = (Get-Date).ToUniversalTime().ToString("o")
-  symbol = $Symbol
-  pid = $p.Id
-  config = $cfgAbs
-  use_ib_snapshots = [bool]$UseIBSnapshots
-  ticks = $Ticks
-  sleep_sec = $SleepSec
-  log_file = $LogFile
-  stdout = $stdout
-  stderr = $stderr
-  cmd = $cmdLine
+  Start-Sleep -Seconds $PaperSleepSec
 }
-$rec | ConvertTo-Json -Depth 6 | Out-File $pidPath -Encoding utf8
+"@
 
-Write-Host "[OPS] STARTED pid=$($p.Id)" -ForegroundColor Green
-Write-Host "[OPS] PID file: $pidPath" -ForegroundColor DarkGray
+# --- Inject literal boolean for child window (prevents True token bug) ---
+$useIBLiteral = if($UseIBSnapshotsWhenHealthy){ '$true' } else { '$false' }
+$paperCmd = $paperCmd -replace '__USE_IBSNAP__', $useIBLiteral
+# --- end inject ---
+
+
+# Launch windows (use Windows PowerShell 5.1 host for compatibility)
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+if(-not (Test-Path -LiteralPath $psExe)){ throw "Cannot find powershell.exe at $psExe" }
+
+Write-Host "[OPS] Launching INTEL window..." -ForegroundColor Cyan
+Start-Process -FilePath $psExe -ArgumentList @(
+  "-NoProfile","-ExecutionPolicy","Bypass","-NoExit","-Command", $intelCmd
+) | Out-Null
+
+Start-Sleep -Milliseconds 400
+
+Write-Host "[OPS] Launching PAPER-LIVE window..." -ForegroundColor Green
+Start-Process -FilePath $psExe -ArgumentList @(
+  "-NoProfile","-ExecutionPolicy","Bypass","-NoExit","-Command", $paperCmd
+) | Out-Null
+
+Write-Host "[OPS] OK: two windows launched (INTEL + PAPER-LIVE)." -ForegroundColor Cyan
+Write-Host "[OPS] Stop = close those windows or Ctrl+C inside each loop." -ForegroundColor Yellow
