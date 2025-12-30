@@ -276,3 +276,29 @@ tools/Disarm-NVDA-Live.ps1
 
 
 ---
+## 20251229_191120  parse_patchlog_hardening
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_191120/
+**Backups:** ./.backup/*.20251229_191120.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_191130  patchlog_format_smoke
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_191130/
+**Backups:** ./.backup/*.20251229_191130.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
