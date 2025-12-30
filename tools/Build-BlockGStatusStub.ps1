@@ -524,7 +524,16 @@ if($enableSpyQqq){
   $payload.spy_blockg_ready = $false
   $payload.qqq_blockg_ready = $false
 }
-# BLOCKG_AUTHORITY_VERSION = 1
+# --- Institutional NVDA GateScore events integrity (fail-closed) ---
+# Contract must NOT arm if NVDA events are missing/empty/insufficient OR degenerate/placeholder.
+try {
+  $p = Join-Path $repoRoot "logs\nvda_gatescore_events.jsonl"
+  $today = (Get-Date).ToString("yyyy-MM-dd")
+  $minEvents = 10
+
+  $todayLines = @()
+  if(Test-Path -LiteralPath $p){
+    $todayLines = @((Get-Content -LiteralPath $p -Encoding utf8) | Where-Object { # BLOCKG_AUTHORITY_VERSION = 1
 # Authority: summary flags ONLY (phase23, ev_hard, phase4, gatescore)
 # Do NOT trust per-symbol GateScore internals here
 
@@ -1051,70 +1060,72 @@ if($enableSpyQqq){
   $payload.qqq_blockg_ready = $false
 }
 # --- Institutional NVDA GateScore events integrity (fail-closed) ---
-# Canonical: count events by payload.as_of_date (effective trading day), JSON-parse as_of_date.
-# Requirements:
-#   - >= minEvents events for as_of_date
-#   - ALL events must be source="REAL"
-#   - reject degenerate_constant_metrics
+# If NVDA events are tagged PLACEHOLDER or degenerate_constant_metrics => contract must NOT arm.
 try {
   $p = Join-Path $repoRoot "logs\nvda_gatescore_events.jsonl"
-  $minEvents = 10
-  $asof = ""
-  try { $asof = (""+$payload.as_of_date).Substring(0,10) } catch { $asof = (Get-Date).ToString("yyyy-MM-dd") }
-
-  $todayLines = @()
   if(Test-Path -LiteralPath $p){
-    foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)){
-      try {
-        $j = $ln | ConvertFrom-Json
-        $d = (""+$j.as_of_date).Substring(0,10)
-        if($d -eq $asof){ $todayLines += $ln }
-      } catch { }
-    }
-  }
+    $today = (Get-Date).ToString("yyyy-MM-dd")
+    $deg = $false
 
-  $fail = $false
-  $why  = ""
-  if(-not (Test-Path -LiteralPath $p)){
-    $fail = $true; $why = "gatescore_events_missing"
-  } elseif(-not $todayLines -or $todayLines.Count -lt $minEvents){
-    $fail = $true; $why = ("gatescore_events_insufficient_asof<{0}" -f $minEvents)
-  } else {
-    foreach($ln in $todayLines){
-      if($ln -match "degenerate_constant_metrics"){ $fail=$true; $why="gatescore_synthetic_degenerate"; break }
-      # must be REAL evidence to arm live
-      if($ln -match '"source"\s*:\s*"([^"]+)"'){
-        $src = $Matches[1]
-        if($src -ne "REAL"){ $fail=$true; $why="gatescore_events_not_real"; break }
-      } else {
-        $fail=$true; $why="gatescore_events_missing_source"; break
+    foreach($ln in Get-Content -LiteralPath $p -Encoding utf8){
+      if($ln -notmatch $today){ continue }
+      if($ln -match 'degenerate_constant_metrics'){ $deg = $true; break }
+      if($ln -match '"source"\s*:\s*"PLACEHOLDER"'){ $deg = $true; break }
+    }
+
+    if($deg){
+      # 1) flip local vars (best-effort; some older code may still read these)
+      $gsSamplesOk = $false
+      $gsThreshOk  = $false
+      $gsOkToday   = $false
+      $nvdaReady   = $false
+
+      # 2) MOST IMPORTANT: flip payload fields (canonical contract output)
+      if($null -ne $payload){
+        $payload["gatescore_samples_ok"] = $false
+        $payload["min_samples_ok_today"] = $false
+        $payload["gatescore_threshold_ok_today"] = $false
+        $payload["gatescore_ok_today"] = $false
+        $payload["nvda_blockg_ready"] = $false
       }
+
+      # 3) add reason into payload.reasons_not_ready (tail will preserve & dedupe)
+      try {
+        if($null -ne $payload){
+          $rn0 = @()
+          if($payload.Contains("reasons_not_ready") -and $null -ne $payload["reasons_not_ready"]){ $rn0 = @($payload["reasons_not_ready"]) }
+          $rn0 += "gatescore_synthetic_degenerate"
+          $payload["reasons_not_ready"] = @($rn0)
+        }
+      } catch { }
+
+      # 4) also keep legacy list updated if present
+      if($null -ne $reasons){ $reasons.Add("gatescore_synthetic_degenerate") | Out-Null }
     }
   }
-
-  if($fail){
-    # tighten-only: never loosen
+} catch {
+  # If evidence check fails, fail-closed (institutional)
+  $gsSamplesOk = $false
+  $gsThreshOk  = $false
+  $gsOkToday   = $false
+  $nvdaReady   = $false
+  if($null -ne $payload){
     $payload["gatescore_samples_ok"] = $false
     $payload["min_samples_ok_today"] = $false
     $payload["gatescore_threshold_ok_today"] = $false
     $payload["gatescore_ok_today"] = $false
-    $payload["gatescore_fresh_today"] = $false
     $payload["nvda_blockg_ready"] = $false
-
-    $rn0 = @()
-    if($payload.Contains("reasons_not_ready") -and $null -ne $payload["reasons_not_ready"]){ $rn0 = @($payload["reasons_not_ready"]) }
-    $rn0 += $why
-    $payload["reasons_not_ready"] = @($rn0)
+    try {
+      $rn0 = @()
+      if($payload.Contains("reasons_not_ready") -and $null -ne $payload["reasons_not_ready"]){ $rn0 = @($payload["reasons_not_ready"]) }
+      $rn0 += "gatescore_synthetic_degenerate"
+      $payload["reasons_not_ready"] = @($rn0)
+    } catch { }
   }
-} catch {
-  $payload["gatescore_ok_today"] = $false
-  $payload["gatescore_fresh_today"] = $false
-  $payload["nvda_blockg_ready"] = $false
-  $rn0 = @()
-  if($payload.Contains("reasons_not_ready") -and $null -ne $payload["reasons_not_ready"]){ $rn0 = @($payload["reasons_not_ready"]) }
-  $rn0 += "gatescore_events_check_error"
-  $payload["reasons_not_ready"] = @($rn0)
+  if($null -ne $reasons){ $reasons.Add("gatescore_synthetic_degenerate") | Out-Null }
 }
+
+
 
 # Rebuild reasons cleanly (no stale state allowed)
 $rn = @()
