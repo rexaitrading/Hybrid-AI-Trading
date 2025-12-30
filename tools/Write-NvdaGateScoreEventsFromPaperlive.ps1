@@ -56,7 +56,7 @@ if (-not $InputPath -or -not (Test-Path -LiteralPath $InputPath)) { Write-Error 
 
 Write-Host "[NVDA-GS-EVENTS] Input=$InputPath" -ForegroundColor Cyan
 
-$lines = Get-Content -LiteralPath $InputPath -Encoding UTF8
+$lines = @(Get-Content -LiteralPath $InputPath -Encoding UTF8)
 if (-not $lines -or $lines.Count -eq 0) {
   # rewrite-mode should never leave stale outputs behind
   if($Mode -eq "rewrite"){
