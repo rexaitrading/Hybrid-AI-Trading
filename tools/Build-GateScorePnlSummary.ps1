@@ -149,6 +149,23 @@ foreach ($it in $eventFiles) {
     }
     if ($todayEvents.Count -eq 0) { continue }
 
+    # Fail-closed: if events are tagged as degenerate placeholders, skip row for this symbol/date.
+    $degenerate = $false
+    foreach($e in $todayEvents){
+        try {
+            $props = $e.PSObject.Properties.Name
+            if($props -contains "notes"){
+                $n = ([string]$e.notes)
+                if($n -match "degenerate_constant_metrics"){ $degenerate = $true }
+            }
+        } catch {}
+        if($degenerate){ break }
+    }
+    if($degenerate){
+        Write-Host ("GateScore PnL summary: FAIL-CLOSED {0} degenerate_constant_metrics for date={1} (skip row)" -f $sym,$targetDate) -ForegroundColor Yellow
+        continue
+    }
+
     $edgeVals = @()
     $microVals = @()
     $pnlVals = @()
