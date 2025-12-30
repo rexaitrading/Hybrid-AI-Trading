@@ -205,6 +205,7 @@ def _write_heartbeat(symbols: list[str], tick_no: int, price_source: str, log_fi
         p.parent.mkdir(parents=True, exist_ok=True)
         rec = {
             "ts_utc": iso_utc_now(),
+            "as_of_date": ctx.as_of_date,
             "symbols": list(symbols),
             "tick": int(tick_no),
             "price_source": str(price_source),
@@ -345,7 +346,8 @@ def main(argv=None) -> int:
             out = qc.run_once(symbols, price_map, risk_mgr)
         except Exception as e:
             rec = {
-                "ts_utc": iso_utc_now(),
+            "ts_utc": iso_utc_now(),
+            "as_of_date": ctx.as_of_date,
                 "status": "error",
                 "error": repr(e),
                 "symbols": symbols,
@@ -359,6 +361,7 @@ def main(argv=None) -> int:
 
         rec = {
             "ts_utc": iso_utc_now(),
+            "as_of_date": ctx.as_of_date,
             "status": "ok",
             "symbols": symbols,
             "price_map": price_map,
