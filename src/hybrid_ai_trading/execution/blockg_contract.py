@@ -80,6 +80,32 @@ def ensure_symbol_blockg_ready(
             raise BlockGNotReady(f"BLOCK-G DENY: failed to read status: {e!r}")
 
     sym = (symbol or "").strip().upper()
+    # ---- Institutional contract integrity (fail-closed) ----
+    # For LIVE: require required fields AND today-ness so hand-edits cannot bypass policy.
+    if not is_paper:
+        required = [
+            "as_of_date",
+            "phase23_health_ok_today",
+            "ev_hard_daily_ok_today",
+            "phase4_ok_today",
+            "gatescore_fresh_today",
+            "gatescore_recent_enough",
+            "gatescore_samples_ok",
+            "gatescore_threshold_ok_today",
+            "gatescore_ok_today",
+        ]
+        missing = [k for k in required if k not in st]
+        if missing:
+            raise BlockGNotReady("BLOCK-G DENY: missing keys=" + str(missing))
+        try:
+            import datetime as _dt
+            today = _dt.date.today().isoformat()
+        except Exception:
+            today = None
+        if today and str(st.get("as_of_date", "")).strip() != today:
+            raise BlockGNotReady("BLOCK-G DENY: stale as_of_date=" + str(st.get("as_of_date")) + " today=" + str(today))
+    # ---- end institutional contract integrity ----
+
     key_map = {"NVDA":"nvda_blockg_ready","SPY":"spy_blockg_ready","QQQ":"qqq_blockg_ready"}
     k = key_map.get(sym)
     if not k:

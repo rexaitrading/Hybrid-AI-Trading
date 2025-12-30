@@ -27,30 +27,28 @@ class _IbLikeLive:
         return {"status": "pending", "order_id": "X"}
 
 
-def _write_blockg(path: Path, *, nvda_ready: bool) -> None:
-    payload = {
-        "ts_utc": "2025-01-01T00:00:00Z",
-        "as_of_date": "2025-01-01",
+def _write_blockg(path, nvda_ready: bool):
+    """Write a contract-valid Block-G status file for tests (today-ness + required keys)."""
+    from datetime import date
+
+    today = date.today().isoformat()
+    st = {
+        "as_of_date": today,
         "phase23_health_ok_today": True,
         "ev_hard_daily_ok_today": True,
-        "ev_hard_as_of_date": "2025-01-01",
-        "ev_hard_session_ok": True,
         "phase4_ok_today": True,
-        "gatescore_as_of_date": "2025-01-01",
-        "gatescore_age_days": 0,
-        "gatescore_recent_enough": True,
         "gatescore_fresh_today": True,
-        "gatescore_fresh_for_session": True,
+        "gatescore_recent_enough": True,
         "gatescore_samples_ok": True,
-        "min_samples_ok_today": True,
         "gatescore_threshold_ok_today": True,
         "gatescore_ok_today": True,
+        # per-symbol readiness flags
         "nvda_blockg_ready": bool(nvda_ready),
         "spy_blockg_ready": False,
         "qqq_blockg_ready": False,
-        "reasons_not_ready": [],
+        "reasons_not_ready": ([] if nvda_ready else ["nvda_blockg_ready=false"]),
     }
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(st), encoding="utf-8")
 
 def _write_nvda_stamp_ready(tmp_path: Path) -> Path:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
