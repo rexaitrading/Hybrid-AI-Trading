@@ -95,52 +95,10 @@ if (-not $statusPath) { $statusPath = $defaultPath }
 $st = Read-Json $statusPath
 if (-not $st) { Fail "Missing/invalid Block-G status JSON at: $statusPath" }
 
-# --- GateScore session-age policy (contract-only; do not recompute) ---
-$MAX_GS_AGE_DAYS = 3
-# 3) Validate required daily quality fields (fail-closed)
-# NOTE: contract defines these booleans (default false if absent)
-$reqFields = @(
-  "phase23_health_ok_today",
-  "ev_hard_daily_ok_today",
-  "phase4_ok_today",
-  "gatescore_ok_today",
-  "gatescore_fresh_today"
-)
-foreach ($k in $reqFields) {
-  if (-not ($st.PSObject.Properties.Name -contains $k)) { Fail "Missing field: $k" }
-  if (-not [bool]$st.$k) { Fail "$k=false" }
-}
 
-# GateScore age policy (fail-closed)
-if (-not [bool]$st.gatescore_recent_enough) { Fail "gatescore_recent_enough=false" }
-try { $age = [int]$st.gatescore_age_days } catch { Fail "gatescore_age_days invalid" }
-if ($age -gt $MAX_GS_AGE_DAYS) { Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
-# Optional: min_samples_ok_today if present must be true
-if ($st.PSObject.Properties.Name -contains "min_samples_ok_today") {
-  if (-not [bool]$st.min_samples_ok_today) { Fail "min_samples_ok_today=false" }
-}
-
-# 4) Per-symbol readiness (fail-closed)
-function SymReady([string]$sym) {
-  $key = ($sym.ToLower() + "_blockg_ready")
-  if (-not ($st.PSObject.Properties.Name -contains $key)) { return $false }
-  return [bool]$st.$key
-}
-
-$s = $Symbol.ToUpper()
-if ($s -eq "ALL") {
-  foreach ($sym in @("NVDA","SPY","QQQ")) {
-    if (-not (SymReady $sym)) { Fail "$sym not ready ($($sym.ToLower())_blockg_ready=false)" }
-  }
-} else {
-  if (-not (SymReady $s)) { Fail "$s not ready ($($s.ToLower())_blockg_ready=false)" }
-}
-
-if ($env:HAT_BLOCKG_QUIET -ne "1") {
-if((-not $Quiet) -and ($env:HAT_BLOCKG_QUIET -ne "1")){
-  Write-BlockGInfo "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath"
-}
-}
+# ---- Contract semantics owner (single source of truth) ----
+# NOTE: Do NOT recompute. Do NOT duplicate checks elsewhere in this script.
+# All go/no-go semantics happen in the read-only contract decision block below.
 
 # ---- Contract read-only decision (institutional, deterministic) ----
 try {
@@ -148,16 +106,59 @@ try {
   $statusPath = $env:HAT_BLOCKG_STATUS_PATH
   if(-not $statusPath){ $statusPath = Join-Path $repoRoot "logs\blockg_status_stub.json" }
   if(-not (Test-Path $statusPath)){ Fail "Missing contract: $statusPath" }
+
   $j = Get-Content -LiteralPath $statusPath -Raw -Encoding UTF8 | ConvertFrom-Json
+
+  # 1) Today-ness (fail-closed)
   $today = (Get-Date).ToString("yyyy-MM-dd")
   $asOf = (($j.as_of_date + "")).Trim()
   if($asOf -ne $today){ Fail ("stale as_of_date=" + $asOf + " today=" + $today) }
+
+  # 2) Required quality fields (contract-only)
+  $reqFields = @(
+    "phase23_health_ok_today",
+    "ev_hard_daily_ok_today",
+    "phase4_ok_today",
+    "gatescore_ok_today",
+    "gatescore_fresh_today",
+    "gatescore_recent_enough",
+    "gatescore_samples_ok",
+    "gatescore_threshold_ok_today"
+  )
+  foreach($k in $reqFields){
+    if(-not ($j.PSObject.Properties.Name -contains $k)){ Fail ("Missing field: " + $k) }
+    if(-not [bool]$j.$k){ Fail ($k + "=false") }
+  }
+
+  # 3) GateScore age policy (contract-only)
+  $MAX_GS_AGE_DAYS = 3
+  if(-not ($j.PSObject.Properties.Name -contains "gatescore_age_days")){ Fail "Missing field: gatescore_age_days" }
+  try { $age = [int]$j.gatescore_age_days } catch { Fail "gatescore_age_days invalid" }
+  if($age -gt $MAX_GS_AGE_DAYS){ Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
+
+  # 4) Per-symbol readiness
   $sym = ($Symbol + "").Trim().ToUpper()
-  $k = @{"NVDA"="nvda_blockg_ready";"SPY"="spy_blockg_ready";"QQQ"="qqq_blockg_ready"}[$sym]
-  if(-not $k){ Fail "Unknown symbol: $sym" }
-  $ok = $false
-  try { $ok = [bool]$j.$k } catch { $ok = $false }
-  if(-not $ok){ Fail ("contract " + $k + "=false reasons=" + (($j.reasons_not_ready + "") -join ",")) }
+  if($sym -eq "ALL"){
+    foreach($s0 in @("NVDA","SPY","QQQ")){
+      $k0 = @{"NVDA"="nvda_blockg_ready";"SPY"="spy_blockg_ready";"QQQ"="qqq_blockg_ready"}[$s0]
+      if(-not $k0){ Fail ("Unknown symbol: " + $s0) }
+      $ok0 = $false
+      try { $ok0 = [bool]$j.$k0 } catch { $ok0 = $false }
+      if(-not $ok0){ Fail ("contract " + $k0 + "=false reasons=" + (($j.reasons_not_ready + "") -join ",")) }
+    }
+  } else {
+    $k = @{"NVDA"="nvda_blockg_ready";"SPY"="spy_blockg_ready";"QQQ"="qqq_blockg_ready"}[$sym]
+    if(-not $k){ Fail ("Unknown symbol: " + $sym) }
+    $ok = $false
+    try { $ok = [bool]$j.$k } catch { $ok = $false }
+    if(-not $ok){ Fail ("contract " + $k + "=false reasons=" + (($j.reasons_not_ready + "") -join ",")) }
+  }
+
+  if($env:HAT_BLOCKG_QUIET -ne "1"){
+    if((-not $Quiet) -and ($env:HAT_BLOCKG_QUIET -ne "1")){
+      Write-BlockGInfo "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath"
+    }
+  }
 } catch {
   Fail ("Contract read-only decision error: " + $_.Exception.Message)
 }
