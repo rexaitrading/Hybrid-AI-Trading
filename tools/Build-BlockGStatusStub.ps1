@@ -458,7 +458,16 @@ if ($env:HAT_BLOCKG_QUIET -ne "1") {
       $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOfLocal -ne "" -and $gsAsOfLocal -eq $today)
       $spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOfLocal -ne "" -and $gsAsOfLocal -eq $today)
       $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOfLocal -ne "" -and $gsAsOfLocal -eq $today)
-      $payload.nvda_blockg_ready = [bool]$nvdaReady
+$payload.nvda_blockg_ready =
+  [bool]$payload.phase23_health_ok_today -and
+  [bool]$payload.ev_hard_daily_ok_today  -and
+  [bool]$payload.phase4_ok_today         -and
+  [bool]$payload.gatescore_fresh_today   -and
+  [bool]$payload.gatescore_recent_enough -and
+  [bool]$payload.gatescore_samples_ok    -and
+  [bool]$payload.gatescore_threshold_ok_today -and
+  [bool]$payload.gatescore_ok_today      -and
+  ([bool]$payload.gatescore_by_symbol.NVDA.ok_today)
       $payload.spy_blockg_ready  = [bool]$spyReady
       $payload.qqq_blockg_ready  = [bool]$qqqReady
       # Remove stale reason if present
@@ -1028,8 +1037,12 @@ $payload.nvda_blockg_ready =
   [bool]$payload.phase23_health_ok_today -and
   [bool]$payload.ev_hard_daily_ok_today  -and
   [bool]$payload.phase4_ok_today         -and
+  [bool]$payload.gatescore_fresh_today   -and
+  [bool]$payload.gatescore_recent_enough -and
+  [bool]$payload.gatescore_samples_ok    -and
+  [bool]$payload.gatescore_threshold_ok_today -and
   [bool]$payload.gatescore_ok_today      -and
-  [bool]$payload.gatescore_fresh_today
+  ([bool]$payload.gatescore_by_symbol.NVDA.ok_today)
 
 # SPY / QQQ computed only when explicitly enabled (fail-closed by default)
 $enableSpyQqq = ($env:HAT_BLOCKG_ENABLE_SPYQQQ -eq "1")
