@@ -142,7 +142,7 @@ if ($Mode -eq "rewrite" -and $count -lt $MinEvents) {
     exit 4
 }
 
-# --- Institutional guard: degenerate constant metrics => PLACEHOLDER (never REAL) ---
+# --- Institutional guard: degenerate constant metrics => FAIL-CLOSED (do not pollute official events) ---
 try {
   $edgeSet = New-Object System.Collections.Generic.HashSet[string]
   $microSet = New-Object System.Collections.Generic.HashSet[string]
@@ -153,51 +153,29 @@ try {
     $microSet.Add([string]$o.micro_score) | Out-Null
   }
   if(($edgeSet.Count -le 1) -and ($microSet.Count -le 1)){
+    # Write stub-only file for debugging; keep official file clean.
+    $stubPath = Join-Path $logsDir "nvda_gatescore_events_stub.jsonl"
+    $utf8NoBom2 = New-Object System.Text.UTF8Encoding($false)
+    $tmp = New-Object System.Collections.Generic.List[string]
     for($i=0; $i -lt $eventsOut.Count; $i++){
       $o = $eventsOut[$i] | ConvertFrom-Json
       $o.source = "paper_runner_stub"
       $o.notes = (([string]$o.notes) + ";degenerate_constant_metrics")
-      $eventsOut[$i] = ($o | ConvertTo-Json -Compress)
+      $tmp.Add(($o | ConvertTo-Json -Compress)) | Out-Null
     }
+    [System.IO.File]::WriteAllLines([System.IO.Path]::GetFullPath($stubPath), $tmp.ToArray(), $utf8NoBom2)
+    Write-Host "[NVDA-GS-EVENTS] FAIL-CLOSED: degenerate_constant_metrics -> wrote STUB file only (no official events)" -ForegroundColor Yellow
+
+    # rewrite-mode must not leave stale outputs behind
+    if($Mode -eq "rewrite"){
+      $enc3 = New-Object System.Text.UTF8Encoding($false)
+      [System.IO.File]::WriteAllText((Resolve-Path $OutPath).Path, "", $enc3)
+    }
+    exit 4
   }
 } catch { }
+# --- end institutional guard ---
 
-if ($count -lt $MinEvents) { Write-Error "[NVDA-GS-EVENTS] Too few events emitted ($count < $MinEvents)."; exit 4 }
-
-$outFull = $OutPath
-if (-not [System.IO.Path]::IsPathRooted($outFull)) { $outFull = Join-Path $repoRoot $outFull }
-
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-
-if ($Mode -eq "rewrite") {
-    $tmp = New-Object System.Collections.Generic.List[string]
-    foreach($x in $eventsOut){ $tmp.Add(("" + $x)) }
-    [System.IO.File]::WriteAllLines($outFull, $tmp.ToArray(), $utf8NoBom)
-}
-elseif ($Mode -eq "append") {
-    $tmp = New-Object System.Collections.Generic.List[string]
-    foreach($x in $eventsOut){ $tmp.Add(("" + $x)) }
-    [System.IO.File]::AppendAllLines($outFull, $tmp.ToArray(), $utf8NoBom)
-}
-else {
-    $pd = $PruneDate; if (-not $pd) { $pd = $today }
-    $kept = New-Object System.Collections.ArrayList
-    if (Test-Path -LiteralPath $outFull) {
-        $old = Get-Content -LiteralPath $outFull -Encoding UTF8
-        foreach ($oln in $old) {
-            $t = ($oln + "").Trim(); if (-not $t) { continue }
-            $oj = $null; try { $oj = $t | ConvertFrom-Json } catch { $oj = $null }
-            if ($null -eq $oj) { continue }
-            if (($oj.as_of_date + "") -ne $pd) { [void]$kept.Add($t) }
-        }
-    }
-    $merged = New-Object System.Collections.ArrayList
-    foreach ($k in $kept) { [void]$merged.Add($k) }
-    foreach ($n in $eventsOut) { [void]$merged.Add($n) }
-    $tmp = New-Object System.Collections.Generic.List[string]
-    foreach($x in $merged){ $tmp.Add(("" + $x)) }
-    [System.IO.File]::WriteAllLines($outFull, $tmp.ToArray(), $utf8NoBom)
-}
 
 Write-Host "[NVDA-GS-EVENTS] Wrote $count events to $outFull (mode=$Mode)" -ForegroundColor Green
 exit 0
