@@ -5,6 +5,14 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
+
+# --- Block-G + Notion export gate (institutional; fail-closed) ---
+$bg = Join-Path $toolsDir "Run-BlockGNotionExport.ps1"
+if(-not (Test-Path -LiteralPath $bg)){ throw ("Missing gate script: " + $bg) }
+& $bg -Symbol NVDA | Out-Host
+if($LASTEXITCODE -ne 0){ throw ("BLOCK-G NOT READY (rc=" + $LASTEXITCODE + ") - aborting Arm-NVDA-Live") }
+# --- end Block-G gate ---
+
 $repoRoot = Split-Path -Parent $toolsDir
 Set-Location $repoRoot
 
