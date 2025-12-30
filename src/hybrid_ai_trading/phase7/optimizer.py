@@ -100,6 +100,8 @@ def main() -> None:
     ap.add_argument("--blockg-status", default="logs/blockg_status_stub.json")
     ap.add_argument("--outdir", default="logs/phase7")
     ap.add_argument("--providers-policy", default=None)  # optional; fail-closed if provided+invalid
+    ap.add_argument("--allow-empty", action="store_true")  # smoke-only: RC=0 when empty
+
 
 
     # constraints (simple, deterministic)
@@ -172,6 +174,16 @@ def main() -> None:
 
     eligible = [s for s in symbols if gs_ok(s) and blockg_ready(s)]
     if not eligible:
+        if getattr(args, "allow_empty", False):
+            # Smoke-only mode: succeed with empty eligibility, but still emit artifact for auditability
+            _write_json(outdir / "constraints.json", {
+                "as_of_date": as_of,
+                "ok": True,
+                "reason": "allow_empty",
+                "payload": {"symbols": symbols, "eligible": [], "max_weight": float(args.max_weight)},
+                "version": "phase7.0",
+            })
+            return 0
         return _reject(outdir, as_of, "no_eligible_symbols", {"symbols": symbols, "eligible": eligible, "max_weight": float(args.max_weight)})
 
     # Deterministic weights: equal-weight among eligible, then clamp to max_weight and renormalize.
