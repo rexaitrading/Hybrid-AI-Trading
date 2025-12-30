@@ -29,20 +29,27 @@ $outLog = Join-Path $logDir ("daily_build_" + $ts + ".out.txt")
 $errLog = Join-Path $logDir ("daily_build_" + $ts + ".err.txt")
 
 $csv = Join-Path $root "logs\gatescore_daily_summary.csv"
+$csvToday = Join-Path $root "logs\gatescore_daily_summary_today.csv"
+# IMPORTANT: never overwrite $csv (canonical). Today-only normalize writes to $csvToday.
 if (-not (Test-Path $csv)) { throw "[GS-BUILD] missing input csv: $csv" }
 
-$todayUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+# Trading-day "today" must follow LOCAL session day; allow override via env HAT_ASOF_DATE.
+# Trading-day "today" must follow LOCAL session day; allow override via env HAT_ASOF_DATE.
+$today = (($env:HAT_ASOF_DATE + "")).Trim()
+if([string]::IsNullOrWhiteSpace($today)){ $today = (Get-Date).ToString("yyyy-MM-dd") }
+if([string]::IsNullOrWhiteSpace($today)){
+}
 
 # --- TODAY-ONLY NORMALIZE (institutional hygiene) ---
 try {
   $rowsAll = @(Import-Csv -LiteralPath $csv)
-  $rowsToday = @($rowsAll | Where-Object { ([string]$_.as_of_date).Substring(0,10) -eq $todayUtc })
+  $rowsToday = @($rowsAll | Where-Object { ([string]$_.as_of_date).Substring(0,10) -eq $today })
   if ($rowsToday.Count -gt 0) {
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     $out = ($rowsToday | ConvertTo-Csv -NoTypeInformation) -join "`n"
     if ($out.Length -gt 0 -and $out[-1] -ne "`n") { $out += "`n" }
-    [System.IO.File]::WriteAllText($csv, $out, $utf8NoBom)
-    Write-Host "[GS-BUILD] today-only normalized: $csv rows=$($rowsToday.Count) as_of_date=$todayUtc" -ForegroundColor Cyan
+    [System.IO.File]::WriteAllText($csvToday, $out, $utf8NoBom)
+    Write-Host "[GS-BUILD] today-only normalized: $csvToday rows=$($rowsToday.Count) as_of_date=$today" -ForegroundColor Cyan
   } else {
     Write-Host "[GS-BUILD] WARNING: no today rows found in $csv (kept as-is)" -ForegroundColor Yellow
   }
@@ -127,7 +134,7 @@ if ($Symbol -ne "ALL") { $syms = @($Symbol.ToUpper()) }
 foreach($s in $syms){
   if (-not (Has-SessionRow -sym $s)) {
     $sd = Get-SessionDate -sym $s
-    Write-Host ("[GS-BUILD] FAIL-CLOSED: missing session row for {0} in {1} today={2} session={3}" -f $s,$csv,$todayUtc,$sd) -ForegroundColor Yellow
+    Write-Host ("[GS-BUILD] FAIL-CLOSED: missing session row for {0} in {1} today={2} session={3}" -f $s,$csv,$today,$sd) -ForegroundColor Yellow
     exit 2
   }
 }
