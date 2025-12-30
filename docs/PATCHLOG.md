@@ -172,3 +172,16 @@ tools/Disarm-NVDA-Live.ps1
 - Added Phase-6 readiness post-merge of blockg_status
 - Added CI workflow: .github/workflows/ci-final-lock.yml running Run-FinalLock -Mode CI on PR/push
 - Tag: FINAL_LOCK_20251228
+## 20251229_181051  parse_sanity
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_181051/
+**Backups:** ./.backup/*.20251229_181051.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
