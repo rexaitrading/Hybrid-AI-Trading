@@ -97,3 +97,53 @@ class RunContext:
             repo_root=root,
             blockg_status_path=RunContext._resolve_blockg_status_path(root),
         )
+
+# ---------------- RunContext resolution helpers (single source of truth) ----------------
+
+def resolve_is_paper(meta=None, ctx=None) -> bool:
+    # Resolve effective paper/live mode (fail-closed).
+    # Precedence: ctx.is_paper > meta["is_paper"] > env:HAT_IS_PAPER > default paper.
+    try:
+        ip = getattr(ctx, "is_paper", None)
+        if isinstance(ip, bool):
+            return bool(ip)
+    except Exception:
+        pass
+    try:
+        if isinstance(meta, dict) and ("is_paper" in meta) and (meta.get("is_paper", None) is not None):
+            return bool(meta.get("is_paper"))
+    except Exception:
+        pass
+    try:
+        v = str(os.environ.get("HAT_IS_PAPER", "")).strip()
+        if v in ("0", "false", "False", "NO", "no"):
+            return False
+        if v in ("1", "true", "True", "YES", "yes"):
+            return True
+    except Exception:
+        pass
+    return True
+
+
+def resolve_ctx(symbol: str, meta=None, ctx=None):
+    # Resolve a unified RunContext (best-effort; fail-closed).
+    try:
+        if ctx is not None:
+            return ctx
+    except Exception:
+        pass
+    try:
+        if isinstance(meta, dict):
+            c0 = meta.get("ctx", None)
+            if isinstance(c0, RunContext):
+                return c0
+    except Exception:
+        pass
+    try:
+        paper = resolve_is_paper(meta=meta, ctx=None)
+        regime = "unknown"
+        if isinstance(meta, dict) and (meta.get("regime", None) is not None):
+            regime = str(meta.get("regime"))
+        return RunContext.from_env_and_args(symbol=str(symbol), regime=regime, mode=None, is_paper=paper)
+    except Exception:
+        return None

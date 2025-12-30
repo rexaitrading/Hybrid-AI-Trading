@@ -3,7 +3,7 @@ from __future__ import annotations
 from hybrid_ai_trading.execution.blockg_contract import assert_nvda_live_ready
 
 from typing import Any, Dict, List, Optional, Tuple
-from hybrid_ai_trading.runtime.run_context import RunContext
+from hybrid_ai_trading.runtime.run_context import RunContext, resolve_is_paper
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready
 from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 
@@ -93,18 +93,9 @@ class IBAdapter(Broker):
                 ctx = RunContext.from_env_and_args(symbol=str(symbol), regime=str(meta0.get('regime','unknown')), mode=None)
             except Exception:
                 ctx = None
-        is_paper = True
-        try:
-            if "is_paper" in meta0:
-                is_paper = bool(meta0.get("is_paper", True))
-            else:
-                env_flag = str(__import__("os").environ.get("HAT_IS_PAPER", "")).strip()
-                if env_flag == "0":
-                    is_paper = False
-                elif ctx is not None and getattr(ctx, "mode", ""):
-                    is_paper = str(getattr(ctx, "mode", "")).strip().lower() != "live"
-        except Exception:
-            is_paper = True
+        # Canonical paper/live resolution (ctx > meta > env; fail-closed paper)
+        is_paper = resolve_is_paper(meta=meta0, ctx=ctx)
+
         # Additional hard gate: if LIVE, require NVDA live stamp/readiness (fail-closed)
         if not is_paper and str(symbol).upper() == "NVDA":
             assert_nvda_live_ready()
@@ -154,4 +145,3 @@ class IBAdapter(Broker):
                 }
             )
         return pos
-

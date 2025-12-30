@@ -21,7 +21,7 @@ def _ensure_ctx(meta0: dict, symbol: str) -> dict:
     except Exception:
         pass
     return meta0
-from hybrid_ai_trading.runtime.run_context import RunContext
+from hybrid_ai_trading.runtime.run_context import RunContext, resolve_is_paper
 class BrokerError(Exception):
     pass
 
@@ -93,20 +93,20 @@ class IBKRClient(BrokerClient):
         #   - meta["is_paper"] == False  OR  env:HAT_IS_PAPER == "0"
         # Default is paper (safe). Production live callers must set meta.is_paper=False.
         try:
-            meta0 = meta or {}
-            meta0 = _ensure_ctx(meta0, symbol)
-            is_paper = bool(meta0.get("is_paper", True))
-        except Exception:
-            meta0 = meta or {}
-            is_paper = True
+        meta0 = meta or {}
+        meta0 = _ensure_ctx(meta0, symbol)
+        # Canonical paper/live resolution (ctx > meta > env; fail-closed paper)
         try:
-            env_flag = str(__import__("os").environ.get("HAT_IS_PAPER", "")).strip()
-            if env_flag in ("0", "false", "False", "NO", "no"):
-                is_paper = False
+            ctx0 = meta0.get("ctx", None) if isinstance(meta0, dict) else None
+        except Exception:
+            ctx0 = None
+        is_paper_effective = resolve_is_paper(meta=meta0, ctx=(ctx0 if isinstance(ctx0, RunContext) else None))
+        try:
+            if isinstance(meta0, dict) and ("is_paper" not in meta0 or meta0.get("is_paper", None) is None):
+                meta0["is_paper"] = bool(is_paper_effective)
         except Exception:
             pass
-        # Block-G single chokepoint (ctx/json/env precedence inside contract)
-        ensure_symbol_blockg_ready(
+
             symbol,
             allow_paper=True,
             is_paper=(meta0.get("is_paper", None) if isinstance(meta0, dict) else None),
@@ -223,5 +223,3 @@ class KrakenClient(BrokerClient):
             resp.get("id") or resp.get("txid") or resp.get("clientOrderId") or "unknown"
         )
         return oid, {"raw": resp}
-
-
