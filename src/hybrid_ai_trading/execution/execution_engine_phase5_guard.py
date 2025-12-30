@@ -1,8 +1,6 @@
 from __future__ import annotations
-from hybrid_ai_trading.execution.blockg_contract_reader import require_blockg_ready_for_live_symbol
 
 from dataclasses import asdict
-from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from typing import Any, Dict
 from hybrid_ai_trading.runtime.run_context import RunContext
 
@@ -23,7 +21,7 @@ def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
     return decision
 
 
-def ensure_symbol_blockg_ready(symbol: str) -> None:
+def ensure_symbol_blockg_ready(symbol: str, *, is_paper: bool | None = None, ctx: RunContext | None = None) -> None:
     """
     Block-G contract enforcement for live NVDA / SPY / QQQ.
 
@@ -33,7 +31,7 @@ def ensure_symbol_blockg_ready(symbol: str) -> None:
     Tests may monkeypatch this function to simulate Block-G failures without touching
     the underlying contract helper.
     """
-    contract_ensure_symbol_blockg_ready(symbol)
+    contract_ensure_symbol_blockg_ready(symbol, allow_paper=True, is_paper=is_paper, ctx=ctx)
 
 
 def place_order_phase5(
@@ -93,7 +91,10 @@ def place_order_phase5_with_guard(
         is_paper = True
     if not is_paper:
         # Block-G: env-aware single gate (fail-closed for live)
-        require_blockg_ready_for_live(symbol)
+        # Block-G: contract-only single gate (fail-closed for live)
+        sym_u = str(symbol).upper()
+        if sym_u in ("NVDA","SPY","QQQ"):
+            ensure_symbol_blockg_ready(sym_u, is_paper=False, ctx=None)
     trade = {
         "symbol": symbol,
         "side": side,
@@ -105,8 +106,6 @@ def place_order_phase5_with_guard(
     }
 
     # 1) Block-G for NVDA (tests monkeypatch ensure_symbol_blockg_ready)
-    if symbol.upper() == "NVDA":
-        ensure_symbol_blockg_ready(symbol.upper())
     # 1.5) Phase-6 Portfolio Halt (optional; fail-closed when enabled)
     try:
         cfg = {}
