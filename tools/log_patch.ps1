@@ -89,7 +89,10 @@ if($inGit){ git diff > (Join-Path $logDir "post.diff") }
 
 # PATCHLOG entry
 $patchlog = ".\docs\PATCHLOG.md"
-if(-not (Test-Path $patchlog)){ "# PATCHLOG (surgical changes)`n" | Out-File -FilePath $patchlog -Encoding utf8 }
+if(-not (Test-Path $patchlog)){
+  $enc0 = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText((Resolve-Path $patchlog).Path, ("# PATCHLOG (surgical changes)`n"), $enc0)
+}
 $tail = ""; $testsOut = Join-Path $logDir "tests.out.txt"; if(Test-Path $testsOut){ $tail = (Get-Content $testsOut -Tail 20) -join "`n" }
 $entry = @"
 ## $stamp  $Title
@@ -106,6 +109,11 @@ $tail
 
 ---
 "@
-Add-Content -Path $patchlog -Value $entry -Encoding utf8
+$enc1 = New-Object System.Text.UTF8Encoding($false)
+$pp = (Resolve-Path $patchlog).Path
+$existing = ""
+if(Test-Path $pp){ $existing = Get-Content -LiteralPath $pp -Raw -Encoding utf8 }
+$merged = ($existing -replace "`r`n","`n").TrimEnd() + "`n" + (($entry -replace "`r`n","`n").TrimEnd()) + "`n"
+[System.IO.File]::WriteAllText($pp, $merged, $enc1)
 Write-Host ("Logged patch  {0}" -f $patchlog) -ForegroundColor Green
 Write-Host ("Logs dir      {0}" -f $logDir)   -ForegroundColor Green
