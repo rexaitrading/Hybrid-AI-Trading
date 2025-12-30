@@ -55,16 +55,55 @@ foreach($ln in $lines){
   $props = $j.PSObject.Properties.Name
   $d = $null
 
-  foreach($k in @("ts_trade","entry_ts","ts_utc")){
+  # Prefer explicit as_of_date if present (authoritative local trading day)
+if($props -contains "as_of_date"){
+  $v = (""+$j.as_of_date).Trim()
+  if($v.Length -ge 10){ $d = $v.Substring(0,10) }
+}
+
+# Else derive local date from ts_utc (handles UTC midnight crossing)
+if((-not $d) -and ($props -contains "ts_utc")){
+  $v = (""+$j.ts_utc).Trim()
+  if($v){
+    try {
+      $dto = [datetimeoffset]::Parse($v)
+      $d = $dto.ToLocalTime().ToString("yyyy-MM-dd")
+    } catch { }
+  }
+}
+
+# Else fallback legacy keys
+if(-not $d){
+  foreach($k in @("ts_trade","entry_ts")){
     if($props -contains $k){
-      $v = (($j.$k) + "").Trim()
+      $v = (""+$j.$k).Trim()
       if($v.Length -ge 10){ $d = $v.Substring(0,10); break }
     }
   }
+}
 
-  if($d -eq $today){
-    [void]$keep.Add($s)
+if($d -eq $today){
+  # Normalize to a paperlive-results style row so downstream GateScore writer can consume it.
+  # (paper_runner ledger schema has `symbols:[...]` and `ts_utc` in UTC; we enforce local as_of_date)
+  $outObj = [ordered]@{
+    as_of_date = $today
+    symbol = "NVDA"
+    source = "paper_runner"
+    ts_utc = (""+$j.ts_utc).Trim()
+    status = (""+$j.status).Trim()
+    price_source = (""+$j.price_source).Trim()
+    # minimal deterministic metrics (provider-only stubs should never arm live)
+    edge_ratio = 0.0
+    micro_score = 0.0
+    micro_score_source = "derived"
+    realized_pnl = 0.0
+    count_signals = 1
+    pnl_samples = 1
+    notes = "from_paper_live_ledger;provider_only_stub"
   }
+  $lineOut = ($outObj | ConvertTo-Json -Compress -Depth 6)
+  [void]$keep.Add($lineOut)
+}
 }
 
 if($keep.Count -eq 0){
