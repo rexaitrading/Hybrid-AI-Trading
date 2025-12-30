@@ -1,12 +1,7 @@
 {
   "version": "providers.1",
-  "as_of_date_source": "blockg",
   "defaults": {
-    "mode": "fail_closed",
-    "max_monthly_budget_usd": 200,
-    "trading_days_per_month": 21,
-    "min_ev_per_day_usd_to_pay": 5.0,
-    "min_trades_per_day_to_pay": 5,
-    "min_days_observed": 10
+    "max_monthly_budget_usd": 200.0,
+    "trading_days_per_month": 21
   }
 }

@@ -1,6 +1,7 @@
-from hybrid_ai_trading.phase7.preflight_gate import ensure_phase7_ready
-# -*- coding: utf-8 -*-
 from __future__ import annotations
+
+from hybrid_ai_trading.phase7.preflight_gate import ensure_phase7_ready
+
 
 import argparse
 import csv
@@ -43,6 +44,51 @@ def _read_json(path: Path) -> Dict[str, Any]:
     return d
 
 
+def _maybe_policy_path(arg_path: Optional[str]) -> Optional[Path]:
+    # Order: CLI > env > local untracked policy > tracked example > None
+    if arg_path:
+        return Path(arg_path)
+    import os
+    p = os.environ.get("HAT_PROVIDERS_POLICY_PATH", "").strip()
+    if p:
+        return Path(p)
+    localp = Path("config/providers_policy.json")
+    if localp.exists():
+        return localp
+    ex = Path("config/providers_policy.example.json")
+    if ex.exists():
+        return ex
+    return None
+
+
+def _read_providers_policy(p: Optional[Path]) -> Optional[Dict[str, Any]]:
+    if p is None:
+        return None
+    if not p.exists():
+        raise SystemExit(f"phase7: providers policy missing: {p}")
+    d = _read_json(p)
+    if d.get("version") != "providers.1":
+        raise SystemExit(f"phase7: providers policy bad version: {d.get('version')}")
+    defaults = d.get("defaults")
+    if not isinstance(defaults, dict):
+        raise SystemExit("phase7: providers policy missing defaults")
+    for k in ("max_monthly_budget_usd", "trading_days_per_month"):
+        if k not in defaults:
+            raise SystemExit(f"phase7: providers policy missing defaults.{k}")
+    return d
+
+
+def _provider_cost_per_day_usd(pol: Optional[Dict[str, Any]]) -> float:
+    if not pol:
+        return 0.0
+    d = pol["defaults"]
+    max_budget = float(d.get("max_monthly_budget_usd", 0.0) or 0.0)
+    td = int(d.get("trading_days_per_month", 21) or 21)
+    if max_budget <= 0.0 or td <= 0:
+        raise SystemExit("phase7: providers policy invalid budget/trading_days_per_month")
+    return max_budget / float(td)
+
+
 def _bool(x: Any) -> bool:
     return bool(x) is True
 
@@ -53,6 +99,8 @@ def main() -> None:
     ap.add_argument("--phase6-summary", default="logs/phase6/phase6_daily_summary.json")
     ap.add_argument("--blockg-status", default="logs/blockg_status_stub.json")
     ap.add_argument("--outdir", default="logs/phase7")
+    ap.add_argument("--providers-policy", default=None)  # optional; fail-closed if provided+invalid
+
 
     # constraints (simple, deterministic)
     ap.add_argument("--max-weight", type=float, default=0.60)
@@ -81,6 +129,12 @@ def main() -> None:
     st = _read_json(bg)
     if st.get("as_of_date") != as_of:
         raise SystemExit(f"phase7: BlockG stale as_of_date={st.get('as_of_date')} need={as_of}")
+
+    # Providers policy (optional): if present and invalid => FAIL-CLOSED
+    pol_path = _maybe_policy_path(args.providers_policy)
+    pol = _read_providers_policy(pol_path)
+    provider_cost_per_day = _provider_cost_per_day_usd(pol)
+
 
     # Inputs
     gs = s6.get("gatescore_by_symbol", {})
@@ -153,6 +207,7 @@ def main() -> None:
         "max_weight": max_w,
         "min_weight": float(args.min_weight),
         "cost_proxy_avg_cost_bps": avg_cost_bps,
+        "provider_cost_per_day_usd": float(provider_cost_per_day),
         "version": "phase7.0",
     }
 
