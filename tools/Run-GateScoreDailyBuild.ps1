@@ -140,7 +140,19 @@ foreach($s in $syms){
 }
 
 if (-not $RunPython) {
-  Write-Host "[GS-BUILD] OK (no-python) symbols=$($syms -join ',') csv=$csv" -ForegroundColor Green
+  # --- Institutional rule: explicit symbol runs MUST pass python threshold eval (fail-closed) ---
+  if($Symbol -and ($Symbol.ToUpperInvariant() -ne "ALL")){
+    try {
+      $args = @("-m","hybrid_ai_trading.gatescore.daily_build","--csv",$csv,"--symbol",$Symbol)
+      & $py $args
+      exit $LASTEXITCODE
+    } catch {
+      Write-Host ("[GS-BUILD] FAIL-CLOSED: python eval failed: " + $_.Exception.Message) -ForegroundColor Red
+      exit 2
+    }
+  }
+  # --- END institutional rule ---
+  # Write-Host "[GS-BUILD] OK (no-python) symbols=$($syms -join ',') csv=$csv" -ForegroundColor Green
   exit 0
 }
 
