@@ -185,3 +185,94 @@ tools/Disarm-NVDA-Live.ps1
 
 
 ---
+## 20251229_184545  parse_probe
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_184545/
+**Backups:** ./.backup/*.20251229_184545.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_185238  parse_after_stray_tail_removal
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_185238/
+**Backups:** ./.backup/*.20251229_185238.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_185244  smoke_log_patch
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_185244/
+**Backups:** ./.backup/*.20251229_185244.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_190346  parse_guard
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_190346/
+**Backups:** ./.backup/*.20251229_190346.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_190714  parse_guard_fix
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_190714/
+**Backups:** ./.backup/*.20251229_190714.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_190715  guard_override
+**Why:** 
+
+**Files:** .\tools\Build-BlockGStatusStub.ps1
+**Logs:** ./logs/20251229_190715/
+**Backups:** ./.backup/*.20251229_190715.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_190859  guard_override
+**Why:** 
+
+**Files:** .\tools\Build-BlockGStatusStub.ps1
+**Logs:** ./logs/20251229_190859/
+**Backups:** ./.backup/*.20251229_190859.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
