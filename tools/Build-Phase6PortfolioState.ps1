@@ -19,7 +19,16 @@ if([string]::IsNullOrWhiteSpace($env:HAT_IBG_STATUS_PATH)){
     $env:HAT_IBG_STATUS_PATH = $u
   }
 }
+# --- Phase6 as_of_date authority: BlockG (fail-closed) ---
 $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+try {
+  $bg = Join-Path (Join-Path $repoRoot "logs") "blockg_status_stub.json"
+  if(Test-Path -LiteralPath $bg){
+    $j = Get-Content -LiteralPath $bg -Raw -Encoding utf8 | ConvertFrom-Json
+    $v = (""+$j.as_of_date).Trim()
+    if($v.Length -ge 10){ $today = $v.Substring(0,10) }
+  }
+} catch { }
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
 function CheckSym([string]$sym){
