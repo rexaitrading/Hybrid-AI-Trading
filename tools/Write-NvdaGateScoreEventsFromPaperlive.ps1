@@ -7,10 +7,14 @@ param(
     [string]$Mode = "rewrite",
     [string]$PruneDate = ""
 )
-
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# --- deterministic rewrite semantics: truncate output FIRST (prevents stale PLACEHOLDER persistence) ---
+if($Mode -eq "rewrite"){
+  $enc = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText((Resolve-Path $OutPath).Path, "", $enc)
+}
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $logsDir  = Join-Path $repoRoot "logs"
 $today    = (Get-Date).ToString("yyyy-MM-dd")
@@ -53,11 +57,22 @@ if (-not $InputPath -or -not (Test-Path -LiteralPath $InputPath)) { Write-Error 
 Write-Host "[NVDA-GS-EVENTS] Input=$InputPath" -ForegroundColor Cyan
 
 $lines = Get-Content -LiteralPath $InputPath -Encoding UTF8
-if (-not $lines -or $lines.Count -eq 0) { Write-Error "[NVDA-GS-EVENTS] Input jsonl is empty: $InputPath"; exit 3 }
+if (-not $lines -or $lines.Count -eq 0) {
+  # rewrite-mode should never leave stale outputs behind
+  if($Mode -eq "rewrite"){
+    $enc = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText((Resolve-Path $OutPath).Path, "", $enc)
+  }
+  Write-Host ("[NVDA-GS-EVENTS] INPUT_EMPTY: mode={0} input={1} -> fail-closed (rc=4)" -f $Mode,$InputPath) -ForegroundColor Yellow
+  exit 4
+}
 
 $eventsOut = New-Object System.Collections.ArrayList
 $count = 0
 
+# --- StrictMode-safe realized_pnl evidence defaults ---
+$rpOk = $false
+$rpNum = 0.0
 foreach ($ln in $lines) {
     $s = ($ln + "").Trim()
     if (-not $s) { continue }
@@ -68,8 +83,10 @@ foreach ($ln in $lines) {
 
     $props = $j.PSObject.Properties.Name
     $asOf = Pick-Date $j @("as_of_date","date","trading_day","day","ts","timestamp","ts_utc") $today
-    if ($Mode -eq "rewrite") { $asOf = $today }
-
+    # rewrite-mode is "today-only": never manufacture today from stale rows
+    if ($Mode -eq "rewrite") {
+        if ($asOf -ne $today) { continue }
+    }
     $edge = 0.0
     foreach ($k in @("edge_ratio","mean_edge_ratio","edge","edge_mean","gatescore_edge","edgeValue","edge_score")) {
         if ($props -contains $k) { $edge = TryD ($j.$k); break }
@@ -84,11 +101,21 @@ foreach ($ln in $lines) {
     foreach ($k in @("pnl_samples","pnlSamples","pnl_n","trades_n","trade_count","n_trades","samples","sample_count")) {
         if ($props -contains $k) { $pnlSamples = TryI ($j.$k); break }
     }
-
+$rp = $null; $rpOk = $false
+if ($props -contains "realized_pnl") {
+  $s = [string]$j.realized_pnl
+  if([double]::TryParse($s, [ref]$rpNum)){
+    $rp = [double]$rpNum
+    $rpOk = $true
+  } else {
     $rp = $null
-    if ($props -contains "realized_pnl") { $rp = [string]$j.realized_pnl }
+    $rpOk = $false
+  }
+}
+# pnl_samples evidence-based: 1 only when realized_pnl parsed numeric; else 0
+$pnlSamples = if($rpOk){ 1 } else { 0 }
 
-    $ms = $micro
+$ms = $micro
     $microSrc = "producer"
     if ($ms -eq $null -or [double]$ms -le 0.0) { $ms = Get-DerivedMicroScore -EdgeRatio $edge; $microSrc = "derived_v1" }
 
@@ -109,6 +136,31 @@ foreach ($ln in $lines) {
     [void]$eventsOut.Add(($outObj | ConvertTo-Json -Compress))
     $count++
 }
+# NO_TODAY_ROWS_FOR_REWRITE
+if ($Mode -eq "rewrite" -and $count -lt $MinEvents) {
+    Write-Host ("[NVDA-GS-EVENTS] NO_TODAY_ROWS: emitted={0} MinEvents={1} today={2} input={3}" -f $count,$MinEvents,$today,$InputPath) -ForegroundColor Red
+    exit 4
+}
+
+# --- Institutional guard: degenerate constant metrics => PLACEHOLDER (never REAL) ---
+try {
+  $edgeSet = New-Object System.Collections.Generic.HashSet[string]
+  $microSet = New-Object System.Collections.Generic.HashSet[string]
+  foreach($ln2 in $eventsOut){
+    $o=$null; try{$o=($ln2|ConvertFrom-Json)}catch{$o=$null}
+    if($null -eq $o){ continue }
+    $edgeSet.Add([string]$o.edge_ratio) | Out-Null
+    $microSet.Add([string]$o.micro_score) | Out-Null
+  }
+  if(($edgeSet.Count -le 1) -and ($microSet.Count -le 1)){
+    for($i=0; $i -lt $eventsOut.Count; $i++){
+      $o = $eventsOut[$i] | ConvertFrom-Json
+      $o.source = "PLACEHOLDER"
+      $o.notes = (([string]$o.notes) + ";degenerate_constant_metrics")
+      $eventsOut[$i] = ($o | ConvertTo-Json -Compress)
+    }
+  }
+} catch { }
 
 if ($count -lt $MinEvents) { Write-Error "[NVDA-GS-EVENTS] Too few events emitted ($count < $MinEvents)."; exit 4 }
 
