@@ -76,7 +76,31 @@ try {
     Remove-Item Env:PYTEST_ADDOPTS -ErrorAction SilentlyContinue
   }
 
-  Invoke-PSFile -Path ".\tools\Run-GateScoreDailySummary.ps1" -Args @("-Quiet") -StepName "GateScoreDailySummary"
+    # 1.5) Rebuild NVDA GateScore events (today-only; may be absent on non-trading / not-running days)
+    # 1.45) Export NVDA today results from canonical trades.jsonl (fail-closed if none)
+  Write-Host "[DAILY-OPS] -> ExportNvdaPaperliveResultsToday(from trades.jsonl)"
+  $pExp = Join-Path $repoRoot ".\tools\Export-NvdaPaperliveResultsToday.ps1"
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $pExp
+  $rcExp = $LASTEXITCODE
+  if($rcExp -eq 0){
+    # ok
+  } elseif($rcExp -eq 2){
+    Write-Host "[DAILY-OPS] ExportNvdaPaperliveResultsToday: NO_TODAY_ROWS (rc=2) -- continuing (paper locked)" -ForegroundColor Yellow
+  } else {
+    throw ("DAILY_OPS_FAIL: ExportNvdaPaperliveResultsToday rc={0} file={1}" -f $rcExp,$pExp)
+  }
+Write-Host "[DAILY-OPS] -> NvdaGateScoreEvents(today-only)"
+  $pEv = Join-Path $repoRoot ".\tools\Write-NvdaGateScoreEventsFromPaperlive.ps1"
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $pEv -Mode rewrite -MinEvents 10 -OutPath (Join-Path $logsDir "nvda_gatescore_events.jsonl")
+  $rcEv = $LASTEXITCODE
+  if($rcEv -eq 0){
+    # ok
+  } elseif($rcEv -eq 4){
+    Write-Host "[DAILY-OPS] NvdaGateScoreEvents: NO_TODAY_ROWS (rc=4) -- continuing (paper locked)" -ForegroundColor Yellow
+  } else {
+    throw ("DAILY_OPS_FAIL: NvdaGateScoreEvents rc={0} file={1}" -f $rcEv,$pEv)
+  }
+Invoke-PSFile -Path ".\tools\Run-GateScoreDailySummary.ps1" -Args @("-Quiet") -StepName "GateScoreDailySummary"
   Invoke-PSFile -Path ".\tools\Run-GateScoreDailyBuild.ps1" -StepName "GateScoreDailyBuild"
 
   # 2) Build BlockG stub to canonical logs/ no matter what the builder does internally
@@ -84,7 +108,20 @@ try {
   Invoke-PSFile -Path ".\tools\Build-BlockGStatusStub.ps1" -StepName "BuildBlockGStatusStub"
 
   # 3) Final contract check (must be after evidence build)
-  Invoke-PSFile -Path ".\tools\Check-BlockGReady.ps1" -Args @("-Symbol","NVDA") -StepName "BlockGReady(NVDA)"
+    # 3) Final contract check (must be after evidence build)
+  Write-Host ("[DAILY-OPS] -> {0}" -f "BlockGReady(NVDA)")
+  $pChk = Join-Path $repoRoot ".\tools\Check-BlockGReady.ps1"
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $pChk -Symbol "NVDA"
+  $rcBlockG = $LASTEXITCODE
+
+  if($rcBlockG -eq 0){
+    # ok, continue
+  } elseif($rcBlockG -eq 2){
+    # FAIL-CLOSED but NON-FATAL for paper-locked daily ops (we still want intel + notion exports)
+    Write-Host "[DAILY-OPS] BlockGReady(NVDA) = NOT READY (rc=2) -- continuing (paper locked)" -ForegroundColor Yellow
+  } else {
+    throw ("DAILY_OPS_FAIL: {0} rc={1} file={2}" -f "BlockGReady(NVDA)", $rcBlockG, $pChk)
+  }
 
   # 4) Intel + Phase6
   Invoke-PSFile -Path ".\tools\Run-IntelPipeline.ps1" -StepName "IntelPipeline"

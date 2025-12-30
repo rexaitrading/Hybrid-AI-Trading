@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$InputPath = ".\logs\nvda_phase5_paperlive_results.jsonl",
+[string]$InputPath = ".\logs\trades.jsonl",
   [string]$OutPath   = ".\logs\nvda_phase5_paperlive_results_today.jsonl"
 )
 
@@ -34,6 +34,8 @@ $lines = Get-Content -LiteralPath $InputPath -Encoding UTF8
 foreach($ln in $lines){
   $s = ($ln + "").Trim()
   if(-not $s){ continue }
+  if($s -notmatch '"NVDA"'){ continue }  # fast prefilter
+
   $j = $null
   try { $j = $s | ConvertFrom-Json } catch { continue }
   if($null -eq $j){ continue }
