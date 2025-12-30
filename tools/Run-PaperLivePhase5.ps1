@@ -47,8 +47,10 @@ Write-Host ("[PAPER-LIVE] Symbol={0} Iter={1} SleepMs={2}" -f $Symbol,$Iteration
 
 # ---- Build Block-G stub (fresh) ----
 Remove-Item Env:HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
+# ---- Build Block-G stub (fresh) ----
+# IMPORTANT: prevent stale reuse across interactive sessions
+Remove-Item Env:HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
 & (Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1")
-
 # ---- Risk slice (fail-closed) ----
 powershell -NoProfile -ExecutionPolicy Bypass -File $choke -q --rootdir $repoRoot .\tests -k "blockg or risk or phase5" --maxfail=1
 if($LASTEXITCODE -ne 0){ throw "[PAPER-LIVE] Risk slice failed; abort." }
