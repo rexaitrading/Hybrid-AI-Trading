@@ -244,7 +244,13 @@ def main(argv=None) -> int:
 
     cfg: Dict[str, Any] = load_config(args.config)
 
-    # --- Auto daily rollover log file ---
+        # If log_file is missing/empty, default to auto so every run emits evidence.
+    try:
+        if not getattr(args, "log_file", None):
+            args.log_file = "auto"
+    except Exception:
+        pass
+# --- Auto daily rollover log file ---
     try:
         if getattr(args, "log_file", None) == "auto":
             day = datetime.now().astimezone().date().isoformat()
