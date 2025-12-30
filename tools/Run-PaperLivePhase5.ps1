@@ -73,7 +73,14 @@ Write-Host ("[PAPER-LIVE] Runner={0}" -f $runner) -ForegroundColor Cyan
 Write-Host ("[PAPER-LIVE] Config={0}" -f $Config) -ForegroundColor Cyan
 
 # SAFE default: provider-only tick (no IB). Remove --provider-only later to hit IB paper path.
-$argsRunner = @("--config", $Config, "--once", "--log-file", "auto")
+# Runner args: multi-tick evidence when Iterations>1
+$argsRunner = @("--config", $Config, "--log-file", "auto")
+if($Iterations -le 1){
+  $argsRunner += @("--once")
+} else {
+  $argsRunner += @("--ticks", [string]$Iterations)
+  $argsRunner += @("--sleep-sec", [string]([math]::Max(0.0, ($SleepMs / 1000.0))))
+}
   $argsRunner += @("--universe", $Symbol)
 if($UseIBSnapshots){
   # IB snapshots path (paper only)  will fail-closed if IBG down or market closed (unless override flag is set in config/CLI)
