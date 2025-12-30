@@ -141,4 +141,26 @@ if((-not $Quiet) -and ($env:HAT_BLOCKG_QUIET -ne "1")){
   Write-BlockGInfo "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath"
 }
 }
+
+# ---- Contract read-only decision (institutional, deterministic) ----
+try {
+  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+  $statusPath = $env:HAT_BLOCKG_STATUS_PATH
+  if(-not $statusPath){ $statusPath = Join-Path $repoRoot "logs\blockg_status_stub.json" }
+  if(-not (Test-Path $statusPath)){ Fail "Missing contract: $statusPath" }
+  $j = Get-Content -LiteralPath $statusPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  $today = (Get-Date).ToString("yyyy-MM-dd")
+  $asOf = (($j.as_of_date + "")).Trim()
+  if($asOf -ne $today){ Fail ("stale as_of_date=" + $asOf + " today=" + $today) }
+  $sym = ($Symbol + "").Trim().ToUpper()
+  $k = @{"NVDA"="nvda_blockg_ready";"SPY"="spy_blockg_ready";"QQQ"="qqq_blockg_ready"}[$sym]
+  if(-not $k){ Fail "Unknown symbol: $sym" }
+  $ok = $false
+  try { $ok = [bool]$j.$k } catch { $ok = $false }
+  if(-not $ok){ Fail ("contract " + $k + "=false reasons=" + (($j.reasons_not_ready + "") -join ",")) }
+} catch {
+  Fail ("Contract read-only decision error: " + $_.Exception.Message)
+}
+# ---- end contract read-only decision ----
+
 exit 0
