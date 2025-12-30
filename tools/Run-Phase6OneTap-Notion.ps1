@@ -26,7 +26,18 @@ if([string]::IsNullOrWhiteSpace($env:HAT_NOTION_PHASE6_DB_ID)){ throw "Missing H
 
 
 # FAIL-CLOSED: propagate OneTap exit code (automation must see failure)
-if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+# FAIL-CLOSED semantics:
+# rc=0 => OK
+# rc=2 => NOT READY (expected when BlockG fail-closed / no symbols ready); still push Notion summary for journaling
+# any other non-zero => fatal
+$rcPhase6 = $LASTEXITCODE
+if($rcPhase6 -eq 0){
+  # continue
+} elseif($rcPhase6 -eq 2){
+  Write-Host "[PHASE6-ONETAP+NOTION] Phase6 NOT READY (rc=2) -- continuing Notion push (paper locked)" -ForegroundColor Yellow
+} else {
+  exit $rcPhase6
+}
 # Notion upsert by as_of_date
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Push-Phase6DailySummary-ToNotion.ps1")
 
