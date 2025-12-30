@@ -6,6 +6,21 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
+$toolsDir = Split-Path -Parent $PSCommandPath
+$repoRoot = Split-Path -Parent $toolsDir
+
+$py = Join-Path $repoRoot ".venv\Scripts\python.exe"
+if(-not (Test-Path -LiteralPath $py)){ throw "Missing venv python: $py" }
+
+# Force THIS repo imports (never C:\Dev\HybridAITrading)
+$env:PYTHONPATH = (Join-Path $repoRoot "src")
+
+# Force pytest temp to repo-writable path (prevents WinError 5 cleanup)
+$tmpBase = Join-Path $repoRoot "logs\_pytest_tmp"
+New-Item -ItemType Directory -Force -Path $tmpBase | Out-Null
+$env:TEMP = (Resolve-Path $tmpBase).Path
+$env:TMP  = (Resolve-Path $tmpBase).Path
+
 chcp 65001 | Out-Null
 
 $toolsDir = Split-Path -Parent $PSCommandPath
@@ -22,8 +37,6 @@ $py = Join-Path $repoRoot ".venv\Scripts\python.exe"
 if(-not (Test-Path -LiteralPath $py)){ throw "Missing venv python: $py" }
 
 # Hard-fix import root (prevents C:\Dev\HybridAITrading hijack)
-Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
-$env:PYTHONPATH = (Join-Path $repoRoot "src")
 
 # Repo-local basetemp (avoids pytest-of-* lock spam)
 $tmp = Join-Path (Join-Path $repoRoot "logs") "_pytest_tmp"
