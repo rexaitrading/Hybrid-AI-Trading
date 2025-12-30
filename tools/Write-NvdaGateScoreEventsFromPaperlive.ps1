@@ -155,7 +155,7 @@ try {
   if(($edgeSet.Count -le 1) -and ($microSet.Count -le 1)){
     for($i=0; $i -lt $eventsOut.Count; $i++){
       $o = $eventsOut[$i] | ConvertFrom-Json
-      $o.source = "PLACEHOLDER"
+      $o.source = "paper_runner_stub"
       $o.notes = (([string]$o.notes) + ";degenerate_constant_metrics")
       $eventsOut[$i] = ($o | ConvertTo-Json -Compress)
     }
