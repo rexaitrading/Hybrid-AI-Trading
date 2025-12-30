@@ -15,6 +15,10 @@ import argparse
 import csv
 import json
 import os
+try:
+    from hybrid_ai_trading.runtime.run_context import RunContext
+except Exception:
+    RunContext = None
 import sys
 import time
 from typing import Dict
@@ -160,13 +164,15 @@ def main():
     parser.add_argument("--live", action="store_true", default=False)
     args = parser.parse_args()
 
+    ctx = None
+    if RunContext is not None:
+        ctx = RunContext.from_env_and_args(symbol="KRAKEN", regime="exec", mode=("live" if bool(args.live) else "paper"))
     symbol = args.symbol
 
     # Robust env parsing: only specific tokens mean True
     live_raw = os.getenv("KRAKEN_LIVE")
     live_env = str(live_raw).strip().lower() in ("1", "true", "yes", "y", "on")
-    live_flag = live_env or bool(args.live)
-
+    live_flag = live_env or bool(args.live) or (ctx is not None and str(getattr(ctx, "mode", "")).lower() == "live")
     # If user *explicitly* requested --live but env isn't truthy, exit (tests expect SystemExit)
     if args.live and not live_env:
         missing = []
