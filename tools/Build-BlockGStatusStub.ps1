@@ -141,6 +141,46 @@ function Has-NonEmpty([string]$p){
   try { return ((Get-Item -LiteralPath $p).Length -gt 0) } catch { return $false }
 }
 
+# ---- GateScore quality helpers ----
+function Get-GateScoreRow([string]$logsDir, [string]$sym, [string]$asOf){
+  $p = Join-Path $logsDir "gatescore_daily_summary.csv"
+  if(-not (Test-Path -LiteralPath $p)){ return $null }
+  try {
+    $rows = @(Import-Csv $p)
+    $u = ($sym + "").Trim().ToUpper()
+    $last = $null
+    foreach($r in $rows){
+      if((("" + $r.symbol).Trim().ToUpper() -eq $u) -and (("" + $r.as_of_date).Trim() -eq $asOf)){
+        $last = $r
+      }
+    }
+    return $last
+  } catch { return $null }
+}
+
+function To-Num($v){ try { return [double]("" + $v) } catch { return [double]0 } }
+
+function GateScoreOkFromRow($row){
+  # thresholds (tune later via config)
+  $MIN_SIGNALS = 30
+  $MIN_PNL_SAMPLES = 30
+  $MIN_MICRO_SCORE = 0.10
+  $MIN_EDGE_RATIO  = 0.05
+
+  if($null -eq $row){ return $false }
+  $countSignals = To-Num $row.count_signals
+  $pnlSamples   = To-Num $row.pnl_samples
+  $microScore   = To-Num $row.mean_micro_score
+  $edgeRatio    = To-Num $row.mean_edge_ratio
+
+  if($countSignals -lt $MIN_SIGNALS){ return $false }
+  if($pnlSamples -lt $MIN_PNL_SAMPLES){ return $false }
+  if(($microScore -le 0) -and ($edgeRatio -le 0)){ return $false }
+  if($microScore -lt $MIN_MICRO_SCORE){ return $false }
+  if($edgeRatio -lt $MIN_EDGE_RATIO){ return $false }
+  return $true
+}
+
 # ---- payload ----
 $asOf = Effective-AsofDate $logsDir
 $payload = [ordered]@{
@@ -182,15 +222,23 @@ if(($payload.gatescore_as_of_date + "") -eq ""){
   $payload.gatescore_fresh_today = $false
 }
 
-# GateScore ok today (conservative): fresh_today + non-empty NVDA events
+# GateScore ok today (quality):
+# - NVDA fallback: use stub events file if NVDA row missing in daily_summary
+# - SPY/QQQ: use daily_summary thresholds/samples
+
+# NVDA GateScore OK (fallback path)
 $payload.gatescore_ok_today = $false
 if((To-Bool $payload.gatescore_fresh_today)){
-  if(Has-NonEmpty (EventsFileFor $logsDir "NVDA")){
-    $payload.gatescore_ok_today = $true
+  $nvRow = Get-GateScoreRow $logsDir "NVDA" $asOf
+  if($null -ne $nvRow){
+    if(GateScoreOkFromRow $nvRow){ $payload.gatescore_ok_today = $true }
+  } else {
+    # fallback to stub events presence (nvda_gatescore_events.jsonl may be empty)
+    if(Has-NonEmpty (EventsFileFor $logsDir "NVDA")){ $payload.gatescore_ok_today = $true }
   }
 }
 
-# Per-symbol readiness flags (PS-safe; no -and assignments)
+# NVDA readiness (PS-safe; no -and operators)
 $payload.nvda_blockg_ready = $false
 if((To-Bool $payload.phase4_ok_today)){
   if((To-Bool $payload.ev_hard_daily_ok_today)){
@@ -202,18 +250,18 @@ if((To-Bool $payload.phase4_ok_today)){
   }
 }
 
+# SPY readiness from daily_summary row
 $payload.spy_blockg_ready = $false
 if((To-Bool $payload.gatescore_fresh_today)){
-  if(Has-NonEmpty (EventsFileFor $logsDir "SPY")){
-    $payload.spy_blockg_ready = $true
-  }
+  $spyRow = Get-GateScoreRow $logsDir "SPY" $asOf
+  if(GateScoreOkFromRow $spyRow){ $payload.spy_blockg_ready = $true }
 }
 
+# QQQ readiness from daily_summary row
 $payload.qqq_blockg_ready = $false
 if((To-Bool $payload.gatescore_fresh_today)){
-  if(Has-NonEmpty (EventsFileFor $logsDir "QQQ")){
-    $payload.qqq_blockg_ready = $true
-  }
+  $qqqRow = Get-GateScoreRow $logsDir "QQQ" $asOf
+  if(GateScoreOkFromRow $qqqRow){ $payload.qqq_blockg_ready = $true }
 }
 
 # Reasons (canonical)
