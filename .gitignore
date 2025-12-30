@@ -129,3 +129,5 @@ tools/Kill-Spammers.ps1
 !config/paper_runner.yaml
 
 tools/pytest_safe.ps1
+
+config/providers_policy.json
