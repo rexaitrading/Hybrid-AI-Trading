@@ -6,7 +6,10 @@ param(
   [string]$Files = "",
 
   [string]$Tests = "powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q",
-  [switch]$SkipTests
+  [switch]$SkipTests,
+
+  # Authority-file patch override (default: FAIL-CLOSED)
+  [switch]$ForceProtected
 )
 $ErrorActionPreference='Stop'
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
