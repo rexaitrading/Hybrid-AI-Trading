@@ -24,8 +24,20 @@ if (-not (Test-Path -LiteralPath $InputPath)) {
   Write-Host "[NVDA-TODAY] Input not found: $InputPath" -ForegroundColor Yellow
   exit 2
 }
-
 $today = (Get-Date).ToString("yyyy-MM-dd")
+
+# Prefer NVDA paper-live ledger for today (equities). Do NOT silently reuse prior days.
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+$nvLedger = Join-Path $repoRoot ("logs\paper_live_NVDA_" + $today + ".jsonl")
+if(Test-Path -LiteralPath $nvLedger){
+  $InputPath = $nvLedger
+} else {
+  Write-Host ("[NVDA-TODAY] MISSING_TODAY_LEDGER: " + $nvLedger) -ForegroundColor Yellow
+  # deterministic hygiene: overwrite OutPath to empty
+  $enc = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText((Resolve-Path $OutPath).Path, "", $enc)
+  exit 2
+}
 Write-Host "[NVDA-TODAY] Filtering for today=$today from $InputPath" -ForegroundColor Cyan
 
 $keep = New-Object System.Collections.ArrayList
@@ -58,7 +70,11 @@ foreach($ln in $lines){
 if($keep.Count -eq 0){
   Write-Host "[NVDA-TODAY] No today rows found -> fail-closed." -ForegroundColor Yellow
   # still write empty file for determinism? we prefer not to create misleading artifacts
-  exit 2
+
+  # deterministic hygiene: overwrite OutPath to empty so downstream cannot read stale content
+  $enc = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText((Resolve-Path $OutPath).Path, "", $enc)
+    exit 2
 }
 
 $enc = New-Object System.Text.UTF8Encoding($false)
