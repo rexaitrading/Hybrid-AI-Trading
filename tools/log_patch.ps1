@@ -1,6 +1,12 @@
 param(
-  [Parameter(Mandatory=$true)][string]$Title,
-  [string]$Why="", [string]$Files="", [string]$Tests="powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q" [switch]$SkipTests
+  [Parameter(Mandatory=$true)]
+  [string]$Title,
+
+  [string]$Why = "",
+  [string]$Files = "",
+
+  [string]$Tests = "powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q",
+  [switch]$SkipTests
 )
 $ErrorActionPreference='Stop'
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
