@@ -114,6 +114,30 @@ try {
   $asOf = (($j.as_of_date + "")).Trim()
   if($asOf -ne $today){ Fail ("stale as_of_date=" + $asOf + " today=" + $today) }
 
+  # 1b) Mandate C.5 today-row validation (fail-closed)
+  $logsDir = Join-Path $repoRoot "logs"
+  $p23 = Join-Path $logsDir "phase23_health_daily.csv"
+  if(-not (Test-Path -LiteralPath $p23)){ Fail "missing phase23_health_daily.csv" }
+  try {
+    $r23 = @(Import-Csv -LiteralPath $p23)
+    if($r23.Count -lt 1){ Fail "phase23_health_daily.csv empty" }
+    $last = $r23[-1]
+    $d23 = ""
+    if($last.PSObject.Properties.Name -contains "as_of_date"){ $d23 = ("" + $last.as_of_date).Trim() }
+    elseif($last.PSObject.Properties.Name -contains "date"){ $d23 = ("" + $last.date).Trim() }
+    else { Fail "phase23_health_daily.csv missing date/as_of_date column" }
+    if($d23 -ne $today){ Fail ("phase23_health_daily stale date=" + $d23 + " today=" + $today) }
+  } catch { Fail ("phase23_health_daily read error: " + $_.Exception.Message) }
+
+  $pev = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
+  if(-not (Test-Path -LiteralPath $pev)){ Fail "missing phase5_ev_hard_veto_daily.csv" }
+  try {
+    $rev = @(Import-Csv -LiteralPath $pev)
+    $hit = @($rev | Where-Object { (("" + $_.as_of_date).Trim() -eq $today) })
+    if($hit.Count -lt 1){ Fail ("phase5_ev_hard_veto_daily missing today row=" + $today) }
+  } catch { Fail ("phase5_ev_hard_veto_daily read error: " + $_.Exception.Message) }
+
+
   # 2) Symbol readiness flag is the contract authority
   $sym = ($Symbol + "").Trim().ToUpper()
   if($sym -eq "ALL"){

@@ -71,7 +71,26 @@ function Get-Phase4OkToday([string]$logsDir, [string]$asOf){
 }
 
 function Get-EvHardOkToday([string]$logsDir, [string]$asOf){
-  # CSV missing in your repo right now; use ev_hard_evidence_raw.json
+  # Prefer canonical daily CSV if present; fallback to raw evidence JSON (legacy).
+  $csv = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
+  if(Test-Path -LiteralPath $csv){
+    try {
+      $rows = @(Import-Csv -LiteralPath $csv)
+      foreach($r in $rows){
+        $d = ("" + $r.as_of_date).Trim()
+        if($d -eq $asOf){
+          # ok column may be "True"/"False" string; normalize
+          return (To-Bool $r.ok)
+        }
+      }
+      # If CSV exists but no row for asOf => fail-closed
+      return $false
+    } catch {
+      return $false
+    }
+  }
+
+  # Fallback: ev_hard_evidence_raw.json
   $raw = Join-Path $logsDir "ev_hard_evidence_raw.json"
   if(-not (Test-Path -LiteralPath $raw)){ return $false }
 
