@@ -77,7 +77,9 @@ function Get-EvHardOkToday([string]$logsDir, [string]$asOf){
     try {
       $rows = @(Import-Csv -LiteralPath $csv)
       foreach($r in $rows){
-        $d = ("" + $r.as_of_date).Trim()
+        $d = ""
+        if($r.PSObject.Properties.Name -contains "as_of_date"){ $d = ("" + $r.as_of_date).Trim() }
+        elseif($r.PSObject.Properties.Name -contains "date"){ $d = ("" + $r.date).Trim() }
         if($d -eq $asOf){
           # ok column may be "True"/"False" string; normalize
           return (To-Bool $r.ok)
