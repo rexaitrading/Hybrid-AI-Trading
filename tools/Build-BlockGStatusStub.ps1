@@ -309,6 +309,22 @@ $payloadRef = [ref]$payload
 Apply-GateScoreFromStamp -payload $payloadRef -stamp $stamp
 # --- end GateScore stamp ---
 
+# Tighten-only: "fresh" requires at least one GateScore row today (prevents misleading fresh+empty).
+if([int]$payload.gatescore_rows_today -le 0){
+  $payload.gatescore_fresh_for_session = $false
+  $payload.gatescore_fresh_today = $false
+  $payload.gatescore_ok_today = $false
+}
+
+
+# Tighten-only: "fresh" requires at least one GateScore row today (prevents misleading fresh+empty).
+if([int]$payload.gatescore_rows_today -le 0){
+  $payload.gatescore_fresh_for_session = $false
+  $payload.gatescore_fresh_today = $false
+  $payload.gatescore_ok_today = $false
+}
+
+
 # GateScore ok today (quality):
 # (computed strictly from gatescore_stamp.json; no fallbacks)
 
