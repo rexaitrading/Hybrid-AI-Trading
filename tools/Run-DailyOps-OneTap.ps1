@@ -121,8 +121,11 @@ Write-Host "[DAILY-OPS] -> NvdaGateScoreEvents(today-only)"
   }
 Invoke-Step -Path ".\tools\Run-GateScoreDailySummary.ps1" -Args @("-Quiet") -StepName "GateScoreDailySummary"
   Write-Host "[DAILY-OPS] -> GateScoreDailyBuild"
+  # GateScoreDailyBuild: paper-locked DailyOps is NVDA-only (portfolio mode elsewhere)
+  $env:HAT_GS_REQUIRED_SYMBOLS = "NVDA"
   $pGs = Join-Path $repoRoot ".\tools\Run-GateScoreDailyBuild.ps1"
   & powershell -NoProfile -ExecutionPolicy Bypass -File $pGs
+  Remove-Item Env:HAT_GS_REQUIRED_SYMBOLS -ErrorAction SilentlyContinue
   $rcGs = $LASTEXITCODE
   if($rcGs -eq 0){
     # ok
