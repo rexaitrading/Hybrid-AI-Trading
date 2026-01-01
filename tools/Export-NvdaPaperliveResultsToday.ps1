@@ -87,6 +87,7 @@ if($d -eq $today){
     as_of_date = $today
     symbol = "NVDA"
     source = "paper_runner"
+    is_synthetic = $true
     ts_utc = (""+$j.ts_utc).Trim()
     status = (""+$j.status).Trim()
     price_source = (""+$j.price_source).Trim()
@@ -94,10 +95,10 @@ if($d -eq $today){
     edge_ratio = 0.0
     micro_score = 0.0
     micro_score_source = "derived"
-    realized_pnl = 0.0
+    realized_pnl = $null  # unknown in provider-only stub
     count_signals = 1
-    pnl_samples = 1
-    notes = "from_paper_live_ledger;provider_only_stub"
+    pnl_samples = 0  # truthful: no realized pnl sample
+    notes = "from_paper_live_ledger;synthetic_metrics=true;provider_only_stub"
   }
   $lineOut = ($outObj | ConvertTo-Json -Compress -Depth 6)
   [void]$keep.Add($lineOut)

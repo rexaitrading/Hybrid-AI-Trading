@@ -133,6 +133,21 @@ $ms = $micro
         notes              = "from_paperlive"
     }
 
+    # Tighten-only: deny synthetic producer rows from becoming OFFICIAL GateScore events.
+    $isSynth = $false
+    try { if($props -contains "is_synthetic"){ $isSynth = [bool]$j.is_synthetic } } catch {}
+    $noteS = ""
+    try { if($props -contains "notes"){ $noteS = ("" + $j.notes) } } catch {}
+    $srcS = ""
+    try { if($props -contains "source"){ $srcS = ("" + $j.source) } } catch {}
+    if($isSynth -or ($noteS -match "synthetic_metrics=true") -or ($srcS -match "paper_runner_stub")){
+      # keep for stub audit only, not official events
+      $outObj.source = "paper_runner_stub"
+      $outObj.notes  = (([string]$outObj.notes) + ";synthetic_row_denied")
+      $eventsOut.Add(($outObj | ConvertTo-Json -Compress)) | Out-Null
+      continue
+    }
+
     [void]$eventsOut.Add(($outObj | ConvertTo-Json -Compress))
     $count++
 }
