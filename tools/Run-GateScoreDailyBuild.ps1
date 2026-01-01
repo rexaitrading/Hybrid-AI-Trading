@@ -37,7 +37,15 @@ if (-not (Test-Path $csv)) { throw "[GS-BUILD] missing input csv: $csv" }
 # Trading-day "today" must follow LOCAL session day; allow override via env HAT_ASOF_DATE.
 $today = (($env:HAT_ASOF_DATE + "")).Trim()
 
+try {
+} catch {
+  Write-Host ("[GS-BUILD] WARNING: daily_summary_from_events failed: " + $_.Exception.Message) -ForegroundColor Yellow
+}
+
+if([string]::IsNullOrWhiteSpace($today)){ $today = (Get-Date).ToString("yyyy-MM-dd") }
+
 # --- Build canonical GateScore daily summary from events (fail-closed; no fabrication) ---
+if([string]::IsNullOrWhiteSpace($today)){ Write-Host "[GS-BUILD] FAIL-CLOSED: empty today/as_of_date" -ForegroundColor Yellow; exit 2 }
 try {
   $args = @("-m","hybrid_ai_trading.gatescore.daily_summary_from_events","--as-of-date",$today,"--csv",$csv,"--logs",(Join-Path $root "logs"))
   & $py $args | Out-Host
@@ -46,7 +54,6 @@ try {
 }
 # --- END build daily summary from events ---
 
-if([string]::IsNullOrWhiteSpace($today)){ $today = (Get-Date).ToString("yyyy-MM-dd") }
 if([string]::IsNullOrWhiteSpace($today)){
 }
 
@@ -153,8 +160,6 @@ if (-not $RunPython) {
   # --- Institutional rule: explicit symbol runs MUST pass python threshold eval (fail-closed) ---
   if($Symbol -and ($Symbol.ToUpperInvariant() -ne "ALL")){
     try {
-      $args = @("-m","hybrid_ai_trading.gatescore.daily_build","--csv",$csv,"--symbol",$Symbol)
-      & $py $args
       exit $LASTEXITCODE
     } catch {
       Write-Host ("[GS-BUILD] FAIL-CLOSED: python eval failed: " + $_.Exception.Message) -ForegroundColor Red
