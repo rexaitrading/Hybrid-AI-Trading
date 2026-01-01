@@ -204,6 +204,12 @@ function GateScoreOkFromRow($row){
 
 # ---- payload ----
 $asOf = Effective-AsofDate $logsDir
+
+# --- GateScore stamp load (preferred over CSV heuristics; fail-closed) ---
+$stampPath = Join-Path $logsDir "gatescore_stamp.json"
+$stamp = $null
+if(Test-Path -LiteralPath $stampPath){ $stamp = Read-JsonSafe $stampPath }
+# --- end stamp load ---
 $payload = [ordered]@{
   as_of_date = $asOf
 
@@ -211,6 +217,12 @@ $payload = [ordered]@{
   gatescore_fresh_for_session = $false
   gatescore_fresh_today = $false
   gatescore_ok_today = $false
+
+  # GateScore stamp (deterministic) - fail-closed
+  gatescore_rows_today = 0
+  gatescore_min_samples_ok_today = $false
+  gatescore_stable_today = $false
+  gatescore_stamp_reasons = @()
 
   phase4_ok_today = $false
   ev_hard_daily_ok_today = $false
@@ -227,6 +239,40 @@ $payload.phase4_ok_today = (Get-Phase4OkToday $logsDir $asOf)
 $payload.ev_hard_daily_ok_today = (Get-EvHardOkToday $logsDir $asOf)
 
 # GateScore as_of + freshness
+
+# --- If stamp exists, override GateScore fields deterministically (never loosens) ---
+if($null -ne $stamp){
+  try {
+    $sd = ""
+    if($stamp.PSObject.Properties.Name -contains "as_of_date"){ $sd = ("" + $stamp.as_of_date).Trim() }
+    $payload.gatescore_as_of_date = $sd
+    $payload.gatescore_fresh_for_session = ($sd -ne "" -and $sd -eq $payload.as_of_date)
+    $payload.gatescore_fresh_today = (To-Bool $payload.gatescore_fresh_for_session)
+    $payload.gatescore_rows_today = 0
+    if($stamp.PSObject.Properties.Name -contains "gatescore_rows_today"){ $payload.gatescore_rows_today = [int]("" + $stamp.gatescore_rows_today) }
+    $payload.gatescore_min_samples_ok_today = $false
+    if($stamp.PSObject.Properties.Name -contains "gatescore_min_samples_ok_today"){ $payload.gatescore_min_samples_ok_today = (To-Bool $stamp.gatescore_min_samples_ok_today) }
+    $payload.gatescore_stable_today = $false
+    if($stamp.PSObject.Properties.Name -contains "gatescore_stable_today"){ $payload.gatescore_stable_today = (To-Bool $stamp.gatescore_stable_today) }
+    $payload.gatescore_stamp_reasons = @()
+    if($stamp.PSObject.Properties.Name -contains "reasons"){ $payload.gatescore_stamp_reasons = @($stamp.reasons) }
+
+    # gatescore_ok_today is TRUE only if fresh AND rows>0 AND min-samples OK AND stable
+    $payload.gatescore_ok_today = $false
+    if((To-Bool $payload.gatescore_fresh_today)){
+      if(($payload.gatescore_rows_today -gt 0)){
+        if((To-Bool $payload.gatescore_min_samples_ok_today)){
+          if((To-Bool $payload.gatescore_stable_today)){
+            $payload.gatescore_ok_today = $true
+          }
+        }
+      }
+    }
+  } catch {
+    # fail-closed: leave defaults
+  }
+}
+# --- end stamp override ---
 $gsAsOf = (Get-GateScoreSessionDate $logsDir)
 $payload.gatescore_as_of_date = $gsAsOf
 if($gsAsOf -ne ""){
@@ -286,6 +332,12 @@ if((To-Bool $payload.gatescore_fresh_today)){
 }
 
 # Reasons (canonical)
+if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
+  foreach($r in @($payload.gatescore_stamp_reasons)){
+    $s = ("" + $r).Trim()
+    if($s){ $rn += ("gatescore_stamp:" + $s) }
+  }
+}
 $rn = @()
 if(-not (To-Bool $payload.phase4_ok_today)){ $rn += "phase4_ok_today=false" }
 if(-not (To-Bool $payload.ev_hard_daily_ok_today)){ $rn += "ev_hard_daily_ok_today=false" }
