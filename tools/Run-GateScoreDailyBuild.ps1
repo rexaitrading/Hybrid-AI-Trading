@@ -76,6 +76,15 @@ try {
 # --- END TODAY-ONLY NORMALIZE ---
 
 
+function Get-SessionLabel(){
+  # Log-only label; does NOT imply readiness.
+  $now = Get-Date
+  $hm = [int]($now.ToString("HHmm"))
+  if($hm -lt 930){ return "PM" }       # pre-market
+  elseif($hm -lt 1600){ return "RTH" } # regular
+  else { return "AH" }                 # after-hours
+}
+
 function Get-SessionDate([string]$sym){
   $rows = @(Import-Csv -LiteralPath $csv)
   $r = $rows | Where-Object { $_.symbol -eq $sym } | Sort-Object as_of_date -Descending | Select-Object -First 1
@@ -151,7 +160,7 @@ if ($Symbol -ne "ALL") { $syms = @($Symbol.ToUpper()) }
 foreach($s in $syms){
   if (-not (Has-SessionRow -sym $s)) {
     $sd = Get-SessionDate -sym $s
-    Write-Host ("[GS-BUILD] FAIL-CLOSED: missing session row for {0} in {1} today={2} session={3}" -f $s,$csv,$today,$sd) -ForegroundColor Yellow
+    Write-Host ("[GS-BUILD] FAIL-CLOSED: missing session row for {0} in {1} today={2} session_label=$(Get-SessionLabel) asof={3}" -f $s,$csv,$today,$sd) -ForegroundColor Yellow
     exit 2
   }
 }
