@@ -7,6 +7,28 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 REQUIRED_KEYS = ["as_of_date", "symbol", "edge_ratio", "micro_score", "realized_pnl", "pnl_samples"]
 
+def _walk_dict(obj: Any, *, max_depth: int = 4) -> Iterable[Dict[str, Any]]:
+    """Yield dict nodes breadth-first up to max_depth (for nested schema discovery)."""
+    if not isinstance(obj, dict):
+        return
+    q: List[Tuple[int, Dict[str, Any]]] = [(0, obj)]
+    while q:
+        depth, node = q.pop(0)
+        yield node
+        if depth >= max_depth:
+            continue
+        for v in node.values():
+            if isinstance(v, dict):
+                q.append((depth + 1, v))
+
+def _pick_nested(obj: Dict[str, Any], keys: List[str]) -> Any:
+    """Find first matching key across nested dict nodes (fail-safe)."""
+    for node in _walk_dict(obj, max_depth=4):
+        for k in keys:
+            if k in node:
+                return node.get(k)
+    return None
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
@@ -78,17 +100,16 @@ def _convert_row_to_event(row: Dict[str, Any], *, as_of: str, symbol: str) -> Op
         return None
 
     # Pick edge/micro from common keys
-    edge_v = _pick_first(row, ["edge_ratio", "edge", "mean_edge_ratio", "score", "gatescore_edge"])
-    micro_v = _pick_first(row, ["micro_score", "micro", "mean_micro_score", "gatescore_micro"])
-    pnl_v = _pick_first(row, ["realized_pnl", "pnl", "pnl_realized", "realizedPnL"])
+    edge_v = _pick_nested(row, ["edge_ratio","edge","mean_edge_ratio","score","gatescore_edge","ev_mu","ev"])
+    micro_v = _pick_nested(row, ["micro_score","micro","mean_micro_score","gatescore_micro"])
+    pnl_v = _pick_nested(row, ["realized_pnl","pnl","pnl_realized","realizedPnL","mean_pnl"])
 
     edge, ok_edge = _try_float(edge_v)
     micro, ok_micro = _try_float(micro_v)
     rp, ok_rp = _try_float(pnl_v)
 
     # Require real edge+micro. Fail-closed: do NOT emit if missing/invalid.
-    if not ok_edge or not ok_micro:
-        return None
+    if (not ok_edge) or (not ok_micro):\n        return None\n\n    # must be non-zero (institutional: avoid degenerate/zeroed official events)\n    if float(edge) == 0.0 or float(micro) == 0.0:\n        return None
 
     # Evidence-based pnl_samples
     pnl_samples = 1 if ok_rp else 0
