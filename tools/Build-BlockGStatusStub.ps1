@@ -275,6 +275,12 @@ $payload = [ordered]@{
   phase4_ok_today = $false
   ev_hard_daily_ok_today = $false
 
+  # Evidence-only: today-row validation for daily CSV artifacts (builder-owned; checker is contract-only)
+  phase23_health_today_row_ok = $false
+  phase23_health_last_date    = ""
+  ev_hard_today_row_ok        = $false
+  ev_hard_last_date           = ""
+
   nvda_blockg_ready = $false
   spy_blockg_ready  = $false
   qqq_blockg_ready  = $false
@@ -330,6 +336,44 @@ if([int]$payload.gatescore_rows_today -le 0){
 
 # NVDA readiness (PS-safe; no -and operators)
 $payload.nvda_blockg_ready = $false
+
+## --- C.5 today-row validation (builder-owned; contract carries evidence) ---
+try {
+  $p23 = Join-Path $logsDir "phase23_health_daily.csv"
+  if(Test-Path -LiteralPath $p23){
+    $r23 = @(Import-Csv -LiteralPath $p23)
+    if($r23.Count -gt 0){
+      $last = $r23[-1]
+      $d23 = ""
+      if($last.PSObject.Properties.Name -contains "as_of_date"){ $d23 = ("" + $last.as_of_date).Trim() }
+      elseif($last.PSObject.Properties.Name -contains "date"){ $d23 = ("" + $last.date).Trim() }
+      $payload.phase23_health_last_date = $d23
+      if($d23 -eq $asOf){ $payload.phase23_health_today_row_ok = $true }
+    }
+  }
+} catch { }
+try {
+  $pev = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
+  if(Test-Path -LiteralPath $pev){
+    $rev = @(Import-Csv -LiteralPath $pev)
+    if($rev.Count -gt 0){
+      $rowLast = $rev[-1]
+      $dlast = ""
+      if($rowLast.PSObject.Properties.Name -contains "as_of_date"){ $dlast = ("" + $rowLast.as_of_date).Trim() }
+      elseif($rowLast.PSObject.Properties.Name -contains "date"){ $dlast = ("" + $rowLast.date).Trim() }
+      $payload.ev_hard_last_date = $dlast
+    }
+    $hit = @($rev | Where-Object {
+      $d = ""
+      if($_.PSObject.Properties.Name -contains "as_of_date"){ $d = ("" + $_.as_of_date).Trim() }
+      elseif($_.PSObject.Properties.Name -contains "date"){ $d = ("" + $_.date).Trim() }
+      $d -eq $asOf
+    })
+    if($hit.Count -gt 0){ $payload.ev_hard_today_row_ok = $true }
+  }
+} catch { }
+## --- end today-row validation ---
+
 if((To-Bool $payload.phase4_ok_today)){
   if((To-Bool $payload.ev_hard_daily_ok_today)){
     if((To-Bool $payload.gatescore_ok_today)){
@@ -376,6 +420,8 @@ if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
 }
 if(-not (To-Bool $payload.phase4_ok_today)){ $rn += "phase4_ok_today=false" }
 if(-not (To-Bool $payload.ev_hard_daily_ok_today)){ $rn += "ev_hard_daily_ok_today=false" }
+if(-not (To-Bool $payload.phase23_health_today_row_ok)){ $rn += ("phase23_today_row_missing:last=" + ($payload.phase23_health_last_date + "")) }
+if(-not (To-Bool $payload.ev_hard_today_row_ok)){ $rn += ("ev_hard_today_row_missing:last=" + ($payload.ev_hard_last_date + "")) }
 if(-not (To-Bool $payload.gatescore_ok_today)){ $rn += "gatescore_ok_today=false" }
 if(-not (To-Bool $payload.gatescore_fresh_today)){ $rn += "gatescore_fresh_today=false" }
 if(-not (To-Bool $payload.nvda_blockg_ready)){ $rn += "nvda_blockg_ready=false" }
