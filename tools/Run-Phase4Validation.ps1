@@ -59,13 +59,24 @@ try {
   }
   Invoke-Phase4PyTest -Label "Phase-1 replay demo pytest" -Args @($t1)
 
-  # 2) Microstructure slice (optional)
-  $micro = "tests/test_microstructure_features.py"
-  if (Test-Path -LiteralPath (Join-Path $repoRoot $micro)) {
-    Invoke-Phase4PyTest -Label "Microstructure features tests" -Args @($micro)
-  } else {
-    Write-Host "[PHASE4] WARN: $micro not found; skipping microstructure slice." -ForegroundColor Yellow
+  # 2) Phase-2 microstructure + cost model slice (REQUIRED; fail-closed)
+  $phase2Candidates = @(
+    "tests/test_microstructure_regime.py",
+    "tests/test_phase2_costs_package.py",
+    "tests/test_phase2_cost_gate.py",
+    "tests/test_phase2_cost_gate_latency.py",
+    "tests/test_phase2_cost_gate_wiring.py"
+  )
+
+  $phase2Args = @()
+  foreach ($t in $phase2Candidates) {
+    if (Test-Path -LiteralPath (Join-Path $repoRoot $t)) { $phase2Args += $t }
+    else { Write-Host "[PHASE4] WARN: missing phase2 test => $t (skipping)" -ForegroundColor Yellow }
   }
+  if ($phase2Args.Count -lt 1) {
+    throw "missing_required_phase2_slice:0_tests_present"
+  }
+  Invoke-Phase4PyTest -Label "Phase-2 microstructure/cost slice" -Args $phase2Args
 
   # 3) Phase-5 risk + guard slice (required set: only run files that exist; but require at least 1)
   $phase5Candidates = @(
