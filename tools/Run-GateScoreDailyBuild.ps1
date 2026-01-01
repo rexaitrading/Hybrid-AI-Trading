@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [int]$TimeoutSec = 60,
+  [int]$TimeoutSec = 180,
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "ALL",
   [switch]$RunPython
@@ -139,7 +139,8 @@ function RunPyTimeout([string[]]$args,[int]$timeoutSec){
 
   if (-not $proc.WaitForExit($timeoutSec * 1000)) {
     try { Stop-Process -Id $childPid -Force } catch { }
-    "[TIMEOUT] killed pid=$childPid after ${timeoutSec}s args=$($args -join ' ')" | Out-File -FilePath $errLog -Encoding utf8
+    $argLine = $proc.StartInfo.Arguments
+    ("[TIMEOUT] killed pid={0} after {1}s args={2} outLog={3} errLog={4}" -f $childPid,$timeoutSec,$argLine,$outLog,$errLog) | Out-File -FilePath $errLog -Encoding utf8
     Kill-LeftoverVenvPython -sinceUtc $startUtc
     return 124
   }
@@ -153,7 +154,12 @@ function RunPyTimeout([string[]]$args,[int]$timeoutSec){
   return $proc.ExitCode
 }
 
-$syms = @("NVDA","SPY","QQQ")
+# Required symbols policy (scopes ALL-mode precheck).
+# Default portfolio: NVDA,SPY,QQQ
+# Paper-locked DailyOps may set: HAT_GS_REQUIRED_SYMBOLS="NVDA"
+$reqEnv = ("" + $env:HAT_GS_REQUIRED_SYMBOLS).Trim()
+if(-not $reqEnv){ $syms = @("NVDA","SPY","QQQ") }
+else { $syms = @($reqEnv.Split(",") | ForEach-Object { (""+$_).Trim().ToUpper() } | Where-Object { $_ }) }
 if ($Symbol -ne "ALL") { $syms = @($Symbol.ToUpper()) }
 
 # Fail-closed PRECHECK (session-based, not "today-based")
