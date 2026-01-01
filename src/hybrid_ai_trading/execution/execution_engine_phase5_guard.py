@@ -147,6 +147,15 @@ def place_order_phase5_with_guard(
             }
 
     # 3) Call underlying order function
+    # --- Block-G fail-closed: must run BEFORE place_order_phase5 (no bypass) ---
+    if str(symbol).upper() == "NVDA":
+        try:
+            # If this raises, we must NOT place an order.
+            ensure_symbol_blockg_ready("NVDA")
+        except Exception:
+            raise
+    # --- end Block-G ---
+
     return place_order_phase5(
         engine=engine,
         symbol=symbol,
