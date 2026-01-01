@@ -210,6 +210,54 @@ $stampPath = Join-Path $logsDir "gatescore_stamp.json"
 $stamp = $null
 if(Test-Path -LiteralPath $stampPath){ $stamp = Read-JsonSafe $stampPath }
 # --- end stamp load ---
+
+function Apply-GateScoreFromStamp([ref]$payload, $stamp){
+  # Fail-closed defaults
+  $payload.Value.gatescore_as_of_date = ""
+  $payload.Value.gatescore_fresh_for_session = $false
+  $payload.Value.gatescore_fresh_today = $false
+  $payload.Value.gatescore_ok_today = $false
+
+  $payload.Value.gatescore_rows_today = 0
+  $payload.Value.gatescore_min_samples_ok_today = $false
+  $payload.Value.gatescore_stable_today = $false
+  $payload.Value.gatescore_stamp_reasons = @()
+
+  if($null -eq $stamp){
+    $payload.Value.gatescore_stamp_reasons = @("missing_gatescore_stamp")
+    return
+  }
+
+  try {
+    $sd = ""
+    if($stamp.PSObject.Properties.Name -contains "as_of_date"){ $sd = ("" + $stamp.as_of_date).Trim() }
+    $payload.Value.gatescore_as_of_date = $sd
+    $payload.Value.gatescore_fresh_for_session = ($sd -ne "" -and $sd -eq $payload.Value.as_of_date)
+    $payload.Value.gatescore_fresh_today = (To-Bool $payload.Value.gatescore_fresh_for_session)
+
+    if($stamp.PSObject.Properties.Name -contains "gatescore_rows_today"){ $payload.Value.gatescore_rows_today = [int]("" + $stamp.gatescore_rows_today) }
+    if($stamp.PSObject.Properties.Name -contains "gatescore_min_samples_ok_today"){ $payload.Value.gatescore_min_samples_ok_today = (To-Bool $stamp.gatescore_min_samples_ok_today) }
+    if($stamp.PSObject.Properties.Name -contains "gatescore_stable_today"){ $payload.Value.gatescore_stable_today = (To-Bool $stamp.gatescore_stable_today) }
+    if($stamp.PSObject.Properties.Name -contains "reasons"){ $payload.Value.gatescore_stamp_reasons = @($stamp.reasons) }
+
+    # STRICT OK: must be fresh + rows>0 + min samples + stable
+    $payload.Value.gatescore_ok_today = $false
+    if((To-Bool $payload.Value.gatescore_fresh_today)){
+      if(($payload.Value.gatescore_rows_today -gt 0)){
+        if((To-Bool $payload.Value.gatescore_min_samples_ok_today)){
+          if((To-Bool $payload.Value.gatescore_stable_today)){
+            $payload.Value.gatescore_ok_today = $true
+          }
+        }
+      }
+    }
+  } catch {
+    # fail-closed
+    $payload.Value.gatescore_ok_today = $false
+    $payload.Value.gatescore_fresh_today = $false
+    $payload.Value.gatescore_stamp_reasons = @("gatescore_stamp_parse_failed")
+  }
+}
 $payload = [ordered]@{
   as_of_date = $asOf
 
@@ -250,62 +298,19 @@ if($gsAsOf -ne ""){
 if(($payload.gatescore_as_of_date + "") -eq ""){
   $payload.gatescore_fresh_for_session = $false
   $payload.gatescore_fresh_today = $false
-
-# --- If stamp exists, override GateScore fields deterministically (never loosens) ---
-if($null -ne $stamp){
-  try {
-    $sd = ""
-    if($stamp.PSObject.Properties.Name -contains "as_of_date"){ $sd = ("" + $stamp.as_of_date).Trim() }
-    $payload.gatescore_as_of_date = $sd
-    $payload.gatescore_fresh_for_session = ($sd -ne "" -and $sd -eq $payload.as_of_date)
-    $payload.gatescore_fresh_today = (To-Bool $payload.gatescore_fresh_for_session)
-    $payload.gatescore_rows_today = 0
-    if($stamp.PSObject.Properties.Name -contains "gatescore_rows_today"){ $payload.gatescore_rows_today = [int]("" + $stamp.gatescore_rows_today) }
-    $payload.gatescore_min_samples_ok_today = $false
-    if($stamp.PSObject.Properties.Name -contains "gatescore_min_samples_ok_today"){ $payload.gatescore_min_samples_ok_today = (To-Bool $stamp.gatescore_min_samples_ok_today) }
-    $payload.gatescore_stable_today = $false
-    if($stamp.PSObject.Properties.Name -contains "gatescore_stable_today"){ $payload.gatescore_stable_today = (To-Bool $stamp.gatescore_stable_today) }
-    $payload.gatescore_stamp_reasons = @()
-    if($stamp.PSObject.Properties.Name -contains "reasons"){ $payload.gatescore_stamp_reasons = @($stamp.reasons) }
-
-    # gatescore_ok_today is TRUE only if fresh AND rows>0 AND min-samples OK AND stable
-    $payload.gatescore_ok_today = $false
-    if((To-Bool $payload.gatescore_fresh_today)){
-      if(($payload.gatescore_rows_today -gt 0)){
-        if((To-Bool $payload.gatescore_min_samples_ok_today)){
-          if((To-Bool $payload.gatescore_stable_today)){
-            $payload.gatescore_ok_today = $true
-          }
-        }
-      }
-    }
-  } catch {
-    # fail-closed: leave defaults
-  }
-}
-# --- end stamp override ---
-
 } elseif(($payload.gatescore_as_of_date + "") -eq ($payload.as_of_date + "")){
   $payload.gatescore_fresh_today = (To-Bool $payload.gatescore_fresh_for_session)
 } else {
   $payload.gatescore_fresh_today = $false
 }
 
-# GateScore ok today (quality):
-# - NVDA fallback: use stub events file if NVDA row missing in daily_summary
-# - SPY/QQQ: use daily_summary thresholds/samples
+# --- Apply GateScore stamp STRICT (no fallback; fail-closed) ---
+$payloadRef = [ref]$payload
+Apply-GateScoreFromStamp -payload $payloadRef -stamp $stamp
+# --- end GateScore stamp ---
 
-# NVDA GateScore OK (fallback path)
-$payload.gatescore_ok_today = $false
-if((To-Bool $payload.gatescore_fresh_today)){
-  $nvRow = Get-GateScoreRow $logsDir "NVDA" $asOf
-  if($null -ne $nvRow){
-    if(GateScoreOkFromRow $nvRow){ $payload.gatescore_ok_today = $true }
-  } else {
-    # fallback to stub events presence (nvda_gatescore_events.jsonl may be empty)
-    if(Has-NonEmpty (EventsFileFor $logsDir "NVDA")){ $payload.gatescore_ok_today = $true }
-  }
-}
+# GateScore ok today (quality):
+# (computed strictly from gatescore_stamp.json; no fallbacks)
 
 # NVDA readiness (PS-safe; no -and operators)
 $payload.nvda_blockg_ready = $false
@@ -341,6 +346,12 @@ if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
   }
 }
 $rn = @()
+if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
+  foreach($r in @($payload.gatescore_stamp_reasons)){
+    $s = ("" + $r).Trim()
+    if($s){ $rn += ("gatescore_stamp:" + $s) }
+  }
+}
 if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
   foreach($r in @($payload.gatescore_stamp_reasons)){
     $s = ("" + $r).Trim()
