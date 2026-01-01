@@ -1,12 +1,7 @@
 import json
+from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
 import os
 from typing import Any, Dict, Optional
-
-
-class BlockGNotReady(RuntimeError):
-    pass
-
-
 def load_blockg_status() -> Dict[str, Any]:
     """
     Load Block-G status JSON from env HAT_BLOCKG_STATUS_PATH (fail-closed).
