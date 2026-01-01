@@ -240,6 +240,17 @@ $payload.ev_hard_daily_ok_today = (Get-EvHardOkToday $logsDir $asOf)
 
 # GateScore as_of + freshness
 
+$gsAsOf = (Get-GateScoreSessionDate $logsDir)
+$payload.gatescore_as_of_date = $gsAsOf
+if($gsAsOf -ne ""){
+  $payload.gatescore_fresh_for_session = ($gsAsOf -eq $asOf)
+}
+
+# Institutional invariant
+if(($payload.gatescore_as_of_date + "") -eq ""){
+  $payload.gatescore_fresh_for_session = $false
+  $payload.gatescore_fresh_today = $false
+
 # --- If stamp exists, override GateScore fields deterministically (never loosens) ---
 if($null -ne $stamp){
   try {
@@ -273,16 +284,7 @@ if($null -ne $stamp){
   }
 }
 # --- end stamp override ---
-$gsAsOf = (Get-GateScoreSessionDate $logsDir)
-$payload.gatescore_as_of_date = $gsAsOf
-if($gsAsOf -ne ""){
-  $payload.gatescore_fresh_for_session = ($gsAsOf -eq $asOf)
-}
 
-# Institutional invariant
-if(($payload.gatescore_as_of_date + "") -eq ""){
-  $payload.gatescore_fresh_for_session = $false
-  $payload.gatescore_fresh_today = $false
 } elseif(($payload.gatescore_as_of_date + "") -eq ($payload.as_of_date + "")){
   $payload.gatescore_fresh_today = (To-Bool $payload.gatescore_fresh_for_session)
 } else {
@@ -339,6 +341,12 @@ if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
   }
 }
 $rn = @()
+if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
+  foreach($r in @($payload.gatescore_stamp_reasons)){
+    $s = ("" + $r).Trim()
+    if($s){ $rn += ("gatescore_stamp:" + $s) }
+  }
+}
 if(-not (To-Bool $payload.phase4_ok_today)){ $rn += "phase4_ok_today=false" }
 if(-not (To-Bool $payload.ev_hard_daily_ok_today)){ $rn += "ev_hard_daily_ok_today=false" }
 if(-not (To-Bool $payload.gatescore_ok_today)){ $rn += "gatescore_ok_today=false" }

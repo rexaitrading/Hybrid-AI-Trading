@@ -134,6 +134,9 @@ Invoke-Step -Path ".\tools\Run-GateScoreDailySummary.ps1" -Args @("-Quiet") -Ste
 
   # 2) Build BlockG stub to canonical logs/ no matter what the builder does internally
   $env:HAT_BLOCKG_STATUS_PATH = (Join-Path $logsDir "blockg_status_stub.json")
+  # 2) GateScore stamp (deterministic contract inputs; fail-closed)
+  Invoke-Step -StepName "GateScoreStamp" -Path ".\tools\Build-GateScoreStamp.ps1"
+
   Invoke-Step -Path ".\tools\Build-BlockGStatusStub.ps1" -StepName "BuildBlockGStatusStub"
 
   # 3) Final contract check (must be after evidence build)
