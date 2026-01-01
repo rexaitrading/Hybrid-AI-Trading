@@ -21,6 +21,40 @@ $rcPath   = Join-Path $logsDir "daily_ops_onetap_rc.txt"
 $errPath  = Join-Path $logsDir "daily_ops_onetap_err.txt"
 $okJson   = Join-Path $logsDir "daily_ops_onetap_last_ok.json"
 
+# ---- Softfail policy table (paper-locked ops) ----
+# StepName => allowed non-zero rc codes that downgrade to warning + continue.
+$SOFTFAIL = @{
+  "ExportNvdaPaperliveResultsToday" = @(2)
+  "NvdaGateScoreEvents"            = @(4)
+  "GateScoreDailyBuild"            = @(2,4)
+  "BlockGReady(NVDA)"              = @(2)
+  "Phase6OneTap+Notion"            = @(2)  # Not ready is non-fatal in paper-locked DailyOps
+}
+
+function Invoke-Step {
+  param(
+    [Parameter(Mandatory=$true)][string]$StepName,
+    [Parameter(Mandatory=$true)][string]$Path,
+    [string[]]$Args=@()
+  )
+  Write-Host ("[DAILY-OPS] -> {0}" -f $StepName)
+  $p = $Path
+  if(-not [System.IO.Path]::IsPathRooted($p)){ $p = Join-Path $repoRoot $p }
+  if(-not (Test-Path -LiteralPath $p)){ throw "Missing script: $p" }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $p @Args
+  $rc = $LASTEXITCODE
+  if($rc -eq 0){ return 0 }
+  $allow = @()
+  if($SOFTFAIL.ContainsKey($StepName)){ $allow = @($SOFTFAIL[$StepName]) }
+  if($allow -contains $rc){
+    Write-Host ("[DAILY-OPS] {0}: SOFTFAIL rc={1} -- continuing (paper locked; live remains fail-closed)" -f $StepName,$rc) -ForegroundColor Yellow
+    return $rc
+  }
+  throw ("DAILY_OPS_FAIL: {0} rc={1} file={2}" -f $StepName,$rc,$p)
+}
+# ---- end softfail policy table ----
+
+
 # ---- HARD SAFETY: paper only ----
 $env:HAT_IS_PAPER="1"
 $env:HAT_LIVE_DISABLED="1"
@@ -36,43 +70,28 @@ Remove-Item Env:HAT_BLOCKG_QUIET -ErrorAction SilentlyContinue
 $pytestTmp = Join-Path $logsDir "_pytest_tmp"
 New-Item -ItemType Directory -Force -Path $pytestTmp | Out-Null
 
-function Invoke-PSFile {
-  param(
-    [Parameter(Mandatory=$true)][string]$Path,
-    [string[]]$Args = @(),
-    [Parameter(Mandatory=$true)][string]$StepName
-  )
-  Write-Host ("[DAILY-OPS] -> {0}" -f $StepName)
-  $p = $Path
-  if(-not [System.IO.Path]::IsPathRooted($p)){ $p = Join-Path $repoRoot $p }
-  if(-not (Test-Path -LiteralPath $p)){ throw "Missing script: $p" }
-
-  & powershell -NoProfile -ExecutionPolicy Bypass -File $p @Args
-  if($LASTEXITCODE -ne 0){ throw ("DAILY_OPS_FAIL: {0} rc={1} file={2}" -f $StepName,$LASTEXITCODE,$p) }
-}
-
 # ---- MAIN ----
 $asOf = (Get-Date).ToString("yyyy-MM-dd")
 try {
   # 0) Pytest first (can clobber logs; must run before evidence build)
   try{
     $env:PYTEST_ADDOPTS = "--basetemp `"$pytestTmp`""
-    Invoke-PSFile -Path ".\tools\pytest.ps1" -Args @("-q") -StepName "Pytest(anti-hijack)"
+    Invoke-Step -Path ".\tools\pytest.ps1" -Args @("-q") -StepName "Pytest(anti-hijack)"
   } finally {
     Remove-Item Env:PYTEST_ADDOPTS -ErrorAction SilentlyContinue
   }
 
   # 1) Evidence rebuild
-  Invoke-PSFile -Path ".\tools\Run-Phase23HealthDaily.ps1" -StepName "Phase23HealthDaily"
-  Invoke-PSFile -Path ".\tools\Export-Phase5EvHardVetoDailySnapshot.ps1" -StepName "EvHardDailySnapshot"
-  Invoke-PSFile -Path ".\tools\Run-EvHardVetoDaily.ps1" -StepName "EvHardVetoDaily"
+  Invoke-Step -Path ".\tools\Run-Phase23HealthDaily.ps1" -StepName "Phase23HealthDaily"
+  Invoke-Step -Path ".\tools\Export-Phase5EvHardVetoDailySnapshot.ps1" -StepName "EvHardDailySnapshot"
+  Invoke-Step -Path ".\tools\Run-EvHardVetoDaily.ps1" -StepName "EvHardVetoDaily"
 
   # Phase4 + stamp (force basetemp again to avoid temp lock spam)
   try{
     $env:PYTEST_ADDOPTS = "--basetemp `"$pytestTmp`""
-    Invoke-PSFile -Path ".\tools\Run-Phase4Validation.ps1" -StepName "Phase4Validation"
-    Invoke-PSFile -Path ".\tools\Run-Phase4Stamp.ps1" -StepName "Phase4Stamp"
-  Invoke-PSFile -Path ".\tools\Build-EvHardEvidenceRaw.ps1" -StepName "EvHardEvidenceRaw"  } finally {
+    Invoke-Step -Path ".\tools\Run-Phase4Validation.ps1" -StepName "Phase4Validation"
+    Invoke-Step -Path ".\tools\Run-Phase4Stamp.ps1" -StepName "Phase4Stamp"
+  Invoke-Step -Path ".\tools\Build-EvHardEvidenceRaw.ps1" -StepName "EvHardEvidenceRaw"  } finally {
     Remove-Item Env:PYTEST_ADDOPTS -ErrorAction SilentlyContinue
   }
 
@@ -100,7 +119,7 @@ Write-Host "[DAILY-OPS] -> NvdaGateScoreEvents(today-only)"
   } else {
     throw ("DAILY_OPS_FAIL: NvdaGateScoreEvents rc={0} file={1}" -f $rcEv,$pEv)
   }
-Invoke-PSFile -Path ".\tools\Run-GateScoreDailySummary.ps1" -Args @("-Quiet") -StepName "GateScoreDailySummary"
+Invoke-Step -Path ".\tools\Run-GateScoreDailySummary.ps1" -Args @("-Quiet") -StepName "GateScoreDailySummary"
   Write-Host "[DAILY-OPS] -> GateScoreDailyBuild"
   $pGs = Join-Path $repoRoot ".\tools\Run-GateScoreDailyBuild.ps1"
   & powershell -NoProfile -ExecutionPolicy Bypass -File $pGs
@@ -115,7 +134,7 @@ Invoke-PSFile -Path ".\tools\Run-GateScoreDailySummary.ps1" -Args @("-Quiet") -S
 
   # 2) Build BlockG stub to canonical logs/ no matter what the builder does internally
   $env:HAT_BLOCKG_STATUS_PATH = (Join-Path $logsDir "blockg_status_stub.json")
-  Invoke-PSFile -Path ".\tools\Build-BlockGStatusStub.ps1" -StepName "BuildBlockGStatusStub"
+  Invoke-Step -Path ".\tools\Build-BlockGStatusStub.ps1" -StepName "BuildBlockGStatusStub"
 
   # 3) Final contract check (must be after evidence build)
     # 3) Final contract check (must be after evidence build)
@@ -134,8 +153,8 @@ Invoke-PSFile -Path ".\tools\Run-GateScoreDailySummary.ps1" -Args @("-Quiet") -S
   }
 
   # 4) Intel + Phase6
-  Invoke-PSFile -Path ".\tools\Run-IntelPipeline.ps1" -StepName "IntelPipeline"
-  Invoke-PSFile -Path ".\tools\Run-Phase6OneTap-Notion.ps1" -StepName "Phase6OneTap+Notion"
+  Invoke-Step -StepName "IntelPipeline" -Path ".\tools\Run-IntelPipeline.ps1"
+  Invoke-Step -StepName "Phase6OneTap+Notion" -Path ".\tools\Run-Phase6OneTap-Notion.ps1"
 
   # Success
   $ok = [ordered]@{ as_of_date=$asOf; ok=$true; mode="paper_locked"; ts_utc=(Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json -Depth 5
