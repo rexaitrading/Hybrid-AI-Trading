@@ -101,7 +101,17 @@ Write-Host "[DAILY-OPS] -> NvdaGateScoreEvents(today-only)"
     throw ("DAILY_OPS_FAIL: NvdaGateScoreEvents rc={0} file={1}" -f $rcEv,$pEv)
   }
 Invoke-PSFile -Path ".\tools\Run-GateScoreDailySummary.ps1" -Args @("-Quiet") -StepName "GateScoreDailySummary"
-  Invoke-PSFile -Path ".\tools\Run-GateScoreDailyBuild.ps1" -StepName "GateScoreDailyBuild"
+  Write-Host "[DAILY-OPS] -> GateScoreDailyBuild"
+  $pGs = Join-Path $repoRoot ".\tools\Run-GateScoreDailyBuild.ps1"
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $pGs
+  $rcGs = $LASTEXITCODE
+  if($rcGs -eq 0){
+    # ok
+  } elseif($rcGs -eq 2 -or $rcGs -eq 4){
+    Write-Host "[DAILY-OPS] GateScoreDailyBuild: NO_TODAY_ROWS (rc=$rcGs) -- continuing (paper locked; live remains fail-closed)" -ForegroundColor Yellow
+  } else {
+    throw ("DAILY_OPS_FAIL: GateScoreDailyBuild rc={0} file={1}" -f $rcGs,$pGs)
+  }
 
   # 2) Build BlockG stub to canonical logs/ no matter what the builder does internally
   $env:HAT_BLOCKG_STATUS_PATH = (Join-Path $logsDir "blockg_status_stub.json")
