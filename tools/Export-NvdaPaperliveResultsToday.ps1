@@ -33,10 +33,8 @@ if(Test-Path -LiteralPath $nvLedger){
   $InputPath = $nvLedger
 } else {
   Write-Host ("[NVDA-TODAY] MISSING_TODAY_LEDGER: " + $nvLedger) -ForegroundColor Yellow
-  # deterministic hygiene: overwrite OutPath to empty
-  $enc = New-Object System.Text.UTF8Encoding($false)
-  [System.IO.File]::WriteAllText((Resolve-Path $OutPath).Path, "", $enc)
-  exit 2
+  Write-Host ("[NVDA-TODAY] FALLBACK_INPUTPATH: " + $InputPath) -ForegroundColor Yellow
+  # Continue with InputPath (default trades.jsonl). Still fail-closed later if no today rows.
 }
 Write-Host "[NVDA-TODAY] Filtering for today=$today from $InputPath" -ForegroundColor Cyan
 
