@@ -136,7 +136,12 @@ try {
   if(-not (Test-Path -LiteralPath $pev)){ Fail "missing phase5_ev_hard_veto_daily.csv" }
   try {
     $rev = @(Import-Csv -LiteralPath $pev)
-    $hit = @($rev | Where-Object { (("" + $_.as_of_date).Trim() -eq $today) })
+    $hit = @($rev | Where-Object {
+      $d = ""
+      if($_.PSObject.Properties.Name -contains "as_of_date"){ $d = ("" + $_.as_of_date).Trim() }
+      elseif($_.PSObject.Properties.Name -contains "date"){ $d = ("" + $_.date).Trim() }
+      $d -eq $today
+    })
     if($hit.Count -lt 1){ Fail ("phase5_ev_hard_veto_daily missing today row=" + $today) }
   } catch { Fail ("phase5_ev_hard_veto_daily read error: " + $_.Exception.Message) }
 
