@@ -83,7 +83,8 @@ try {
     "tests/test_phase5_riskmanager_combined_gates.py",
     "tests/test_phase5_riskmanager_daily_loss_integration.py",
     "tests/test_execution_engine_phase5_guard.py",
-    "tests/test_ib_phase5_guard.py"
+    
+    "tests/phase7/test_phase7_preflight_no_bypass.py","tests/test_ib_phase5_guard.py"
   )
 
   $phase5Args = @()

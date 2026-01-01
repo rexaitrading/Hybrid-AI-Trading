@@ -7,8 +7,20 @@ import os
 # For optimizer daily (offline analytics), allow bypassing per-symbol Block-G readiness.
 # Live/order paths must still enforce Block-G elsewhere (execution guards).
 def _phase7_require_blockg() -> bool:
+    """
+    Institutional invariant:
+    - If live intent exists (HAT_IS_PAPER=0 OR HAT_PHASE7_LIVE_SCALING=1), BlockG is REQUIRED (no bypass).
+    - Otherwise (offline analytics), allow disabling via HAT_PHASE7_REQUIRE_BLOCKG=0.
+    """
+    # Live intent hard override (fail-closed)
+    if str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0":
+        return True
+    if str(os.environ.get("HAT_PHASE7_LIVE_SCALING", "")).strip() == "1":
+        return True
+
     v = os.getenv("HAT_PHASE7_REQUIRE_BLOCKG", "1").strip().lower()
-    return v not in ("0","false","no","off")
+    return v not in ("0", "false", "no", "off")
+
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
