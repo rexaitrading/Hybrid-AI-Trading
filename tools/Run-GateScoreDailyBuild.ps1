@@ -47,8 +47,8 @@ if([string]::IsNullOrWhiteSpace($today)){ $today = (Get-Date).ToString("yyyy-MM-
 # --- Build canonical GateScore daily summary from events (fail-closed; no fabrication) ---
 if([string]::IsNullOrWhiteSpace($today)){ Write-Host "[GS-BUILD] FAIL-CLOSED: empty today/as_of_date" -ForegroundColor Yellow; exit 2 }
 try {
-  $args = @("-m","hybrid_ai_trading.gatescore.daily_summary_from_events","--as-of-date",$today,"--csv",$csv,"--logs",(Join-Path $root "logs"))
-  & $py $args | Out-Host
+  $pyArgsDailySummary = @("-m","hybrid_ai_trading.gatescore.daily_summary_from_events","--as-of-date",$today,"--csv",$csv,"--logs",(Join-Path $root "logs"))
+  & $py $pyArgsDailySummary | Out-Host
 } catch {
   Write-Host ("[GS-BUILD] WARNING: daily_summary_from_events failed: " + $_.Exception.Message) -ForegroundColor Yellow
 }
@@ -122,10 +122,10 @@ function Kill-LeftoverVenvPython([datetime]$sinceUtc){
     }
 }
 
-function RunPyTimeout([string[]]$args,[int]$timeoutSec){
+function RunPyTimeout([string[]]$pyArgs,[int]$timeoutSec){
   $psi = New-Object System.Diagnostics.ProcessStartInfo
   $psi.FileName = $py
-  $psi.Arguments = ($args -join " ")
+  $psi.Arguments = ($pyArgs -join " ")
   $psi.WorkingDirectory = $root
   $psi.RedirectStandardOutput = $true
   $psi.RedirectStandardError  = $true
@@ -187,8 +187,7 @@ if (-not $RunPython) {
 }
 
 foreach($s in $syms){
-  $code = "import sys,runpy; sys.path.insert(0,r'$env:PYTHONPATH'); runpy.run_module('hybrid_ai_trading.gatescore.daily_build', run_name='__main__')"
-  $rc = RunPyTimeout -args @("-I","-X","faulthandler","-c",$code,"--csv",$csv,"--symbol",$s) -timeoutSec $TimeoutSec
+  $rc = RunPyTimeout -pyArgs @("-I","-X","faulthandler","-m","hybrid_ai_trading.gatescore.daily_build","--csv",$csv,"--symbol",$s) -timeoutSec $TimeoutSec
   if ($rc -ne 0) {
     Write-Host "[GS-BUILD] FAIL symbol=$s rc=$rc logs=$logDir" -ForegroundColor Yellow
     exit $rc
