@@ -100,4 +100,15 @@ def ensure_symbol_blockg_ready(symbol: str, *args: Any, **kwargs: Any) -> None:
 
 
 def assert_nvda_live_ready(*args: Any, **kwargs: Any) -> None:
-    ensure_symbol_blockg_ready("NVDA", *args, **kwargs)
+    """
+    Fail-closed NVDA live arming gate.
+    This is a STRICT guard: it does NOT infer live/paper. Callers use it right before any NVDA live order.
+    Requires BOTH BlockG contract ready AND NVDA live stamp today.
+    """
+    st = read_blockg_status(repo_root=kwargs.get("repo_root", None))
+    if not bool(st.get("nvda_blockg_ready", False)):
+        sp = str(_status_path(kwargs.get("repo_root", None)))
+        raise BlockGNotReady(f"BLOCK-G DENY: NVDA nvda_blockg_ready=false ({sp})")
+    # Require NVDA live stamp (separate human arming consent gate)
+    from hybrid_ai_trading.broker.ib_safe import require_nvda_live_stamp  # local import
+    require_nvda_live_stamp("NVDA")
