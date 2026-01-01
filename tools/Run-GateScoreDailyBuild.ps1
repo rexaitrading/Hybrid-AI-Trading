@@ -36,6 +36,16 @@ if (-not (Test-Path $csv)) { throw "[GS-BUILD] missing input csv: $csv" }
 # Trading-day "today" must follow LOCAL session day; allow override via env HAT_ASOF_DATE.
 # Trading-day "today" must follow LOCAL session day; allow override via env HAT_ASOF_DATE.
 $today = (($env:HAT_ASOF_DATE + "")).Trim()
+
+# --- Build canonical GateScore daily summary from events (fail-closed; no fabrication) ---
+try {
+  $args = @("-m","hybrid_ai_trading.gatescore.daily_summary_from_events","--as-of-date",$today,"--csv",$csv,"--logs",(Join-Path $root "logs"))
+  & $py $args | Out-Host
+} catch {
+  Write-Host ("[GS-BUILD] WARNING: daily_summary_from_events failed: " + $_.Exception.Message) -ForegroundColor Yellow
+}
+# --- END build daily summary from events ---
+
 if([string]::IsNullOrWhiteSpace($today)){ $today = (Get-Date).ToString("yyyy-MM-dd") }
 if([string]::IsNullOrWhiteSpace($today)){
 }
