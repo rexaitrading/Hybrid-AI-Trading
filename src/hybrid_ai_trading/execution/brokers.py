@@ -90,23 +90,29 @@ class IBKRClient(BrokerClient):
     ):
         # Block-G lowest-layer enforcement (fail-closed for LIVE NVDA)
         # LIVE is determined by:
-        #   - meta["is_paper"] == False  OR  env:HAT_IS_PAPER == "0"
-        # Default is paper (safe). Production live callers must set meta.is_paper=False.
-        try:
+        #   - ctx (preferred)  OR  meta["is_paper"]  OR  env:HAT_IS_PAPER
+        # Default is paper (safe). Production live callers must set is_paper=False (or ctx.mode="live").
         meta0 = meta or {}
         meta0 = _ensure_ctx(meta0, symbol)
+
         # Canonical paper/live resolution (ctx > meta > env; fail-closed paper)
         try:
             ctx0 = meta0.get("ctx", None) if isinstance(meta0, dict) else None
         except Exception:
             ctx0 = None
-        is_paper_effective = resolve_is_paper(meta=meta0, ctx=(ctx0 if isinstance(ctx0, RunContext) else None))
+
+        is_paper_effective = resolve_is_paper(
+            meta=meta0,
+            ctx=(ctx0 if isinstance(ctx0, RunContext) else None),
+        )
         try:
             if isinstance(meta0, dict) and ("is_paper" not in meta0 or meta0.get("is_paper", None) is None):
                 meta0["is_paper"] = bool(is_paper_effective)
         except Exception:
             pass
 
+        # Early Block-G enforcement (chokepoint also enforces; this improves UX + keeps semantics consistent)
+        ensure_symbol_blockg_ready(
             symbol,
             allow_paper=True,
             is_paper=(meta0.get("is_paper", None) if isinstance(meta0, dict) else None),

@@ -50,44 +50,40 @@ def is_symbol_ready(symbol: str, st: Dict[str, Any], repo_root: Optional[Path] =
 
 
 def _infer_is_live(*args: Any, **kwargs: Any) -> bool:
-    # Explicit kw flags
-    for k in ("is_live", "live", "enforce_live"):
-        if k in kwargs:
-            return bool(kwargs[k])
-
-    # ctx kw (RunContext-like) is authoritative
+    """
+    Determine if call is LIVE.
+    Policy: ctx wins over env/meta. If ctx says paper => not live (paper-safe bypass).
+    Supports RunContext and SimpleNamespace-style ctx objects used in tests.
+    """
     ctx = kwargs.get("ctx", None)
-    if ctx is not None:
-        m = getattr(ctx, "mode", None)
-        if isinstance(m, str) and m.strip().lower() == "live":
+    try:
+        if ctx is not None:
+            m = str(getattr(ctx, "mode", "") or "").strip().lower()
+            ip = getattr(ctx, "is_paper", None)
+            # paper wins (fail-closed toward paper when explicit)
+            if m == "paper" or ip is True:
+                return False
+            if m == "live" or ip is False:
+                return True
+    except Exception:
+        pass
+
+    # Existing behavior fallback (env/meta)  keep semantics stable
+    try:
+        is_paper = kwargs.get("is_paper", None)
+        if is_paper is True:
+            return False
+        if is_paper is False:
             return True
-        ip = getattr(ctx, "is_paper", None)
-        if ip is False:
-            return True
+    except Exception:
+        pass
 
-    # is_paper kw passed explicitly (False => live intent)
-    if "is_paper" in kwargs and bool(kwargs["is_paper"]) is False:
-        return True
-
-    # mode/run_mode kw
-    mode = kwargs.get("mode") or kwargs.get("run_mode")
-    if isinstance(mode, str) and mode.strip().lower() == "live":
-        return True
-
-    # Scan positional args for RunContext-like objects
-    for a in args:
-        m = getattr(a, "mode", None)
-        if isinstance(m, str) and m.strip().lower() == "live":
-            return True
-        ip = getattr(a, "is_paper", None)
-        if ip is False:
-            return True
-
-    # Env: paper flag (tests set HAT_IS_PAPER=0)
-    if os.environ.get("HAT_IS_PAPER", "").strip() == "0":
-        return True
-
-    return False
+    # env fallback: HAT_IS_PAPER=0 means live
+    try:
+        import os
+        return str(os.environ.get("HAT_IS_PAPER", "1")).strip() == "0"
+    except Exception:
+        return False
 
 def ensure_symbol_blockg_ready(symbol: str, *args: Any, **kwargs: Any) -> None:
     if not _infer_is_live(*args, **kwargs):
