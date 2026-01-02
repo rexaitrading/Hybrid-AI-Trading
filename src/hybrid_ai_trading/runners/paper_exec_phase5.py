@@ -93,7 +93,9 @@ def main() -> int:
         try: return float(rep.get("realized_pnl", 0.0) or 0.0)
         except Exception: return 0.0
 
-    prev_realized = _realized(portfolio.report())
+    # --- Manual realized PnL (tighten-only; evidence uses real px from input) ---
+open_px: Optional[float] = None
+open_qty: float = 0.0
 
 
     pnl_samples = 0
@@ -138,9 +140,18 @@ def main() -> int:
 
         rep = portfolio.report()
         cur_realized = _realized(rep)
-        delta = cur_realized - prev_realized
-        sample = 1 if abs(delta) > 0.0 else 0
-        pnl_samples += sample
+        delta = 0.0  # manual mode
+        sample = 0
+        # manual open/close:
+if side == "BUY" and open_px is None:
+    open_px = px
+    open_qty = float(qty)
+elif side == "SELL" and open_px is not None:
+    realized = (px - float(open_px)) * float(open_qty)
+    sample = 1
+    pnl_samples += 1
+    open_px = None
+    open_qty = 0.0
         if sample: prev_realized = cur_realized
 
         wrote.append(json.dumps({
@@ -150,7 +161,7 @@ def main() -> int:
             "price": px,
             "side": side,
             "qty": qty,
-            "realized_pnl": rp if sample else None,
+            "realized_pnl": realized if sample else None,
             "pnl_samples": sample,
             "count_signals": 1,
         }, ensure_ascii=False, separators=(",", ":")))
