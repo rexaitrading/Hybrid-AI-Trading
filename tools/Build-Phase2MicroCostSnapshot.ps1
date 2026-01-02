@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [string]$OutPath = ".\logs\phase2_micro_cost_snapshot.json"
 )

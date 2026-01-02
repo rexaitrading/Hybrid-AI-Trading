@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [string]$OutPath = ".\logs\phase6_portfolio_state.json"
 )

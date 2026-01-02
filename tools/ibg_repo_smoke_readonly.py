@@ -1,4 +1,4 @@
-﻿"""
+"""
 Read-only IB Gateway smoke test (repo-native).
 - Connect via hybrid_ai_trading.brokers.ib_client.IBClient (ib_insync)
 - Print server info + key account summary

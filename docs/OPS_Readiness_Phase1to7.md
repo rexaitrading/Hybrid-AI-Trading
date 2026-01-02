@@ -1,4 +1,4 @@
-﻿# Ops Readiness (Phase1–Phase7)
+# Ops Readiness (Phase1–Phase7)
 
 ## Daily safety spine (Phase-5)
 Run:
