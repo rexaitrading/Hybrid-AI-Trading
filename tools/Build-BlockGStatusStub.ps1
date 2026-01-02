@@ -337,12 +337,6 @@ if([int]$payload.gatescore_rows_today -le 0){
 }
 
 
-# Tighten-only: "fresh" requires at least one GateScore row today (prevents misleading fresh+empty).
-if([int]$payload.gatescore_rows_today -le 0){
-  $payload.gatescore_fresh_for_session = $false
-  $payload.gatescore_fresh_today = $false
-  $payload.gatescore_ok_today = $false
-}
 
 
 # GateScore ok today (quality):
@@ -410,7 +404,9 @@ if((To-Bool $payload.phase4_ok_today)){
   if((To-Bool $payload.ev_hard_daily_ok_today)){
     if((To-Bool $payload.gatescore_ok_today)){
       if((To-Bool $payload.gatescore_fresh_today)){
-        $payload.nvda_blockg_ready = $true
+        if((To-Bool System.Collections.Specialized.OrderedDictionary.nvda_gatescore_events_ok_today)){
+          $payload.nvda_blockg_ready = $true
+        }
       }
     }
   }
@@ -431,19 +427,7 @@ if((To-Bool $payload.gatescore_fresh_today)){
 }
 
 # Reasons (canonical)
-if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
-  foreach($r in @($payload.gatescore_stamp_reasons)){
-    $s = ("" + $r).Trim()
-    if($s){ $rn += ("gatescore_stamp:" + $s) }
-  }
-}
 $rn = @()
-if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
-  foreach($r in @($payload.gatescore_stamp_reasons)){
-    $s = ("" + $r).Trim()
-    if($s){ $rn += ("gatescore_stamp:" + $s) }
-  }
-}
 if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
   foreach($r in @($payload.gatescore_stamp_reasons)){
     $s = ("" + $r).Trim()
