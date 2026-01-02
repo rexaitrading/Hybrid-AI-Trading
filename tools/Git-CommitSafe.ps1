@@ -18,7 +18,9 @@ param(
   [Parameter(Mandatory=$false)]
   [switch]$AllowDirty,
 
+  # Print actions only; do not stage/commit/push.
   [Parameter(Mandatory=$false)]
+  [switch]$DryRun,
   [switch]$NoVerify
 )
 
@@ -60,13 +62,18 @@ if($All){
   git add -A | Out-Host
 } elseif($Paths.Count -gt 0){
   Info ("Staging paths: " + ($Paths -join ", "))
-  git add -- @Paths | Out-Host
+  git add -- $Paths | Out-Host
 } else {
   Warn "No -Paths and no -All. Not staging anything automatically."
 }
 
 Info "git status --porcelain (after stage)"
 git status --porcelain | Out-Host
+
+# --- Guard: refuse to commit if nothing is staged (fail-closed) ---
+$staged = (git diff --cached --name-only | Measure-Object).Count
+if($staged -le 0){ Fail "Nothing staged. Provide -Paths or -All to stage changes before commit." }
+
 
 if($Pytest.Count -gt 0){
   $py = ".\.venv\Scripts\python.exe"
@@ -90,6 +97,10 @@ $nv = @()
 if($NoVerify){ $nv = @("--no-verify") }
 
 Info "Committing"
+if($DryRun){
+  Warn "DryRun enabled: skipping git commit/push."
+  exit 0
+}
 git commit -m $msg @nv | Out-Host
 if($LASTEXITCODE -ne 0){ Fail "git commit failed rc=$LASTEXITCODE" }
 
