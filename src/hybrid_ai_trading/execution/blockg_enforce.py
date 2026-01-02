@@ -1,84 +1,68 @@
 from __future__ import annotations
 
-from datetime import date
-from pathlib import Path
-from typing import Any, Dict, Optional
-
 import json
-
 import os
-from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
-from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
-def _today_str() -> str:
-    return date.today().isoformat()
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 
-def _repo_root() -> Path:
-    # .../src/hybrid_ai_trading/execution/blockg_enforce.py -> repo root
-    return Path(__file__).resolve().parents[4]
+DEFAULT_STATUS_PATH = Path("logs") / "blockg_status_stub.json"
 
 
-def _default_paths() -> list[Path]:
-    root = _repo_root()
-    return [
-        root / "logs" / "blockg_status_stub.json",
-        root / ".intel" / "blockg_status_stub.json",
-    ]
+@dataclass(frozen=True)
+class BlockGDecision:
+    ready: bool
+    reasons: List[str]
+    path: str
 
 
-def load_blockg_status(path: Optional[str] = None) -> Dict[str, Any]:
-    if path:
-        p = Path(path)
-        raw = p.read_text(encoding="utf-8-sig")
+def _load_status(path: Path) -> Dict[str, Any]:
+    try:
+        raw = path.read_text(encoding="utf-8")
         return json.loads(raw)
-
-    # Env override (deterministic): HAT_BLOCKG_STATUS_PATH points to contract JSON
-    p_env = os.environ.get("HAT_BLOCKG_STATUS_PATH", "").strip()
-    if p_env:
-        pe = Path(p_env)
-        if pe.exists():
-            raw = pe.read_text(encoding="utf-8-sig")
-            return json.loads(raw)
-    for p in _default_paths():
-        if p.exists():
-            raw = p.read_text(encoding="utf-8-sig")
-            return json.loads(raw)
-
-    raise BlockGNotReady("BLOCK-G: status file missing (fail-closed)")
+    except Exception:
+        return {}
 
 
-def _sym_ready_key(symbol: str) -> str:
-    s = (symbol or "").upper().strip()
-    if s == "NVDA":
-        return "nvda_blockg_ready"
-    if s == "SPY":
-        return "spy_blockg_ready"
-    if s == "QQQ":
-        return "qqq_blockg_ready"
-    # Conservative default: unknown symbols are not allowed for live
-    return ""
+def _status_path() -> Path:
+    p = (os.environ.get("HAT_BLOCKG_STATUS_PATH") or "").strip()
+    return Path(p) if p else DEFAULT_STATUS_PATH
 
 
-def require_blockg_ready_for_live(symbol: str, status: Optional[Dict[str, Any]] = None) -> None:
+def check_symbol_ready(symbol: str) -> BlockGDecision:
+    sym = (symbol or "").upper().strip()
+    path = _status_path()
+    st = _load_status(path)
+
+    # Fail-closed on missing/invalid JSON
+    if not st:
+        return BlockGDecision(False, [f"missing_or_invalid_contract:{path.as_posix()}"], str(path))
+
+    key = f"{sym.lower()}_blockg_ready"
+    ready = bool(st.get(key, False))
+    reasons = list(st.get("reasons_not_ready") or [])
+
+    # If the symbol is not ready but reasons list is empty, add deterministic reason
+    if not ready and not reasons:
+        reasons = [f"{key}=false"]
+
+    return BlockGDecision(ready, reasons, str(path))
+
+
+def require_blockg_ready(symbol: str, *, is_live: bool) -> None:
     """
-    Public stable gate (kept for backward compatibility).
-    Single semantics owner is blockg_contract.ensure_symbol_blockg_ready.
-
-    - If paper (env HAT_IS_PAPER!=0): no-op
-    - If live (env HAT_IS_PAPER==0): enforce fail-closed using contract JSON
+    Enforce Block-G contract for live order path.
+    Fail-closed: if live and contract says not ready -> raise RuntimeError.
     """
-    # Explicit status injection stays supported for tests
-    if status is not None:
-        key = _sym_ready_key(symbol)
-        if not key:
-            raise BlockGNotReady(f"BLOCK-G: unknown symbol '{symbol}' (fail-closed)")
-        if not bool(status.get(key, False)):
-            reasons = status.get("reasons_not_ready", [])
-            raise BlockGNotReady(f"BLOCK-G: {key}=false for {symbol}. reasons={reasons}")
-        return
-
-    # Delegate to contract (env/run_context aware)
-    is_live = os.environ.get("HAT_IS_PAPER", "").strip() == "0"
     if not is_live:
         return
-    ensure_symbol_blockg_ready(symbol, allow_paper=False, is_paper=False, ctx=None)
+
+    sym = (symbol or "").upper().strip()
+    if sym not in {"NVDA", "SPY", "QQQ"}:
+        return
+
+    d = check_symbol_ready(sym)
+    if not d.ready:
+        msg = f"BLOCKG_NOT_READY sym={sym} path={d.path} reasons={';'.join(d.reasons)[:500]}"
+        raise RuntimeError(msg)

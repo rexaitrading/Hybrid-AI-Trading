@@ -12,6 +12,12 @@ $ErrorActionPreference = "Stop"
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 
+# --- Normalize symbol early (defensive, deterministic) ---
+$s = ($Symbol + "").ToUpperInvariant()
+if($s -notin @("NVDA","SPY","QQQ","ALL")){ Fail-Script ("Invalid -Symbol=" + $Symbol) }
+# --- END normalize ---
+
+
 function Write-Utf8NoBom {
   param([string]$Path, [string]$Text)
   $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -111,8 +117,7 @@ function SymReady([string]$sym) {
   if (-not ($st.PSObject.Properties.Name -contains $key)) { return $false }
   return [bool]$st.$key
 }
-
-$s = $Symbol.ToUpper()
+# $s normalized earlier
 if ($s -eq "ALL") {
   foreach ($sym in @("NVDA","SPY","QQQ")) {
     if (-not (SymReady $sym)) { Fail "$sym not ready ($($sym.ToLower())_blockg_ready=false)" }
