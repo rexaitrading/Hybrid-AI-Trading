@@ -101,7 +101,6 @@ if (-not $st) { Fail "Missing/invalid Block-G status JSON at: $statusPath" }
 # All go/no-go semantics happen in the read-only contract decision block below.
 
 # ---- Contract read-only decision (institutional, deterministic) ----
-# ---- Contract read-only decision (institutional, deterministic) ----
 try {
   $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
   $statusPath = $env:HAT_BLOCKG_STATUS_PATH

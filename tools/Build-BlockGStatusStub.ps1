@@ -138,6 +138,17 @@ function Get-GateScoreSessionDate([string]$logsDir){
   return ""
 }
 
+# --- Official GateScore events evidence (fail-closed) ---
+function Count-JsonlLines([string]$Path){
+  try {
+    if(-not (Test-Path -LiteralPath $Path)){ return 0 }
+    $n = 0
+    foreach($x in (Get-Content -LiteralPath $Path -Encoding utf8)){ if(($x+"").Trim()){ $n++ } }
+    return [int]$n
+  } catch { return 0 }
+}
+
+
 function EventsFileFor([string]$logsDir, [string]$sym){
   $u = ($sym + "").Trim().ToUpper()
   if($u -eq "NVDA"){
@@ -282,6 +293,9 @@ $payload = [ordered]@{
   ev_hard_last_date           = ""
 
   nvda_blockg_ready = $false
+  nvda_gatescore_events_count_today = 0
+  nvda_gatescore_events_min_required = 10
+  nvda_gatescore_events_ok_today = $false
   spy_blockg_ready  = $false
   qqq_blockg_ready  = $false
 
@@ -336,6 +350,24 @@ if([int]$payload.gatescore_rows_today -le 0){
 
 # NVDA readiness (PS-safe; no -and operators)
 $payload.nvda_blockg_ready = $false
+
+# --- NVDA official GateScore events evidence (builder-owned; contract-only later) ---
+$payload.nvda_gatescore_events_count_today = 0
+$payload.nvda_gatescore_events_min_required = 10
+$payload.nvda_gatescore_events_ok_today = $false
+try {
+  $ev = (EventsFileFor $logsDir "NVDA")
+  if($ev -and (Test-Path -LiteralPath $ev)){
+    $payload.nvda_gatescore_events_count_today = (Count-JsonlLines $ev)
+    if([int]$payload.nvda_gatescore_events_count_today -ge [int]$payload.nvda_gatescore_events_min_required){
+      $payload.nvda_gatescore_events_ok_today = $true
+    }
+  }
+} catch {
+  $payload.nvda_gatescore_events_ok_today = $false
+}
+# --- end events evidence ---
+
 
 ## --- C.5 today-row validation (builder-owned; contract carries evidence) ---
 try {
