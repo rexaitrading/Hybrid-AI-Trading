@@ -85,10 +85,67 @@ def evaluate(symbol: str, price_map: Dict[str, Any], risk_mgr) -> Dict[str, Any]
     }
 
 
+
+# GateScore metric extraction (best-effort). Defaults to zeros (fail-closed).
+def _extract_gatescore_metrics(decision):
+    edge_ratio = 0.0
+    micro_score = 0.0
+    pnl_samples = 0
+    if decision is None:
+        return edge_ratio, micro_score, pnl_samples
+    if isinstance(decision, dict):
+        for k in ('edge_ratio','mean_edge_ratio','gatescore_edge','edge'):
+            if k in decision:
+                try: edge_ratio = float(decision.get(k) or 0.0)
+                except Exception: pass
+                break
+        for k in ('micro_score','mean_micro_score','gatescore_micro','micro'):
+            if k in decision:
+                try: micro_score = float(decision.get(k) or 0.0)
+                except Exception: pass
+                break
+        for k in ('pnl_samples','pnlSamples','samples','sample_count','trades_n','trade_count'):
+            if k in decision:
+                try: pnl_samples = int(decision.get(k) or 0)
+                except Exception: pass
+                break
+        return edge_ratio, micro_score, pnl_samples
+    # object attribute extraction
+    for k in ('edge_ratio','mean_edge_ratio','gatescore_edge','edge'):
+        try:
+            if hasattr(decision, k):
+                edge_ratio = float(getattr(decision, k) or 0.0)
+                break
+        except Exception:
+            pass
+    for k in ('micro_score','mean_micro_score','gatescore_micro','micro'):
+        try:
+            if hasattr(decision, k):
+                micro_score = float(getattr(decision, k) or 0.0)
+                break
+        except Exception:
+            pass
+    for k in ('pnl_samples','pnlSamples','samples','sample_count','trades_n','trade_count'):
+        try:
+            if hasattr(decision, k):
+                pnl_samples = int(getattr(decision, k) or 0)
+                break
+        except Exception:
+            pass
+    return edge_ratio, micro_score, pnl_samples
+
 def run_once(symbols, price_map, risk_mgr):
     """Evaluate a list of symbols and return [{'symbol':..., 'decision':{...}}, ...]."""
     rm = _ensure_risk_mgr(risk_mgr)
     out = []
     for sym in list(symbols or []):
-        out.append({"symbol": sym, "decision": evaluate(sym, price_map or {}, rm)})
+        decision = evaluate(sym, price_map or {}, rm)
+        edge_ratio, micro_score, pnl_samples = _extract_gatescore_metrics(decision)
+        out.append({
+            'symbol': sym,
+            'decision': decision,
+            'edge_ratio': edge_ratio,
+            'micro_score': micro_score,
+            'pnl_samples': pnl_samples,
+        })
     return out
