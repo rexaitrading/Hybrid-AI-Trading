@@ -217,6 +217,16 @@ def _write_heartbeat(symbols: list[str], tick_no: int, price_source: str, log_fi
 def main(argv=None) -> int:
     _chdir_repo_root()
     args = parse_args(argv)
+    # --- Resolve config path against repo root (prevents src\\config rebasing warnings) ---
+    try:
+        here = pathlib.Path(__file__).resolve()
+        repo = here.parents[3]
+        p = pathlib.Path(args.config)
+        if not p.is_absolute():
+            args.config = str((repo / p).resolve())
+    except Exception:
+        pass
+
 
     # --- Fallback: honor --ticks/--sleep-sec even if parser didn't attach attrs ---
     raw = list(argv) if argv is not None else sys.argv[1:]
@@ -342,6 +352,25 @@ def main(argv=None) -> int:
                     price_source = "provider_fallback"
 
         try:
+        # --- FAIL-CLOSED: invalid price_map (<=0) must never be emitted as ok ---
+        try:
+            bad = []
+            for s in symbols:
+                v = price_map.get(s)
+                try:
+                    fv = float(v)
+                except Exception:
+                    fv = -1.0
+                if fv <= 0.0:
+                    bad.append((s, v))
+            if bad:
+                rec = {"ts_utc": iso_utc_now(), "status": "bad_price", "symbols": symbols, "price_map": price_map, "result": [], "price_source": "bad_price", "error": f"bad_price_map:{bad}"}
+                if args.log_file: _append_jsonl(args.log_file, rec)
+                print("[PaperRunner] tick BAD_PRICE:", json.dumps(rec, ensure_ascii=False))
+                return 4
+        except Exception:
+            pass
+
             out = qc.run_once(symbols, price_map, risk_mgr)
         except Exception as e:
             rec = {
