@@ -117,11 +117,11 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
     # Place order
     try:
         if _is_live(ctx) and sym == "NVDA":
-            assert_nvda_live_ready()
+            assert_nvda_live_ready(ctx=ctx)
         return ib.placeOrder(order_id, contract, order)
     except TypeError:
         if _is_live(ctx) and sym == "NVDA":
-            assert_nvda_live_ready()
+            assert_nvda_live_ready(ctx=ctx)
         return ib.placeOrder(contract, order)
 def retry(
     exc_types: Union[Type[BaseException], Tuple[Type[BaseException], ...]],
