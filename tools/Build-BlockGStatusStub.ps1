@@ -32,6 +32,24 @@ $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 $statusPath = Join-Path $logsDir "blockg_status_stub.json"
 
+
+# ---- GateScore EVENTS freshness (fail-closed) ----
+$GS_MIN_EVENTS_REQUIRED = 25
+
+function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
+  $p = Join-Path $RepoRoot ("logs\{0}_gatescore_events.jsonl" -f $Sym.ToLower())
+  $rows = 0; $fresh = $false; $ts = ""
+  if(Test-Path -LiteralPath $p){
+    try { $rows = @(Get-Content -LiteralPath $p -Encoding utf8).Count } catch { $rows = 0 }
+    try {
+      $it = Get-Item -LiteralPath $p
+      $ts = $it.LastWriteTime.ToString("yyyy-MM-dd")
+      $fresh = ($ts -eq $Today)
+    } catch { $fresh = $false; $ts = "" }
+  }
+  $ok = ($fresh -and $rows -ge $GS_MIN_EVENTS_REQUIRED)
+  return [pscustomobject]@{ path=$p; rows=$rows; fresh=$fresh; ts=$ts; ok=$ok }
+}
 function To-Bool([object]$v) {
     if ($null -eq $v) { return $false }
     $s = ([string]$v).Trim().ToLowerInvariant()
@@ -58,14 +76,7 @@ if (-not $gsAsOf) {
   $gsAsOf = ""
 }
 # ---- Phase4 ----
-    $phase4Ok = Get-Phase4OkToday $repoRoot $today
-$phase4Path = Join-Path $logsDir "phase4_validation_passed.json"
-if (Test-Path $phase4Path) {
-    try {
-        $j = Get-Content $phase4Path -Raw -Encoding UTF8 | ConvertFrom-Json
-    $phase4Ok = Get-Phase4OkToday $repoRoot $today
-    } catch { $phase4Ok = $false }
-}
+$phase4Ok = Get-Phase4OkToday $repoRoot $today
 
 # ---- EV hard veto daily ----
 $evHardOk = $false
@@ -220,11 +231,15 @@ $minMicro   = [double]$gsNVDA.minMicro
 $gsAgeDays = 9999
 $gsRecentEnough = $false
 
+$evNVDA = Get-GSEventsMeta $repoRoot "NVDA" $today
+$evSPY  = Get-GSEventsMeta $repoRoot "SPY"  $today
+$evQQQ  = Get-GSEventsMeta $repoRoot "QQQ"  $today
+
 # ---- Per-symbol ready (institutional) ----
 # NOTE: GateScore global fields remain NVDA-based for compatibility; readiness is per-symbol.
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evNVDA.ok
+$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
+$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
 $reasons = New-Object System.Collections.Generic.List[string]
 if (-not $gsAsOf) { $reasons.Add("gatescore_missing_source_data") | Out-Null }
 
@@ -253,9 +268,9 @@ if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
 if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
 
 # Recompute per-symbol readiness AFTER GateScore age policy (StrictMode-safe)
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evNVDA.ok
+$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
+$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
 
 
 # Audit: include per-symbol not-ready flags (even if NVDA is ready)
@@ -301,7 +316,12 @@ $payload = [ordered]@{
             min_signals=$gsQQQ.minSignals; min_pnl_samples=$gsQQQ.minPnl; min_edge_ratio=$gsQQQ.minEdge; min_micro_score=$gsQQQ.minMicro
         }
     }
-
+    gatescore_events_min_required = $GS_MIN_EVENTS_REQUIRED
+    gatescore_events_by_symbol = [ordered]@{
+        NVDA = $evNVDA
+        SPY  = $evSPY
+        QQQ  = $evQQQ
+    }
     gatescore_samples       = $gsCount
     gatescore_min_samples   = $minSignals
     gatescore_pnl_samples   = $gsPnl
@@ -329,3 +349,6 @@ Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
 
 exit 0
+
+
+
