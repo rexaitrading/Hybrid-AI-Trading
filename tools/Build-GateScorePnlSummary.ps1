@@ -149,6 +149,13 @@ foreach ($it in $eventFiles) {
     }
     if ($todayEvents.Count -eq 0) { continue }
 
+    # Drop ineligible events (fail-closed against zero-metric pollution)
+    $todayEvents = @($todayEvents | Where-Object {
+        -not ($_.PSObject.Properties.Name -contains "eligible") -or [bool]$_.eligible
+    })
+    if ($todayEvents.Count -eq 0) { continue }
+
+
     $edgeVals = @()
     $microVals = @()
     $pnlVals = @()

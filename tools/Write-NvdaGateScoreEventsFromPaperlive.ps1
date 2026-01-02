@@ -116,10 +116,14 @@ foreach ($ln in $lines) {
     $microSrc = "producer"
     if ($ms -eq $null -or [double]$ms -le 0.0) { $ms = Get-DerivedMicroScore -EdgeRatio $edge; $microSrc = "derived_v1" }
 
+    # Fail-closed eligibility: require non-zero metrics OR real pnl samples
+    $eligible = ($edge -gt 0.0 -or [double]$ms -gt 0.0 -or $pnlSamples -gt 0)
+    $src = if($eligible){"REAL"}else{"STUB"}
+    $note = if($eligible){"from_paperlive"}else{"from_paperlive;ineligible_zero_metrics"}
     $outObj = [ordered]@{
         as_of_date         = $asOf
         symbol             = "NVDA"
-        source             = "REAL"
+        source             = $src
         score              = $edge
         edge_ratio         = $edge
         micro_score        = [double]$ms
@@ -127,7 +131,8 @@ foreach ($ln in $lines) {
         realized_pnl       = $rp
         count_signals      = 1
         pnl_samples        = $pnlSamples
-        notes              = "from_paperlive"
+        eligible           = [bool]$eligible
+        notes              = $note
     }
 
     [void]$eventsOut.Add(($outObj | ConvertTo-Json -Compress))
