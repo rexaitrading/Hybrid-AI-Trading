@@ -4,6 +4,12 @@ param(
     [string]$Symbol = "ALL"
 )
 
+function WantSym([string]$sym){
+  $s = $Symbol.ToUpperInvariant()
+  return ($s -eq "ALL" -or $s -eq $sym.ToUpperInvariant())
+}
+
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -274,9 +280,9 @@ $qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and 
 
 
 # Audit: include per-symbol not-ready flags (even if NVDA is ready)
-if (-not $spyReady) { $reasons.Add("spy_blockg_ready=false") | Out-Null }
-if (-not $qqqReady) { $reasons.Add("qqq_blockg_ready=false") | Out-Null }
-
+if (WantSym "NVDA" -and -not $nvdaReady) { $reasons.Add("nvda_blockg_ready=false") | Out-Null }
+if (WantSym "SPY" -and -not $spyReady) { $reasons.Add("spy_blockg_ready=false") | Out-Null }
+if (WantSym "QQQ" -and -not $qqqReady) { $reasons.Add("qqq_blockg_ready=false") | Out-Null }
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
