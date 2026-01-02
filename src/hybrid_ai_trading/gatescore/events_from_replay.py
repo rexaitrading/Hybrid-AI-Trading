@@ -109,7 +109,6 @@ def _convert_row_to_event(row: Dict[str, Any], *, as_of: str, symbol: str) -> Op
     rp, ok_rp = _try_float(pnl_v)
 
     # Require real edge+micro. Fail-closed: do NOT emit if missing/invalid.
-    # Require real edge+micro. Fail-closed: do NOT emit if missing/invalid.
     if (not ok_edge) or (not ok_micro):
         return None
 
