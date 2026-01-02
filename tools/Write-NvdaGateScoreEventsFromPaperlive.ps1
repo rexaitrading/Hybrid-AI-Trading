@@ -20,7 +20,11 @@ function Pick-LatestPaperlive([string]$dir) {
     if (-not $all -or $all.Length -eq 0) { return "" }
 
     $matches = @(
-        $all | Where-Object { $_.Name -match 'nvda.*paperlive.*jsonl' -or $_.Name -match 'nvda.*phase5.*jsonl' }
+        $all | Where-Object {
+            $_.Name -match '(?i)^paper_live_nvda_.*\.jsonl$' -or
+            $_.Name -match '(?i)nvda.*paperlive.*\.jsonl$' -or
+            $_.Name -match '(?i)nvda.*phase5.*\.jsonl$'
+        }
     )
     if (-not $matches -or $matches.Length -eq 0) { return "" }
 

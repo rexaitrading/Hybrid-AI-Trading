@@ -118,3 +118,7 @@ backup.csv
 tools/Kill-Spammers.ps1
 # local runtime outputs
 .hat/
+
+# Allowlist runtime paper runner config
+!config/paper_runner.yaml
+

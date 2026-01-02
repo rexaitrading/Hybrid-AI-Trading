@@ -1,0 +1,10 @@
+# paper_runner.yaml (repo runtime config)
+# Purpose: provider-only paper_runner must never emit 0.0 prices (prevents BAD_PRICE early exit).
+# Encoding: UTF-8 no BOM
+
+default_price: 100.0
+
+prices:
+  NVDA: 180.0
+  QQQ:  400.0
+  SPY:  480.0
