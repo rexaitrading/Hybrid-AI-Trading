@@ -241,6 +241,7 @@ $minMicro   = [double]$gsNVDA.minMicro
 # Defaults for StrictMode (computed later in GateScore policy block)
 $gsAgeDays = 9999
 $gsRecentEnough = $false
+$gsPolicyOk = [bool]($gsRecentEnough -and $gsSamplesOk -and $gsThreshOk)
 
 $evNVDA = Get-GSEventsMeta $repoRoot "NVDA" $today
 $evSPY  = Get-GSEventsMeta $repoRoot "SPY"  $today
@@ -248,9 +249,9 @@ $evQQQ  = Get-GSEventsMeta $repoRoot "QQQ"  $today
 
 # ---- Per-symbol ready (institutional) ----
 # NOTE: GateScore global fields remain NVDA-based for compatibility; readiness is per-symbol.
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evNVDA.ok
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evNVDA.ok
+$spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
+$qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
 $reasons = New-Object System.Collections.Generic.List[string]
 if (-not $gsAsOf) { $reasons.Add("gatescore_missing_source_data") | Out-Null }
 
@@ -279,9 +280,9 @@ if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
 if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
 
 # Recompute per-symbol readiness AFTER GateScore age policy (StrictMode-safe)
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evNVDA.ok
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evNVDA.ok
+$spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
+$qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
 
 
 # Audit: include per-symbol not-ready flags (even if NVDA is ready)
