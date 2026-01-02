@@ -16,6 +16,10 @@ class BlockGDecision:
     reasons: List[str]
     path: str
 
+class BlockGNotReady(RuntimeError):
+    """Raised when Block-G contract is not satisfied for a live order."""
+    pass
+
 
 def _load_status(path: Path) -> Dict[str, Any]:
     try:
@@ -70,8 +74,13 @@ def require_blockg_ready(symbol: str, *, is_live: bool) -> None:
 def require_blockg_ready_for_live(symbol: str) -> None:
     """
     Broker chokepoint wrapper.
-    Live is determined by HAT_IS_PAPER=0 (fail-closed: only enforce when live).
+    Live is determined by HAT_IS_PAPER=0.
+    Raises BlockGNotReady on failure (fail-closed).
     """
     is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
-    require_blockg_ready(symbol, is_live=is_live)
+    try:
+        require_blockg_ready(symbol, is_live=is_live)
+    except Exception as e:
+        raise BlockGNotReady(str(e)) from e
+
 
