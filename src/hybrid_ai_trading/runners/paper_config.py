@@ -31,9 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--mdt", type=int, default=3, help="Market data throttle / cadence setting."
     )
     ap.add_argument("--client-id", type=int, default=3021, help="IBKR clientId.")
-    ap.add_argument(
-        "--log-file", type=str, default=None, help="Optional JSONL log file path."
-    )
+    ap.add_argument("--log-file", type=str, default=None, help="Optional JSONL log file path.")
     ap.add_argument(
         "--dry-drill",
         action="store_true",
