@@ -14,7 +14,13 @@ $logsPathInfo = Resolve-Path -LiteralPath $LogsDir
 $logs = $logsPathInfo.Path
 
 $lower = $Symbol.ToLower()
+$symU  = $Symbol.ToUpper()
+
 $candidates = @(
+  # paper_runner auto log (true today session)
+  (Join-Path $logs ("paper_live_{0}_{1}.jsonl" -f $symU, $today)),
+
+  # historical "today" / "with_micro_today" variants
   (Join-Path $logs ("{0}_phase5_paperlive_results_with_micro_today.jsonl" -f $lower)),
   (Join-Path $logs ("{0}_phase5_paperlive_results_today.jsonl" -f $lower)),
   (Join-Path $logs ("{0}_phase5_paperlive_results.jsonl" -f $lower))
