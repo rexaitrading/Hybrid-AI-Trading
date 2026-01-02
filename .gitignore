@@ -122,3 +122,7 @@ tools/Kill-Spammers.ps1
 # Allowlist runtime paper runner config
 !config/paper_runner.yaml
 
+
+# backups
+_backups/
+
