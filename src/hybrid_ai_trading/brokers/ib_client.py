@@ -116,3 +116,15 @@ class IBClient:
             "initAfter": str(st.initMarginAfter),
             "commission": str(st.commission),
         }
+
+def get_last_prices(symbols, client_id=3021):
+    """
+    Compatibility wrapper for paper_runner snapshots.
+    Returns dict {SYM: float}. Fail-closed if underlying implementation is missing.
+    """
+    # Try common internal helpers
+    for name in ("get_last_price_map", "get_last_prices_map", "fetch_last_prices", "get_snapshot_prices", "get_last_prices_snapshot"):
+        fn = globals().get(name)
+        if callable(fn):
+            return fn(symbols=symbols, client_id=client_id)
+    raise RuntimeError("ib_client.get_last_prices missing underlying implementation")
