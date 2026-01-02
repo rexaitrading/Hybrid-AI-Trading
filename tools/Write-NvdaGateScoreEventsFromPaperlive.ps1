@@ -34,6 +34,26 @@ function Pick-LatestPaperlive([string]$dir) {
 function TryD([object]$v) { $x=0.0; if($null -ne $v){[void][double]::TryParse([string]$v,[ref]$x)}; return $x }
 function TryI([object]$v) { $x=0;   if($null -ne $v){[void][int]::TryParse([string]$v,[ref]$x)}; return $x }
 
+
+function Get-FromResult0([object]$j, [string]$k) {
+    # Prefer paper_live schema: metrics are inside first result item
+    try {
+        if ($j.PSObject.Properties.Name -contains "result") {
+            $first = $null
+            foreach($x in $j.result){ $first = $x; break }
+            if ($null -ne $first) {
+                $p = $first.PSObject.Properties.Name
+                if ($p -contains $k) { return $first.$k }
+            }
+        }
+    } catch { }
+    # Fallback: top-level
+    try {
+        $p0 = $j.PSObject.Properties.Name
+        if ($p0 -contains $k) { return $j.$k }
+    } catch { }
+    return $null
+}
 function Pick-Date([object]$j, [string[]]$keys, [string]$fallback) {
     $props = $j.PSObject.Properties.Name
     foreach ($k in $keys) {
@@ -76,17 +96,17 @@ foreach ($ln in $lines) {
 
     $edge = 0.0
     foreach ($k in @("edge_ratio","mean_edge_ratio","edge","edge_mean","gatescore_edge","edgeValue","edge_score")) {
-        if ($props -contains $k) { $edge = TryD ($j.$k); break }
+        if ($props -contains $k) { $edge = TryD (Get-FromResult0 $j $k); break }
     }
 
     $micro = 0.0
     foreach ($k in @("micro_score","mean_micro_score","micro","micro_mean","gatescore_micro","microValue","micro_score_mean")) {
-        if ($props -contains $k) { $micro = TryD ($j.$k); break }
+        if ($props -contains $k) { $micro = TryD (Get-FromResult0 $j $k); break }
     }
 
     $pnlSamples = 0
     foreach ($k in @("pnl_samples","pnlSamples","pnl_n","trades_n","trade_count","n_trades","samples","sample_count")) {
-        if ($props -contains $k) { $pnlSamples = TryI ($j.$k); break }
+        if ($props -contains $k) { $pnlSamples = TryI (Get-FromResult0 $j $k); break }
     }
 
     $rp = $null
@@ -147,3 +167,4 @@ else {
 
 Write-Host "[NVDA-GS-EVENTS] Wrote $count events to $outFull (mode=$Mode)" -ForegroundColor Green
 exit 0
+
