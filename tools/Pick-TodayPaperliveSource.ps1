@@ -15,7 +15,13 @@ $lower = $Symbol.ToLower()
 $symU  = $Symbol.ToUpper()
 
 $candidates = @(
+  # Prefer paperexec evidence (pnl_samples) when present
+  (Join-Path $logs ("{0}_phase5_paperexec_results.jsonl" -f $lower)),
+
+  # paper_runner auto log (today session)
   (Join-Path $logs ("paper_live_{0}_{1}.jsonl" -f $symU, $today)),
+
+  # historical variants
   (Join-Path $logs ("{0}_phase5_paperlive_results_with_micro_today.jsonl" -f $lower)),
   (Join-Path $logs ("{0}_phase5_paperlive_results_today.jsonl" -f $lower)),
   (Join-Path $logs ("{0}_phase5_paperlive_results.jsonl" -f $lower))
