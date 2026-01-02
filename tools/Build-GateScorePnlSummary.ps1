@@ -15,6 +15,13 @@ $logsDir  = Join-Path $repoRoot "logs"
 $today = (Get-Date).ToString("yyyy-MM-dd")
 $outPath = Join-Path $logsDir "gatescore_pnl_summary.csv"
 
+function Resolve-EventFile([string]$logsDir,[string]$sym){
+    $real = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $sym.ToLower())
+    if (Test-Path -LiteralPath $real) { return $real }
+    return Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
+}
+
+
 function _SliceDate([string]$d) {
     if (-not $d) { return "" }
     if ($d.Length -ge 10) { return $d.Substring(0,10) }
