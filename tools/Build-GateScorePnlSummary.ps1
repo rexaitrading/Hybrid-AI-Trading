@@ -98,11 +98,16 @@ function Get-EventPnlSamples($events) {
     return [int]$sum
 }
 
+function Resolve-EventFile([string]$logsDir,[string]$sym){
+    $real = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $sym.ToLower())
+    if (Test-Path -LiteralPath $real) { return $real }
+    return Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
+}
+
 $eventFiles = @(
-    @{ sym="NVDA"; path=(Join-Path $logsDir "nvda_gatescore_events.jsonl") },
-    @{ sym="SPY";  path=(Join-Path $logsDir "spy_gatescore_events.jsonl")  },
-    @{ sym="QQQ";  path=(Join-Path $logsDir "qqq_gatescore_events.jsonl")  }
-)
+@{ sym="NVDA"; path=(Resolve-EventFile $logsDir "NVDA") },
+@{ sym="SPY";  path=(Resolve-EventFile $logsDir "SPY") },
+@{ sym="QQQ";  path=(Resolve-EventFile $logsDir "QQQ") }
 
 $wanted = @()
 switch ($Symbol.ToUpperInvariant()) {
@@ -218,3 +223,4 @@ Write-Host "GateScore PnL summary: sample rows:" -ForegroundColor Yellow
 $rowsOut | Format-Table -AutoSize
 
 exit 0
+
