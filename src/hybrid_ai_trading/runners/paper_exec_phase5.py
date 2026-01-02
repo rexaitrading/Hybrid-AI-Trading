@@ -108,7 +108,7 @@ def main() -> int:
         side = "BUY" if (portfolio.positions.get(sym, 0.0) <= 0.0) else "SELL"
 
         fill = sim.simulate_fill(sym, side, qty, px)
-        portfolio.update_position(sym, side, qty, float(fill.get("px", px)), meta={"source": "paper_exec_phase5"})
+        portfolio.update_position(sym, side, float(qty), float(fill.get("px", px)), commission=0.0, currency=None)
 
         rep = portfolio.report()
         rp = float(rep.get("realized_pnl_by_symbol", {}).get(sym, 0.0) or 0.0)
