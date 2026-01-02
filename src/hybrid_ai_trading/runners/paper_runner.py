@@ -217,7 +217,7 @@ def _write_heartbeat(symbols: list[str], tick_no: int, price_source: str, log_fi
 def main(argv=None) -> int:
     _chdir_repo_root()
     args = parse_args(argv)
-    # --- Resolve config path against repo root (prevents src\\config rebasing warnings) ---
+    # --- Resolve config path against repo root (no src\\config rebasing) ---
     try:
         here = pathlib.Path(__file__).resolve()
         repo = here.parents[3]
@@ -253,26 +253,25 @@ def main(argv=None) -> int:
     os.environ["HAT_IS_PAPER"] = "1"
 
     cfg: Dict[str, Any] = load_config(args.config)
-
-        # If log_file is missing/empty, default to auto so every run emits evidence.
+    # If log_file is missing/empty, default to auto so every run emits evidence.
     try:
         if not getattr(args, "log_file", None):
             args.log_file = "auto"
     except Exception:
         pass
-# --- Auto daily rollover log file ---
+
+    # --- Auto daily rollover log file ---
     try:
         if getattr(args, "log_file", None) == "auto":
             day = datetime.now().astimezone().date().isoformat()
             sym = "ALL"
             try:
-                sym = "_".join(getattr(args, "universe_list", []) or []) or "ALL"
+                sym = "_" .join(getattr(args, "universe_list", []) or []) or "ALL"
             except Exception:
                 sym = "ALL"
             args.log_file = f"logs/paper_live_{sym}_{day}.jsonl"
     except Exception:
         pass
-
 
     # Universe
     symbols = list(getattr(args, "universe_list", []) or [])
@@ -352,8 +351,7 @@ def main(argv=None) -> int:
                     price_source = "provider_fallback"
 
         try:
-        # --- FAIL-CLOSED: invalid price_map (<=0) must never be emitted as ok ---
-        try:
+            # --- FAIL-CLOSED: invalid price_map (<=0) must never be emitted as ok ---
             bad = []
             for s in symbols:
                 v = price_map.get(s)
@@ -365,11 +363,10 @@ def main(argv=None) -> int:
                     bad.append((s, v))
             if bad:
                 rec = {"ts_utc": iso_utc_now(), "status": "bad_price", "symbols": symbols, "price_map": price_map, "result": [], "price_source": "bad_price", "error": f"bad_price_map:{bad}"}
-                if args.log_file: _append_jsonl(args.log_file, rec)
+                if args.log_file:
+                    _append_jsonl(args.log_file, rec)
                 print("[PaperRunner] tick BAD_PRICE:", json.dumps(rec, ensure_ascii=False))
                 return 4
-        except Exception:
-            pass
 
             out = qc.run_once(symbols, price_map, risk_mgr)
         except Exception as e:
