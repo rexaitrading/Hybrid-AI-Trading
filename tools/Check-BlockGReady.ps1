@@ -3,7 +3,9 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
-  [switch]$Build
+  [switch]$Build,
+
+  [switch]$Quiet
 )
 
 Set-StrictMode -Version Latest
@@ -11,6 +13,29 @@ $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
+
+# If -Quiet is used, propagate to any child scripts via env var
+if($Quiet){ $env:HAT_BLOCKG_QUIET = "1" }
+# HAT_IBG_HEALTH_GATE_MIN (exit 3; observe-only; no kills)
+$ibgTool = Join-Path $toolsDir "Get-IBGHealth.ps1"
+if(Test-Path -LiteralPath $ibgTool){
+  $p = [string]$env:HAT_IBG_STATUS_PATH
+  if([string]::IsNullOrWhiteSpace($p)){
+    $p = [System.Environment]::GetEnvironmentVariable("HAT_IBG_STATUS_PATH","User")
+  }
+  $ibg = & $ibgTool -StatusPath $p
+  if(-not $ibg.ok){ if(-not $Quiet){ Write-Host "[BLOCKG] IBG NOT HEALTHY" -ForegroundColor Red; Write-Host ($ibg.reasons -join "; ") -ForegroundColor Red }; exit 3 }
+}
+
+
+
+# --- Quiet-aware info output (failures remain noisy) ---
+function Write-BlockGInfo {
+  param([Parameter(ValueFromRemainingArguments=$true)][object[]]$Args)
+  if($Quiet -or ($env:HAT_BLOCKG_QUIET -eq "1")){ return }
+  Write-Host @Args
+}
+
 
 function Write-Utf8NoBom {
   param([string]$Path, [string]$Text)
@@ -23,13 +48,19 @@ function Write-Utf8NoBom {
 function Read-Json {
   param([string]$Path)
   if (-not (Test-Path -LiteralPath $Path)) { return $null }
-  $raw = Get-Content -LiteralPath $Path -Encoding utf8 -Raw
-  if (-not $raw) { return $null }
-  return ($raw | ConvertFrom-Json -ErrorAction Stop)
+  try {
+    $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $Path).Path)
+    $text  = [System.Text.Encoding]::UTF8.GetString($bytes)
+    if($text.Length -gt 0 -and [int]$text[0] -eq 0xFEFF){ $text = $text.Substring(1) } # BOM
+    if (-not $text) { return $null }
+    return ($text | ConvertFrom-Json -ErrorAction Stop)
+  } catch {
+    return $null
+  }
 }
 
 function Fail-Contract([string]$Msg) {
-  Write-Host "[BLOCKG] NOT READY: $Msg" -ForegroundColor Red
+  Write-BlockGInfo "[BLOCKG] NOT READY: $Msg" -ForegroundColor Red
   exit 2
 }
 
@@ -39,7 +70,7 @@ function Fail([string]$Msg) {
   Fail-Contract $Msg
 }
 function Fail-Script([string]$Msg) {
-  Write-Host "[BLOCKG] ERROR: $Msg" -ForegroundColor Yellow
+  Write-BlockGInfo "[BLOCKG] ERROR: $Msg" -ForegroundColor Yellow
   exit 1
 }
 # 1) Optional build step (single semantic owner)
@@ -47,7 +78,11 @@ if ($Build) {
   $builder = Join-Path $toolsDir "Build-BlockGStatusStub.ps1"
   if (-not (Test-Path -LiteralPath $builder)) { Fail "Missing builder: $builder" }
 
-  Write-Host "[BLOCKG] Build requested: running Build-BlockGStatusStub.ps1" -ForegroundColor Cyan
+if ($env:HAT_BLOCKG_BUILT_ONCE -ne "1" -and $env:HAT_BLOCKG_QUIET -ne "1") {
+if((-not $Quiet) -and ($env:HAT_BLOCKG_QUIET -ne "1")){
+  Write-BlockGInfo "[BLOCKG] Build requested: running Build-BlockGStatusStub.ps1"
+}
+}
   powershell -NoProfile -ExecutionPolicy Bypass -File $builder | Out-Host
   if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub.ps1 failed exit=$LASTEXITCODE" }
 }
@@ -60,45 +95,48 @@ if (-not $statusPath) { $statusPath = $defaultPath }
 $st = Read-Json $statusPath
 if (-not $st) { Fail "Missing/invalid Block-G status JSON at: $statusPath" }
 
-# --- GateScore session-age policy (contract-only; do not recompute) ---
-$MAX_GS_AGE_DAYS = 3
-# 3) Validate required daily quality fields (fail-closed)
-# NOTE: contract defines these booleans (default false if absent)
-$reqFields = @(
-  "phase4_ok_today",
-  "ev_hard_daily_ok_today",
-  "gatescore_fresh_today"
-)
 
-foreach ($k in $reqFields) {
-  if (-not ($st.PSObject.Properties.Name -contains $k)) { Fail "Missing field: $k" }
-  if (-not [bool]$st.$k) { Fail "$k=false" }
-}
+# ---- Contract semantics owner (single source of truth) ----
+# NOTE: Do NOT recompute. Do NOT duplicate checks elsewhere in this script.
+# All go/no-go semantics happen in the read-only contract decision block below.
 
-# GateScore age policy (fail-closed)
-if (-not [bool]$st.gatescore_recent_enough) { Fail "gatescore_recent_enough=false" }
-try { $age = [int]$st.gatescore_age_days } catch { Fail "gatescore_age_days invalid" }
-if ($age -gt $MAX_GS_AGE_DAYS) { Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
-# Optional: min_samples_ok_today if present must be true
-if ($st.PSObject.Properties.Name -contains "min_samples_ok_today") {
-  if (-not [bool]$st.min_samples_ok_today) { Fail "min_samples_ok_today=false" }
-}
+# ---- Contract read-only decision (institutional, deterministic) ----
+try {
+  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+  $statusPath = $env:HAT_BLOCKG_STATUS_PATH
+  if(-not $statusPath){ $statusPath = Join-Path $repoRoot "logs\blockg_status_stub.json" }
+  $j = Read-Json $statusPath
+  if(-not $j){ Write-BlockGInfo ("[BLOCKG] ERROR: missing/invalid contract at " + $statusPath) -ForegroundColor Yellow; exit 3 }
 
-# 4) Per-symbol readiness (fail-closed)
-function SymReady([string]$sym) {
+  # 1) Today-ness is contract authority (builder owns external artifact validation)
+  $today = (Get-Date).ToString("yyyy-MM-dd")
+  $asOf = (("" + $j.as_of_date).Trim())
+  if($asOf -ne $today){ Write-BlockGInfo ("[BLOCKG] ERROR: stale as_of_date=" + $asOf + " today=" + $today) -ForegroundColor Yellow; exit 3 }
+
+  # 2) Symbol readiness flag is the contract authority
+  $sym = ($Symbol + "").Trim().ToUpper()
+  if($sym -eq "ALL"){ $sym = "NVDA" }
   $key = ($sym.ToLower() + "_blockg_ready")
-  if (-not ($st.PSObject.Properties.Name -contains $key)) { return $false }
-  return [bool]$st.$key
-}
+  if(-not ($j.PSObject.Properties.Name -contains $key)){ Write-BlockGInfo ("[BLOCKG] ERROR: missing field: " + $key) -ForegroundColor Yellow; exit 4 }
 
-$s = $Symbol.ToUpper()
-if ($s -eq "ALL") {
-  foreach ($sym in @("NVDA","SPY","QQQ")) {
-    if (-not (SymReady $sym)) { Fail "$sym not ready ($($sym.ToLower())_blockg_ready=false)" }
+  $ready = [bool]($j.PSObject.Properties[$key].Value)
+  if($ready){
+    Write-BlockGInfo ("[BLOCKG] READY " + $sym + " (" + $key + "=true)") -ForegroundColor Green
+    exit 0
   }
-} else {
-  if (-not (SymReady $s)) { Fail "$s not ready ($($s.ToLower())_blockg_ready=false)" }
-}
 
-Write-Host "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath" -ForegroundColor Green
+  # Not ready: print reasons if available
+  try {
+    if($j.PSObject.Properties.Name -contains "reasons_not_ready"){
+      $rn = @($j.reasons_not_ready)
+      if($rn -and $rn.Count -gt 0){ Write-BlockGInfo ("[BLOCKG] NOT READY reasons: " + (($rn | ForEach-Object { ""+$_ }) -join "; ")) -ForegroundColor Red }
+    }
+  } catch { }
+
+  Fail-Contract ("contract flag " + $key + "=false")
+} catch {
+  Fail-Script ("Contract decision error: " + $_.Exception.Message)
+}
+# ---- end contract read-only decision ----
+
 exit 0

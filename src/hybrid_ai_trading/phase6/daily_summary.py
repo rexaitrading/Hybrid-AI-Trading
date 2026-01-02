@@ -123,6 +123,7 @@ def main() -> None:
     ap.add_argument("--gatescore-csv", default="logs/gatescore_daily_summary.csv")
     ap.add_argument("--phase2-summary", default="logs/phase2/phase2_summary.json")
     ap.add_argument("--phase5-trade-csvs", default="logs/nvda_phase5_paper_for_notion.csv,logs/spy_phase5_paper_for_notion.csv,logs/qqq_phase5_paper_for_notion.csv")
+    ap.add_argument("--readiness-snapshot", default="logs/phase6_readiness_snapshot.json")
     args = ap.parse_args()
 
     as_of = args.as_of_date or _today_str()
@@ -130,6 +131,15 @@ def main() -> None:
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
+
+    # readiness snapshot (Block-G + portfolio halt surfacing)
+    rs_path = Path(args.readiness_snapshot)
+    if not rs_path.exists():
+        raise SystemExit(f"phase6: missing readiness snapshot: {rs_path}")
+    rs = _read_json(rs_path)
+    blockg = dict(rs.get("blockg_status", {}) or {})
+    ph = dict(rs.get("portfolio_halt", {}) or {})
+    ph_cfg = dict(rs.get("portfolio_halt_cfg", {}) or {})
     # inputs
     gs_csv = Path(args.gatescore_csv)
     if not gs_csv.exists():
@@ -141,10 +151,10 @@ def main() -> None:
 
     trade_csvs = [Path(x.strip()) for x in str(args.phase5_trade_csvs).split(",") if x.strip()]
     trade_csvs = [p for p in trade_csvs if p.exists()]
-
+    # If no trade CSVs, we still produce a report using GateScore proxy (no-trade-day).
+    # Keep fail-closed on GateScore/Phase2 inputs instead.
     if not trade_csvs:
-        raise SystemExit("phase6: no Phase5 trade CSVs found (fail-closed)")
-
+        trade_csvs = []
     ph2j = _read_json(ph2)
     avg_cost_bps = float(ph2j.get("avg_cost_bps", 0.0) or 0.0)
     if avg_cost_bps <= 0:
@@ -183,6 +193,18 @@ def main() -> None:
             "phase2_summary": str(ph2),
             "phase5_trade_csvs": [str(p) for p in trade_csvs],
         },
+        "readiness": {
+            "blockg": {
+                "nvda_blockg_ready": bool(blockg.get("nvda_blockg_ready", False)),
+                "spy_blockg_ready": bool(blockg.get("spy_blockg_ready", False)),
+                "qqq_blockg_ready": bool(blockg.get("qqq_blockg_ready", False)),
+            },
+            "portfolio_halt": {
+                "ok": bool(ph.get("ok", False)),
+                "reason": str(ph.get("reason", "")),
+                "cfg": ph_cfg,
+            },
+        },
         "version": "phase6.0",
     }
 
@@ -193,7 +215,7 @@ def main() -> None:
     syms = sorted(set(list(gs_by_sym.keys()) + list(pnl_by_sym.keys())))
     with csv_path.open("w", encoding="utf-8", newline="\n") as f:
         w = csv.writer(f)
-        w.writerow(["as_of_date", "symbol", "realized_pnl", "mean_edge_ratio", "mean_micro_score", "count_signals", "pnl_samples", "phase2_avg_cost_bps"])
+        w.writerow(["as_of_date", "symbol", "realized_pnl", "mean_edge_ratio", "mean_micro_score", "count_signals", "pnl_samples", "phase2_avg_cost_bps", "nvda_blockg_ready", "spy_blockg_ready", "qqq_blockg_ready", "portfolio_halt_ok", "portfolio_halt_reason"])
         for sym in syms:
             g = gs_by_sym.get(sym, {})
             w.writerow([
@@ -205,6 +227,11 @@ def main() -> None:
                 g.get("count_signals", 0.0),
                 g.get("pnl_samples", 0.0),
                 avg_cost_bps,
+                bool(blockg.get("nvda_blockg_ready", False)),
+                bool(blockg.get("spy_blockg_ready", False)),
+                bool(blockg.get("qqq_blockg_ready", False)),
+                bool(ph.get("ok", False)),
+                str(ph.get("reason", "")),
             ])
 
     print(json.dumps({"phase6": "ok", "as_of_date": as_of, "outdir": str(outdir)}, indent=2))

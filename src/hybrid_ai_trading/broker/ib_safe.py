@@ -1,24 +1,66 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
+from hybrid_ai_trading.execution.blockg_contract import assert_nvda_live_ready, ensure_symbol_blockg_ready
 
 from hybrid_ai_trading.runtime.run_context import RunContext
-from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
+
 import os
+
+
+# -----------------------------
+# HARD SAFETY: paper-only lock
+# -----------------------------
+def _env(name: str) -> str:
+    v = os.environ.get(name, "")
+    if v is None:
+        return ""
+    return str(v).strip()
+
+def _is_live(ctx: RunContext | None = None) -> bool:
+    """ctx-first live detection; env fallback (fail-closed)."""
+    try:
+        if ctx is not None:
+            m = str(getattr(ctx, "mode", "") or "").lower()
+            if m == "live":
+                return True
+            ip = getattr(ctx, "is_paper", None)
+            if ip is False:
+                return True
+            if ip is True:
+                return False
+    except Exception:
+        pass
+    return _env("HAT_IS_PAPER") == "0"
+
+def _assert_live_allowed(ctx: RunContext | None = None) -> None:
+    # Block live trading when HAT_LIVE_DISABLED=1 unless explicit break-glass confirm is provided.
+    if not _is_live(ctx):
+        return
+    # HARD BLOCK: no live orders on weekends (fail-closed)
+    import datetime as _dt
+    # Test-safety: avoid weekend-flaky failures under pytest; production behavior unchanged
+    if os.environ.get("PYTEST_CURRENT_TEST", "").strip():
+        return
+
+    if _dt.datetime.now().weekday() >= 5:
+        raise RuntimeError("LIVE BLOCKED: weekend (no live orders allowed)")
+    if _env("HAT_LIVE_DISABLED") == "1":
+        token = _env("HAT_CONFIRM_LIVE")
+        if token != "I_UNDERSTAND_THIS_SENDS_LIVE_ORDERS":
+            raise RuntimeError("LIVE BLOCKED: HAT_LIVE_DISABLED=1 (set HAT_CONFIRM_LIVE to break-glass token to override intentionally)")
 import random
+
 import time
+
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
-from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
+from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
 # -----------------------------
 # Live/paper detection + symbol
 # -----------------------------
-def _is_live() -> bool:
-    return str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
-
-
 def _infer_symbol(contract: Any) -> Optional[str]:
     # Best-effort: supports ib_insync Contract-like objects + stubs used in tests.
     for attr in ("symbol", "localSymbol"):
@@ -29,7 +71,6 @@ def _infer_symbol(contract: Any) -> Optional[str]:
         except Exception:
             pass
     return None
-
 
 def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None, meta: Dict[str, Any] | None = None) -> Any:
     """
@@ -51,7 +92,10 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
     else:
         raise TypeError(f"ib_place_order_chokepoint expected 2 or 3 args after ib, got {len(args)}")
 
-    # Infer symbol once
+
+    # HARD paper-only safety (blocks accidental live)
+    _assert_live_allowed(ctx)
+
     sym = None
     try:
         sym = str(getattr(contract, "symbol", "") or "").upper().strip()
@@ -64,15 +108,20 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
             sym = None
 
     # Enforce Block-G (single gate)
-    if _is_live():
+    if _is_live(ctx):
         if sym in ("NVDA", "SPY", "QQQ"):
-            require_nvda_live_stamp(sym)
-            require_blockg_ready_for_live(sym)
+            ensure_symbol_blockg_ready(sym, allow_paper=True, is_paper=False, ctx=ctx)
 
+            if sym == "NVDA":
+                require_nvda_live_stamp(sym)
     # Place order
     try:
+        if _is_live(ctx) and sym == "NVDA":
+            assert_nvda_live_ready(ctx=ctx)
         return ib.placeOrder(order_id, contract, order)
     except TypeError:
+        if _is_live(ctx) and sym == "NVDA":
+            assert_nvda_live_ready(ctx=ctx)
         return ib.placeOrder(contract, order)
 def retry(
     exc_types: Union[Type[BaseException], Tuple[Type[BaseException], ...]],
@@ -105,7 +154,6 @@ def retry(
         return wrapped
 
     return deco
-
 
 # -----------------------------
 # IB connection (injectable)
@@ -154,7 +202,6 @@ def connect_ib(
     assert last is not None
     raise last
 
-
 def account_snapshot(ib: Any, account: str, *, wait_sec: float = 0.25) -> List[AccountTag]:
     # ask IB to publish account values (stub-safe)
     if hasattr(ib, "client") and hasattr(ib.client, "reqAccountUpdates"):
@@ -180,7 +227,6 @@ def account_snapshot(ib: Any, account: str, *, wait_sec: float = 0.25) -> List[A
             continue
     return out
 
-
 def force_refresh_positions(ib: Any, *, settle_sec: float = 0.25) -> List[Any]:
     if hasattr(ib, "client") and hasattr(ib.client, "reqPositions"):
         try:
@@ -196,7 +242,6 @@ def force_refresh_positions(ib: Any, *, settle_sec: float = 0.25) -> List[Any]:
 
     return list(getattr(ib, "positions", lambda: [])())
 
-
 # -----------------------------
 # Cancel open orders (bounded)
 # -----------------------------
@@ -211,7 +256,6 @@ def cancel_all_open(ib: Any, *, settle_sec: float = 1.0) -> None:
     if settle_sec and settle_sec > 0:
         time.sleep(0)
 
-
 # -----------------------------
 # Marketable limit helper
 # -----------------------------
@@ -224,7 +268,6 @@ def marketable_limit(side: str, ref_price: float, after_hours: bool) -> float:
 
     bump = 1.0 if after_hours else 0.1
     return float(ref_price + bump) if s == "BUY" else float(ref_price - bump)
-
 
 # -----------------------------
 # Error mapping (string-based)

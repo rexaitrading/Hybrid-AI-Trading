@@ -26,8 +26,9 @@ from typing import Any, Dict, Optional
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live, BlockGNotReady
 from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
-logger = logging.getLogger(__name__)
+from hybrid_ai_trading.execution.blockg_contract import assert_nvda_live_ready
 
+logger = logging.getLogger(__name__)
 
 def _get_ctx_cached(obj: object):
     """
@@ -46,7 +47,6 @@ def _get_ctx_cached(obj: object):
         return rc
     except Exception:
         return None
-
 
 class OrderManager:
     def __init__(
@@ -311,7 +311,7 @@ class OrderManager:
         qty: float = 0.0,
         notional: float = 0.0,
         size: float = 0.0,
-            ctx: RunContext | None = None,
+        ctx: RunContext | None = None,
         price: float = 0.0,
     ) -> Dict[str, Any]:
         # --- Compatibility: accept engine-style (size, price) or legacy (qty, notional)
@@ -559,6 +559,9 @@ class OrderManager:
                 raise
             except Exception as e:
                 logger.error("OrderManager live submit error: %s", e)
+
+                if isinstance(e, BlockGNotReady):
+                    raise
                 return {
                     "symbol": symbol,
                     "side": side,

@@ -6,10 +6,14 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
+# --- Pytest chokepoint (TMP/TEMP + basetemp pinned inside repo logs) ---
+$choke = Join-Path (Split-Path -Parent $PSCommandPath) "Pytest-Chokepoint.ps1"
+# ----------------------------------------------------------------------
 $toolsDir = Split-Path -Parent $PSCommandPath
 $root = Split-Path -Parent $toolsDir
 Set-Location $root
-$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+Remove-Item Env:HAT_BLOCKG_BUILT_ONCE -ErrorAction SilentlyContinue
+$today = (Get-Date).ToString("yyyy-MM-dd")
 $tsUtc  = (Get-Date).ToUniversalTime().ToString("o")
 
 $logDir = Join-Path $root "logs"
@@ -94,7 +98,7 @@ sys.exit(0 if ok else 2)
 try {
   $pytest = Join-Path $root ".venv\Scripts\python.exe"
   if (Test-Path $pytest) {
-    & $pytest -m pytest -q tests\test_blockg_risk_flatten_guard.py tests\test_blockg_chokepoint_blocks_live.py tests\test_gatescore_fresh_policy.py | Out-Host
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $choke -q tests\test_blockg_risk_flatten_guard.py tests\test_blockg_chokepoint_blocks_live.py tests\test_gatescore_fresh_policy.py | Out-Host
     if ($LASTEXITCODE -ne 0) {
       $pytest_ok = $false
       $notes.Add("pytest_slice_fail") | Out-Null

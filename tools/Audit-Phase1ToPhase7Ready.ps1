@@ -34,8 +34,8 @@ $okAll = (Step "Phase5: BlockG build + NVDA ready" {
 }) -and $okAll
 
 $okAll = (Step "Phase5: BlockG tests" {
-  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "python.ps1") -m pytest -q tests\test_blockg_risk_flatten_guard.py
-  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "python.ps1") -m pytest -q tests\test_blockg_chokepoint_blocks_live.py
+  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Pytest-Chokepoint.ps1") -q tests\test_blockg_risk_flatten_guard.py
+  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Pytest-Chokepoint.ps1") -q tests\test_blockg_chokepoint_blocks_live.py
 }) -and $okAll
 
 # Phase-1 replay (presence + basic runner import)

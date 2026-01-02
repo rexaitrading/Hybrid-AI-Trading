@@ -118,3 +118,16 @@ backup.csv
 tools/Kill-Spammers.ps1
 # local runtime outputs
 .hat/
+
+# Local secrets (DO NOT COMMIT)
+.secrets/
+.env
+.env.*
+
+
+# Allow tracked paper runner config
+!config/paper_runner.yaml
+
+tools/pytest_safe.ps1
+
+config/providers_policy.json

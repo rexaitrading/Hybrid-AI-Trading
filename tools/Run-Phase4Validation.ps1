@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
+$choke = Join-Path $repoRoot "tools\Pytest-Chokepoint.ps1"
 Set-Location $repoRoot
 
 Write-Host "`n[PHASE4] Phase-4 validation harness RUN" -ForegroundColor Cyan
@@ -41,7 +42,7 @@ function Invoke-Phase4PyTest {
     [Parameter(Mandatory)][string]$Label
   )
   Write-Host "`n[PHASE4] $Label" -ForegroundColor Yellow
-  & $pythonExe -m pytest @Args
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $choke @Args
   $code = $LASTEXITCODE
   if ($code -ne 0) { throw "pytest_failed:$Label:exit=$code" }
 }
@@ -58,20 +59,32 @@ try {
   }
   Invoke-Phase4PyTest -Label "Phase-1 replay demo pytest" -Args @($t1)
 
-  # 2) Microstructure slice (optional)
-  $micro = "tests/test_microstructure_features.py"
-  if (Test-Path -LiteralPath (Join-Path $repoRoot $micro)) {
-    Invoke-Phase4PyTest -Label "Microstructure features tests" -Args @($micro)
-  } else {
-    Write-Host "[PHASE4] WARN: $micro not found; skipping microstructure slice." -ForegroundColor Yellow
+  # 2) Phase-2 microstructure + cost model slice (REQUIRED; fail-closed)
+  $phase2Candidates = @(
+    "tests/test_microstructure_regime.py",
+    "tests/test_phase2_costs_package.py",
+    "tests/test_phase2_cost_gate.py",
+    "tests/test_phase2_cost_gate_latency.py",
+    "tests/test_phase2_cost_gate_wiring.py"
+  )
+
+  $phase2Args = @()
+  foreach ($t in $phase2Candidates) {
+    if (Test-Path -LiteralPath (Join-Path $repoRoot $t)) { $phase2Args += $t }
+    else { Write-Host "[PHASE4] WARN: missing phase2 test => $t (skipping)" -ForegroundColor Yellow }
   }
+  if ($phase2Args.Count -lt 1) {
+    throw "missing_required_phase2_slice:0_tests_present"
+  }
+  Invoke-Phase4PyTest -Label "Phase-2 microstructure/cost slice" -Args $phase2Args
 
   # 3) Phase-5 risk + guard slice (required set: only run files that exist; but require at least 1)
   $phase5Candidates = @(
     "tests/test_phase5_riskmanager_combined_gates.py",
     "tests/test_phase5_riskmanager_daily_loss_integration.py",
     "tests/test_execution_engine_phase5_guard.py",
-    "tests/test_ib_phase5_guard.py"
+    
+    "tests/phase7/test_phase7_preflight_no_bypass.py","tests/test_ib_phase5_guard.py"
   )
 
   $phase5Args = @()
@@ -87,6 +100,22 @@ try {
   Invoke-Phase4PyTest -Label "Phase-5 risk + guard slice" -Args $phase5Args
 
   Write-Host "`n[PHASE4] Phase-4 validation harness complete (required slices green / optional slices skipped)." -ForegroundColor Green
+
+# --- Write Phase-4 evidence JSON for Block-G (UTF-8 no-BOM, LF) ---
+$repoRoot = (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+$choke = Join-Path $repoRoot "tools\Pytest-Chokepoint.ps1"
+$logsDir = Join-Path $repoRoot "logs"
+if(-not (Test-Path $logsDir)){ New-Item -ItemType Directory -Force -Path $logsDir | Out-Null }
+$today = (Get-Date).ToString("yyyy-MM-dd")
+$ok = ($LASTEXITCODE -eq 0)
+$obj = [ordered]@{ ts_utc=(Get-Date).ToUniversalTime().ToString("o"); as_of_date=$today; phase4_ok_today=[bool]$ok }
+$json = ($obj | ConvertTo-Json -Depth 6)
+$json = ($json -replace "`r`n","`n").TrimEnd()+"`n"
+$path = Join-Path $logsDir "phase4_validation_passed.json"
+$enc = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($path, $json, $enc)
+Write-Host ("[PHASE4] wrote evidence: " + $path) -ForegroundColor DarkCyan
+# --- end evidence ---
   Write-Phase4Stamp -Ok $true -Reason "ok" -ExitCode 0
   exit 0
 }

@@ -1,6 +1,8 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
-  [string]$OutPath = ".\logs\phase6_portfolio_state.json"
+  [string]$OutPath = ".\logs\phase6_portfolio_state.json",
+  [string[]]$Symbols = @("NVDA"),
+  [switch]$AllSymbols
 )
 
 Set-StrictMode -Version Latest
@@ -10,15 +12,34 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $toolsDir = Join-Path $repoRoot "tools"
 $checker  = Join-Path $toolsDir "Check-BlockGReady.ps1"
 
+# --- ENV FALLBACK (fail-closed): ensure current Process sees HAT_IBG_STATUS_PATH if set in User env ---
+if([string]::IsNullOrWhiteSpace($env:HAT_IBG_STATUS_PATH)){
+  $u = [Environment]::GetEnvironmentVariable('HAT_IBG_STATUS_PATH','User')
+  if(-not [string]::IsNullOrWhiteSpace($u)){
+    $env:HAT_IBG_STATUS_PATH = $u
+  }
+}
+# --- Phase6 as_of_date authority: BlockG (fail-closed) ---
 $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+try {
+  $bg = Join-Path (Join-Path $repoRoot "logs") "blockg_status_stub.json"
+  if(Test-Path -LiteralPath $bg){
+    $j = Get-Content -LiteralPath $bg -Raw -Encoding utf8 | ConvertFrom-Json
+    $v = (""+$j.as_of_date).Trim()
+    if($v.Length -ge 10){ $today = $v.Substring(0,10) }
+  }
+} catch { }
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
 function CheckSym([string]$sym){
-  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym 2>$null | Out-Host
+  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym -Quiet 2>$null | Out-Host
   return $LASTEXITCODE
 }
-
-$syms = @("NVDA","SPY","QQQ")
+if($AllSymbols){
+  $syms = @("NVDA","SPY","QQQ")
+} else {
+  $syms = @($Symbols)
+}
 $ready = @()
 foreach($s in $syms){
   if((CheckSym $s) -eq 0){ $ready += $s }
@@ -26,12 +47,17 @@ foreach($s in $syms){
 
 $ok = ($ready.Count -gt 0)
 $reason = if($ok){"phase6_state_ok"}else{"phase6_state_no_symbols_ready"}
-
+$readySymbol = ""
+if(@($ready).Count -gt 0){
+  $readySymbol = ("" + @($ready)[0])
+}
 $payload = [ordered]@{
   ts_utc    = $tsUtc
   as_of_date= $today
   ok        = $ok
   reason    = $reason
+  # Back-compat: single ready symbol (first), while keeping ready_symbols as canonical list
+  ready_symbol  = $readySymbol
   ready_symbols = @($ready)
   symbols   = @($syms)
   version   = "phase6.1"

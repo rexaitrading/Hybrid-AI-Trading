@@ -9,8 +9,6 @@ Set-Location $root
 
 $logDir = Join-Path $root "logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-
-
 $today = (Get-Date).ToString("yyyy-MM-dd")
 $p4 = Join-Path $logDir "phase4_validation_passed.json"
 if(Test-Path -LiteralPath $p4){

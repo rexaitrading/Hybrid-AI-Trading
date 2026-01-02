@@ -59,6 +59,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip IB session and use provider prices only.",
     )
+    ap.add_argument(
+        "--ib-snapshots",
+        action="store_true",
+        help="Use IBKR paper session snapshots to build price_map (guarded, fail-closed).",
+    )
+
+    ap.add_argument("--ticks", type=int, default=3, help="Number of ticks when not --once. 0 = run forever.")
+    ap.add_argument("--sleep-sec", type=float, default=0.25, help="Sleep seconds between ticks.")
+
     return ap
 
 

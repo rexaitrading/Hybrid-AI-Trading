@@ -1,331 +1,465 @@
 [CmdletBinding()]
 param(
-    [ValidateSet("NVDA","SPY","QQQ","ALL")]
-    [string]$Symbol = "ALL"
+  [string]$Symbol = "NVDA"
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
-  $path = Join-Path $RepoRoot "logs\phase4_validation_passed.json"
-  if(-not (Test-Path $path)){ return $false }
-
-  try {
-    $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8
-    $j = $raw | ConvertFrom-Json
-    $asOf = [string]$j.as_of_date
-    $ok = [bool]$j.phase4_ok_today
-    return (($asOf.Substring(0,10)) -eq $Today) -and $ok
-  } catch {
-    return $false
-  }
-}
-
+# ---- paths ----
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
-if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
-
-$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
-# ---- GateScore session date (weekend-safe): derive from pnl summary ----
-$tsUtc = (Get-Date).ToUniversalTime().ToString("o")
+if(-not (Test-Path -LiteralPath $logsDir)){ New-Item -ItemType Directory -Path $logsDir | Out-Null }
 $statusPath = Join-Path $logsDir "blockg_status_stub.json"
 
-function To-Bool([object]$v) {
-    if ($null -eq $v) { return $false }
-    $s = ([string]$v).Trim().ToLowerInvariant()
-    return $s -in @("1","true","yes","y","ok","pass","passed")
-}
-function Slice-Date([string]$d) {
-    if (-not $d) { return "" }
-    if ($d.Length -ge 10) { return $d.Substring(0,10) }
-    return $d
+Write-Output ("blockg_status_stub.json -> " + $statusPath)
+
+function To-Bool($v){
+  if($v -is [bool]){ return $v }
+  $s = ("" + $v).Trim().ToLower()
+  return ($s -eq "true")
 }
 
-# ---- GateScore session date (weekend/holiday-safe): derive from pnl summary ----
-$pnlPath = Join-Path $logsDir "gatescore_daily_summary.csv"
-$gsAsOf = ""
-if (Test-Path $pnlPath) {
+function Read-JsonSafe([string]$path){
   try {
-    $pnlRows = @(Import-Csv $pnlPath)
-    $dates = @($pnlRows | ForEach-Object { Slice-Date ([string]$_.as_of_date) } | Where-Object { $_ })
-    if ($dates.Count -gt 0) { $gsAsOf = ($dates | Sort-Object | Select-Object -Last 1) }
-  } catch { $gsAsOf = "" }
+    if(Test-Path -LiteralPath $path){
+      return (Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json)
+    }
+  } catch {}
+  return $null
 }
-if (-not $gsAsOf) {
-  # No reliable GateScore session available (holiday/off-session). Keep blank to avoid false "today".
-  $gsAsOf = ""
+
+function Effective-AsofDate([string]$logsDir){
+  $today = (Get-Date).ToString("yyyy-MM-dd")
+  $dow = (Get-Date).DayOfWeek
+  $isWeekend = ($dow -eq "Saturday" -or $dow -eq "Sunday")
+  if(-not $isWeekend){ return $today }
+
+  $cands = New-Object System.Collections.Generic.List[string]
+  try {
+    $gs = Join-Path $logsDir "gatescore_daily_summary.csv"
+    if(Test-Path -LiteralPath $gs){
+      $d = (Import-Csv $gs | ForEach-Object { $_.as_of_date } | Where-Object { $_ } | Sort-Object | Select-Object -Last 1)
+      if($d){ [void]$cands.Add(($d+"").Trim()) }
+    }
+  } catch {}
+  try {
+    $p4 = Join-Path $logsDir "phase4_validation_passed.json"
+    $j = Read-JsonSafe $p4
+    if($null -ne $j){
+      $d = (($j.as_of_date + "").Trim())
+      if($d){ [void]$cands.Add($d) }
+    }
+  } catch {}
+
+  if($cands.Count -gt 0){ return ($cands | Sort-Object | Select-Object -Last 1) }
+  return $today
 }
-# ---- Phase4 ----
-    $phase4Ok = Get-Phase4OkToday $repoRoot $today
-$phase4Path = Join-Path $logsDir "phase4_validation_passed.json"
-if (Test-Path $phase4Path) {
+
+function Get-Phase4OkToday([string]$logsDir, [string]$asOf){
+  $p = Join-Path $logsDir "phase4_validation_passed.json"
+  $j = Read-JsonSafe $p
+  if($null -eq $j){ return $false }
+  try {
+    $d = ("" + $j.as_of_date).Substring(0,10)
+    $ok = To-Bool $j.phase4_ok_today
+    if($d -ne $asOf){ return $false }
+    if(-not $ok){ return $false }
+    return $true
+  } catch { return $false }
+}
+
+function Get-EvHardOkToday([string]$logsDir, [string]$asOf){
+  # Prefer canonical daily CSV if present; fallback to raw evidence JSON (legacy).
+  $csv = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
+  if(Test-Path -LiteralPath $csv){
     try {
-        $j = Get-Content $phase4Path -Raw -Encoding UTF8 | ConvertFrom-Json
-    $phase4Ok = Get-Phase4OkToday $repoRoot $today
-    } catch { $phase4Ok = $false }
-}
-
-# ---- EV hard veto daily ----
-$evHardOk = $false
-$evPath = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
-if (Test-Path $evPath) {
-    $rows = @(Import-Csv $evPath)
-    foreach ($r in $rows) {
-        if ((Slice-Date ([string]$r.date)) -eq $today) {
-            if ($r.PSObject.Properties.Name -contains "ok") { $evHardOk = To-Bool $r.ok } else { $evHardOk = $true }
-        }
-    }
-}
-
-
-# ---- EV hard veto session preview (does NOT arm live; informational) ----
-$evSessionAsOf = ""
-$evSessionOk = $false
-$evRaw = Join-Path $logsDir "ev_hard_evidence_raw.json"
-if (Test-Path $evRaw) {
-  try {
-    $j = Get-Content $evRaw -Raw -Encoding UTF8 | ConvertFrom-Json
-    $evSessionAsOf = Slice-Date ([string]$j.as_of_date)
-    $evSessionOk = To-Bool $j.ok
-  } catch { $evSessionAsOf=""; $evSessionOk=$false }
-}# ---- Phase23 health (must match today row; fail-closed) ----
-
-# If daily EV-hard veto CSV is missing, fall back to session raw evidence (fail-closed, today-checked downstream)
-if((-not (Test-Path -LiteralPath $evPath)) -and $evSessionOk){
-  $evHardOk = $true
-  $evSessionAsOf = ($evSessionAsOf + "")
-}
-
-$phase23Ok = $false
-$phase23Path = Join-Path $logsDir "phase23_health_daily.csv"
-$phase23SawToday = $false
-
-if (Test-Path $phase23Path) {
-    $rows = @(Import-Csv $phase23Path)
-    foreach ($r in $rows) {
+      $rows = @(Import-Csv -LiteralPath $csv)
+      foreach($r in $rows){
         $d = ""
-        if ($r.PSObject.Properties.Name -contains "as_of_date") { $d = Slice-Date ([string]$r.as_of_date) }
-        elseif ($r.PSObject.Properties.Name -contains "date") { $d = Slice-Date ([string]$r.date) }
-
-        if ($d -ne $today) { continue }
-
-        $phase23SawToday = $true
-
-        if ($r.PSObject.Properties.Name -contains "phase23_ok") {
-            $phase23Ok = To-Bool $r.phase23_ok
+        if($r.PSObject.Properties.Name -contains "as_of_date"){ $d = ("" + $r.as_of_date).Trim() }
+        elseif($r.PSObject.Properties.Name -contains "date"){ $d = ("" + $r.date).Trim() }
+        if($d -eq $asOf){
+          # ok column may be "True"/"False" string; normalize
+          return (To-Bool $r.ok)
         }
-        elseif ($r.PSObject.Properties.Name -contains "phase23_health_ok_today") {
-            $phase23Ok = To-Bool $r.phase23_health_ok_today
-        }
-        else {
-            # Unknown schema => fail-closed
-            $phase23Ok = $false
-        }
+      }
+      # If CSV exists but no row for asOf => fail-closed
+      return $false
+    } catch {
+      return $false
     }
-}
-
-if (-not $phase23SawToday) {
-    # No today row => fail-closed
-    $phase23Ok = $false
-}
-
-# ---- GateScore thresholds (per-symbol) ----
-$thrPath = Join-Path $repoRoot "configs\blockg_thresholds.json"
-$thrPathDocs = Join-Path $repoRoot "docs\thresholds\blockg_thresholds.json"
-$thrOverride = Join-Path $repoRoot "configs\blockg_thresholds.override.json"
-if (Test-Path $thrOverride) {
-    $isPaper = ($env:HAT_IS_PAPER -eq "1")
-    if ($isPaper) { $thrPath = $thrOverride }
-}
-if (-not (Test-Path $thrPath) -and (Test-Path $thrPathDocs)) { $thrPath = $thrPathDocs }
-
-$thrObj = $null
-if (Test-Path $thrPath) {
-    try { $thrObj = Get-Content $thrPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $thrObj = $null }
-}
-
-function Get-ThresholdsFor([string]$sym) {
-    $ms = 999999; $mp = 999999; $me = 999.0; $mm = 999.0
-    if ($null -ne $thrObj) {
-        $k = $sym.ToUpperInvariant()
-        $obj = $null
-        if ($thrObj.PSObject.Properties.Name -contains $k) { $obj = $thrObj.$k }
-        elseif ($thrObj.PSObject.Properties.Name -contains "DEFAULT") { $obj = $thrObj.DEFAULT }
-        if ($null -ne $obj) {
-            try { $ms = [int]$obj.min_signals } catch { }
-            try { $mp = [int]$obj.min_pnl_samples } catch { }
-            try { $me = [double]$obj.min_edge_ratio } catch { }
-            try { $mm = [double]$obj.min_micro_score } catch { }
-        }
-    }
-    return [pscustomobject]@{ minSignals=$ms; minPnl=$mp; minEdge=$me; minMicro=$mm }
-}
-
-# ---- GateScore daily summary (per-symbol today row) ----
-$gsPath = $pnlPath  # source-of-truth: gatescore_daily_summary.csv
-$gsRows = @()
-if (Test-Path $gsPath) { $gsRows = @(Import-Csv $gsPath) }
-
-function Get-GSFor([string]$sym) {
-    $fresh=$false; $cnt=0; $pnl=0; $edge=0.0; $micro=0.0
-    foreach ($r in $gsRows) {
-        if (($r.symbol + "").ToUpperInvariant() -ne $sym.ToUpperInvariant()) { continue }
-        if ((Slice-Date ([string]$r.as_of_date)) -ne $gsAsOf) { continue }
-        $fresh = $true
-        [void][int]::TryParse([string]$r.count_signals, [ref]$cnt)
-        if ($cnt -le 0) { $fresh = $false }
-        [void][int]::TryParse([string]$r.pnl_samples, [ref]$pnl)
-        [void][double]::TryParse([string]$r.mean_edge_ratio, [ref]$edge)
-        [void][double]::TryParse([string]$r.mean_micro_score, [ref]$micro)
-    }
-    return [pscustomobject]@{ fresh=$fresh; cnt=$cnt; pnl=$pnl; edge=$edge; micro=$micro }
-}
-
-function Eval-GS([string]$sym) {
-    $thr = Get-ThresholdsFor $sym
-    $gs  = Get-GSFor $sym
-    $samplesOk = ($gs.cnt -ge $thr.minSignals -and $gs.pnl -ge $thr.minPnl)
-    $threshOk  = (($gs.edge + 1e-9) -ge $thr.minEdge -and ($gs.micro + 1e-9) -ge $thr.minMicro)
-    $okToday   = ($gs.fresh -and $samplesOk -and $threshOk)
-    return [pscustomobject]@{
-        fresh=$gs.fresh; samplesOk=$samplesOk; threshOk=$threshOk; okToday=$okToday;
-        cnt=$gs.cnt; pnl=$gs.pnl; edge=$gs.edge; micro=$gs.micro;
-        minSignals=$thr.minSignals; minPnl=$thr.minPnl; minEdge=$thr.minEdge; minMicro=$thr.minMicro
-    }
-}
-
-$gsNVDA = Eval-GS "NVDA"
-$gsSPY  = Eval-GS "SPY"
-$gsQQQ  = Eval-GS "QQQ"
-
-# ---- Legacy GateScore vars (NVDA-based) for backward-compatible payload/reasons ----
-$gsFresh     = [bool]$gsNVDA.fresh
-$gsSamplesOk = [bool]$gsNVDA.samplesOk
-$gsThreshOk  = [bool]$gsNVDA.threshOk
-$gsOkToday   = [bool]$gsNVDA.okToday
-
-$gsCount = [int]$gsNVDA.cnt
-$gsPnl   = [int]$gsNVDA.pnl
-$gsEdge  = [double]$gsNVDA.edge
-$gsMicro = [double]$gsNVDA.micro
-
-$minSignals = [int]$gsNVDA.minSignals
-$minPnl     = [int]$gsNVDA.minPnl
-$minEdge    = [double]$gsNVDA.minEdge
-$minMicro   = [double]$gsNVDA.minMicro
-
-# Defaults for StrictMode (computed later in GateScore policy block)
-$gsAgeDays = 9999
-$gsRecentEnough = $false
-
-# ---- Per-symbol ready (institutional) ----
-# NOTE: GateScore global fields remain NVDA-based for compatibility; readiness is per-symbol.
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
-$reasons = New-Object System.Collections.Generic.List[string]
-if (-not $gsAsOf) { $reasons.Add("gatescore_missing_source_data") | Out-Null }
-
-
-# GateScore policy (session-age based; holiday/weekend safe)
-$MAX_GS_AGE_DAYS = 3
-$gsAgeDays = 9999
-try {
-  if ($gsAsOf) {
-    $d0 = [datetime]::ParseExact(($gsAsOf + ""), "yyyy-MM-dd", $null)
-    $d1 = [datetime]::ParseExact(($today + ""), "yyyy-MM-dd", $null)
-    $gsAgeDays = [int]([math]::Floor(($d1 - $d0).TotalDays))
   }
-} catch { $gsAgeDays = 9999 }
 
-$gsRecentEnough = ($gsAgeDays -le $MAX_GS_AGE_DAYS)
-if (-not $gsRecentEnough) {
-  $reasons.Add(("gatescore_too_old age_days=" + $gsAgeDays + " max=" + $MAX_GS_AGE_DAYS + " session=" + $gsAsOf + " today=" + $today)) | Out-Null
-}
-# QQQ_GS_OK_TODAY omitted for NVDA-only readiness
-if (-not $phase23Ok) { $reasons.Add("phase23_health_ok_today=false") }
-if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
-if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }
-if (-not $gsAsOf -or $gsAsOf -ne $today) { $reasons.Add("gatescore_fresh_today=false") }
-if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
-if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
+  # Fallback: ev_hard_evidence_raw.json
+  $raw = Join-Path $logsDir "ev_hard_evidence_raw.json"
+  if(-not (Test-Path -LiteralPath $raw)){ return $false }
 
-# Recompute per-symbol readiness AFTER GateScore age policy (StrictMode-safe)
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
-$spyReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsSPY.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
-$qqqReady  = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsQQQ.okToday  -and ($gsAsOf -ne "" -and $gsAsOf -eq $today)
+  try {
+    $j = Read-JsonSafe $raw
+    if($null -eq $j){ return $false }
 
-
-# Audit: include per-symbol not-ready flags (even if NVDA is ready)
-if (-not $spyReady) { $reasons.Add("spy_blockg_ready=false") | Out-Null }
-if (-not $qqqReady) { $reasons.Add("qqq_blockg_ready=false") | Out-Null }
-
-$payload = [ordered]@{
-    ts_utc = $tsUtc
-    as_of_date = $today
-
-    phase23_health_ok_today = $phase23Ok
-    ev_hard_daily_ok_today  = $evHardOk
-    ev_hard_as_of_date = $evSessionAsOf
-    ev_hard_session_ok = $evSessionOk
-    phase4_ok_today         = $phase4Ok
-
-    gatescore_fresh_today   = (($gsAsOf -ne "") -and ($gsAsOf -eq $today))
-
-    gatescore_as_of_date = $gsAsOf
-    gatescore_age_days = $gsAgeDays
-    gatescore_recent_enough = $gsRecentEnough
-    gatescore_fresh_for_session = [bool]$gsRecentEnough
-    gatescore_samples_ok    = $gsSamplesOk
-    min_samples_ok_today   = $gsSamplesOk
-    gatescore_threshold_ok_today = $gsThreshOk
-    gatescore_ok_today      = $gsOkToday
-
-    # Per-symbol GateScore detail (audit/Notion-friendly)
-    gatescore_by_symbol = [ordered]@{
-        NVDA = [ordered]@{
-            fresh=$gsNVDA.fresh; samples_ok=$gsNVDA.samplesOk; threshold_ok=$gsNVDA.threshOk; ok_today=$gsNVDA.okToday;
-            count_signals=$gsNVDA.cnt; pnl_samples=$gsNVDA.pnl; mean_edge_ratio=$gsNVDA.edge; mean_micro_score=$gsNVDA.micro;
-            min_signals=$gsNVDA.minSignals; min_pnl_samples=$gsNVDA.minPnl; min_edge_ratio=$gsNVDA.minEdge; min_micro_score=$gsNVDA.minMicro
+    # If file has a date field, require it matches asOf
+    foreach($k in @("as_of_date","date","session_date","effective_as_of")){
+      if($j.PSObject.Properties[$k]){
+        $d = ("" + $j.$k).Trim()
+        if($d -ne ""){
+          if($d -ne $asOf){ return $false }
         }
-        SPY = [ordered]@{
-            fresh=$gsSPY.fresh; samples_ok=$gsSPY.samplesOk; threshold_ok=$gsSPY.threshOk; ok_today=$gsSPY.okToday;
-            count_signals=$gsSPY.cnt; pnl_samples=$gsSPY.pnl; mean_edge_ratio=$gsSPY.edge; mean_micro_score=$gsSPY.micro;
-            min_signals=$gsSPY.minSignals; min_pnl_samples=$gsSPY.minPnl; min_edge_ratio=$gsSPY.minEdge; min_micro_score=$gsSPY.minMicro
-        }
-        QQQ = [ordered]@{
-            fresh=$gsQQQ.fresh; samples_ok=$gsQQQ.samplesOk; threshold_ok=$gsQQQ.threshOk; ok_today=$gsQQQ.okToday;
-            count_signals=$gsQQQ.cnt; pnl_samples=$gsQQQ.pnl; mean_edge_ratio=$gsQQQ.edge; mean_micro_score=$gsQQQ.micro;
-            min_signals=$gsQQQ.minSignals; min_pnl_samples=$gsQQQ.minPnl; min_edge_ratio=$gsQQQ.minEdge; min_micro_score=$gsQQQ.minMicro
-        }
+      }
     }
 
-    gatescore_samples       = $gsCount
-    gatescore_min_samples   = $minSignals
-    gatescore_pnl_samples   = $gsPnl
-    gatescore_min_pnl_samples = $minPnl
+    # Prefer explicit ok/pass fields
+    foreach($k in @("ev_hard_daily_ok_today","ok","passed","pass","ev_hard_ok")){
+      if($j.PSObject.Properties[$k]){
+        return (To-Bool $j.$k)
+      }
+    }
 
-    gatescore_mean_edge_ratio  = $gsEdge
-    gatescore_mean_micro_score = $gsMicro
-    gatescore_min_edge_ratio   = $minEdge
-    gatescore_min_micro_score  = $minMicro
-
-    nvda_blockg_ready = $nvdaReady
-    spy_blockg_ready  = $spyReady
-    qqq_blockg_ready  = $qqqReady
-
-    reasons_not_ready = @($reasons)
+    # Last resort: string heuristic for '"passed": true' or '"ok": true'
+    $s = Get-Content -LiteralPath $raw -Raw -Encoding utf8
+    if($s -match '"passed"\s*:\s*true' -or $s -match '"ok"\s*:\s*true'){ return $true }
+    return $false
+  } catch { return $false }
 }
 
-$payloadJson = $payload | ConvertTo-Json -Depth 6
-Write-Host "[BLOCK-G] Writing Block-G status stub to $statusPath" -ForegroundColor Cyan
+function Get-GateScoreSessionDate([string]$logsDir){
+  $gs = Join-Path $logsDir "gatescore_daily_summary.csv"
+  if(Test-Path -LiteralPath $gs){
+    try {
+      $rows = @(Import-Csv $gs)
+      if($rows.Count -gt 0){
+        $d = ("" + $rows[-1].as_of_date).Trim()
+        if($d){ return $d }
+      }
+    } catch {}
+  }
+  return ""
+}
 
+# --- Official GateScore events evidence (fail-closed) ---
+function Count-JsonlLines([string]$Path){
+  try {
+    if(-not (Test-Path -LiteralPath $Path)){ return 0 }
+    $n = 0
+    foreach($x in (Get-Content -LiteralPath $Path -Encoding utf8)){ if(($x+"").Trim()){ $n++ } }
+    return [int]$n
+  } catch { return 0 }
+}
+
+
+function EventsFileFor([string]$logsDir, [string]$sym){
+  $u = ($sym + "").Trim().ToUpper()
+  if($u -eq "NVDA"){
+    $p = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+    if(Test-Path -LiteralPath $p){
+      if((Get-Item -LiteralPath $p).Length -gt 0){ return $p }
+    }
+    $p2 = Join-Path $logsDir "nvda_gatescore_events_stub.jsonl"
+    if(Test-Path -LiteralPath $p2){
+      if((Get-Item -LiteralPath $p2).Length -gt 0){ return $p2 }
+    }
+    return $p
+  }
+  if($u -eq "SPY"){ return (Join-Path $logsDir "spy_gatescore_events.jsonl") }
+  if($u -eq "QQQ"){ return (Join-Path $logsDir "qqq_gatescore_events.jsonl") }
+  return ""
+}
+
+function Has-NonEmpty([string]$p){
+  if(-not $p){ return $false }
+  if(-not (Test-Path -LiteralPath $p)){ return $false }
+  try { return ((Get-Item -LiteralPath $p).Length -gt 0) } catch { return $false }
+}
+
+# ---- GateScore quality helpers ----
+function Get-GateScoreRow([string]$logsDir, [string]$sym, [string]$asOf){
+  $p = Join-Path $logsDir "gatescore_daily_summary.csv"
+  if(-not (Test-Path -LiteralPath $p)){ return $null }
+  try {
+    $rows = @(Import-Csv $p)
+    $u = ($sym + "").Trim().ToUpper()
+    $last = $null
+    foreach($r in $rows){
+      if((("" + $r.symbol).Trim().ToUpper() -eq $u) -and (("" + $r.as_of_date).Trim() -eq $asOf)){
+        $last = $r
+      }
+    }
+    return $last
+  } catch { return $null }
+}
+
+function To-Num($v){ try { return [double]("" + $v) } catch { return [double]0 } }
+
+function GateScoreOkFromRow($row){
+  # thresholds (tune later via config)
+  $MIN_SIGNALS = 30
+  $MIN_PNL_SAMPLES = 30
+  $MIN_MICRO_SCORE = 0.10
+  $MIN_EDGE_RATIO  = 0.05
+
+  if($null -eq $row){ return $false }
+  $countSignals = To-Num $row.count_signals
+  $pnlSamples   = To-Num $row.pnl_samples
+  $microScore   = To-Num $row.mean_micro_score
+  $edgeRatio    = To-Num $row.mean_edge_ratio
+
+  if($countSignals -lt $MIN_SIGNALS){ return $false }
+  if($pnlSamples -lt $MIN_PNL_SAMPLES){ return $false }
+  if(($microScore -le 0) -and ($edgeRatio -le 0)){ return $false }
+  if($microScore -lt $MIN_MICRO_SCORE){ return $false }
+  if($edgeRatio -lt $MIN_EDGE_RATIO){ return $false }
+  return $true
+}
+
+# ---- payload ----
+$asOf = Effective-AsofDate $logsDir
+
+# --- GateScore stamp load (preferred over CSV heuristics; fail-closed) ---
+$stampPath = Join-Path $logsDir "gatescore_stamp.json"
+$stamp = $null
+if(Test-Path -LiteralPath $stampPath){ $stamp = Read-JsonSafe $stampPath }
+# --- end stamp load ---
+
+function Apply-GateScoreFromStamp([ref]$payload, $stamp){
+  # Fail-closed defaults
+  $payload.Value.gatescore_as_of_date = ""
+  $payload.Value.gatescore_fresh_for_session = $false
+  $payload.Value.gatescore_fresh_today = $false
+  $payload.Value.gatescore_ok_today = $false
+
+  $payload.Value.gatescore_rows_today = 0
+  $payload.Value.gatescore_min_samples_ok_today = $false
+  $payload.Value.gatescore_stable_today = $false
+  $payload.Value.gatescore_stamp_reasons = @()
+
+  if($null -eq $stamp){
+    $payload.Value.gatescore_stamp_reasons = @("missing_gatescore_stamp")
+    return
+  }
+
+  try {
+    $sd = ""
+    if($stamp.PSObject.Properties.Name -contains "as_of_date"){ $sd = ("" + $stamp.as_of_date).Trim() }
+    $payload.Value.gatescore_as_of_date = $sd
+    $payload.Value.gatescore_fresh_for_session = ($sd -ne "" -and $sd -eq $payload.Value.as_of_date)
+    $payload.Value.gatescore_fresh_today = (To-Bool $payload.Value.gatescore_fresh_for_session)
+
+    if($stamp.PSObject.Properties.Name -contains "gatescore_rows_today"){ $payload.Value.gatescore_rows_today = [int]("" + $stamp.gatescore_rows_today) }
+    if($stamp.PSObject.Properties.Name -contains "gatescore_min_samples_ok_today"){ $payload.Value.gatescore_min_samples_ok_today = (To-Bool $stamp.gatescore_min_samples_ok_today) }
+    if($stamp.PSObject.Properties.Name -contains "gatescore_stable_today"){ $payload.Value.gatescore_stable_today = (To-Bool $stamp.gatescore_stable_today) }
+    if($stamp.PSObject.Properties.Name -contains "reasons"){ $payload.Value.gatescore_stamp_reasons = @($stamp.reasons) }
+
+    # STRICT OK: must be fresh + rows>0 + min samples + stable
+    $payload.Value.gatescore_ok_today = $false
+    if((To-Bool $payload.Value.gatescore_fresh_today)){
+      if(($payload.Value.gatescore_rows_today -gt 0)){
+        if((To-Bool $payload.Value.gatescore_min_samples_ok_today)){
+          if((To-Bool $payload.Value.gatescore_stable_today)){
+            $payload.Value.gatescore_ok_today = $true
+          }
+        }
+      }
+    }
+  } catch {
+    # fail-closed
+    $payload.Value.gatescore_ok_today = $false
+    $payload.Value.gatescore_fresh_today = $false
+    $payload.Value.gatescore_stamp_reasons = @("gatescore_stamp_parse_failed")
+  }
+}
+$payload = [ordered]@{
+  as_of_date = $asOf
+
+  gatescore_as_of_date = ""
+  gatescore_fresh_for_session = $false
+  gatescore_fresh_today = $false
+  gatescore_ok_today = $false
+
+  # GateScore stamp (deterministic) - fail-closed
+  gatescore_rows_today = 0
+  gatescore_min_samples_ok_today = $false
+  gatescore_stable_today = $false
+  gatescore_stamp_reasons = @()
+
+  phase4_ok_today = $false
+  ev_hard_daily_ok_today = $false
+
+  # Evidence-only: today-row validation for daily CSV artifacts (builder-owned; checker is contract-only)
+  phase23_health_today_row_ok = $false
+  phase23_health_last_date    = ""
+  ev_hard_today_row_ok        = $false
+  ev_hard_last_date           = ""
+
+  nvda_blockg_ready = $false
+  nvda_gatescore_events_count_today = 0
+  nvda_gatescore_events_min_required = 10
+  nvda_gatescore_events_ok_today = $false
+  spy_blockg_ready  = $false
+  qqq_blockg_ready  = $false
+
+  reasons_not_ready = @()
+}
+
+# Phase4 + EV-hard
+$payload.phase4_ok_today = (Get-Phase4OkToday $logsDir $asOf)
+$payload.ev_hard_daily_ok_today = (Get-EvHardOkToday $logsDir $asOf)
+
+# GateScore as_of + freshness
+
+$gsAsOf = (Get-GateScoreSessionDate $logsDir)
+$payload.gatescore_as_of_date = $gsAsOf
+if($gsAsOf -ne ""){
+  $payload.gatescore_fresh_for_session = ($gsAsOf -eq $asOf)
+}
+
+# Institutional invariant
+if(($payload.gatescore_as_of_date + "") -eq ""){
+  $payload.gatescore_fresh_for_session = $false
+  $payload.gatescore_fresh_today = $false
+} elseif(($payload.gatescore_as_of_date + "") -eq ($payload.as_of_date + "")){
+  $payload.gatescore_fresh_today = (To-Bool $payload.gatescore_fresh_for_session)
+} else {
+  $payload.gatescore_fresh_today = $false
+}
+
+# --- Apply GateScore stamp STRICT (no fallback; fail-closed) ---
+$payloadRef = [ref]$payload
+Apply-GateScoreFromStamp -payload $payloadRef -stamp $stamp
+# --- end GateScore stamp ---
+
+# Tighten-only: "fresh" requires at least one GateScore row today (prevents misleading fresh+empty).
+if([int]$payload.gatescore_rows_today -le 0){
+  $payload.gatescore_fresh_for_session = $false
+  $payload.gatescore_fresh_today = $false
+  $payload.gatescore_ok_today = $false
+}
+
+
+
+
+# GateScore ok today (quality):
+# (computed strictly from gatescore_stamp.json; no fallbacks)
+
+# NVDA readiness (PS-safe; no -and operators)
+$payload.nvda_blockg_ready = $false
+
+# --- NVDA official GateScore events evidence (builder-owned; contract-only later) ---
+$payload.nvda_gatescore_events_count_today = 0
+$payload.nvda_gatescore_events_min_required = 10
+$payload.nvda_gatescore_events_ok_today = $false
+try {
+  $ev = (EventsFileFor $logsDir "NVDA")
+  if($ev -and (Test-Path -LiteralPath $ev)){
+    $payload.nvda_gatescore_events_count_today = (Count-JsonlLines $ev)
+    if([int]$payload.nvda_gatescore_events_count_today -ge [int]$payload.nvda_gatescore_events_min_required){
+      $payload.nvda_gatescore_events_ok_today = $true
+    }
+  }
+} catch {
+  $payload.nvda_gatescore_events_ok_today = $false
+}
+# --- end events evidence ---
+
+
+## --- C.5 today-row validation (builder-owned; contract carries evidence) ---
+try {
+  $p23 = Join-Path $logsDir "phase23_health_daily.csv"
+  if(Test-Path -LiteralPath $p23){
+    $r23 = @(Import-Csv -LiteralPath $p23)
+    if($r23.Count -gt 0){
+      $last = $r23[-1]
+      $d23 = ""
+      if($last.PSObject.Properties.Name -contains "as_of_date"){ $d23 = ("" + $last.as_of_date).Trim() }
+      elseif($last.PSObject.Properties.Name -contains "date"){ $d23 = ("" + $last.date).Trim() }
+      $payload.phase23_health_last_date = $d23
+      if($d23 -eq $asOf){ $payload.phase23_health_today_row_ok = $true }
+    }
+  }
+} catch { }
+try {
+  $pev = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
+  if(Test-Path -LiteralPath $pev){
+    $rev = @(Import-Csv -LiteralPath $pev)
+    if($rev.Count -gt 0){
+      $rowLast = $rev[-1]
+      $dlast = ""
+      if($rowLast.PSObject.Properties.Name -contains "as_of_date"){ $dlast = ("" + $rowLast.as_of_date).Trim() }
+      elseif($rowLast.PSObject.Properties.Name -contains "date"){ $dlast = ("" + $rowLast.date).Trim() }
+      $payload.ev_hard_last_date = $dlast
+    }
+    $hit = @($rev | Where-Object {
+      $d = ""
+      if($_.PSObject.Properties.Name -contains "as_of_date"){ $d = ("" + $_.as_of_date).Trim() }
+      elseif($_.PSObject.Properties.Name -contains "date"){ $d = ("" + $_.date).Trim() }
+      $d -eq $asOf
+    })
+    if($hit.Count -gt 0){ $payload.ev_hard_today_row_ok = $true }
+  }
+} catch { }
+## --- end today-row validation ---
+
+if((To-Bool $payload.phase4_ok_today)){
+  if((To-Bool $payload.ev_hard_daily_ok_today)){
+    if((To-Bool $payload.gatescore_ok_today)){
+      if((To-Bool $payload.gatescore_fresh_today)){
+        if((To-Bool $payload.nvda_gatescore_events_ok_today)){
+          $payload.nvda_blockg_ready = $true
+        }
+      }
+    }
+  }
+}
+
+# SPY readiness from daily_summary row
+$payload.spy_blockg_ready = $false
+if((To-Bool $payload.gatescore_fresh_today)){
+  $spyRow = Get-GateScoreRow $logsDir "SPY" $asOf
+  if(GateScoreOkFromRow $spyRow){ $payload.spy_blockg_ready = $true }
+}
+
+# QQQ readiness from daily_summary row
+$payload.qqq_blockg_ready = $false
+if((To-Bool $payload.gatescore_fresh_today)){
+  $qqqRow = Get-GateScoreRow $logsDir "QQQ" $asOf
+  if(GateScoreOkFromRow $qqqRow){ $payload.qqq_blockg_ready = $true }
+}
+
+# Reasons (canonical)
+$rn = @()
+if($payload.PSObject.Properties.Name -contains "gatescore_stamp_reasons"){
+  foreach($r in @($payload.gatescore_stamp_reasons)){
+    $s = ("" + $r).Trim()
+    if($s){ $rn += ("gatescore_stamp:" + $s) }
+  }
+}
+if(-not (To-Bool $payload.phase4_ok_today)){ $rn += "phase4_ok_today=false" }
+if(-not (To-Bool $payload.ev_hard_daily_ok_today)){ $rn += "ev_hard_daily_ok_today=false" }
+if(-not (To-Bool $payload.phase23_health_today_row_ok)){ $rn += ("phase23_today_row_missing:last=" + ($payload.phase23_health_last_date + "")) }
+if(-not (To-Bool $payload.ev_hard_today_row_ok)){ $rn += ("ev_hard_today_row_missing:last=" + ($payload.ev_hard_last_date + "")) }
+if(-not (To-Bool $payload.gatescore_ok_today)){ $rn += "gatescore_ok_today=false" }
+if(-not (To-Bool $payload.gatescore_fresh_today)){ $rn += "gatescore_fresh_today=false" }
+if(-not (To-Bool $payload.nvda_blockg_ready)){ $rn += "nvda_blockg_ready=false" }
+
+$hs = New-Object System.Collections.Generic.HashSet[string]
+$rn2 = New-Object System.Collections.Generic.List[string]
+foreach($x in @($rn)){
+  $s = ("" + $x).Trim()
+  if([string]::IsNullOrWhiteSpace($s)){ continue }
+  if($hs.Add($s)){ [void]$rn2.Add($s) }
+}
+$payload.reasons_not_ready = @($rn2)
+
+# Write once
+$payloadJson = $payload | ConvertTo-Json -Depth 6
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($statusPath, $payloadJson, $utf8NoBom)
 
-Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
-$payload.GetEnumerator() | Format-Table -AutoSize
+if ($env:HAT_BLOCKG_QUIET -ne "1") {
+  Write-Host "[BLOCK-G] Writing Block-G status stub to $statusPath" -ForegroundColor Cyan
+  Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
+  $payload.GetEnumerator() | Format-Table -AutoSize
+}
 
 exit 0

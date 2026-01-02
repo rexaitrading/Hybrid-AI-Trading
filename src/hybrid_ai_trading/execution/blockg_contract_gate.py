@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from hybrid_ai_trading.execution.blockg_enforce import BlockGNotReady, require_blockg_ready_for_live
-from hybrid_ai_trading.execution.blockg_contract_reader import load_blockg_status
+from hybrid_ai_trading.execution.blockg_contract_reader import read_contract
 
 
 def _is_live(ctx: Any = None) -> bool:
@@ -56,13 +56,13 @@ def _default_status_path(ctx: Any = None) -> Path:
 def get_blockg_status(ctx: Any = None) -> Dict[str, Any]:
     p = _default_status_path(ctx=ctx)
     try:
-        s = load_blockg_status(p)
+        s = read_contract(p)
         return {
-            "as_of_date": s.as_of_date,
-            "nvda_blockg_ready": bool(s.nvda_blockg_ready),
-            "spy_blockg_ready": bool(s.spy_blockg_ready),
-            "qqq_blockg_ready": bool(s.qqq_blockg_ready),
-            "reasons_not_ready": list(s.reasons_not_ready),
+            "as_of_date": str(s.get("as_of_date","") or "").strip(),
+            "nvda_blockg_ready": bool(s.get("nvda_blockg_ready", False)),
+            "spy_blockg_ready": bool(s.get("spy_blockg_ready", False)),
+            "qqq_blockg_ready": bool(s.get("qqq_blockg_ready", False)),
+            "reasons_not_ready": list(s.get("reasons_not_ready", []) or []),
         }
     except Exception as e:
         return {

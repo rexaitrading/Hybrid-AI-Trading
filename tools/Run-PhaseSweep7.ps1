@@ -77,7 +77,7 @@ if(Test-Path .\logs\gatescore_pnl_summary.csv){
 
 # -------- Phase 4: Required guard slice --------
 Write-Host "--- Phase4: Validation ---"
-pytest -q tests/test_execution_engine_phase5_guard.py tests/test_ib_phase5_guard.py | Out-Host
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q tests/test_execution_engine_phase5_guard.py tests/test_ib_phase5_guard.py | Out-Host
 if($LASTEXITCODE -eq 0){ Ok "Phase4 required guard slice green" } else { Fail "Phase4 guard slice failed" }
 
 # -------- Phase 5: EV-hard + BlockG --------

@@ -166,3 +166,139 @@ tools/Disarm-NVDA-Live.ps1
 - GitHub Checks: CI Risk-First + ci-gates ✅ (PR #42)
 - Local spot-check: tests/execution/test_nvda_live_stamp_gate.py ✅
 
+## 2025-12-28 11:17 — Final Lock + CI lock
+
+- Added tools/Run-FinalLock.ps1 (WEEKEND carry-forward safe, CI mode supported)
+- Added Phase-6 readiness post-merge of blockg_status
+- Added CI workflow: .github/workflows/ci-final-lock.yml running Run-FinalLock -Mode CI on PR/push
+- Tag: FINAL_LOCK_20251228
+## 20251229_181051  parse_sanity
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_181051/
+**Backups:** ./.backup/*.20251229_181051.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_184545  parse_probe
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_184545/
+**Backups:** ./.backup/*.20251229_184545.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_185238  parse_after_stray_tail_removal
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_185238/
+**Backups:** ./.backup/*.20251229_185238.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_185244  smoke_log_patch
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_185244/
+**Backups:** ./.backup/*.20251229_185244.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_190346  parse_guard
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_190346/
+**Backups:** ./.backup/*.20251229_190346.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_190714  parse_guard_fix
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_190714/
+**Backups:** ./.backup/*.20251229_190714.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_190715  guard_override
+**Why:** 
+
+**Files:** .\tools\Build-BlockGStatusStub.ps1
+**Logs:** ./logs/20251229_190715/
+**Backups:** ./.backup/*.20251229_190715.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_190859  guard_override
+**Why:** 
+
+**Files:** .\tools\Build-BlockGStatusStub.ps1
+**Logs:** ./logs/20251229_190859/
+**Backups:** ./.backup/*.20251229_190859.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_191120  parse_patchlog_hardening
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_191120/
+**Backups:** ./.backup/*.20251229_191120.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---
+## 20251229_191130  patchlog_format_smoke
+**Why:** 
+
+**Files:** 
+**Logs:** ./logs/20251229_191130/
+**Backups:** ./.backup/*.20251229_191130.bak
+
+**Tests:** powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Pytest-Chokepoint.ps1 -q
+
+**Summary (tail):**
+
+
+---

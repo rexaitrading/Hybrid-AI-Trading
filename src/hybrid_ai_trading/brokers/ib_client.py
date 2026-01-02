@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 
 """
 IBClient (Hybrid AI Quant Pro Ã¢â‚¬â€œ minimal, safe wrapper)
@@ -116,3 +117,141 @@ class IBClient:
             "initAfter": str(st.initMarginAfter),
             "commission": str(st.commission),
         }
+def get_last_prices(symbols, client_id: int = 3021, host: str = "127.0.0.1", port: int = 4002, wait_sec: float = 3.0):
+    """
+    Paper-safe snapshot prices using IBKR via ib_insync reqMktData(snapshot=True).
+    Returns dict {SYM: float_price}. Fail-closed if any symbol missing.
+    """
+    # Local import to avoid hard dependency at module import time for non-IB paths
+    from ib_insync import IB, Stock  # type: ignore
+
+    ib = IB()
+    import time as _time
+    # Suppress ib_insync console spam for error 10089 (no subscription)
+    _orig_err = getattr(ib.wrapper, "error", None)
+    def _err(reqId, errorCode, errorString, contract=None):
+        try:
+            if int(errorCode) == 10089:
+                return
+        except Exception:
+            pass
+        if _orig_err is not None:
+            return _orig_err(reqId, errorCode, errorString, contract)
+    try:
+        ib.wrapper.error = _err
+    except Exception:
+        pass
+
+    
+    # Mute IB market-data subscription spam (10089) for this snapshot helper
+    def _on_err(reqId, errorCode, errorString, *_):
+        try:
+            if int(errorCode) == 10089:
+                return
+        except Exception:
+            pass
+        # allow other errors to surface normally
+        return
+    try:
+        ib.errorEvent += _on_err  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    
+    import os as _os
+    try:
+      import os as _os
+      # Always use a unique clientId for snapshot helper to avoid collisions
+      _cid = 30000 + (_os.getpid() % 10000)
+      ib.connect(host, port, clientId=int(_cid))
+    except Exception:
+      # Fallback to a unique clientId (avoids Error 326 client id already in use)
+      _cid = 30000 + (_os.getpid() % 10000)
+      ib.connect(host, port, clientId=int(_cid))
+    try:
+      out = {}
+      for sym in symbols:
+        c = Stock(str(sym), "SMART", "USD")
+        ib.reqMarketDataType(3)  # 3=delayed (reduces 10089 spam)
+        t = ib.reqMktData(c, "", snapshot=True)
+        # Poll in small slices (more responsive than one long sleep)
+        # Break early once we have a valid price.
+        deadline = _time.time() + float(wait_sec)
+        while _time.time() < deadline:
+          # pump ib_insync event loop in short bursts
+          try:
+            ib.sleep(0.2)
+          except KeyboardInterrupt:
+            raise
+          # attempt to pick a valid price ASAP
+          px_try = None
+          try:
+            px_try = _valid(getattr(t, "last", None))
+            if px_try is None and hasattr(t, "marketPrice"):
+              try:
+                px_try = _valid(t.marketPrice())
+              except Exception:
+                px_try = None
+            if px_try is None:
+              px_try = _valid(getattr(t, "close", None))
+            if px_try is None:
+              b = _valid(getattr(t, "bid", None))
+              a = _valid(getattr(t, "ask", None))
+              if b is not None and a is not None:
+                px_try = float((b + a) / 2.0)
+            if px_try is None:
+              px_try = _valid(getattr(t, "lastClose", None))
+          except Exception:
+            px_try = None
+
+          if px_try is not None:
+            px = px_try
+            break
+        px = None
+
+        # Robust snapshot price pick (reject NaN/<=0 early)
+        def _valid(x):
+          try:
+            fx = float(x)
+          except Exception:
+            return None
+          if fx != fx or fx <= 0.0:  # NaN check: fx != fx
+            return None
+          return fx
+
+        # Prefer: last -> marketPrice() -> close -> mid(bid,ask) -> lastClose
+        px = _valid(getattr(t, "last", None))
+        if px is None and hasattr(t, "marketPrice"):
+          try:
+            px = _valid(t.marketPrice())
+          except Exception:
+            px = None
+        if px is None:
+          px = _valid(getattr(t, "close", None))
+        if px is None:
+          b = _valid(getattr(t, "bid", None))
+          a = _valid(getattr(t, "ask", None))
+          if b is not None and a is not None:
+            px = float((b + a) / 2.0)
+        if px is None:
+          px = _valid(getattr(t, "lastClose", None))
+
+        if px is None:
+          raise RuntimeError(f"ib_snapshot_missing_price: {sym}")
+
+        fpx = float(px)
+        out[str(sym).upper()] = fpx
+      return out
+    finally:
+      try:
+        if _orig_err is not None:
+          ib.wrapper.error = _orig_err
+      except Exception:
+        pass
+      try:
+        ib.errorEvent -= _on_err  # type: ignore[attr-defined]
+      except Exception:
+        pass
+      try:
+        ib.disconnect()
+      except Exception:
+        pass

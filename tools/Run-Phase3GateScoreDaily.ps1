@@ -31,8 +31,8 @@ Write-Host "[PHASE3] NOTE: Block-G build is owned by strict premarket runner; sk
 # 2) Choose CSV input for daily_build (REAL CLI)
 if (-not $Csv) {
   $cands = @(
-    (Join-Path $root "logs\gatescore_pnl_summary.csv"),
     (Join-Path $root "logs\gatescore_daily_summary.csv"),
+    (Join-Path $root "logs\gatescore_pnl_summary.csv"),
     (Join-Path $root "logs\gatescore_daily_summary_nvda.csv"),
     (Join-Path $root "logs\nvda_gatescore_samples.csv")
   )

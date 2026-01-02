@@ -22,10 +22,16 @@ Write-Host ("[PRE-SMART] RepoRoot={0} Today={1} {2} Symbol={3}" -f $root,$today,
 # 1) Quick diagnostic (never throws)
 & ".\tools\Check-PreMarketInputs.ps1" -Symbol $Symbol
 $rcInputs = $LASTEXITCODE
-Write-Host ("[PRE-SMART] inputs_rc={0}" -f $rcInputs) -ForegroundColor Yellow
+if($rcInputs -eq 0){
+  Write-Host ("[PRE-SMART] inputs_rc={0} (quick inputs OK)" -f $rcInputs) -ForegroundColor Green
+} elseif($rcInputs -eq 2){
+  Write-Host ("[PRE-SMART] inputs_rc={0} (quick inputs warn; strict runner will decide)" -f $rcInputs) -ForegroundColor DarkYellow
+} else {
+  Write-Host ("[PRE-SMART] inputs_rc={0} (quick inputs warn; strict runner will decide)" -f $rcInputs) -ForegroundColor DarkYellow
+}
 
 if($weekend -and $rcInputs -eq 2){
-  Write-Host "[PRE-SMART] Weekend + stale inputs => expected FAIL-CLOSED. Skipping heavy pre-market runner." -ForegroundColor Yellow
+  Write-Host "[PRE-SMART] Weekend + stale inputs (inputs_rc=2) => exiting 2 (skip strict runner)." -ForegroundColor Yellow
   exit 2
 }
 

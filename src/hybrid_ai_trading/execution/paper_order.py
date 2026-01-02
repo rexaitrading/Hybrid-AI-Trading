@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 def _paper_only_guard() -> None:
     # FAIL-CLOSED: paper_order must never touch IB in live mode.
     import os
@@ -152,7 +152,7 @@ def whatif_validate(
     trial.algoParams = getattr(order, "algoParams", None)
     trial.whatIf = True
     _paper_only_guard()
-    tr = ib.placeOrder(contract, trial)
+    tr = ib_place_order_chokepoint(ib, contract, trial)
     ib.sleep(0.6)
     err = None
     for log in tr.log:
@@ -232,9 +232,9 @@ def place_bracket(
 
     _paper_only_guard()
 
-    tr_parent = ib.placeOrder(contract, parent)
-    tr_take = ib.placeOrder(contract, take)
-    tr_stop = ib.placeOrder(contract, stop)
+    tr_parent = ib_place_order_chokepoint(ib, contract, parent)
+    tr_take = ib_place_order_chokepoint(ib, contract, take)
+    tr_stop = ib_place_order_chokepoint(ib, contract, stop)
     ib.sleep(0.8)
     return tr_parent, tr_take, tr_stop
 

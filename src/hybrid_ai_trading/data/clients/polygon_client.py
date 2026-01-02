@@ -1,165 +1,175 @@
 from __future__ import annotations
 
-"""
-Polygon Client (Hybrid AI Quant Pro v1.5 - Safe & Test-Friendly)
-----------------------------------------------------------------
-- __init__(api_key=None, allow_missing=False, base_url=..., session=None, timeout=10.0)
-- Key resolution order:
-    1) explicit api_key
-    2) env POLYGON_KEY / POLYGON_API_KEY
-    3) if allow_missing=True -> stub (no config needed)
-    4) else read load_config().providers.polygon.api_key_env and its env value
-- _headers(): {"apiKey": <key>} or raises if missing
-- _request(): GET with query param auth; robust error mapping
-- prev_close(): wrapper for /v2/aggs/ticker/{symbol}/prev
-- ping(): True on success; warns and False on PolygonAPIError; False on generic Exception
-"""
-
+import json
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
-try:
-    import requests  # type: ignore
-except Exception:  # pragma: no cover
-    requests = None  # type: ignore
+import requests  # tests patch hybrid_ai_trading.data.clients.polygon_client.requests
 
 __all__ = ["PolygonAPIError", "PolygonClient", "load_config"]
 
 logger = logging.getLogger("hybrid_ai_trading.data.clients.polygon_client")
 
 
-class PolygonAPIError(Exception):
-    """Polygon client error."""
+class PolygonAPIError(RuntimeError):
+    pass
 
 
 def load_config() -> Optional[dict]:
     """
     Placeholder config loader (tests monkeypatch this).
-    Real app may import a central settings loader here.
+    Keep this function here (tests patch polygon_client.load_config).
     """
     return None
 
 
+def _is_nonempty_str(x: Any) -> bool:
+    return isinstance(x, str) and x.strip() != ""
+
+
 class PolygonClient:
+    """
+    Key resolution order (tests depend on this):
+      1) explicit api_key
+      2) env POLYGON_KEY / POLYGON_API_KEY
+      3) if allow_missing=True -> stub (no config needed)
+      4) else read load_config().providers.polygon.api_key_env and its env value
+      5) if still missing -> PolygonAPIError("Polygon API key not provided")
+
+    Required surface (tests patch/call these):
+      - _headers()
+      - _request()
+      - prev_close()
+      - ping()
+      - module-level 'requests'
+    """
+
     def __init__(
         self,
         api_key: Optional[str] = None,
-        *,
         allow_missing: bool = False,
         base_url: Optional[str] = None,
         session: Any = None,
         timeout: float = 10.0,
-    ) -> None:
+    ):
         self.base_url = (base_url or "https://api.polygon.io").rstrip("/")
-        self.session = session
-        self.timeout = timeout
+        self.timeout = float(timeout) if timeout else 10.0
+        self.session = session  # optional injected session for tests
+        self._stub = False
+
+        key: Optional[str] = None
 
         # 1) explicit api_key
-        key = api_key
+        if _is_nonempty_str(api_key):
+            key = api_key.strip()
 
-        # 2) env fallback
+        # 2) env POLYGON_KEY / POLYGON_API_KEY
         if not key:
-            key = os.getenv("POLYGON_KEY") or os.getenv("POLYGON_API_KEY")
+            env_key = os.getenv("POLYGON_KEY")
+            if _is_nonempty_str(env_key):
+                key = env_key.strip()
 
-        # 3) if still no key and allow_missing=True -> stub (skip config entirely)
+        # 3) allow_missing => stub
         if not key and allow_missing:
-            self.api_key: Optional[str] = None
+            self.api_key = None
             self._stub = True
             return
 
-        # 4) otherwise resolve via config (tests patch load_config to drive branches)
+        # 4) config-driven resolution (strict validation)
         if not key:
             try:
                 cfg = load_config()
             except Exception as e:
-                raise PolygonAPIError(f"Failed to load Polygon config: {e}") from e
+                raise PolygonAPIError(f"Failed to load Polygon config: {e!r}") from e
+
+            if cfg is None:
+                cfg = {}
 
             if not isinstance(cfg, dict):
                 raise PolygonAPIError("Invalid Polygon config structure")
 
-            providers = cfg.get("providers")
+            providers = cfg.get("providers", {})
             if providers is None:
-                # No providers section -> treat as "key not provided" per tests
-                raise PolygonAPIError("Polygon API key not provided")
+                providers = {}
             if not isinstance(providers, dict):
                 raise PolygonAPIError("Invalid Polygon config structure")
 
-            poly_cfg = providers.get("polygon")
+            poly_cfg = providers.get("polygon", {})
+            if poly_cfg is None:
+                poly_cfg = {}
             if not isinstance(poly_cfg, dict):
                 raise PolygonAPIError("Invalid Polygon config structure")
 
             env_name = poly_cfg.get("api_key_env")
-            if not env_name:
+            if not _is_nonempty_str(env_name):
                 raise PolygonAPIError("Polygon API key not provided")
 
-            env_val = os.getenv(str(env_name))
-            if not env_val:
+            env_name = env_name.strip()
+            v = os.getenv(env_name)
+            if _is_nonempty_str(v):
+                key = v.strip()
+            else:
                 raise PolygonAPIError("Polygon API key not provided")
 
-            key = env_val
+        # 5) final enforcement
+        if not _is_nonempty_str(key):
+            raise PolygonAPIError("Polygon API key not provided")
 
         self.api_key = key
-        self._stub = False
 
-    # ---------------- internals ----------------
-    def _headers(self) -> Dict[str, str]:
-        """
-        Tests expect query-param style key surfaced via headers() for inspection.
-        """
-        if not self.api_key:
+    def _headers(self) -> dict:
+        if not _is_nonempty_str(self.api_key):
             raise PolygonAPIError("Polygon API key not set")
         return {"apiKey": self.api_key}
 
-    def _request(
-        self, path: str, params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        GET wrapper that:
-        - attaches ?apiKey=... (query param auth)
-        - returns dict JSON or raises PolygonAPIError on any anomaly
-        """
+    def _request(self, path: str, params: Optional[dict] = None) -> dict:
         if self._stub:
-            return {"results": []}
+            raise PolygonAPIError("Polygon client is in stub mode")
 
-        if requests is None:  # pragma: no cover
-            raise PolygonAPIError("requests not available")
+        url = f"{self.base_url}/{str(path).lstrip('/')}"
+        p = dict(params or {})
 
-        url = f"{self.base_url}/{path.lstrip('/')}"
-        q = dict(params or {})
-        q.setdefault("apiKey", self._headers()["apiKey"])
+        # also include key as query param for compatibility
+        if _is_nonempty_str(self.api_key):
+            p.setdefault("apiKey", self.api_key)
+
+        sess = self.session if self.session is not None else requests
 
         try:
-            if self.session is not None:
-                resp = self.session.get(url, params=q, timeout=self.timeout)
-            else:
-                resp = requests.get(url, params=q, timeout=self.timeout)
+            resp = sess.get(url, params=p, headers=self._headers(), timeout=self.timeout)
+        except Exception as e:
+            raise PolygonAPIError(f"Polygon request failed: {e!r}") from e
 
-            # may raise any Exception per tests
-            resp.raise_for_status()
+        # HTTP error mapping
+        try:
+            if hasattr(resp, "raise_for_status"):
+                resp.raise_for_status()
+        except Exception as e:
+            raise PolygonAPIError(f"Polygon HTTP error: {e!r}") from e
+
+        # JSON parse mapping
+        try:
             data = resp.json()
         except Exception as e:
-            msg = str(e)
-            if isinstance(e, ValueError):
-                # json decode error
-                raise PolygonAPIError("Failed to parse Polygon response") from e
-            raise PolygonAPIError(msg) from e
+            raise PolygonAPIError(f"Failed to parse Polygon response: {e!r}") from e
 
         if not isinstance(data, dict):
             raise PolygonAPIError("Polygon response not a dict")
+
         return data
 
-    # ---------------- public API ----------------
-    def prev_close(self, symbol: str) -> Dict[str, Any]:
-        """Return previous-day aggregate for the ticker."""
-        return self._request(f"v2/aggs/ticker/{symbol}/prev")
+    def prev_close(self, symbol: str) -> dict:
+        sym = (symbol or "").strip().upper()
+        if not sym:
+            raise PolygonAPIError("Invalid symbol")
+        return self._request(f"v2/aggs/ticker/{sym}/prev", params={})
 
     def ping(self) -> bool:
         try:
-            _ = self.prev_close("AAPL")
+            # tests patch prev_close(); use it as the health probe
+            self.prev_close("AAPL")
             return True
-        except PolygonAPIError as e:
+        except Exception as e:
             logger.warning("Polygon ping failed: %s", e)
-            return False
-        except Exception:
             return False

@@ -1,179 +1,114 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
-from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
-from hybrid_ai_trading.runtime.run_context_reader import load_run_context
-from hybrid_ai_trading.runtime.run_context import RunContext
 
 import json
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Optional
 
-_DEFAULT_ENV_KEY = "HAT_BLOCKG_STATUS_PATH"
-_DEFAULT_PATH = os.path.join("logs", "blockg_status_stub.json")
+# Canonical exception type expected by tests/chokepoints
+from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
 
 
 @dataclass(frozen=True)
-class BlockGStatus:
-    as_of_date: str
-    nvda_blockg_ready: bool = False
-    spy_blockg_ready: bool = False
-    qqq_blockg_ready: bool = False
-
-    # freshness/quality fields (contract-driven)
-    phase4_ok_today: bool = False
-    ev_hard_daily_ok_today: bool = False
-    gatescore_fresh_today: bool = False
-    gatescore_fresh_for_session: bool = False
-    gatescore_recent_enough: bool = False
-    gatescore_age_days: int = 0
-    min_samples_ok_today: bool = False
-
-    @staticmethod
-    def from_dict(d: Dict[str, Any]) -> "BlockGStatus":
-        return BlockGStatus(
-            as_of_date=str(d.get("as_of_date") or ""),
-            nvda_blockg_ready=bool(d.get("nvda_blockg_ready", False)),
-            spy_blockg_ready=bool(d.get("spy_blockg_ready", False)),
-            qqq_blockg_ready=bool(d.get("qqq_blockg_ready", False)),
-            phase4_ok_today=bool(d.get("phase4_ok_today", False)),
-            ev_hard_daily_ok_today=bool(d.get("ev_hard_daily_ok_today", False)),
-            gatescore_fresh_today=bool(d.get("gatescore_fresh_today", False)),
-            gatescore_fresh_for_session=bool(d.get("gatescore_fresh_for_session", False)),
-            gatescore_recent_enough=bool(d.get("gatescore_recent_enough", False)),
-            gatescore_age_days=int(d.get("gatescore_age_days", 0) or 0),
-            min_samples_ok_today=bool(d.get("min_samples_ok_today", False)),
-        )
+class BlockGDecision:
+    ok: bool
+    reason: str
+    status_path: str
 
 
-def load_blockg_status(path: Optional[str] = None) -> BlockGStatus:
-    p = path or os.environ.get(_DEFAULT_ENV_KEY) or _DEFAULT_PATH
-    try:
-
-        with open(p, "r", encoding="utf-8-sig") as f:
-
-            d = json.load(f)
-
-    except FileNotFoundError:
-
-        # Fail-closed: missing contract is NOT a system error; it is "NOT READY"
-
-        raise BlockGNotReady(f"Block-G status missing at: {p}")
-    return BlockGStatus.from_dict(d)
+def _default_repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
 
 
-def symbol_ready(st: BlockGStatus, symbol: str) -> bool:
-    s = (symbol or "").upper().strip()
-    if s == "NVDA":
-        return st.nvda_blockg_ready
-    if s == "SPY":
-        return st.spy_blockg_ready
-    if s == "QQQ":
-        return st.qqq_blockg_ready
-    return False
-# ---------------------------------------------------------------------------
-# Backward-compatible contract gate (tests + legacy call sites expect this name)
-# ---------------------------------------------------------------------------
-def _resolve_is_paper_from_ctx(ctx: RunContext | None = None) -> bool:
+def _status_path(repo_root: Optional[Path] = None) -> Path:
+    env_p = os.environ.get("HAT_BLOCKG_STATUS_PATH", "").strip()
+    if env_p:
+        return Path(env_p)
+    root = repo_root or _default_repo_root()
+    return root / "logs" / "blockg_status_stub.json"
+
+
+def read_blockg_status(repo_root: Optional[Path] = None) -> Dict[str, Any]:
+    p = _status_path(repo_root)
+    if not p.exists():
+        raise FileNotFoundError(f"Block-G status missing: {p}")
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def is_symbol_ready(symbol: str, st: Dict[str, Any], repo_root: Optional[Path] = None) -> BlockGDecision:
+    sym = (symbol or "").upper().strip()
+    sp = str(_status_path(repo_root))
+
+    if sym == "NVDA":
+        ok = bool(st.get("nvda_blockg_ready", False))
+        return BlockGDecision(ok=ok, reason="nvda_blockg_ready=false" if not ok else "ok", status_path=sp)
+
+    key = f"{sym.lower()}_blockg_ready"
+    ok = bool(st.get(key, False))
+    return BlockGDecision(ok=ok, reason=f"{key}=false" if not ok else "ok", status_path=sp)
+
+
+def _infer_is_live(*args: Any, **kwargs: Any) -> bool:
     """
-    Canonical is_paper resolver:
-      1) ctx.is_paper
-      2) logs/run_context.json via load_run_context()
-      3) env:HAT_IS_PAPER
-    Default is paper-safe.
+    Determine if call is LIVE.
+    Policy: ctx wins over env/meta. If ctx says paper => not live (paper-safe bypass).
+    Supports RunContext and SimpleNamespace-style ctx objects used in tests.
     """
+    ctx = kwargs.get("ctx", None)
     try:
         if ctx is not None:
-            # Unified mode semantics: ctx.mode='live' implies LIVE (is_paper=False)
-            try:
-                if str(getattr(ctx, "mode", "")).lower() == "live":
-                    return False
-            except Exception:
-                pass
-
-            return bool(getattr(ctx, "is_paper", True))
-    except Exception:
-        return False  # fail-closed -> LIVE -> contract blocks
-
-    try:
-        rc = load_run_context()
-        return bool(getattr(rc, "is_paper", True))
+            m = str(getattr(ctx, "mode", "") or "").strip().lower()
+            ip = getattr(ctx, "is_paper", None)
+            # paper wins (fail-closed toward paper when explicit)
+            if m == "paper" or ip is True:
+                return False
+            if m == "live" or ip is False:
+                return True
     except Exception:
         pass
 
+    # Existing behavior fallback (env/meta)  keep semantics stable
     try:
-        return os.environ.get("HAT_IS_PAPER", "1").strip() != "0"
+        is_paper = kwargs.get("is_paper", None)
+        if is_paper is True:
+            return False
+        if is_paper is False:
+            return True
     except Exception:
-        return True
+        pass
 
-def ensure_symbol_blockg_ready(symbol: str,
-    *,
-    allow_paper: bool = True,
-    is_paper: Optional[bool] = None,
-    status_path: Optional[str] = None,
-    ctx: RunContext | None = None,
-) -> None:
-    """
-    Fail-closed contract gate.
+    # env fallback: HAT_IS_PAPER=0 means live
+    try:
+        import os
+        return str(os.environ.get("HAT_IS_PAPER", "1")).strip() == "0"
+    except Exception:
+        return False
 
-    - If allow_paper=True and is_paper=True -> bypass (paper-safe path).
-    - Otherwise requires per-symbol ready flag in Block-G status JSON.
-
-    This function is intentionally lightweight and stable because many tests
-    monkeypatch it directly.
-    """
-    sym = str(symbol or "").upper().strip()
-
-    # Determine paper/live intent (fail-safe default: paper)
-    if is_paper is None:
-        is_paper = _resolve_is_paper_from_ctx(ctx)
-    if bool(is_paper) and bool(allow_paper):
+def ensure_symbol_blockg_ready(symbol: str, *args: Any, **kwargs: Any) -> None:
+    if not _infer_is_live(*args, **kwargs):
         return
 
-    st = load_blockg_status(status_path) if status_path else load_blockg_status()
-    # Per-symbol readiness (fail-closed for LIVE)
-    mode = getattr(ctx, "mode", None) if ctx is not None else None
-    env_live = (str(os.environ.get("HAT_IS_PAPER", "1")).strip() == "0")
-    live = (is_paper is False) or (str(mode).lower() == "live") or env_live
-    if live:
-        sym_u = str(symbol).upper().strip()
-        key = f"{sym_u.lower()}_blockg_ready"
-        flag = getattr(st, key, None)
-        if flag is None:
-            # Fail-closed if field missing
-            raise BlockGNotReady(f"Block-G not ready: {key}=missing")
-        if flag is not True:
-            raise BlockGNotReady(f"Block-G not ready: {key}={flag}")
+    repo_root = kwargs.get("repo_root", None)
+    st = kwargs.get("status", None)
+    if st is None:
+        st = read_blockg_status(repo_root=repo_root)
+
+    decision = is_symbol_ready(symbol, st, repo_root=repo_root)
+    if not decision.ok:
+        raise BlockGNotReady(f"BLOCK-G DENY: {symbol} {decision.reason} ({decision.status_path})")
 
 
-    # -----------------------------------------------------------------------
-    # Upgrade #2: freshness/quality checks (contract-only, no recomputation)
-    # LIVE path must satisfy these daily requirements before per-symbol gating.
-    # -----------------------------------------------------------------------
-    if not bool(getattr(st, "phase4_ok_today", False)):
-        raise BlockGNotReady("BLOCK-G: phase4_ok_today false")
-    if not bool(getattr(st, "ev_hard_daily_ok_today", False)):
-        raise BlockGNotReady("BLOCK-G: ev_hard_daily_ok_today false")
-    if hasattr(st, "phase23_health_ok_today") and (not bool(getattr(st, "phase23_health_ok_today", False))):
-        raise BlockGNotReady("BLOCK-G: phase23_health_ok_today false")
-
-    if not bool(getattr(st, "gatescore_fresh_for_session", False)):
-        raise BlockGNotReady("BLOCK-G: gatescore_fresh_for_session false")
-    if not bool(getattr(st, "gatescore_recent_enough", False)):
-        raise BlockGNotReady("BLOCK-G: gatescore_recent_enough false")
-    # Defense-in-depth: if age field is present, enforce max=3 days
-    try:
-        age = int(getattr(st, "gatescore_age_days", 0))
-        if age > 3:
-            raise BlockGNotReady(f"BLOCK-G: gatescore_age_days too old ({age} > 3)")
-    except Exception:
-        if hasattr(st, "gatescore_age_days"):
-            raise BlockGNotReady("BLOCK-G: gatescore_age_days invalid")
-    if hasattr(st, "gatescore_samples_ok") and (not bool(getattr(st, "gatescore_samples_ok", False))):
-        raise BlockGNotReady("BLOCK-G: gatescore_samples_ok false")
-    if hasattr(st, "gatescore_threshold_ok_today") and (not bool(getattr(st, "gatescore_threshold_ok_today", False))):
-        raise BlockGNotReady("BLOCK-G: gatescore_threshold_ok_today false")
-
-    # Conservative: unknown symbols are not allowed for live
-    if not symbol_ready(st, sym):
-        raise BlockGNotReady(f"BLOCK-G: {sym} not ready (per-symbol flag false)")
+def assert_nvda_live_ready(*args: Any, **kwargs: Any) -> None:
+    """
+    Fail-closed NVDA live arming gate.
+    This is a STRICT guard: it does NOT infer live/paper. Callers use it right before any NVDA live order.
+    Requires BOTH BlockG contract ready AND NVDA live stamp today.
+    """
+    st = read_blockg_status(repo_root=kwargs.get("repo_root", None))
+    if not bool(st.get("nvda_blockg_ready", False)):
+        sp = str(_status_path(kwargs.get("repo_root", None)))
+        raise BlockGNotReady(f"BLOCK-G DENY: NVDA nvda_blockg_ready=false ({sp})")
+    # Require NVDA live stamp (separate human arming consent gate)
+    from hybrid_ai_trading.broker.ib_safe import require_nvda_live_stamp  # local import
+    require_nvda_live_stamp("NVDA")

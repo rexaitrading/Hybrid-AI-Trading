@@ -10,6 +10,10 @@ IBKR Executor (Hybrid AI Quant Pro v1.0 - DRY-RUN Safe)
 import argparse
 import json
 import os
+try:
+    from hybrid_ai_trading.runtime.run_context import RunContext
+except Exception:
+    RunContext = None
 import sys
 
 from ib_insync import IB
@@ -23,7 +27,7 @@ from hybrid_ai_trading.data.clients.ibkr_client import (
 
 
 def _require_live(args: argparse.Namespace) -> bool:
-    if not args.live:
+    if not live_flag:
         return False
     if os.getenv("IBKR_LIVE", "0") != "1":
         print("Refusing LIVE: set IBKR_LIVE=1 to enable IBKR orders.", file=sys.stderr)
@@ -47,7 +51,13 @@ def main() -> None:
     ap.add_argument("--live", action="store_true", help="Requires IBKR_LIVE=1")
     args = ap.parse_args()
 
-    ib: IB = connect_ib(readonly=not args.live)
+    # Unified intent: RunContext (does NOT bypass env live gate)
+    ctx = None
+    if RunContext is not None:
+        ctx = RunContext.from_env_and_args(symbol="IBKR", regime="exec", mode=("live" if bool(args.live) else "paper"))
+
+    live_flag = bool(args.live) or (ctx is not None and str(getattr(ctx, "mode", "")).lower() == "live")
+    ib: IB = connect_ib(readonly=not live_flag)
 
     try:
         if args.cancel_all:
