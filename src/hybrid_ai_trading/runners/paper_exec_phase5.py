@@ -163,7 +163,7 @@ def main() -> int:
     outp.write_text("\n".join(wrote) + ("\n" if wrote else ""), encoding="utf-8")
 
     ok = pnl_samples >= int(args.min_samples)
-    print(json.dumps({"ok": ok, "pnl_samples": pnl_samples, "rows": len(wrote), "out": str(outp), "in": str(inp}, indent=2))
+    print(json.dumps({"ok": ok, "pnl_samples": pnl_samples, "rows": len(wrote), "out": str(outp), "in": str(inp)}, indent=2))
     return 0 if ok else 2
 
 if __name__ == "__main__":
