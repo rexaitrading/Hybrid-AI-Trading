@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 # Canonical exception type expected by tests/chokepoints
-from hybrid_ai_trading.execution.blockg_enforce import BlockGNotReady
+from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
 
 
 @dataclass(frozen=True)
