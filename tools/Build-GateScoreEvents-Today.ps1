@@ -3,8 +3,26 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "ALL",
 
-  [int]$MinEvents = 1
+  [int]$MinEvents = 1,
+  [switch]$AllowConstantPrice
 )
+
+# --- Institutional: flat-price gate (fail-closed unless -AllowConstantPrice) ---
+function Get-UniquePriceCount([string]$sym,[string]$asof,[string]$repo){
+  $f = Join-Path $repo ("logs\paper_live_{0}_{1}.jsonl" -f $sym,$asof)
+  if(-not (Test-Path $f)){ return -1 }
+  $px = New-Object System.Collections.Generic.HashSet[string]
+  foreach($ln in (Get-Content $f -Encoding utf8)){
+    $s = ($ln + "").Trim(); if(-not $s){ continue }
+    try{
+      $r = $s | ConvertFrom-Json
+      $v = [double]($r.price_map.$sym)
+      if($v -gt 0){ [void]$px.Add(("{0:F4}" -f $v)) }
+    } catch {}
+  }
+  return $px.Count
+}
+
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -36,6 +54,16 @@ function Run-One([string]$sym){
   }
 
   $out = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $symU.ToLower())
+
+  # --- Institutional: flat-price gate (uniform; fail-closed unless -AllowConstantPrice) ---
+  $repoRoot = (Get-Location).Path
+  $u = Get-UniquePriceCount $symU $today $repoRoot
+  if((-not $AllowConstantPrice) -and ($u -ge 0) -and ($u -lt 2)){
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($out, "", $utf8NoBom)
+    Write-Host ("[{0}-GS-EVENTS] FAIL-CLOSED: degenerate_constant_metrics (unique_prices={1}) -> wrote STUB file only (no official events)" -f $symU,$u)
+    return @{sym=$symU; ok=$false; rc=4; reason="degenerate_constant_metrics"; unique_prices=$u; input=$pick; out=$out; rows=0}
+  }
 
   $writer = switch($symU){
     "NVDA" { Join-Path $toolsDir "Write-NvdaGateScoreEventsFromPaperlive.ps1" }
