@@ -404,7 +404,7 @@ if((To-Bool $payload.phase4_ok_today)){
   if((To-Bool $payload.ev_hard_daily_ok_today)){
     if((To-Bool $payload.gatescore_ok_today)){
       if((To-Bool $payload.gatescore_fresh_today)){
-        if((To-Bool System.Collections.Specialized.OrderedDictionary.nvda_gatescore_events_ok_today)){
+        if((To-Bool $payload.nvda_gatescore_events_ok_today)){
           $payload.nvda_blockg_ready = $true
         }
       }
