@@ -7,6 +7,10 @@ param(
   [int]$Iterations = 200,
   [int]$SleepMs = 500,
 
+  # IB market data type: 1=live,2=frozen,3=delayed,4=delayed-frozen
+  [ValidateSet(1,2,3,4)]
+  [int]$Mdt = 4,
+
   # Optional: path to a YAML/JSON config if your runner expects it
   [string]$Config = "config/config.yaml",
 
@@ -70,6 +74,7 @@ Write-Host ("[PAPER-LIVE] Config={0}" -f $Config) -ForegroundColor Cyan
 
 # ---- Runner args (deterministic) ----
 $argsRunner = @("--config", $Config, "--log-file", "auto", "--universe", $Symbol)
+  $argsRunner += @("--mdt", [string]$Mdt)
 
 if($Iterations -le 1){
   $argsRunner += @("--once")

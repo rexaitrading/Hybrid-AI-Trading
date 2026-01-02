@@ -136,10 +136,12 @@ def main() -> int:
         portfolio.update_position(sym, side, float(qty), float(fill_px), commission=0.0, currency=None)
 
         rep = portfolio.report()
+        pos1 = _pos_size(rep, sym)
+        pos1 = _pos_size(rep, sym)
         cur_realized = _realized(rep)
         delta = cur_realized - prev_realized
 
-        sample = 1 if abs(delta) > 0.0 else 0
+        sample = 1 if (side == "SELL" and pos0 > 0.0 and pos1 == 0.0) else 0
         if sample:
             pnl_samples += 1
             prev_realized = cur_realized
