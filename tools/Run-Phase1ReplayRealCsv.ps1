@@ -50,7 +50,12 @@ $entry = Join-Path $repoRoot "runners\backtest_replay.py"
 if (-not (Test-Path $entry)) { throw "Missing runners/backtest_replay.py at $entry" }
 
 & $py $entry --config $Config --input $InputCsv --log $OutLog --batch $Batch
-if ($LASTEXITCODE -ne 0) { throw "Phase1 replay failed (exit=$LASTEXITCODE)" }
+if($LASTEXITCODE -eq 0){ }
+elseif($LASTEXITCODE -eq 2){
+  # rc=2 means "no actionable decisions" (normal). Allow for metrics/GateScore builds.
+  Write-Host "[PHASE1] NOTE: rc=2 (no actionable). Continuing (metrics build)."
+}
+else{ throw "Phase1 replay failed (exit=$LASTEXITCODE)" }
 
 Write-Host "[PHASE1] OK" -ForegroundColor Green
 exit 0
