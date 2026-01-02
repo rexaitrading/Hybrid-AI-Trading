@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional
 
 from hybrid_ai_trading.execution.paper_simulator import PaperSimulator
 from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
-from hybrid_ai_trading.execution.trade_logger import TradeLogger
 
 def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
     if not path.exists():
@@ -37,6 +36,16 @@ def _price_from_line(sym: str, row: Dict[str, Any]) -> Optional[float]:
     except Exception:
         return None
 
+def _decision_for_sym(sym: str, row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    res = row.get("result") or []
+    if not isinstance(res, list):
+        return None
+    for it in res:
+        if isinstance(it, dict) and str(it.get("symbol", "")).upper() == sym:
+            d0 = it.get("decision") or {}
+            return d0 if isinstance(d0, dict) else None
+    return None
+
 def _qty_from_decision(dec: Dict[str, Any]) -> int:
     try:
         ks = dec.get("kelly_size") or {}
@@ -48,8 +57,28 @@ def _approved(dec: Dict[str, Any]) -> bool:
     ra = dec.get("risk_approved") or {}
     return bool(ra.get("approved", False))
 
+def _pos_size(rep: Dict[str, Any], sym: str) -> float:
+    pos = rep.get("positions") or {}
+    v = pos.get(sym)
+    if v is None:
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, dict):
+        try:
+            return float(v.get("size", 0.0) or 0.0)
+        except Exception:
+            return 0.0
+    return 0.0
+
+def _realized(rep: Dict[str, Any]) -> float:
+    try:
+        return float(rep.get("realized_pnl", 0.0) or 0.0)
+    except Exception:
+        return 0.0
+
 def main() -> int:
-    ap = argparse.ArgumentParser("Paper Exec Phase5 (paper-only): simulate fills + realized pnl evidence")
+    ap = argparse.ArgumentParser("paper_exec_phase5: generate pnl_samples evidence from paper_live ticks")
     ap.add_argument("--as-of-date", required=True)
     ap.add_argument("--symbol", required=True)
     ap.add_argument("--in", dest="inp", default="")
@@ -58,12 +87,13 @@ def main() -> int:
     args = ap.parse_args()
 
     sym = args.symbol.upper().strip()
-    day = args.as_of_date.strip()[:10]
+    day = (args.as_of_date or "").strip()[:10]
     if not sym or not day:
+        print(json.dumps({"ok": False, "reason": "bad_args"}, indent=2))
         return 2
 
-    inp = Path(args.inp) if args.inp else Path("logs") / f"paper_live_{sym}_{day}.jsonl"
-    outp = Path(args.outp) if args.outp else Path("logs") / f"{sym.lower()}_phase5_paperexec_results.jsonl"
+    inp = Path(args.inp) if args.inp else (Path("logs") / f"paper_live_{sym}_{day}.jsonl")
+    outp = Path(args.outp) if args.outp else (Path("logs") / f"{sym.lower()}_phase5_paperexec_results.jsonl")
 
     rows = _read_jsonl(inp)
     if not rows:
@@ -72,97 +102,57 @@ def main() -> int:
 
     sim = PaperSimulator()
     portfolio = PortfolioTracker()
-    TradeLogger(jsonl_path="logs/trades.jsonl")  # ensures logger init
 
-    def _pos_size(rep: Dict[str, Any], sym0: str) -> float:
-        try:
-            pos = rep.get("positions") or {}
-            v = pos.get(sym0)
-            if v is None: return 0.0
-            if isinstance(v, (int, float)): return float(v)
-            if isinstance(v, dict):
-                for k in ("size","qty","position","pos","shares"):
-                    if k in v:
-                        try: return float(v.get(k) or 0.0)
-                        except Exception: pass
-        except Exception:
-            pass
-        return 0.0
-
-    def _realized(rep: Dict[str, Any]) -> float:
-        try: return float(rep.get("realized_pnl", 0.0) or 0.0)
-        except Exception: return 0.0
-
-    # --- Manual realized PnL (tighten-only; evidence uses real px from input) ---
-open_px: Optional[float] = None
-open_qty: float = 0.0
-
-
+    prev_realized = _realized(portfolio.report())
     pnl_samples = 0
     wrote: List[str] = []
 
     for r in rows:
-        if (str(r.get("as_of_date",""))[:10]) != day:
+        if (str(r.get("as_of_date", ""))[:10]) != day:
             continue
 
-        res = r.get("result") or []
-        if not isinstance(res, list) or not res:
+        dec = _decision_for_sym(sym, r)
+        if dec is None:
             continue
-
-        d0: Optional[Dict[str, Any]] = None
-        for it in res:
-            if isinstance(it, dict) and str(it.get("symbol","")).upper() == sym:
-                d0 = (it.get("decision") or {})
-                break
-        if not isinstance(d0, dict):
+        if not _approved(dec):
             continue
 
         px = _price_from_line(sym, r)
         if px is None:
             continue
 
-        if not _approved(d0):
-            continue
-
-        qty = _qty_from_decision(d0)
+        qty = _qty_from_decision(dec)
         if qty <= 0:
             continue
 
-        # deterministic: alternate buy/sell to create closes
         rep0 = portfolio.report()
         pos0 = _pos_size(rep0, sym)
-        side = "BUY" if (pos0 <= 0.0) else "SELL"
+        side = "BUY" if pos0 <= 0.0 else "SELL"
 
         fill = sim.simulate_fill(sym, side, qty, px)
-        portfolio.update_position(sym, side, float(qty), float(fill.get("px", px)), commission=0.0, currency=None)
+        fill_px = float(fill.get("px", px))
 
-        rep = portfolio.report()
+        # PortfolioTracker signature: (symbol, side, size, price, commission=0.0, currency=None)
+        portfolio.update_position(sym, side, float(qty), float(fill_px), commission=0.0, currency=None)
 
         rep = portfolio.report()
         cur_realized = _realized(rep)
-        delta = 0.0  # manual mode
-        sample = 0
-        # manual open/close:
-if side == "BUY" and open_px is None:
-    open_px = px
-    open_qty = float(qty)
-elif side == "SELL" and open_px is not None:
-    realized = (px - float(open_px)) * float(open_qty)
-    sample = 1
-    pnl_samples += 1
-    open_px = None
-    open_qty = 0.0
-        if sample: prev_realized = cur_realized
+        delta = cur_realized - prev_realized
+
+        sample = 1 if abs(delta) > 0.0 else 0
+        if sample:
+            pnl_samples += 1
+            prev_realized = cur_realized
 
         wrote.append(json.dumps({
             "as_of_date": day,
             "symbol": sym,
             "source": "paper_exec_phase5",
-            "price": px,
             "side": side,
-            "qty": qty,
-            "realized_pnl": realized if sample else None,
-            "pnl_samples": sample,
+            "qty": int(qty),
+            "price": float(px),
+            "realized_pnl": float(delta) if sample else None,
+            "pnl_samples": int(sample),
             "count_signals": 1,
         }, ensure_ascii=False, separators=(",", ":")))
 
@@ -173,7 +163,7 @@ elif side == "SELL" and open_px is not None:
     outp.write_text("\n".join(wrote) + ("\n" if wrote else ""), encoding="utf-8")
 
     ok = pnl_samples >= int(args.min_samples)
-    print(json.dumps({"ok": ok, "pnl_samples": pnl_samples, "rows": len(wrote), "out": str(outp), "in": str(inp)}, indent=2))
+    print(json.dumps({"ok": ok, "pnl_samples": pnl_samples, "rows": len(wrote), "out": str(outp), "in": str(inp}, indent=2))
     return 0 if ok else 2
 
 if __name__ == "__main__":
