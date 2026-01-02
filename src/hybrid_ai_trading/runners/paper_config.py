@@ -32,6 +32,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ap.add_argument("--client-id", type=int, default=3021, help="IBKR clientId.")
     ap.add_argument("--log-file", type=str, default=None, help="Optional JSONL log file path.")
+    ap.add_argument("--ticks", type=int, default=300, help="Number of ticks to run (ignored when --once).")
+    ap.add_argument("--sleep-sec", type=float, default=0.05, help="Sleep seconds between ticks.")
+    ap.add_argument("--dry-drill", action="store_true", help="Don't place/route orders; dry run signals only.")
+    ap.add_argument("--snapshots-when-closed", action="store_true", help="When market is CLOSED and preflight is forced, still proceed to IB snapshots + QuantCore eval.")
+    ap.add_argument("--ib-snapshots", action="store_true", help="Use IB snapshot prices when available (paper).")
+    ap.add_argument("--enforce-riskhub", action="store_true", help="If set, deny actions when RiskHub returns ok=false (paper-safe gate).")
+    ap.add_argument("--prefer-providers", action="store_true", help="Use provider prices to override IB snapshots when available.")
+    ap.add_argument("--provider-only", action="store_true", help="Skip IB session and use provider prices only.")
+    ap.add_argument(
+        "--once", action="store_true", help="Run a single tick/batch and exit."
+    )
+    ap.add_argument(
+        "--universe",
+        type=str,
+        default="AAPL,MSFT",
+        help="Comma-separated symbols list.",
+    )
+    ap.add_argument(
+        "--mdt", type=int, default=3, help="Market data throttle / cadence setting."
+    )
+    ap.add_argument("--client-id", type=int, default=3021, help="IBKR clientId.")
+    ap.add_argument("--log-file", type=str, default=None, help="Optional JSONL log file path.")
     ap.add_argument(
         "--dry-drill",
         action="store_true",
@@ -39,6 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ap.add_argument(
         "--snapshots-when-closed",
+    ap.add_argument("--ib-snapshots", action="store_true", help="Use IB snapshot prices when available (paper).")
         action="store_true",
         help="When market is CLOSED and preflight is forced, still proceed to IB snapshots + QuantCore eval.",
     )
@@ -71,6 +94,17 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
 
 def load_config(path: str) -> Dict[str, Any]:
+    # Resolve relative config paths against repo root (prevents src\\config rebasing)
+    try:
+        pp = pathlib.Path(path)
+        if not pp.is_absolute():
+            here = pathlib.Path(__file__).resolve()
+            repo = here.parents[3]
+            pp = (repo / pp).resolve()
+            path = str(pp)
+    except Exception:
+        pass
+
     """Simple YAML loader used by runner/trader (resilient)."""
     try:
         pp = pathlib.Path(path)
