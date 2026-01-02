@@ -43,7 +43,21 @@ def main(argv=None) -> int:
         return 0
 
     # default: loop a couple ticks (safe)
-    for i in range(3):
+    # --- loop control (institutional: honor --ticks; no hidden caps) ---
+    ticks = 300
+    sleep_sec = 0.05
+    try:
+        ticks = int(getattr(args, "ticks", ticks))
+    except Exception:
+        ticks = 300
+    try:
+        sleep_sec = float(getattr(args, "sleep_sec", sleep_sec))
+    except Exception:
+        sleep_sec = 0.05
+    n_ticks = 1 if bool(getattr(args, "once", False)) else max(1, ticks)
+    print(f"[PaperRunner] loopctl ticks={n_ticks} sleep_sec={sleep_sec}")
+
+    for i in range(n_ticks):
         print(f"[PaperRunner] tick {i+1}")
         time.sleep(0.1)
     print("[PaperRunner] done.")
