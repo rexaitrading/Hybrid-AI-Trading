@@ -51,9 +51,25 @@ foreach($it in $inputs){
   $rows = Read-JsonlSafe $it.path
   $sumPnl = 0.0
   foreach($r in $rows){
-    if($null -ne $r.realized_pnl){ $sumPnl += [double]$r.realized_pnl }
-    elseif($null -ne $r.pnl){ $sumPnl += [double]$r.pnl }
+  # Guard: only objects can have properties; ignore primitives/arrays/null
+  if($null -eq $r){ continue }
+  if(-not ($r -is [psobject])){ continue }
+
+  try {
+    if($null -ne $r.PSObject.Properties["realized_pnl"] -and $null -ne $r.realized_pnl){
+      $v = $r.realized_pnl
+      if($v -is [ValueType] -or ($v -is [string] -and $v.Trim() -ne "")){ $sumPnl += [double]$v }
+      continue
+    }
+    if($null -ne $r.PSObject.Properties["pnl"] -and $null -ne $r.pnl){
+      $v = $r.pnl
+      if($v -is [ValueType] -or ($v -is [string] -and $v.Trim() -ne "")){ $sumPnl += [double]$v }
+      continue
+    }
+  } catch {
+    # ignore parse/convert errors; fail-soft
   }
+}
   $symbolStats += [pscustomobject]@{
     symbol = $it.sym
     rows   = @($rows).Count
@@ -74,3 +90,4 @@ $obj = [pscustomobject]@{
 Write-Utf8NoBomLf -Path $outPath -Text ($obj | ConvertTo-Json -Depth 8)
 Write-Host "[PHASE6] wrote: $outPath" -ForegroundColor Cyan
 exit 0
+

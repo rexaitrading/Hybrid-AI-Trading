@@ -65,7 +65,7 @@ if (-not [string]::IsNullOrWhiteSpace($override)) {
 
 $entry = $null
 if (-not [string]::IsNullOrWhiteSpace($override)) {
-  $entry = Join-Path $repoRoot $override
+$entry = $override; if(-not [System.IO.Path]::IsPathRooted($entry)){ $entry = Join-Path $repoRoot $override }
   if (-not (Test-Path -LiteralPath $entry)) { Write-Host "[INTEL] NOT READY: HAT_INTEL_ENTRYPOINT set but not found: $entry" -ForegroundColor Yellow; exit 2 }
 } else {
   # No override => never run arbitrary discovered .py. Use minimal safe intel pulse.
@@ -98,3 +98,4 @@ if ($entry.ToLowerInvariant().EndsWith(".py")) {
 }
 
 throw "Unsupported intel entrypoint type: $entry"
+
