@@ -10,6 +10,11 @@ $intelDir = Join-Path $repoRoot "src\.intel"
 if (-not (Test-Path $intelDir)) { New-Item -ItemType Directory -Path $intelDir -Force | Out-Null }
 
 $pulse = Join-Path $intelDir "risk_pulse.jsonl"
+
+# Canonical log outputs (Phase-6 invariant): always mirror minimal pulse into .\logs
+$pulseLog = Join-Path $repoRoot "logs\risk_pulse.jsonl"
+$intelFeedLog = Join-Path $repoRoot "logs\intel_feed.jsonl"
+
 $ts = (Get-Date).ToUniversalTime().ToString("o")
 $today = (Get-Date).ToString("yyyy-MM-dd")
 
@@ -45,4 +50,14 @@ $line = ($obj | ConvertTo-Json -Compress)
 Add-Content -LiteralPath $pulse -Value $line -Encoding utf8
 
 Write-Host "[INTEL-MIN] wrote $pulse" -ForegroundColor Green
+
+# Mirror to canonical logs (fail-closed best-effort)
+try { Copy-Item -LiteralPath $pulse -Destination $pulseLog -Force } catch { }
+try {
+  # minimal intel_feed is a single-line pulse wrapper
+  $line = Get-Content -LiteralPath $pulse -Encoding utf8 | Select-Object -Last 1
+  $line | Out-File -LiteralPath $intelFeedLog -Encoding utf8 -Append
+} catch { }
+Write-Host "[INTEL-MIN] mirrored $pulse -> $pulseLog and appended -> $intelFeedLog" -ForegroundColor Green
+
 exit 0

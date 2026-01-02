@@ -66,6 +66,25 @@ if (-not $statusPath) { $statusPath = $defaultPath }
 $st = Read-Json $statusPath
 if (-not $st) { Fail "Missing/invalid Block-G status JSON at: $statusPath" }
 
+# --- CONTRACT-ONLY READINESS (institutional, single semantic owner) ---
+$sym = $Symbol
+if (-not $sym) { $sym = "NVDA" }
+if ($sym.ToUpperInvariant() -eq "ALL") {
+  foreach($s in @("NVDA","SPY","QQQ")){
+    $k = ($s.ToLower() + "_blockg_ready")
+    if (-not ($st.PSObject.Properties.Name -contains $k)) { Fail "Contract missing field: $k" }
+    if (-not [bool]$st.$k) { Fail "$s not ready ($k=false)" }
+  }
+  Write-Host "[BLOCKG] READY: Symbol=ALL Path=$statusPath" -ForegroundColor Green
+  exit 0
+}
+$k = ($sym.ToLower() + "_blockg_ready")
+if (-not ($st.PSObject.Properties.Name -contains $k)) { Fail "Contract missing field: $k" }
+if (-not [bool]$st.$k) { Fail "$sym not ready ($k=false)" }
+Write-Host "[BLOCKG] READY: Symbol=$sym Path=$statusPath" -ForegroundColor Green
+exit 0
+
+
 # --- GateScore session-age policy (contract-only; do not recompute) ---
 $MAX_GS_AGE_DAYS = 3
 # 3A) Per-symbol GateScore validation (contract-only)
