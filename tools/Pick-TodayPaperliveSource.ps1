@@ -2,7 +2,6 @@
 param(
   [ValidateSet("NVDA","SPY","QQQ")]
   [string]$Symbol,
-
   [string]$LogsDir = ".\logs"
 )
 
@@ -10,17 +9,13 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $today = (Get-Date).ToString("yyyy-MM-dd")
-$logsPathInfo = Resolve-Path -LiteralPath $LogsDir
-$logs = $logsPathInfo.Path
+$logs = (Resolve-Path -LiteralPath $LogsDir).Path
 
 $lower = $Symbol.ToLower()
 $symU  = $Symbol.ToUpper()
 
 $candidates = @(
-  # paper_runner auto log (true today session)
   (Join-Path $logs ("paper_live_{0}_{1}.jsonl" -f $symU, $today)),
-
-  # historical "today" / "with_micro_today" variants
   (Join-Path $logs ("{0}_phase5_paperlive_results_with_micro_today.jsonl" -f $lower)),
   (Join-Path $logs ("{0}_phase5_paperlive_results_today.jsonl" -f $lower)),
   (Join-Path $logs ("{0}_phase5_paperlive_results.jsonl" -f $lower))
@@ -39,8 +34,7 @@ foreach($p in $candidates){
   if(-not (Test-Path -LiteralPath $p)){ continue }
   if((Get-Item -LiteralPath $p).Length -le 0){ continue }
 
-  $lines = Get-Content -LiteralPath $p -Encoding utf8
-  foreach($ln in $lines){
+  foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)){
     if([string]::IsNullOrWhiteSpace($ln)){ continue }
     $d1 = Get-AsOf $ln
     $d2 = Get-TsTrade $ln
