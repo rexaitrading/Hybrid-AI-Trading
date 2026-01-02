@@ -74,6 +74,28 @@ def main() -> int:
     portfolio = PortfolioTracker()
     TradeLogger(jsonl_path="logs/trades.jsonl")  # ensures logger init
 
+    def _pos_size(rep: Dict[str, Any], sym0: str) -> float:
+        try:
+            pos = rep.get("positions") or {}
+            v = pos.get(sym0)
+            if v is None: return 0.0
+            if isinstance(v, (int, float)): return float(v)
+            if isinstance(v, dict):
+                for k in ("size","qty","position","pos","shares"):
+                    if k in v:
+                        try: return float(v.get(k) or 0.0)
+                        except Exception: pass
+        except Exception:
+            pass
+        return 0.0
+
+    def _realized(rep: Dict[str, Any]) -> float:
+        try: return float(rep.get("realized_pnl", 0.0) or 0.0)
+        except Exception: return 0.0
+
+    prev_realized = _realized(portfolio.report())
+
+
     pnl_samples = 0
     wrote: List[str] = []
 
@@ -105,16 +127,21 @@ def main() -> int:
             continue
 
         # deterministic: alternate buy/sell to create closes
-        side = "BUY" if (portfolio.positions.get(sym, 0.0) <= 0.0) else "SELL"
+        rep0 = portfolio.report()
+        pos0 = _pos_size(rep0, sym)
+        side = "BUY" if (pos0 <= 0.0) else "SELL"
 
         fill = sim.simulate_fill(sym, side, qty, px)
         portfolio.update_position(sym, side, float(qty), float(fill.get("px", px)), commission=0.0, currency=None)
 
         rep = portfolio.report()
-        rp = float(rep.get("realized_pnl_by_symbol", {}).get(sym, 0.0) or 0.0)
 
-        sample = 1 if abs(rp) > 0 else 0
+        rep = portfolio.report()
+        cur_realized = _realized(rep)
+        delta = cur_realized - prev_realized
+        sample = 1 if abs(delta) > 0.0 else 0
         pnl_samples += sample
+        if sample: prev_realized = cur_realized
 
         wrote.append(json.dumps({
             "as_of_date": day,
