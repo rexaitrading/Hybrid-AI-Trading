@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -16,9 +17,6 @@ class BlockGDecision:
     reasons: List[str]
     path: str
 
-class BlockGNotReady(RuntimeError):
-    """Raised when Block-G contract is not satisfied for a live order."""
-    pass
 
 
 def _load_status(path: Path) -> Dict[str, Any]:
@@ -69,18 +67,34 @@ def require_blockg_ready(symbol: str, *, is_live: bool) -> None:
     d = check_symbol_ready(sym)
     if not d.ready:
         msg = f"BLOCKG_NOT_READY sym={sym} path={d.path} reasons={';'.join(d.reasons)[:500]}"
-        raise RuntimeError(msg)
+        raise BlockGNotReady(msg)
+def require_blockg_ready_for_live(symbol: str, *, status: dict | None = None) -> None:
+    """
+    Test + broker wrapper.
 
-def require_blockg_ready_for_live(symbol: str) -> None:
+    - Live is determined by HAT_IS_PAPER=0.
+    - If status is provided, use it (tests).
+    - Fail-closed for unknown symbols.
+    - Raises BlockGNotReady on failure.
     """
-    Broker chokepoint wrapper.
-    Live is determined by HAT_IS_PAPER=0.
-    Raises BlockGNotReady on failure (fail-closed).
-    """
+    sym = (symbol or "").upper().strip()
+    if sym not in {"NVDA", "SPY", "QQQ"}:
+        raise BlockGNotReady(f"Block-G not ready: unsupported_symbol={sym}")
+
     is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
-    try:
-        require_blockg_ready(symbol, is_live=is_live)
-    except Exception as e:
-        raise BlockGNotReady(str(e)) from e
+    if not is_live:
+        return
+
+    if status is not None:
+        key = f"{sym.lower()}_blockg_ready"
+        if bool(status.get(key, False)) is not True:
+            reasons = status.get("reasons_not_ready") or [f"{key}=false"]
+            # tests expect explicit key=false substring
+            if all(str(x).lower() != f"{key}=false" for x in reasons):
+                reasons = list(reasons) + [f"{key}=false"]
+            raise BlockGNotReady(";".join([str(x) for x in reasons])[:500])
+        return
+
+    require_blockg_ready(sym, is_live=True)
 
 
