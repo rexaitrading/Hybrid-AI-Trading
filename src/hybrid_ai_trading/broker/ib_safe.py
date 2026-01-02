@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from hybrid_ai_trading.runtime.run_context import RunContext
-from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 import os
 import random
 import time
@@ -245,4 +244,5 @@ def map_ib_error(err: BaseException) -> str:
     if "unreachable" in msg:
         return "HOST_UNREACHABLE"
     return "UNKNOWN"
+
 

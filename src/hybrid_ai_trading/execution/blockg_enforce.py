@@ -66,3 +66,12 @@ def require_blockg_ready(symbol: str, *, is_live: bool) -> None:
     if not d.ready:
         msg = f"BLOCKG_NOT_READY sym={sym} path={d.path} reasons={';'.join(d.reasons)[:500]}"
         raise RuntimeError(msg)
+
+def require_blockg_ready_for_live(symbol: str) -> None:
+    """
+    Broker chokepoint wrapper.
+    Live is determined by HAT_IS_PAPER=0 (fail-closed: only enforce when live).
+    """
+    is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
+    require_blockg_ready(symbol, is_live=is_live)
+
