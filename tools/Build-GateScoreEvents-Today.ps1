@@ -10,28 +10,43 @@ $ErrorActionPreference="Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
+$today = (Get-Date).ToString("yyyy-MM-dd")
 
-# Prefer canonical location if present
-$candidates = @(
-  (Join-Path $repoRoot "tools\Build-GateScoreEvents-Today.ps1"),
-  (Join-Path $repoRoot "tools\Build-GateScoreEvents.ps1"),
-  (Join-Path $repoRoot "tools\Run-GateScoreEvents.ps1")
-) | Select-Object -Unique
+function Run-One([string]$sym){
+  $symU = $sym.ToUpper()
+  $out = Join-Path $repoRoot ("logs\{0}_gatescore_events.jsonl" -f $symU.ToLower())
 
-$target = $null
-foreach($c in $candidates){
-  if(Test-Path -LiteralPath $c){
-    if((Resolve-Path $c).Path -ne (Resolve-Path $PSCommandPath).Path){
-      $target = $c
-      break
-    }
+  $writer = switch($symU){
+    "NVDA" { Join-Path $toolsDir "Write-NvdaGateScoreEventsFromPaperlive.ps1" }
+    "SPY"  { Join-Path $toolsDir "Write-SpyGateScoreEventsFromPaperlive.ps1" }
+    "QQQ"  { Join-Path $toolsDir "Write-QqqGateScoreEventsFromPaperlive.ps1" }
   }
+
+  if(-not (Test-Path -LiteralPath $writer)){
+    Write-Host ("[GS-EVENTS] {0} missing writer: {1}" -f $symU,$writer) -ForegroundColor Red
+    return @{sym=$symU; ok=$false; rc=3; reason="missing_writer"; out=$out; rows=0}
+  }
+
+  # Writers handle their own input discovery; enforce MinEvents.
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $writer -OutPath $out -Mode rewrite -MinEvents $MinEvents | Out-Host
+  $rc = $LASTEXITCODE
+
+  $rows = 0
+  if(Test-Path -LiteralPath $out){ $rows = @(Get-Content -LiteralPath $out -Encoding utf8).Count }
+
+  $ok = ($rc -eq 0 -and $rows -ge $MinEvents)
+  return @{sym=$symU; ok=$ok; rc=$rc; out=$out; rows=$rows}
 }
 
-if(-not $target){
-  Write-Host "[GS-EVENTS] NOT FOUND: no canonical GateScore events builder script present in tools/. (fail-closed)" -ForegroundColor Red
-  exit 2
-}
+$syms = @()
+if($Symbol -eq "ALL"){ $syms = @("NVDA","SPY","QQQ") } else { $syms = @($Symbol) }
 
-powershell -NoProfile -ExecutionPolicy Bypass -File $target -Symbol $Symbol -MinEvents $MinEvents | Out-Host
-exit $LASTEXITCODE
+$results = @()
+foreach($s in $syms){ $results += (Run-One $s) }
+
+$bad = @($results | Where-Object { -not $_.ok })
+$payload = [ordered]@{ as_of_date=$today; results=$results; ok=($bad.Count -eq 0); bad=$bad }
+$payload | ConvertTo-Json -Depth 6 | Out-Host
+
+if($bad.Count -eq 0){ exit 0 }
+exit 2

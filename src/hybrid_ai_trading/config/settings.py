@@ -14,9 +14,7 @@ import yaml
 logger = logging.getLogger("hybrid_ai_trading.config.settings")
 
 # Project root and config path are constants for clarity and testability
-PROJECT_ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
-)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "config", "config.yaml")
 
 
@@ -57,6 +55,16 @@ def load_config(force: bool = False) -> Dict[str, Any]:
     return cfg
 
 
+
+def load_config_strict() -> Dict[str, Any]:
+    """Strict config loader: fail-closed if config.yaml missing or invalid."""
+    config_path = _find_config_path()
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Missing config.yaml at: {config_path}")
+    cfg = load_config(force=False)
+    if not isinstance(cfg, dict) or not cfg:
+        raise RuntimeError(f"Config invalid/empty at: {config_path}")
+    return cfg
 def get_config_value(*keys: str, default: Any = None) -> Any:
     """Retrieve a nested config value with a safe default."""
     node: Any = CONFIG
@@ -74,10 +82,14 @@ def get_config_value(*keys: str, default: Any = None) -> Any:
 CONFIG: Dict[str, Any] = load_config()
 
 __all__ = [
-    "CONFIG",
+    
+    "load_config_strict",
+"CONFIG",
     "load_config",
     "get_config_value",
     "_find_config_path",
     "PROJECT_ROOT",
     "CONFIG_PATH",
 ]
+
+
