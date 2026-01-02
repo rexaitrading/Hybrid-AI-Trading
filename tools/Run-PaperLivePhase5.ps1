@@ -14,6 +14,7 @@ param(
 
   # Explicit stub mode (tighten-only: must be opt-in)
   [switch]$ProviderOnly
+  ,[switch]$SnapshotsWhenClosed
 )
 
 Set-StrictMode -Version Latest
@@ -78,6 +79,11 @@ if($Iterations -le 1){
 }
 
 # ---- Evidence mode selection (tighten-only) ----
+
+# ---- Closed-market snapshot override (paper only; tighten-only) ----
+if($SnapshotsWhenClosed){
+  $argsRunner += @("--snapshots-when-closed")
+}
 if($ProviderOnly){
   $argsRunner += @("--provider-only")
 } elseif($UseIBSnapshots){
