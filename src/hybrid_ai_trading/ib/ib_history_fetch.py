@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 import argparse
 import csv
 import sys
