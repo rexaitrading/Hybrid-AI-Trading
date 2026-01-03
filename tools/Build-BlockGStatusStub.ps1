@@ -347,8 +347,8 @@ $gsCountPolicy = if([int]$gatescore_samples_rolling -gt 0){ [int]$gatescore_samp
 $gsPnlPolicy   = if([int]$gatescore_pnl_samples_rolling -gt 0){ [int]$gatescore_pnl_samples_rolling } else { [int]$gsPnl }
 $gsEdgePolicy  = [double]$gatescore_mean_edge_ratio_rolling
 $gsMicroPolicy = [double]$gatescore_mean_micro_score_rolling
-
-$gsSamplesOk = ($gsCountPolicy -ge [int]$gsNVDA.minSignals -and $gsPnlPolicy -ge [int]$gsNVDA.minPnl)
+# LIVE policy A: strict daily only (fail-closed)
+$gsSamplesOk = [bool]$gatescore_daily_samples_ok
 $gsThreshOk  = (($gsEdgePolicy + 1e-9) -ge [double]$gsNVDA.minEdge -and ($gsMicroPolicy + 1e-9) -ge [double]$gsNVDA.minMicro)
 $gsOkToday   = ([bool]$gsNVDA.fresh -and $gsSamplesOk -and $gsThreshOk)
 # NOTE: gsPolicyOk depends on gsRecentEnough, computed later (age policy); we will recompute it after age check.
