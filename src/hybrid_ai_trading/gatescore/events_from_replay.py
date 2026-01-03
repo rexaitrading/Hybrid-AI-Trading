@@ -56,6 +56,27 @@ def main() -> int:
 
         sigs = gen_bplus_signals(bars)
         scored = score_signals_v2(bars, sigs)
+        # Sentinel row: day exists, signals existed, but 0 eligible events were produced.
+        # This preserves truth for freshness/today-ness without inflating samples or edge.
+        if len(scored) == 0:
+            row: Dict = {
+                "ts_utc": ts_utc,
+                "as_of_date": day,
+                "symbol": symbol,
+                "source": "BARS_EDGE_V0",
+                "eligible": False,
+                "edge_source": "edge_model_v2",
+                "micro_score_source": "edge_model_v2",
+                "realized_pnl": 0.0,
+                "edge_ratio": 0.0,
+                "micro_score": 0.0,
+                "pnl_samples": 0,
+                "count_signals": 0,
+                "signals_total": int(len(sigs)),
+                "notes": "no_eligible_events",
+            }
+            out_lines.append(json.dumps(row, ensure_ascii=False))
+            continue
 
         for ev in scored:
             # Normalize + stamp day deterministically from filename
