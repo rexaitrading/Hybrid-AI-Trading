@@ -208,5 +208,20 @@ def main() -> int:
         print("[ibkr] wrote " + out_csv.name)
     return rc
 
+def _safe_main() -> int:
+    """
+    Fail-closed wrapper:
+      - 0 = ok
+      - 2 = contract/data failure OR any non-zero OR unexpected exception
+    """
+    try:
+        rc = int(main())
+        return 0 if rc == 0 else 2
+    except Exception as e:
+        try:
+            print("[ibkr] ERROR: " + str(e))
+        except Exception:
+            print("[ibkr] ERROR: unexpected failure")
+        return 2
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(_safe_main())
