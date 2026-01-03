@@ -52,7 +52,63 @@ def main() -> int:
     )
     write_session_artifact(outdir / "replay_session.json", art)
 
-    # Synthetic example (deterministic): 10 trades @ $100
+        # Synthetic example (deterministic): per-day replay summary (scaffold)
+    # Writes replay_summary_YYYY-MM-DD.json for each day in window, plus a last replay_summary.json for convenience.
+    from datetime import date, timedelta
+
+    def _parse(d: str) -> date:
+        return datetime.strptime(d, "%Y-%m-%d").date()
+
+    d0 = _parse(args.start_date)
+    d1 = _parse(args.end_date)
+    cur = d0
+
+    last_summ = None
+    while cur <= d1:
+        as_of = cur.isoformat()
+
+        trades = 10
+        px = 100.0
+        qty = 1.0
+        gross_pnl = 0.0
+        fees = 0.0
+        slips = 0.0
+
+        for i in range(trades):
+            side = "BUY" if (i % 2 == 0) else "SELL"
+            fr = fill.fill(side=side, qty=qty, price=px)
+            fees += fr.fee_usd
+            slips += fr.slippage_usd
+
+        net_pnl = gross_pnl - fees - slips
+
+        summ = ReplaySummary(
+            ts_utc=iso_utc_now(),
+            as_of_date=as_of,
+            symbol=art.symbol,
+            window_start=as_of,
+            window_end=as_of,
+            trades=trades,
+            gross_pnl=gross_pnl,
+            net_pnl=net_pnl,
+            est_fees=fees,
+            est_slippage=slips,
+            model_fill=art.fill_model,
+            model_latency=art.latency_model,
+        )
+
+        # per-day file
+        write_summary(outdir / f"replay_summary_{as_of}.json", summ)
+
+        last_summ = summ
+        cur = cur + timedelta(days=1)
+
+    # also write the last day as replay_summary.json for backward compatibility
+    if last_summ is not None:
+        write_summary(outdir / "replay_summary.json", last_summ)
+
+    # notion csv uses last_summ
+    summ = last_summ
     trades = 10
     px = 100.0
     qty = 1.0
