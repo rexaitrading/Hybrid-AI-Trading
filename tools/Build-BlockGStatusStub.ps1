@@ -33,7 +33,17 @@ $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
 if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
-$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+# Session date (single source of truth): prefer Phase4 stamp as_of_date; fallback to local date
+$today = (Get-Date).ToString("yyyy-MM-dd")
+$p4Path = Join-Path $logsDir "phase4_validation_passed.json"
+if (Test-Path -LiteralPath $p4Path) {
+  try {
+    $p4 = (Get-Content -LiteralPath $p4Path -Raw -Encoding utf8 | ConvertFrom-Json)
+    $d = [string]$p4.as_of_date
+    if ($d -and $d.Length -ge 10) { $today = $d.Substring(0,10) }
+  } catch { }
+}
+
 # ---- GateScore session date (weekend-safe): derive from pnl summary ----
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 $statusPath = Join-Path $logsDir "blockg_status_stub.json"
