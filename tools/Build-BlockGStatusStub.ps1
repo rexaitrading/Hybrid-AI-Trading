@@ -423,7 +423,7 @@ if (WantSym "QQQ" -and -not $qqqReady) { $reasons.Add("qqq_blockg_ready=false") 
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
-
+    date = $today
     phase23_health_ok_today = $phase23Ok
     ev_hard_daily_ok_today  = $evHardOk
     ev_hard_as_of_date = $evSessionAsOf
