@@ -7,7 +7,17 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+# --- repo root: walk up from this script until .git is found (fail-closed) ---
+$repoRoot = $PSScriptRoot
+while($repoRoot -and -not (Test-Path (Join-Path $repoRoot ".git"))){
+  $parent = Split-Path -Parent $repoRoot
+  if($parent -eq $repoRoot){ break }
+  $repoRoot = $parent
+}
+if(-not (Test-Path (Join-Path $repoRoot ".git"))){
+  throw "NOT IN REPO ROOT (could not find .git from $PSScriptRoot)"
+}
+# --- end repo root ---
 $today = (Get-Date).ToString("yyyy-MM-dd")
 
 Write-Host "[ONETAP] Daily readiness start today=$today symbol=$Symbol" -ForegroundColor Cyan
