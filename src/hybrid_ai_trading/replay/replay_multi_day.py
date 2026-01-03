@@ -105,15 +105,7 @@ def main() -> int:
 
     # also write the last day as replay_summary.json for backward compatibility
     if last_summ is not None:
-        write_summary(    # ALSO write per-day summary (required for sample scaling)
-    try:
-        as_of = getattr(summ, "as_of_date", None) or ""
-        as_of = str(as_of)[:10]
-        if as_of:
-            write_summary(outdir / f"replay_summary_{as_of}.json", summ)
-    except Exception:
-        pass
-outdir / "replay_summary.json", last_summ)
+        write_summary(outdir / "replay_summary.json", last_summ)
 
     # notion csv uses last_summ
     summ = last_summ
@@ -144,15 +136,7 @@ outdir / "replay_summary.json", last_summ)
         model_fill=art.fill_model,
         model_latency=art.latency_model,
     )
-    write_summary(    # ALSO write per-day summary (required for sample scaling)
-    try:
-        as_of = getattr(summ, "as_of_date", None) or ""
-        as_of = str(as_of)[:10]
-        if as_of:
-            write_summary(outdir / f"replay_summary_{as_of}.json", summ)
-    except Exception:
-        pass
-outdir / "replay_summary.json", summ)
+    write_summary(outdir / "replay_summary.json", summ)
 
     csv_path = outdir / "replay_summary_for_notion.csv"
     with csv_path.open("w", encoding="utf-8", newline="") as f:
