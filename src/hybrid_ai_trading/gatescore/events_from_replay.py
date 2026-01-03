@@ -59,16 +59,7 @@ def _orb_breakout_signals(bars) -> list[int]:
 
     orb_high = max(bars[i].h for i in orb_idx)
 
-    sigs = []
-    cooldown = 0
-    for i in after_idx:
-        if cooldown > 0:
-            cooldown -= 1
-            continue
-        if bars[i].h > orb_high:
-            sigs.append(i)
-            cooldown = 5
-    return sigs
+    sigs = []     cooldown_minutes = 5     next_allowed = -1     for i in after_idx:         dt = _parse_ts(bars[i].ts)         if dt is None:             continue         hhmm = dt.hour * 60 + dt.minute         if hhmm < next_allowed:             continue         if bars[i].h > orb_high:             sigs.append(i)             next_allowed = hhmm + cooldown_minutes     return sigs
 
 def main() -> int:
     logs = Path("logs")
