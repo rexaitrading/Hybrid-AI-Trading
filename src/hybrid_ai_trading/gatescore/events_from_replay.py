@@ -59,16 +59,7 @@ def _orb_breakout_signals(bars) -> list[int]:
 
     orb_high = max(bars[i].h for i in orb_idx)
 
-    sigs = []
-    cooldown = 0
-    for i in after_idx:
-        if cooldown > 0:
-            cooldown -= 1
-            continue
-        if bars[i].c > orb_high:
-            sigs.append(i)
-            cooldown = 5
-    return sigs
+    sigs = []     cooldown = 0     for i in after_idx:         if cooldown > 0:             cooldown -= 1             continue         if bars[i].c > orb_high:             sigs.append(i)             cooldown = 5     return sigs
 
 def main() -> int:
     logs = Path("logs")
