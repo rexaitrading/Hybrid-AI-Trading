@@ -123,18 +123,24 @@ $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
 # GS_METRICS_SOURCE_CAPTURE_BEGIN
 $gatescore_metrics_source = ""
+$gsMsSeenCount = 0
+$gsMsTop = ""
+$gsMsPath = ""
+$gsMsToday = ($today + "")
+$gsMsExists = $false
 try {
   $p = Join-Path $logsDir "nvda_gatescore_events.jsonl"
-  if (Test-Path -LiteralPath $p) {
+  $gsMsPath = $p
+  $gsMsExists = [bool](Test-Path -LiteralPath $p)
+  if ($gsMsExists) {
     $seen = @{}
     foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)) {
       $s = ($ln + "").Trim(); if(-not $s){ continue }
       try {
         $o = $s | ConvertFrom-Json
-
         $d = ($o.as_of_date + "")
         if($d.Length -ge 10){ $d = $d.Substring(0,10) }
-        if($d -ne $today){ continue }
+        if($d -ne $gsMsToday){ continue }
 
         if($o.PSObject.Properties.Name -contains "metrics_source"){
           $ms = ([string]$o.metrics_source).Trim()
@@ -145,11 +151,17 @@ try {
         }
       } catch { }
     }
+    $gsMsSeenCount = [int]$seen.Count
     if($seen.Count -gt 0){
-      $gatescore_metrics_source = ($seen.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1).Name
+      $gsMsTop = ($seen.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1).Name
+      $gatescore_metrics_source = $gsMsTop
     }
   }
-} catch { $gatescore_metrics_source = "" }
+} catch {
+  $gatescore_metrics_source = ""
+  $gsMsSeenCount = 0
+  $gsMsTop = ""
+}
 # GS_METRICS_SOURCE_CAPTURE_END
 # GS_ELIGIBLE_ZERO_BEGIN
 # Weekend-aware clarity (no holiday calendar): market_closed_today is true on Sat/Sun.
@@ -556,6 +568,11 @@ $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
     gatescore_metrics_source = $gatescore_metrics_source
+    gatescore_metrics_source_debug_seen_count = $gsMsSeenCount
+    gatescore_metrics_source_debug_top        = $gsMsTop
+    gatescore_metrics_source_debug_today      = $gsMsToday
+    gatescore_metrics_source_debug_path       = $gsMsPath
+    gatescore_metrics_source_debug_exists     = $gsMsExists
     market_closed_today = $marketClosedToday
     gatescore_nvda_eligible_zero = $gsNvdaEligibleZero
     date = $today
