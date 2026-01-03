@@ -29,7 +29,8 @@ if(Test-Path $p23){
 }
 if ($LASTEXITCODE -ne 0) {
   Write-Host "[ONETAP] FAIL-CLOSED: Phase4 failed exit=$LASTEXITCODE" -ForegroundColor Red
-  exit $LASTEXITCODE
+  $finalExit = $LASTEXITCODE
+  goto ONETAP_SUMMARY
 }
 # 2) EV-hard snapshot
 $ev = Join-Path $repoRoot "tools\Build-EvHardSnapshot.ps1"
@@ -59,7 +60,8 @@ if(Test-Path $bg){
 $chk = Join-Path $repoRoot "tools\Check-BlockGReady.ps1"
 if(Test-Path $chk){
   & powershell -NoProfile -ExecutionPolicy Bypass -File $chk -Symbol $Symbol | Out-Host
-  exit $LASTEXITCODE
+  $finalExit = $LASTEXITCODE
+  goto ONETAP_SUMMARY
 }
 throw "Missing checker: $chk"
 :ONETAP_SUMMARY
