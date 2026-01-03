@@ -19,6 +19,18 @@ function Run-Step([string]$name, [scriptblock]$sb){
 }
 
 function Run-PS([string]$path, [string[]]$args=@()){
+
+function Run-PSAllowExit([string]$path, [int[]]$okExits, [string[]]$args=@()){
+  if(-not (Test-Path $path)){ throw "Missing tool: $path" }
+  $a = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$path) + $args
+  & powershell @a
+  $code = [int]$LASTEXITCODE
+  if(-not ($okExits -contains $code)){
+    throw "Tool failed: $path exit=$code"
+  }
+  return $code
+}
+
   if(-not (Test-Path $path)){ throw "Missing tool: $path" }
   $a = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$path) + $args
   & powershell @a
