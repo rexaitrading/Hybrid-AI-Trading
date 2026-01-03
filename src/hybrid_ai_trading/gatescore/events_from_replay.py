@@ -61,7 +61,7 @@ def _orb_breakout_signals(bars) -> list[int]:
 
     sigs = []
     for i in after_idx:
-        if bars[i].c > orb_high:
+        if bars[i].h > orb_high:
             sigs.append(i)
             break
     return sigs
