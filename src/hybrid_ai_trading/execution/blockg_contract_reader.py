@@ -1,18 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
-
-
-@dataclass(frozen=True)
-class BlockGStatus:
-    as_of_date: str
-    nvda_blockg_ready: bool
-    spy_blockg_ready: bool
-    qqq_blockg_ready: bool
-    reasons_not_ready: tuple[str, ...]
 
 
 def _as_bool(v: Any) -> bool:
@@ -20,6 +12,44 @@ def _as_bool(v: Any) -> bool:
         return v
     s = str(v).strip().lower()
     return s in ("1", "true", "yes", "y", "ok", "pass", "passed")
+
+
+def _repo_root_from_here() -> Path:
+    # .../src/hybrid_ai_trading/execution/blockg_contract_reader.py -> repo root = parents[3]
+    # execution -> hybrid_ai_trading -> src -> repo_root
+    try:
+        return Path(__file__).resolve().parents[3]
+    except Exception:
+        return Path.cwd()
+
+
+def get_default_blockg_status_path() -> Path:
+    # Env override first, else repo_root/logs/blockg_status_stub.json
+    p = os.environ.get("HAT_BLOCKG_CONTRACT_PATH", "").strip()
+    if p:
+        return Path(p)
+    return _repo_root_from_here() / "logs" / "blockg_status_stub.json"
+
+
+@dataclass(frozen=True)
+class BlockGStatus:
+    # Contract dates
+    as_of_date: str
+    date: str
+
+    # Per-symbol readiness
+    nvda_blockg_ready: bool
+    spy_blockg_ready: bool
+    qqq_blockg_ready: bool
+
+    # Policy booleans (top-level)
+    phase4_ok_today: bool
+    phase23_health_ok_today: bool
+    ev_hard_daily_ok_today: bool
+    gatescore_fresh_today: bool
+    gatescore_ok_today: bool
+
+    reasons_not_ready: tuple[str, ...]
 
 
 def load_blockg_status(path: str | Path) -> BlockGStatus:
@@ -31,13 +61,39 @@ def load_blockg_status(path: str | Path) -> BlockGStatus:
     if not isinstance(reasons, list):
         reasons = [str(reasons)]
 
+    as_of = str(j.get("as_of_date", ""))[:10]
+    date = str(j.get("date", ""))[:10]  # may be empty on older contracts
+
     return BlockGStatus(
-        as_of_date=str(j.get("as_of_date", ""))[:10],
+        as_of_date=as_of,
+        date=date,
+
         nvda_blockg_ready=_as_bool(j.get("nvda_blockg_ready", False)),
         spy_blockg_ready=_as_bool(j.get("spy_blockg_ready", False)),
         qqq_blockg_ready=_as_bool(j.get("qqq_blockg_ready", False)),
+
+        phase4_ok_today=_as_bool(j.get("phase4_ok_today", False)),
+        phase23_health_ok_today=_as_bool(j.get("phase23_health_ok_today", False)),
+        ev_hard_daily_ok_today=_as_bool(j.get("ev_hard_daily_ok_today", False)),
+        gatescore_fresh_today=_as_bool(j.get("gatescore_fresh_today", False)),
+        gatescore_ok_today=_as_bool(j.get("gatescore_ok_today", False)),
+
         reasons_not_ready=tuple(str(x) for x in reasons),
     )
+
+
+def require_blockg_date_today(*, status: BlockGStatus, today: str) -> None:
+    """
+    Fail-closed: contract must explicitly match today's date.
+    Prefer `date` if present, otherwise fallback to `as_of_date` for backward compatibility.
+    """
+    today10 = str(today).strip()[:10]
+    contract10 = (str(status.date).strip()[:10] or str(status.as_of_date).strip()[:10])
+
+    if contract10 != today10:
+        raise RuntimeError(
+            f"BLOCK-G FAIL-CLOSED: contract_not_today contract_date={contract10} today={today10}"
+        )
 
 
 def require_blockg_ready_for_live_symbol(*, symbol: str, status_path: str | Path) -> None:
