@@ -396,6 +396,7 @@ def main(argv=None) -> int:
                 return 4
 
             out = qc.run_once(symbols, price_map, risk_mgr)
+            out = _force_proxy_metrics_from_decision(out)  # PROXY_FORCE_AFTER_RUNONCE_APPLY
         except Exception as e:
             rec = {
                 "ts_utc": iso_utc_now(),
