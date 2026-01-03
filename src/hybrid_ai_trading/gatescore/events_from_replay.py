@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from hybrid_ai_trading.replay.edge_model_v0 import read_bars_csv, gen_bplus_signals
-from hybrid_ai_trading.replay.edge_model_v2 import score_signals_v2, _rth_mask, _parse_ts
+from hybrid_ai_trading.replay.edge_model_v2 import score_signals_v2, _rth_mask
 _BAR_RE = re.compile(r"^(?P<sym>[A-Z]+)_(?P<day>\d{4}-\d{2}-\d{2})_1m\.csv$")
 
 
@@ -54,7 +54,7 @@ def main() -> int:
         if not bars:
             continue
 
-        sigs = _orb_breakout_signals(bars)
+        sigs = gen_bplus_signals(bars)
         sigs = [i for i in sigs if (0 <= i < len(rth) and rth[i])]
         scored = score_signals_v2(bars, sigs)
         # Sentinel row: day exists, signals existed, but 0 eligible events were produced.
