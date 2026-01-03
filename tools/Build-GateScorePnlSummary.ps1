@@ -181,7 +181,26 @@ foreach ($it in $eventFiles) {
     $todayEvents = @($todayEvents | Where-Object {
         -not ($_.PSObject.Properties.Name -contains "eligible") -or [bool]$_.eligible
     })
-    if ($todayEvents.Count -eq 0) { continue }
+
+    # If no eligible events exist for targetDate:
+    # - StrictToday => fail-closed (skip)
+    # - Non-strict  => write sentinel freshness row (zeros) so Block-G can see latest date
+    if ($todayEvents.Count -eq 0) {
+        if ($StrictToday) { continue }
+
+        $row = [pscustomobject]@{
+            as_of_date       = $targetDate
+            symbol           = $sym
+            count_signals    = 0
+            pnl_samples      = 0
+            mean_edge_ratio  = 0.0
+            mean_micro_score = 0.0
+            mean_pnl         = 0.0
+            has_eligible     = $false
+        }
+        $rowsOut.Add($row) | Out-Null
+        continue
+    }
 
 
     $edgeSourceEvents = if ($stdTodayEvents.Count -gt 0) { $stdTodayEvents } else { $todayEvents }
@@ -243,8 +262,11 @@ foreach ($r in $rowsOut) {
     }
 }
 if ($allZero) {
-    Write-Error "GateScore PnL summary: computed rows are all zeros. Refusing to write $outPath (fail-closed)."
-    exit 3
+    if ($StrictToday) {
+        Write-Error "GateScore PnL summary: computed rows are all zeros. Refusing to write $outPath (fail-closed)."
+        exit 3
+    }
+    Write-Host "GateScore PnL summary: rows are zeros (sentinel freshness). Writing anyway (non-strict)." -ForegroundColor Yellow
 }
 
 Write-Host "GateScore PnL summary: writing $outPath" -ForegroundColor Cyan
