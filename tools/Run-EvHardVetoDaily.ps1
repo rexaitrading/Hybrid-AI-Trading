@@ -26,7 +26,13 @@ function Safe-Bool([bool]$b){ if($b){ "true" } else { "false" } }
 $ok = $false
 $reason = "snapshot_missing"
 
-$snap = Join-Path $logDir "phase5_ev_hard_veto_snapshot.json"
+# PREFER_EV_HARD_SNAPSHOT_BEGIN
+# Prefer unified EV-hard snapshot; fallback to legacy veto snapshot.
+$snap = Join-Path $logDir "ev_hard_snapshot.json"
+if (-not (Test-Path $snap)) {
+  $snap = Join-Path $logDir "phase5_ev_hard_veto_snapshot.json"
+}
+# PREFER_EV_HARD_SNAPSHOT_END
 if (Test-Path $snap) {
   try {
     $j = Get-Content $snap -Raw -Encoding utf8 | ConvertFrom-Json
