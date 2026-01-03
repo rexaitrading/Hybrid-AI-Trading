@@ -92,8 +92,11 @@ def require_blockg_ready_for_live(symbol: str, *, status: dict | None = None) ->
                 reasons = list(reasons) + [f"{key}=false"]
             raise BlockGNotReady(";".join([str(x) for x in reasons])[:500])
         return
-
     # Runtime path: only enforce when live
+    is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
+    if not is_live:
+        return
+
     # Institutional hard checks (fail-closed):
     # - market_closed_today must be false
     # - contract must be for today
@@ -104,8 +107,6 @@ def require_blockg_ready_for_live(symbol: str, *, status: dict | None = None) ->
 
     today = datetime.now().strftime("%Y-%m-%d")
     require_blockg_date_today(status=s, today=today)
-    is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
-    if not is_live:
-        return
 
+    # Finally: enforce symbol readiness from the contract JSON
     require_blockg_ready(sym, is_live=True)
