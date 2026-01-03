@@ -95,6 +95,15 @@ foreach ($ln in $lines) {
         if ($null -ne $msv) { $metricsSource = ($msv + "") }
     } catch { $metricsSource = "" }
     # METRICS_SOURCE_AUDIT_END
+# METRICS_SOURCE_OVERRIDE_NO_PROXY_BEGIN
+# Institutional rule: paperlive-derived events must not emit proxy_* metrics_source.
+# If upstream tags proxy (or missing), override to a real paperlive label.
+try {
+    $ms0 = ($metricsSource + "").Trim()
+    if (-not $ms0) { $metricsSource = "paperlive_real_v1" }
+    elseif ($ms0 -match '^(?i)proxy_') { $metricsSource = "paperlive_real_v1" }
+} catch { $metricsSource = "paperlive_real_v1" }
+# METRICS_SOURCE_OVERRIDE_NO_PROXY_END
     foreach ($k in @("pnl_samples","pnlSamples","pnl_n","trades_n","trade_count","n_trades","samples","sample_count")) {
         $v = Get-FromResult0 $j $k
         if ($null -ne $v -and ([string]$v).Trim() -ne "") { $pnlSamples = TryI $v; break }
