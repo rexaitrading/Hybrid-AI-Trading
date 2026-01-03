@@ -58,18 +58,11 @@ if(Test-Path $gs){
   throw "Missing GateScore summary builder: $gs"
 }
 
-# 4) Block-G status stub
-$bg = Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1"
-if(Test-Path $bg){
-  & powershell -NoProfile -ExecutionPolicy Bypass -File $bg | Out-Host
-} else {
-  throw "Missing BlockG builder: $bg"
-}
-
+# 4) Block-G status stub (handled by Check-BlockGReady -Build)
 # 5) Check readiness
 $chk = Join-Path $repoRoot "tools\Check-BlockGReady.ps1"
 if(Test-Path -LiteralPath $chk){
-  & powershell -NoProfile -ExecutionPolicy Bypass -File $chk -Symbol $Symbol | Out-Host
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $chk -Symbol $Symbol | Out-Host -Build
   $finalExit = $LASTEXITCODE
 # $finalExit already captured earlier
   $continue = $false
