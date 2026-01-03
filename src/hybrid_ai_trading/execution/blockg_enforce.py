@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime
 from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
+from hybrid_ai_trading.execution.blockg_contract_reader import get_default_blockg_status_path, load_blockg_status, require_blockg_date_today
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -92,6 +94,16 @@ def require_blockg_ready_for_live(symbol: str, *, status: dict | None = None) ->
         return
 
     # Runtime path: only enforce when live
+    # Institutional hard checks (fail-closed):
+    # - market_closed_today must be false
+    # - contract must be for today
+    status_path = get_default_blockg_status_path()
+    s = load_blockg_status(status_path)
+    if bool(getattr(s, "market_closed_today", False)):
+        raise BlockGNotReady(f"BLOCK-G FAIL-CLOSED: market_closed_today=true symbol={sym}")
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    require_blockg_date_today(status=s, today=today)
     is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
     if not is_live:
         return
