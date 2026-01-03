@@ -121,6 +121,32 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
+# GS_METRICS_SOURCE_CAPTURE_BEGIN
+$gatescore_metrics_source = ""
+try {
+  $p = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+  if(Test-Path -LiteralPath $p){
+    $seen = @{}
+    foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)){
+      $s = ($ln + "").Trim(); if(-not $s){ continue }
+      try {
+        $o = $s | ConvertFrom-Json
+        if((Slice-Date ([string]$o.as_of_date)) -ne $today){ continue }
+        if($o.PSObject.Properties.Name -contains "metrics_source"){
+          $ms = ([string]$o.metrics_source).Trim()
+          if($ms){
+            if(-not $seen.ContainsKey($ms)){ $seen[$ms]=0 }
+            $seen[$ms] += 1
+          }
+        }
+      } catch { }
+    }
+    if($seen.Count -gt 0){
+      $gatescore_metrics_source = ($seen.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1).Name
+    }
+  }
+} catch { $gatescore_metrics_source = "" }
+# GS_METRICS_SOURCE_CAPTURE_END
 # GS_ELIGIBLE_ZERO_BEGIN
 # Weekend-aware clarity (no holiday calendar): market_closed_today is true on Sat/Sun.
 $marketClosedToday = $false
@@ -477,6 +503,7 @@ $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsN
 $spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
 $qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
 $reasons = New-Object System.Collections.Generic.List[string]
+if ($gatescore_metrics_source) { $reasons.Add(("gatescore_metrics_source=" + $gatescore_metrics_source)) | Out-Null }
 # GateScore NVDA data-quality reason (audit-only; does not change gating)
 # GateScore NVDA data-quality reason (audit-only; does not change gating)
 if ($gsNvdaEligibleZero) { $reasons.Add("gatescore_nvda_eligible_zero=true") | Out-Null }
@@ -524,6 +551,7 @@ if (WantSym "QQQ" -and -not $qqqReady) { $reasons.Add("qqq_blockg_ready=false") 
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
+    gatescore_metrics_source = $gatescore_metrics_source
     market_closed_today = $marketClosedToday
     gatescore_nvda_eligible_zero = $gsNvdaEligibleZero
     date = $today
