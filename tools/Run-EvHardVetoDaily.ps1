@@ -30,19 +30,24 @@ $snap = Join-Path $logDir "phase5_ev_hard_veto_snapshot.json"
 if (Test-Path $snap) {
   try {
     $j = Get-Content $snap -Raw -Encoding utf8 | ConvertFrom-Json
-    $d = [string]$j.as_of_date
-    if($d.Length -ge 10){ $d = $d.Substring(0,10) }
-    $okFlag = $false
-if ($j.PSObject.Properties.Name -contains "ok_today") { $okFlag = [bool]$j.ok_today }
-elseif ($j.PSObject.Properties.Name -contains "ok") { $okFlag = [bool]$j.ok }
+    $d = _SliceDate ([string]$j.as_of_date)
 
-if ($d -eq $today -and $okFlag) {
+    $okFlag = $false
+    if ($j.PSObject.Properties.Name -contains "ok_today") { $okFlag = [bool]$j.ok_today }
+    elseif ($j.PSObject.Properties.Name -contains "ok") { $okFlag = [bool]$j.ok }
+
+    if ($d -ne $today) {
+      $ok = $false
+      $reason = ("snapshot_asof_mismatch as_of=" + $d + " today=" + $today)
+    } elseif (-not $okFlag) {
+      $ok = $false
+      $reason = "snapshot_ok_false"
+    } else {
       $ok = $true
       $reason = "snapshot_ok_today"
-    } else {
-      $reason = "snapshot_not_ok_or_not_today"
     }
   } catch {
+    $ok = $false
     $reason = "snapshot_parse_failed"
   }
 }
