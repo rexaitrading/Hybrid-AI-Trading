@@ -27,6 +27,14 @@ function Write-Utf8NoBom([string]$Path, [string]$Text) {
 }
 
 $today = (Get-Date).ToString("yyyy-MM-dd")
+
+# EVH_EFFECTIVE_TRADING_DAY_BEGIN
+$effectiveTradingDay = $today
+try {
+  $effectiveTradingDay = (powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\Get-EffectiveTradingDay.ps1").Trim()
+  if(-not $effectiveTradingDay){ $effectiveTradingDay = $today }
+} catch { $effectiveTradingDay = $today }
+# EVH_EFFECTIVE_TRADING_DAY_END
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
 
@@ -49,9 +57,9 @@ if (Test-Path $EvidencePath) {
     # require evidence to be for today
     $asOf = (($j.as_of_date) + "").Trim()
     $evidenceAsOfDate = $asOf
-    if ($asOf -ne $today) {
+    if ($asOf -ne $effectiveTradingDay) {
       $ok = $false
-      $reason = ("evidence_stale_failclosed as_of_date={0} today={1}" -f $asOf,$today)
+      $reason = ("evidence_stale_failclosed as_of_date={0} effective_trading_day={1} snapshot_date={2}" -f $asOf,$effectiveTradingDay,$today)
     } else {
       # if evidence itself declares ok=true, accept; otherwise fail
       $ok = As-Bool $j.ok
