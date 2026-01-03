@@ -20,6 +20,12 @@ function Resolve-EventFile([string]$logsDir,[string]$sym){
     if (Test-Path -LiteralPath $real) { return $real }
     return Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
 }
+function Resolve-StdOnlyFile([string]$logsDir,[string]$sym){
+    $std = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
+    if (Test-Path -LiteralPath $std) { return $std }
+    return ""
+}
+
 
 
 function _SliceDate([string]$d) {
@@ -106,10 +112,11 @@ function Get-EventPnlSamples($events) {
 }
 
 $eventFiles = @(
-    @{ sym="NVDA"; path=(Resolve-EventFile $logsDir "NVDA") },
-    @{ sym="SPY";  path=(Resolve-EventFile $logsDir "SPY") },
-    @{ sym="QQQ";  path=(Resolve-EventFile $logsDir "QQQ") }
+    @{ sym="NVDA"; path=(Resolve-EventFile $logsDir "NVDA"); std=(Resolve-StdOnlyFile $logsDir "NVDA") },
+    @{ sym="SPY";  path=(Resolve-EventFile $logsDir "SPY");  std=(Resolve-StdOnlyFile $logsDir "SPY") },
+    @{ sym="QQQ";  path=(Resolve-EventFile $logsDir "QQQ");  std=(Resolve-StdOnlyFile $logsDir "QQQ") }
 )
+
 
 $wanted = @()
 switch ($Symbol.ToUpperInvariant()) {
@@ -128,6 +135,10 @@ foreach ($it in $eventFiles) {
     if (-not (Test-Path $path)) { continue }
 
     $events = Read-Jsonl $path
+    $stdPath = [string]$it.std
+    $stdEvents = @()
+    if ($stdPath -and (Test-Path -LiteralPath $stdPath)) { $stdEvents = Read-Jsonl $stdPath }
+
     if ($events.Count -eq 0) { continue }
 
     
@@ -154,6 +165,16 @@ foreach ($it in $eventFiles) {
     foreach ($e in $events) {
         if ((Get-EventDate $e) -eq $targetDate) { $todayEvents += $e }
     }
+    $stdTodayEvents = @()
+    if ($stdEvents.Count -gt 0) {
+        foreach ($se in $stdEvents) {
+            if ((Get-EventDate $se) -eq $targetDate) { $stdTodayEvents += $se }
+        }
+        $stdTodayEvents = @($stdTodayEvents | Where-Object {
+            -not ($_.PSObject.Properties.Name -contains "eligible") -or [bool]$_.eligible
+        })
+    }
+
     if ($todayEvents.Count -eq 0) { continue }
 
     # Drop ineligible events (fail-closed against zero-metric pollution)
@@ -163,11 +184,15 @@ foreach ($it in $eventFiles) {
     if ($todayEvents.Count -eq 0) { continue }
 
 
+    $edgeSourceEvents = if ($stdTodayEvents.Count -gt 0) { $stdTodayEvents } else { $todayEvents }
+    $microSourceEvents = $edgeSourceEvents
+    $pnlSourceEvents = $todayEvents
+
     $edgeVals = @()
     $microVals = @()
     $pnlVals = @()
 
-    foreach ($e in $todayEvents) {
+    foreach ($e in $pnlSourceEvents) {
         $edge  = Get-Num $e @("edge_ratio","mean_edge_ratio","edge","ev_edge_ratio")
         $micro = Get-Num $e @("micro_score","mean_micro_score","micro","micro_score_today")
         $pnl   = Get-Num $e @("realized_pnl","pnl","net_pnl","pnl_usd")
@@ -176,6 +201,16 @@ foreach ($it in $eventFiles) {
         if ($null -ne $micro) { $microVals += $micro }
         if ($null -ne $pnl)   { $pnlVals += $pnl }
     }
+
+    foreach ($e in $edgeSourceEvents) {
+        $edge  = Get-Num $e @("edge_ratio","mean_edge_ratio","edge","ev_edge_ratio")
+        if ($null -ne $edge)  { $edgeVals += $edge }
+    }
+    foreach ($e in $microSourceEvents) {
+        $micro = Get-Num $e @("micro_score","mean_micro_score","micro","micro_score_today")
+        if ($null -ne $micro) { $microVals += $micro }
+    }
+
     # pnl_samples semantics:
     # 1) Prefer numeric pnl samples (realized_pnl count)
     # 2) Else fallback to declared per-event pnl_samples
