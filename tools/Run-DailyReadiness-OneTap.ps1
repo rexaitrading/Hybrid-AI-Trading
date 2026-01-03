@@ -62,3 +62,29 @@ if(Test-Path $chk){
   exit $LASTEXITCODE
 }
 throw "Missing checker: $chk"
+# --- OneTap summary JSON (for Notion ingest) ---
+try {
+  $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+  $p = Join-Path $repo "logs\blockg_status_stub.json"
+  if(Test-Path $p){
+    $st = Get-Content $p -Raw -Encoding utf8 | ConvertFrom-Json
+    $out = [ordered]@{
+      ts_utc = (Get-Date).ToUniversalTime().ToString("o")
+      as_of_date = $st.as_of_date
+      phase4_ok_today = $st.phase4_ok_today
+      phase23_health_ok_today = $st.phase23_health_ok_today
+      ev_hard_daily_ok_today = $st.ev_hard_daily_ok_today
+      gatescore_ok_today = $st.gatescore_ok_today
+      nvda_blockg_ready = $st.nvda_blockg_ready
+      spy_blockg_ready  = $st.spy_blockg_ready
+      qqq_blockg_ready  = $st.qqq_blockg_ready
+      reasons_not_ready = $st.reasons_not_ready
+    }
+    $json = ($out | ConvertTo-Json -Depth 6)
+    $dst = Join-Path $repo "logs\onetap_summary.json"
+    [System.IO.File]::WriteAllText($dst, ($json -replace "`r`n","`n"), (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "[ONETAP] wrote logs\onetap_summary.json"
+  }
+} catch {
+  Write-Host "[ONETAP] summary json skipped: $($_.Exception.Message)" -ForegroundColor Yellow
+}
