@@ -85,10 +85,11 @@ def main() -> int:
         print("[gatescore-replay] no cached bars found")
         return 2
 
-    ts_utc = _iso_utc_now()
+    ts_utc = None  # set per-day deterministically
     out_lines: List[str] = []
 
     for day in days:
+        ts_utc = f"{day}T00:00:00Z"
         bars_path = logs / "bars" / f"{symbol}_{day}_1m.csv"
         try:
             bars = read_bars_csv(bars_path)
