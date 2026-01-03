@@ -63,7 +63,7 @@ def main() -> int:
             ev["count_signals"] = 1
         lines.append(json.dumps(ev, separators=(",", ":")))
 
-    out_path.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     # Unicode-safe print on Windows consoles: print filename only
     print("[gatescore-replay] wrote " + out_path.name)
