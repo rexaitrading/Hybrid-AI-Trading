@@ -170,6 +170,17 @@ try {
   $gsMsExists = $false
 }
 # GS_METRICS_SOURCE_CAPTURE_END
+# PROXY_METRICS_SOURCE_LIVE_VETO_BEGIN
+# Institutional rule: proxy GateScore sources are NEVER live-eligible.
+# We still compute/record them, but we fail-closed for live readiness.
+$gsMetricsSourceDisallowedForLive = $false
+try {
+  if ($gatescore_metrics_source) {
+    $ms = ([string]$gatescore_metrics_source).Trim()
+    if ($ms -match '^(?i)proxy_') { $gsMetricsSourceDisallowedForLive = $true }
+  }
+} catch { $gsMetricsSourceDisallowedForLive = $false }
+# PROXY_METRICS_SOURCE_LIVE_VETO_END
 # GS_ELIGIBLE_ZERO_BEGIN
 # Weekend-aware clarity (no holiday calendar): market_closed_today is true on Sat/Sun.
 $marketClosedToday = $false
@@ -534,6 +545,9 @@ $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsN
 $spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
 $qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
 $reasons = New-Object System.Collections.Generic.List[string]
+if ($gsMetricsSourceDisallowedForLive) {
+  $reasons.Add(("gatescore_metrics_source_disallowed_for_live=" + $gatescore_metrics_source)) | Out-Null
+}
 if ($marketClosedToday) { $reasons.Add("ev_hard_market_closed_today=true") | Out-Null }
 if ($gatescore_metrics_source) { $reasons.Add(("gatescore_metrics_source=" + $gatescore_metrics_source)) | Out-Null }
 # GateScore NVDA data-quality reason (audit-only; does not change gating)
@@ -571,6 +585,16 @@ if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
 if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
 
 # Recompute per-symbol readiness AFTER GateScore age policy (StrictMode-safe)
+# PROXY_METRICS_SOURCE_FORCE_NOT_READY_BEGIN
+if ($gsMetricsSourceDisallowedForLive) {
+  # fail-closed: do not allow live readiness on proxy metrics source
+  $gsOkToday = $false
+  $gsPolicyOk = $false
+  $nvdaReady = $false
+  $spyReady  = $false
+  $qqqReady  = $false
+}
+# PROXY_METRICS_SOURCE_FORCE_NOT_READY_END
 $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsNVDA.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evNVDA.ok
 $spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
 $qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
