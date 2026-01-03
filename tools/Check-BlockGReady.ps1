@@ -66,14 +66,66 @@ if (-not $statusPath) { $statusPath = $defaultPath }
 $st = Read-Json $statusPath
 if (-not $st) { Fail "Missing/invalid Block-G status JSON at: $statusPath" }
 
-# --- CONTRACT-ONLY READINESS (institutional, single semantic owner) ---
-$sym = $Symbol
-if (-not $sym) { $sym = "NVDA" }
-if ($sym.ToUpperInvariant() -eq "ALL") {
-  foreach($s in @("NVDA","SPY","QQQ")){
-    $k = ($s.ToLower() + "_blockg_ready")
-    if (-not ($st.PSObject.Properties.Name -contains $k)) { Fail "Contract missing field: $k" }
-    if (-not [bool]$st.$k) { Fail "$s not ready ($k=false)" }
+# --- GateScore session-age policy (contract-only; do not recompute) ---
+$MAX_GS_AGE_DAYS = 3
+# 3A) Per-symbol GateScore validation (contract-only)
+function Get-GS([string]$sym){
+  if(-not ($st.PSObject.Properties.Name -contains "gatescore_by_symbol")){ return $null }
+  $gsb = $st.gatescore_by_symbol
+  if($null -eq $gsb){ return $null }
+  $k = $sym.ToUpperInvariant()
+  if(-not ($gsb.PSObject.Properties.Name -contains $k)){ return $null }
+  return $gsb.$k
+}
+
+# 3) Validate required daily quality fields (fail-closed)
+# NOTE: contract defines these booleans (default false if absent)
+$reqFields = @(
+  "phase4_ok_today",
+  "ev_hard_daily_ok_today",
+  "gatescore_fresh_today"
+)
+
+foreach ($k in $reqFields) {
+  if (-not ($st.PSObject.Properties.Name -contains $k)) { Fail "Missing field: $k" }
+  if (-not [bool]$st.$k) { Fail "$k=false" }
+}
+
+# GateScore age policy (fail-closed)
+if (-not [bool]$st.gatescore_recent_enough) { Fail "gatescore_recent_enough=false" }
+try { $age = [int]$st.gatescore_age_days } catch { Fail "gatescore_age_days invalid" }
+if ($age -gt $MAX_GS_AGE_DAYS) { Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
+# Per-symbol GateScore checks (contract-only)
+if ($s -ne "ALL") {
+  $gs = Get-GS $s
+  if (-not $gs) { Fail ("Missing gatescore_by_symbol." + $s) }
+  if (-not [bool]$gs.samples_ok) { Fail ($s + " gatescore samples_ok=false") }
+  if (-not [bool]$gs.threshold_ok) { Fail ($s + " gatescore threshold_ok=false") }
+} else {
+  foreach($sym in @("NVDA","SPY","QQQ")) {
+    $gs = Get-GS $sym
+    if (-not $gs) { Fail ("Missing gatescore_by_symbol." + $sym) }
+    if (-not [bool]$gs.samples_ok) { Fail ($sym + " gatescore samples_ok=false") }
+    if (-not [bool]$gs.threshold_ok) { Fail ($sym + " gatescore threshold_ok=false") }
   }
-  Write-Host "[BLOCKG] READY: Symbol=ALL Path=$statusPath" -ForegroundColor Green
-  exit 0
+}
+
+
+# 4) Per-symbol readiness (fail-closed)
+function SymReady([string]$sym) {
+  $key = ($sym.ToLower() + "_blockg_ready")
+  if (-not ($st.PSObject.Properties.Name -contains $key)) { return $false }
+  return [bool]$st.$key
+}
+# $s normalized earlier
+if ($s -eq "ALL") {
+  foreach ($sym in @("NVDA","SPY","QQQ")) {
+    if (-not (SymReady $sym)) { Fail "$sym not ready ($($sym.ToLower())_blockg_ready=false)" }
+  }
+} else {
+  if (-not (SymReady $s)) { Fail "$s not ready ($($s.ToLower())_blockg_ready=false)" }
+}
+
+Write-Host "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath" -ForegroundColor Green
+exit 0
+
