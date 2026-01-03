@@ -217,7 +217,17 @@ def _safe_main() -> int:
     try:
         rc = int(main())
         return 0 if rc == 0 else 2
-    except Exception as e:
+    except SystemExit as se:
+        code = getattr(se, "code", 2)
+        try:
+            print("[ibkr] ERROR: SystemExit(" + str(code) + ")")
+        except Exception:
+            print("[ibkr] ERROR: SystemExit")
+        try:
+            return 0 if int(code) == 0 else 2
+        except Exception:
+            return 2
+    except BaseException as e:
         try:
             print("[ibkr] ERROR: " + str(e))
         except Exception:
