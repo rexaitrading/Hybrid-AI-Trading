@@ -585,6 +585,15 @@ if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
 if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
 
 # Recompute per-symbol readiness AFTER GateScore age policy (StrictMode-safe)
+# MARKET_CLOSED_FORCE_SYMBOL_READY_BEGIN
+# Institutional: when market is closed, symbol readiness must be false (do not "arm" on closed days).
+if ($marketClosedToday) {
+  $nvdaReady = $false
+  $spyReady  = $false
+  $qqqReady  = $false
+  try { $reasons.Add("market_closed_forces_symbol_ready=false") | Out-Null } catch { }
+}
+# MARKET_CLOSED_FORCE_SYMBOL_READY_END
 # PROXY_METRICS_SOURCE_FORCE_NOT_READY_BEGIN
 if ($gsMetricsSourceDisallowedForLive) {
   # fail-closed: do not allow live readiness on proxy metrics source
