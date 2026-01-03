@@ -25,6 +25,9 @@ def _repo_root_from_here() -> Path:
 
 def get_default_blockg_status_path() -> Path:
     # Env override first, else repo_root/logs/blockg_status_stub.json
+     p = os.environ.get("HAT_BLOCKG_STATUS_PATH", "").strip()
+    if p:
+        return Path(p)
     p = os.environ.get("HAT_BLOCKG_CONTRACT_PATH", "").strip()
     if p:
         return Path(p)
