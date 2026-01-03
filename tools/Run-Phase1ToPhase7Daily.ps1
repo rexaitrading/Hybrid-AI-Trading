@@ -44,6 +44,13 @@ Run-Step "Phase5: EV-hard snapshot" { Run-PS ".\tools\Build-EvHardSnapshot.ps1" 
 
 Run-Step "Phase5: EV-hard daily veto row" { Run-PS ".\tools\Run-EvHardVetoDaily.ps1" }
 
+Run-Step "Phase2: Micro snapshot (WARN if output missing)" {
+  Run-PS ".\tools\Run-Phase2MicroSnapshot.ps1"
+  $out = ".\logs\spy_qqq_micro_for_notion.csv"
+  if(-not (Test-Path $out)){
+    Write-Host "[WARN] Phase2 output missing: logs\spy_qqq_micro_for_notion.csv" -ForegroundColor Yellow
+  }
+}
 Run-Step "Phase3: GateScore PnL summary" { Run-PS ".\tools\Build-GateScorePnlSummary.ps1" }
 
 Run-Step "BlockG: Build contract" { Run-PS ".\tools\Build-BlockGStatusStub.ps1" @("-Symbol",$Symbol) }
@@ -124,6 +131,13 @@ Run-Step "Phase5: EV-hard snapshot" { Run-PS ".\tools\Build-EvHardSnapshot.ps1" 
 
 Run-Step "Phase5: EV-hard daily veto row" { Run-PS ".\tools\Run-EvHardVetoDaily.ps1" }
 
+Run-Step "Phase2: Micro snapshot (WARN if output missing)" {
+  Run-PS ".\tools\Run-Phase2MicroSnapshot.ps1"
+  $out = ".\logs\spy_qqq_micro_for_notion.csv"
+  if(-not (Test-Path $out)){
+    Write-Host "[WARN] Phase2 output missing: logs\spy_qqq_micro_for_notion.csv" -ForegroundColor Yellow
+  }
+}
 Run-Step "Phase3: GateScore PnL summary" { Run-PS ".\tools\Build-GateScorePnlSummary.ps1" }
 
 Run-Step "BlockG: Build contract" { Run-PS ".\tools\Build-BlockGStatusStub.ps1" @("-Symbol",$Symbol) }
