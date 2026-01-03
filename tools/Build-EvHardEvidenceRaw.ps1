@@ -30,6 +30,15 @@ if(Test-Path $phase4Path){
 }
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
+# EVH_RAW_EFFECTIVE_TRADING_DAY_BEGIN
+$effectiveTradingDay = $today
+try {
+  $effectiveTradingDay = (powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\Get-EffectiveTradingDay.ps1" -TodayOverride $today).Trim()
+  if(-not $effectiveTradingDay){ $effectiveTradingDay = $today }
+} catch { $effectiveTradingDay = $today }
+# EVH_RAW_EFFECTIVE_TRADING_DAY_END
+
+
 # ---- Phase4 ----
 $phase4Ok = $false
 $phase4AsOf = ""
@@ -69,7 +78,7 @@ $gsCountSignals = 0
 if (Test-Path $gsPath) {
   try {
     $rows = @(Import-Csv $gsPath)
-    $row = $rows | Where-Object { $_.symbol -eq "NVDA" -and ($_.as_of_date + "") -eq $today } | Select-Object -First 1
+    $row = $rows | Where-Object { $_.symbol -eq "NVDA" -and ($_.as_of_date + "") -eq $effectiveTradingDay } | Select-Object -First 1
     if ($null -ne $row) {
       $gsFoundTodayRow = $true
       $gsAsOf = (($row.as_of_date) + "").Trim()
@@ -86,10 +95,10 @@ $reason = "missing_inputs_failclosed"
 $reasons = New-Object System.Collections.Generic.List[string]
 $warnings = New-Object System.Collections.Generic.List[string]
 
-if ($phase4AsOf -ne $today -or -not $phase4Ok) { $reasons.Add("phase4_not_ok_or_stale") }
-if ($phase23AsOf -ne $today -or -not $phase23Ok) { $reasons.Add("phase23_not_ok_or_stale") }
+if ($phase4AsOf -ne $effectiveTradingDay -or -not $phase4Ok) { $reasons.Add("phase4_not_ok_or_stale") }
+if ($phase23AsOf -ne $effectiveTradingDay -or -not $phase23Ok) { $reasons.Add("phase23_not_ok_or_stale") }
 # GateScore is recorded as a warning here; Block-G enforces strict today-ness for LIVE readiness
-if ($gsAsOf -ne $today -or -not $gsOk) { $warnings.Add("gatescore_not_ok_or_missing_today_row") }
+if ($gsAsOf -ne $effectiveTradingDay -or -not $gsOk) { $warnings.Add("gatescore_not_ok_or_missing_today_row") }
 
 if ($reasons.Count -eq 0) {
   $ok = $true
@@ -101,7 +110,9 @@ if ($reasons.Count -eq 0) {
 
 $out = [ordered]@{
   ts_utc = $tsUtc
-  as_of_date = $today
+  as_of_date = $effectiveTradingDay
+  snapshot_date = $today
+  effective_trading_day = $effectiveTradingDay
   ok = $ok
   reason = $reason
   warnings = @($warnings)
