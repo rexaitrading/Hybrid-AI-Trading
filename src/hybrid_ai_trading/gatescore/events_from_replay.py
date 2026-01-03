@@ -4,12 +4,15 @@ import json
 from pathlib import Path
 from datetime import datetime, timezone
 
+from hybrid_ai_trading.replay.edge_model_v0 import read_bars_csv, gen_bplus_signals, score_signals_v0
+
 def iso_utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 def main() -> int:
     repo = Path(__file__).resolve().parents[3]
     replay_dir = repo / "logs" / "replay"
+    bars_dir = repo / "logs" / "bars"
     # Prefer per-day summaries, fallback to replay_summary.json
     daily = sorted(replay_dir.glob("replay_summary_*.json"))
     if not daily:
@@ -26,6 +29,20 @@ def main() -> int:
         summ = json.loads(sp.read_text(encoding="utf-8"))
         as_of = str(summ.get("as_of_date", ""))[:10]
         sym = str(summ.get("symbol", "NVDA")).upper()
+
+        # Prefer real bar-based edge if cached bars exist
+        bar_path = bars_dir / f"{sym}_{as_of}_1m.csv"
+        if bar_path.exists():
+            bars = read_bars_csv(bar_path)
+            sigs = gen_bplus_signals(bars)
+            scored = score_signals_v0(bars, sigs)
+
+            for ev0 in scored:
+                ev = dict(base)
+                ev.update(ev0)
+                out_lines.append(json.dumps(ev, separators=(",", ":")))
+            continue
+
 
         net_pnl = float(summ.get("net_pnl", 0.0) or 0.0)
         trades = float(summ.get("trades", 0.0) or 0.0)
