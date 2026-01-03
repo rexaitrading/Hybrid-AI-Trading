@@ -30,4 +30,8 @@ if($OutDir -and $OutDir.Trim().Length -gt 0){ $argv += @("--outdir",$OutDir) }
 
 & $py -m hybrid_ai_trading.ib.ib_history_fetch @argv
 # --- end args ---
-exit $LASTEXITCODE
+if($LASTEXITCODE -eq 0){
+  exit 0
+}
+Write-Host ("[IBKR] FAIL-CLOSED: underlying exit=" + $LASTEXITCODE + " -> mapping to 2") -ForegroundColor Yellow
+exit 2
