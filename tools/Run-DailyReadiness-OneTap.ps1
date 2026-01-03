@@ -27,6 +27,10 @@ if(Test-Path $p23){
 } else {
   Write-Host "[ONETAP] WARN missing Phase23 health runner: $p23" -ForegroundColor Yellow
 }
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "[ONETAP] FAIL-CLOSED: Phase4 failed exit=$LASTEXITCODE" -ForegroundColor Red
+  exit $LASTEXITCODE
+}
 # 2) EV-hard snapshot
 $ev = Join-Path $repoRoot "tools\Build-EvHardSnapshot.ps1"
 if(Test-Path $ev){
