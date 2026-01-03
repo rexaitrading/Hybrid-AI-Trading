@@ -121,6 +121,31 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
+# GS_ELIGIBLE_ZERO_BEGIN
+# Weekend-aware clarity (no holiday calendar): market_closed_today is true on Sat/Sun.
+$marketClosedToday = $false
+try {
+  $dow = [int](Get-Date).DayOfWeek
+  if($dow -eq 0 -or $dow -eq 6){ $marketClosedToday = $true }
+} catch { $marketClosedToday = $false }
+
+# GateScore NVDA data-quality guard: eligible events count
+$nvdaEligibleCount = 0
+try {
+  $nvdaPath = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+  if(Test-Path -LiteralPath $nvdaPath){
+    foreach($ln in (Get-Content -LiteralPath $nvdaPath -Encoding utf8)){
+      $s = $ln.Trim(); if(-not $s){ continue }
+      try {
+        $o = $s | ConvertFrom-Json
+        if($o.PSObject.Properties.Name -contains "eligible" -and [bool]$o.eligible){ $nvdaEligibleCount++ }
+      } catch { }
+    }
+  }
+} catch { $nvdaEligibleCount = 0 }
+
+$gsNvdaEligibleZero = ($nvdaEligibleCount -le 0)
+# GS_ELIGIBLE_ZERO_END
 if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
 # Session date (single source of truth): prefer Phase4 stamp as_of_date; fallback to local date
@@ -408,6 +433,8 @@ $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsN
 $spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
 $qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
 $reasons = New-Object System.Collections.Generic.List[string]
+# GateScore NVDA data-quality reason (audit-only; does not change gating)
+if ($gsNvdaEligibleZero) { $reasons.Add("gatescore_nvda_eligible_zero=true") | Out-Null }
 if (-not $gsAsOf) { $reasons.Add("gatescore_missing_source_data") | Out-Null }
 
 
