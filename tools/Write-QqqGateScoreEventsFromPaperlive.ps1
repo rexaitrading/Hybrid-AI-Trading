@@ -120,7 +120,7 @@ foreach ($ln in $lines) {
         source             = "REAL"
         score              = $edge
         edge_ratio         = $edge
-        micro_score        = [double]$ms
+        micro_score        = $ms
         micro_score_source = $microSrc
         realized_pnl       = $rp
         count_signals      = 1
