@@ -203,7 +203,7 @@ def main() -> int:
         out_csv=out_csv,
     )
     if rc == 0:
-        print(f"[ibkr] wrote {out_csv}")
+        print("[ibkr] wrote " + out_csv.name)
     return rc
 
 if __name__ == "__main__":
