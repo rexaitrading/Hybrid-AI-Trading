@@ -29,6 +29,11 @@ function Write-Utf8NoBom([string]$Path, [string]$Text) {
 $today = (Get-Date).ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
+
+# EVH_SNAPSHOT_DATES_BEGIN
+# Clarity fields (backward-compatible): distinguish snapshot run date vs evidence as-of date.
+$evidenceAsOfDate = $null
+# EVH_SNAPSHOT_DATES_END
 $ok = $false
 $reason = "evidence_missing_failclosed"
 
@@ -43,6 +48,7 @@ if (Test-Path $EvidencePath) {
   } else {
     # require evidence to be for today
     $asOf = (($j.as_of_date) + "").Trim()
+    $evidenceAsOfDate = $asOf
     if ($asOf -ne $today) {
       $ok = $false
       $reason = ("evidence_stale_failclosed as_of_date={0} today={1}" -f $asOf,$today)
@@ -60,6 +66,8 @@ if (Test-Path $EvidencePath) {
 $out = [ordered]@{
   ts_utc = $tsUtc
   as_of_date = $today
+  snapshot_date = $today
+  evidence_as_of_date = $evidenceAsOfDate
   ok = $ok
   reason = $reason
 } | ConvertTo-Json -Depth 6
