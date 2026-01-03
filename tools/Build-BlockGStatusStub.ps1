@@ -170,13 +170,6 @@ try {
   $gsMsExists = $false
 }
 # GS_METRICS_SOURCE_CAPTURE_END
-# EVH_MARKET_CLOSED_AUDIT_BEGIN
-# Audit-only clarity: when market is closed we do not treat EV-hard as "passed".
-$ev_hard_not_evaluated_market_closed = $false
-try {
-  if($marketClosedToday){ $ev_hard_not_evaluated_market_closed = $true }
-} catch { $ev_hard_not_evaluated_market_closed = $false }
-# EVH_MARKET_CLOSED_AUDIT_END
 # GS_ELIGIBLE_ZERO_BEGIN
 # Weekend-aware clarity (no holiday calendar): market_closed_today is true on Sat/Sun.
 $marketClosedToday = $false
@@ -185,6 +178,14 @@ try {
   if($dow -eq 0 -or $dow -eq 6){ $marketClosedToday = $true }
 } catch { $marketClosedToday = $false }
 
+
+# EVH_MARKET_CLOSED_AUDIT_BEGIN
+# Audit-only clarity: when market is closed we do not treat EV-hard as "passed".
+$ev_hard_not_evaluated_market_closed = $false
+try {
+  if($marketClosedToday){ $ev_hard_not_evaluated_market_closed = $true }
+} catch { $ev_hard_not_evaluated_market_closed = $false }
+# EVH_MARKET_CLOSED_AUDIT_END
 # GateScore NVDA data-quality guard: eligible events count
 $nvdaEligibleCount = 0
 try {
