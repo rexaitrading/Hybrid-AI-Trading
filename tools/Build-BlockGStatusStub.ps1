@@ -345,7 +345,7 @@ $gsEdgePolicy  = [double]$gatescore_mean_edge_ratio_rolling
 $gsMicroPolicy = [double]$gatescore_mean_micro_score_rolling
 
 $gsSamplesOk = ($gsCountPolicy -ge [int]$gsNVDA.minSignals -and $gsPnlPolicy -ge [int]$gsNVDA.minPnl)
-$gsThreshOk  = (($gsEdgePolicy + 1e-9) -ge [double]$minEdge -and ($gsMicroPolicy + 1e-9) -ge [double]$minMicro)
+$gsThreshOk  = (($gsEdgePolicy + 1e-9) -ge [double]$gsNVDA.minEdge -and ($gsMicroPolicy + 1e-9) -ge [double]$gsNVDA.minMicro)
 $gsOkToday   = ([bool]$gsFresh -and $gsSamplesOk -and $gsThreshOk)
 # NOTE: gsPolicyOk depends on gsRecentEnough, computed later (age policy); we will recompute it after age check.
 # --- END FIXED policy metrics + booleans ---
