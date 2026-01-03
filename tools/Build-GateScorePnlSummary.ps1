@@ -193,14 +193,10 @@ foreach ($it in $eventFiles) {
     $pnlVals = @()
 
     foreach ($e in $pnlSourceEvents) {
-        $edge  = Get-Num $e @("edge_ratio","mean_edge_ratio","edge","ev_edge_ratio")
-        $micro = Get-Num $e @("micro_score","mean_micro_score","micro","micro_score_today")
         $pnl   = Get-Num $e @("realized_pnl","pnl","net_pnl","pnl_usd")
-
-        if ($null -ne $edge)  { $edgeVals += $edge }
-        if ($null -ne $micro) { $microVals += $micro }
         if ($null -ne $pnl)   { $pnlVals += $pnl }
     }
+
 
     foreach ($e in $edgeSourceEvents) {
         $edge  = Get-Num $e @("edge_ratio","mean_edge_ratio","edge","ev_edge_ratio")
