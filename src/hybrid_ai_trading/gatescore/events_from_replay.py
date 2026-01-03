@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from hybrid_ai_trading.replay.edge_model_v0 import read_bars_csv, gen_bplus_signals
-from hybrid_ai_trading.replay.edge_model_v2 import score_signals_v2, _rth_mask
+from hybrid_ai_trading.replay.edge_model_v2 import score_signals_v2, _rth_mask, _parse_ts
 _BAR_RE = re.compile(r"^(?P<sym>[A-Z]+)_(?P<day>\d{4}-\d{2}-\d{2})_1m\.csv$")
 
 
@@ -28,6 +28,42 @@ def _list_cached_days(logs_dir: Path, symbol: str) -> List[str]:
         days.append(m.group("day"))
     return sorted(set(days))
 
+
+
+def _orb_breakout_signals(bars) -> list[int]:
+    # Minimal ORB breakout signals (LONG-only), session-correct
+    # RTH-only via _rth_mask
+    # ORB window: 09:30–09:34
+    # Signal window: 09:35–16:00
+    # Trigger: close > ORB_high
+    if not bars:
+        return []
+    rth = _rth_mask(bars)
+
+    orb_idx = []
+    after_idx = []
+    for i, b in enumerate(bars):
+        if not rth[i]:
+            continue
+        dt = _parse_ts(b.ts)
+        if dt is None:
+            continue
+        hhmm = dt.hour * 60 + dt.minute
+        if (9*60 + 30) <= hhmm <= (9*60 + 34):
+            orb_idx.append(i)
+        elif (9*60 + 35) <= hhmm <= (16*60):
+            after_idx.append(i)
+
+    if len(orb_idx) < 3 or len(after_idx) < 1:
+        return []
+
+    orb_high = max(bars[i].h for i in orb_idx)
+
+    sigs = []
+    for i in after_idx:
+        if bars[i].c > orb_high:
+            sigs.append(i)
+    return sigs
 
 def main() -> int:
     logs = Path("logs")
@@ -54,7 +90,7 @@ def main() -> int:
         if not bars:
             continue
 
-        sigs = gen_bplus_signals(bars)
+        sigs = _orb_breakout_signals(bars)
         sigs = [i for i in sigs if (0 <= i < len(rth) and rth[i])]
         scored = score_signals_v2(bars, sigs)
         # Sentinel row: day exists, signals existed, but 0 eligible events were produced.
