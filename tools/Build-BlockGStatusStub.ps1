@@ -344,7 +344,7 @@ $gsPnlPolicy   = if([int]$gatescore_pnl_samples_rolling -gt 0){ [int]$gatescore_
 $gsEdgePolicy  = [double]$gatescore_mean_edge_ratio_rolling
 $gsMicroPolicy = [double]$gatescore_mean_micro_score_rolling
 
-$gsSamplesOk = ($gsCountPolicy -ge [int]$minSignals -and $gsPnlPolicy -ge [int]$minPnl)
+$gsSamplesOk = ($gsCountPolicy -ge [int]$gsNVDA.minSignals -and $gsPnlPolicy -ge [int]$gsNVDA.minPnl)
 $gsThreshOk  = (($gsEdgePolicy + 1e-9) -ge [double]$minEdge -and ($gsMicroPolicy + 1e-9) -ge [double]$minMicro)
 $gsOkToday   = ([bool]$gsFresh -and $gsSamplesOk -and $gsThreshOk)
 # NOTE: gsPolicyOk depends on gsRecentEnough, computed later (age policy); we will recompute it after age check.
