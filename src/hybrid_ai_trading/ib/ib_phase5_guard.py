@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
-
-
+from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready
 def place_order_with_phase5_guard(
     rm: Any,
     ib_client: Any,
@@ -21,6 +20,12 @@ def place_order_with_phase5_guard(
     """
     if rm is None:
         raise RuntimeError("RiskManager is required for Phase-5 IB guard")
+
+    # Block-G fail-closed for NVDA LIVE regimes
+    sym = str(trade_context.get("symbol","")).upper()
+    reg = str(trade_context.get("regime","")).upper()
+    if sym == "NVDA" and ("LIVE" in reg):
+        contract_ensure_symbol_blockg_ready("NVDA", allow_paper=False, is_paper=False, ctx=None)
 
     decision = rm.check_trade_phase5(trade_context)
     if not isinstance(decision, Phase5RiskDecision):
