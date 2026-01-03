@@ -65,15 +65,12 @@ def _orb_breakout_signals(bars) -> list[int]:
 cooldown = 0
     for i in after_idx:
     for i in after_idx:
-        
-if cooldown > 0:
-        
-    cooldown -= 1
-        
-    continue
-        if bars[i].h > orb_high:
+        if cooldown > 0:             cooldown -= 1             continue
+        if bars[i].c > orb_high:
             sigs.append(i)
-            cooldown = 5
+            sigs.append(i)
+            
+cooldown = 5
     return sigs
 
 def main() -> int:
