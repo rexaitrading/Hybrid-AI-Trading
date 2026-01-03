@@ -88,6 +88,13 @@ foreach ($ln in $lines) {
         if ($null -ne $v -and ([string]$v).Trim() -ne "") { $micro = TryD $v; break }
     }
     $pnlSamples = 0
+    # METRICS_SOURCE_AUDIT_BEGIN
+    $metricsSource = ""
+    try {
+        $msv = Get-FromResult0 $j "metrics_source"
+        if ($null -ne $msv) { $metricsSource = ($msv + "") }
+    } catch { $metricsSource = "" }
+    # METRICS_SOURCE_AUDIT_END
     foreach ($k in @("pnl_samples","pnlSamples","pnl_n","trades_n","trade_count","n_trades","samples","sample_count")) {
         $v = Get-FromResult0 $j $k
         if ($null -ne $v -and ([string]$v).Trim() -ne "") { $pnlSamples = TryI $v; break }
