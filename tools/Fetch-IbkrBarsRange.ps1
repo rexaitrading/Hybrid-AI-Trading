@@ -37,8 +37,19 @@ foreach($asOf in $need){
   }
 
   Write-Host "`n[FETCH] $asOf" -ForegroundColor Cyan
-  & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Fetch-IbkrBars.ps1") `
-    -Symbol $Symbol -AsOfDate $asOf -Host $IbHost -Port $Port -ClientId $ClientId -UseRth:$UseRth | Out-Host
+
+  $script = (Join-Path $repoRoot "tools\Fetch-IbkrBars.ps1")
+  $argv = @(
+    "-File", $script,
+    "-Symbol", $Symbol,
+    "-AsOfDate", $asOf,
+    "-IbHost", $IbHost,
+    "-Port", $Port,
+    "-ClientId", $ClientId
+  )
+  if($UseRth.IsPresent){ $argv += @("-UseRth") }
+
+  & powershell -NoProfile -ExecutionPolicy Bypass @argv | Out-Host
 
   if($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $dst)){
     $ok += 1
