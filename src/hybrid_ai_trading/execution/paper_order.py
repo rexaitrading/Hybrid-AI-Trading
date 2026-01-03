@@ -9,6 +9,7 @@ def _paper_only_guard() -> None:
 import argparse
 import json
 import os
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import time
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from dataclasses import dataclass
@@ -74,8 +75,6 @@ def clamp_limit(
     side: str, q: Quotes, slip_pct: float, ticks_clamp: int, fallback_ticks: int
 ) -> float:
     side = side.upper()
-    # Block-G: place_bracket live guard (fail-closed)
-    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and str(getattr(contract, "symbol", symbol)).upper() in ("NVDA","SPY","QQQ"):
         require_blockg_ready_for_live(str(getattr(contract, "symbol", symbol)).upper())
     tick = max(q.minTick, 0.01)
     if side == "BUY":
@@ -115,8 +114,6 @@ def dedupe_open_orders(
     ib: IB, symbol: str, side: str, mode: str = "cancel_older"
 ) -> Tuple[list[Trade], list[Trade]]:
     side = side.upper()
-    # Block-G: place_bracket live guard (fail-closed)
-    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and str(getattr(contract, "symbol", symbol)).upper() in ("NVDA","SPY","QQQ"):
         require_blockg_ready_for_live(str(getattr(contract, "symbol", symbol)).upper())
     same = [
         t
@@ -152,7 +149,7 @@ def whatif_validate(
     trial.algoParams = getattr(order, "algoParams", None)
     trial.whatIf = True
     _paper_only_guard()
-    tr = ib.placeOrder(contract, trial)
+    tr = ib_place_order_chokepoint(ib, contract, trial)
     ib.sleep(0.6)
     err = None
     for log in tr.log:
@@ -181,8 +178,6 @@ def place_bracket(
     order_ref: str,
 ) -> Tuple[Trade, Trade, Trade]:
     side = side.upper()
-    # Block-G: place_bracket live guard (fail-closed)
-    if os.environ.get("HAT_IS_PAPER","1").strip() == "0" and str(getattr(contract, "symbol", symbol)).upper() in ("NVDA","SPY","QQQ"):
         require_blockg_ready_for_live(str(getattr(contract, "symbol", symbol)).upper())
     assert side in ("BUY", "SELL")
     parent_id = ib.client.getReqId()
@@ -231,10 +226,9 @@ def place_bracket(
     stop.orderRef = order_ref
 
     _paper_only_guard()
-
-    tr_parent = ib.placeOrder(contract, parent)
-    tr_take = ib.placeOrder(contract, take)
-    tr_stop = ib.placeOrder(contract, stop)
+    tr_parent = ib_place_order_chokepoint(ib, contract, parent)
+    tr_take = ib_place_order_chokepoint(ib, contract, take)
+    tr_stop = ib_place_order_chokepoint(ib, contract, stop)
     ib.sleep(0.8)
     return tr_parent, tr_take, tr_stop
 
