@@ -492,7 +492,7 @@ $gsEdgePolicy  = [double]$gatescore_mean_edge_ratio_rolling
 $gsMicroPolicy = [double]$gatescore_mean_micro_score_rolling
 # LIVE policy A: strict daily only (fail-closed)
 $gsSamplesOk = [bool]$gatescore_daily_samples_ok
-$gsThreshOk = ((([double]$gatescore_mean_edge_ratio + 1e-9) -ge [double]$gsNVDA.minEdge) -and (([double]$gatescore_mean_micro_score + 1e-9) -ge [double]$gsNVDA.minMicro))  # THRESH_OK_DAILY
+$gsThreshOk = ((([double]$gsNVDA.edge + 1e-9) -ge [double]$gsNVDA.minEdge) -and (([double]$gsNVDA.micro + 1e-9) -ge [double]$gsNVDA.minMicro))  # THRESH_OK_DAILY_FROM_GSNVDA
 $gsOkToday   = ([bool]$gsNVDA.fresh -and $gsSamplesOk -and $gsThreshOk)
 # NOTE: gsPolicyOk depends on gsRecentEnough, computed later (age policy); we will recompute it after age check.
 # --- END FIXED policy metrics + booleans ---
