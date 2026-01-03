@@ -68,7 +68,7 @@ if(Test-Path $bg){
 
 # 5) Check readiness
 $chk = Join-Path $repoRoot "tools\Check-BlockGReady.ps1"
-if(Test-Path $chk){
+if(Test-Path -LiteralPath $chk){
   & powershell -NoProfile -ExecutionPolicy Bypass -File $chk -Symbol $Symbol | Out-Host
 # $finalExit already captured earlier
   $continue = $false
