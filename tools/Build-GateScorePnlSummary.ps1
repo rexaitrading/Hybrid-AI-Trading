@@ -135,6 +135,18 @@ foreach ($it in $eventFiles) {
     if (-not (Test-Path $path)) { continue }
 
     $events = @(Read-Jsonl $path)
+    # GS_SUMMARY_DEBUG_NVDA_BEGIN
+    if($sym -eq "NVDA"){
+      $mx = ""
+      foreach($ee in $events){
+        $ed = Get-EventDate $ee
+        if($ed){
+          if($mx -eq "" -or $ed -gt $mx){ $mx = $ed }
+        }
+      }
+      Write-Host ("[GS-SUMMARY] NVDA path=" + $path + " max_date=" + $mx + " today=" + $today) -ForegroundColor Cyan
+    }
+    # GS_SUMMARY_DEBUG_NVDA_END
     $stdPath = [string]$it.std
     $stdEvents = @()
     if ($stdPath -and (Test-Path -LiteralPath $stdPath)) { $stdEvents = @(Read-Jsonl $stdPath) }
