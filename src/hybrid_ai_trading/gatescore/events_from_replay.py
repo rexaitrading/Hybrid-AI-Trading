@@ -60,20 +60,9 @@ def _orb_breakout_signals(bars) -> list[int]:
     orb_high = max(bars[i].h for i in orb_idx)
 
     sigs = []
-<<<<<<< HEAD
     for i in after_idx:
         if bars[i].c > orb_high:
             sigs.append(i)
-=======
-    cooldown = 0
-    for i in after_idx:
-        if cooldown > 0:
-            cooldown -= 1
-            continue
-        if bars[i].c > orb_high:
-            sigs.append(i)
-            cooldown = 5
->>>>>>> parent of 70b49066 (fix(edge): ORB cooldown=5 applied by line rewrite (no indentation mismatch))
     return sigs
 
 def main() -> int:
