@@ -64,6 +64,14 @@ $statusPath = $env:HAT_BLOCKG_STATUS_PATH
 if (-not $statusPath) { $statusPath = $defaultPath }
 
 $st = Read-Json $statusPath
+# MARKET_CLOSED_FAILCLOSED_CHECK_BEGIN
+# Institutional clarity: when market is closed we fail-closed with an explicit operator message.
+try {
+  if ($st -and ($st.PSObject.Properties.Name -contains "market_closed_today") -and [bool]$st.market_closed_today) {
+    Fail "market_closed_today=true (fail-closed; readiness not evaluated on closed days)"
+  }
+} catch { }
+# MARKET_CLOSED_FAILCLOSED_CHECK_END
 if (-not $st) { Fail "Missing/invalid Block-G status JSON at: $statusPath" }
 
 # --- GateScore session-age policy (contract-only; do not recompute) ---
