@@ -15,10 +15,15 @@ Responsibilities:
 """
 
 import logging
+from datetime import datetime
 from typing import Any, Dict, Optional
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
-
+from hybrid_ai_trading.execution.blockg_contract_reader import (
+    get_default_blockg_status_path,
+    load_blockg_status,
+    require_blockg_date_today,
+)
 from hybrid_ai_trading.execution.order_manager import OrderManager
 from hybrid_ai_trading.execution.paper_simulator import PaperSimulator
 from hybrid_ai_trading.execution.portfolio_tracker import PortfolioTracker
@@ -157,6 +162,12 @@ class ExecutionEngine:
             # --- Block-G hard gate for LIVE orders (belt & suspenders)
             if (not self.dry_run) and str(symbol).upper() in ("NVDA","SPY","QQQ"):
                 require_nvda_live_stamp(str(symbol).upper())
+                # Block-G contract must be for today (fail-closed)
+                try:
+                    st = load_blockg_status(get_default_blockg_status_path())
+                    require_blockg_date_today(status=st, today=datetime.now().strftime("%Y-%m-%d"))
+                except Exception:
+                    return {"status": "rejected", "reason": "blockg_contract_not_today_or_unreadable"}
                 require_blockg_ready_for_live(str(symbol).upper())
             return self.order_manager.place_order(
                 symbol=symbol,
