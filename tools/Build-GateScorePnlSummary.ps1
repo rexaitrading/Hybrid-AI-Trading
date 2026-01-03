@@ -285,6 +285,8 @@ foreach ($it in $eventFiles) {
         mean_edge_ratio  = [double](Mean $edgeVals)
         mean_micro_score = [double](Mean $microVals)
         mean_pnl         = [double](Mean $pnlVals)
+        eligible_count  = [int]$todayEvents.Count
+        has_eligible    = [bool]($todayEvents.Count -gt 0)
     }
 
     $rowsOut.Add($row) | Out-Null
