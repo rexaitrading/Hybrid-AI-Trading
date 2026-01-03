@@ -119,6 +119,13 @@ foreach ($ln in $lines) {
     # Fail-closed eligibility: require non-zero metrics OR real pnl samples
     $eligible = ($edge -gt 0.0 -or [double]$ms -gt 0.0 -or $pnlSamples -gt 0)
     $src = if($eligible){"REAL"}else{"STUB"}
+    # Fail-closed: STUB events must NOT emit fake zeros/derived values
+    if (-not $eligible) {
+        $edge = $null
+        $ms = $null
+        $microSrc = "missing"
+    }
+
     $note = if($eligible){"from_paperlive"}else{"from_paperlive;ineligible_zero_metrics"}
     $outObj = [ordered]@{
         as_of_date         = $asOf
@@ -126,7 +133,7 @@ foreach ($ln in $lines) {
         source             = $src
         score              = $edge
         edge_ratio         = $edge
-        micro_score        = [double]$ms
+        micro_score        = $ms
         micro_score_source = $microSrc
         realized_pnl       = $rp
         count_signals      = 1

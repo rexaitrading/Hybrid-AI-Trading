@@ -13,13 +13,20 @@ $today = (Get-Date).ToString("yyyy-MM-dd")
 Write-Host "[ONETAP] Daily readiness start today=$today symbol=$Symbol" -ForegroundColor Cyan
 
 # 1) Phase-4 validation (existing artifact builder may be different; adjust later if needed)
-$phase4 = Join-Path $repoRoot "tools\Build-Phase4ValidationPassed.ps1"
+$phase4 = Join-Path $repoRoot "tools\Run-Phase4Validation.ps1"
 if(Test-Path $phase4){
   & powershell -NoProfile -ExecutionPolicy Bypass -File $phase4 | Out-Host
 } else {
   Write-Host "[ONETAP] WARN missing Phase4 builder: $phase4" -ForegroundColor Yellow
 }
 
+# 1B) Phase-23 health daily
+$p23 = Join-Path $repoRoot "tools\Run-Phase23HealthDaily.ps1"
+if(Test-Path $p23){
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $p23 | Out-Host
+} else {
+  Write-Host "[ONETAP] WARN missing Phase23 health runner: $p23" -ForegroundColor Yellow
+}
 # 2) EV-hard snapshot
 $ev = Join-Path $repoRoot "tools\Build-EvHardSnapshot.ps1"
 if(Test-Path $ev){

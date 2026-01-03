@@ -90,8 +90,9 @@ def place_order_phase5_with_guard(
     except Exception:
         is_paper = True
     sym_u = str(symbol).upper()
-    if (not is_paper) and sym_u in ("NVDA","SPY","QQQ"):
-        contract_ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=None)
+    is_live_regime = ("_LIVE" in str(regime).upper()) or ("LIVE" in str(regime).upper())
+    if (sym_u in ("NVDA","SPY","QQQ")) and ((not is_paper) or is_live_regime):
+        ensure_symbol_blockg_ready(sym_u)
 
     trade = {
         "symbol": symbol,
