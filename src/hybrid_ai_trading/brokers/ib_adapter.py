@@ -72,22 +72,19 @@ class IBAdapter(Broker):
         ctx: RunContext | None = None,
     ) -> Tuple[int, Dict[str, Any]]:
         contract = Stock(symbol, "SMART", "USD")
+
         if order_type.upper() == "LIMIT":
             if limit_price is None:
                 raise ValueError("limit_price required for LIMIT orders")
             order = LimitOrder(side.upper(), qty, limit_price)
         else:
             order = MarketOrder(side.upper(), qty)
-        # Block-G: hard fail-closed for LIVE orders (double-gate)
-        # LIVE is determined by (highest precedence first):
-        #   1) meta["is_paper"] == False
-        #   2) env:HAT_IS_PAPER == "0"
-        #   3) ctx.mode == "live"
-        # Default is paper-safe.
+
+        # Block-G: hard fail-closed for LIVE orders (single chokepoint)
         meta0 = meta or {}
         is_paper = True
         try:
-            if "is_paper" in meta0:
+            if isinstance(meta0, dict) and ("is_paper" in meta0):
                 is_paper = bool(meta0.get("is_paper", True))
             else:
                 env_flag = str(__import__("os").environ.get("HAT_IS_PAPER", "")).strip()
@@ -97,16 +94,17 @@ class IBAdapter(Broker):
                     is_paper = str(getattr(ctx, "mode", "")).strip().lower() != "live"
         except Exception:
             is_paper = True
-        # Block-G single chokepoint (ctx/json/env precedence inside contract)
+
         contract_ensure_symbol_blockg_ready(
             symbol,
             allow_paper=True,
             is_paper=(meta0.get("is_paper", None) if isinstance(meta0, dict) else None),
             ctx=ctx,
         )
+
         trade = ib_place_order_chokepoint(self.ib, contract, order, ctx=ctx, meta=meta0)
-        # Give IB a moment to populate status in async loop
         self.ib.sleep(0.1)
+
         st = trade.orderStatus
         meta_out = {
             "status": st.status,
@@ -115,7 +113,6 @@ class IBAdapter(Broker):
             "meta": meta or {},
         }
         return trade.order.orderId, meta_out
-
     def open_orders(self) -> List[Dict[str, Any]]:
         out: List[Dict[str, Any]] = []
         for oo in self.ib.openTrades():
