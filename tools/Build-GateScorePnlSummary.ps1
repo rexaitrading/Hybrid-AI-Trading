@@ -134,10 +134,10 @@ foreach ($it in $eventFiles) {
     $path = [string]$it.path
     if (-not (Test-Path $path)) { continue }
 
-    $events = Read-Jsonl $path
+    $events = @(Read-Jsonl $path)
     $stdPath = [string]$it.std
     $stdEvents = @()
-    if ($stdPath -and (Test-Path -LiteralPath $stdPath)) { $stdEvents = Read-Jsonl $stdPath }
+    if ($stdPath -and (Test-Path -LiteralPath $stdPath)) { $stdEvents = @(Read-Jsonl $stdPath) }
 
     if ($events.Count -eq 0) { continue }
 
