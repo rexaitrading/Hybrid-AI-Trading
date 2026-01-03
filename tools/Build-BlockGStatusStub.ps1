@@ -211,6 +211,20 @@ if (Test-Path $evPath) {
         }
     }
 }
+# EVHARD_REASON_CAPTURE_BEGIN
+# Capture today's EV-hard daily reason for audit/contract messaging
+$evHardReason = ""
+try {
+  if (Test-Path $evPath) {
+    $rows2 = @(Import-Csv $evPath)
+    foreach ($r2 in $rows2) {
+      if ((Slice-Date ([string]$r2.date)) -eq $today) {
+        if ($r2.PSObject.Properties.Name -contains "reason") { $evHardReason = [string]$r2.reason }
+      }
+    }
+  }
+} catch { $evHardReason = "" }
+# EVHARD_REASON_CAPTURE_END
 
 
 # ---- EV hard veto session preview (does NOT arm live; informational) ----
@@ -416,6 +430,7 @@ if (-not $gsRecentEnough) {
 # QQQ_GS_OK_TODAY omitted for NVDA-only readiness
 if (-not $phase23Ok) { $reasons.Add("phase23_health_ok_today=false") }
 if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
+if (-not $evHardOk -and $evHardReason) { $reasons.Add(("ev_hard_daily_reason=" + $evHardReason)) }
 if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }
 if (-not $gsAsOf -or $gsAsOf -ne $today) { $reasons.Add("gatescore_fresh_today=false") }
 if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
