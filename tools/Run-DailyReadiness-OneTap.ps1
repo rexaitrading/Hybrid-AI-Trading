@@ -62,6 +62,7 @@ if(Test-Path $chk){
   exit $LASTEXITCODE
 }
 throw "Missing checker: $chk"
+:ONETAP_SUMMARY
 # --- OneTap summary JSON (for Notion ingest) ---
 try {
   $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
