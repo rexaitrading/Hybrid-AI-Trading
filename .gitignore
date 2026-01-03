@@ -126,3 +126,6 @@ tools/Kill-Spammers.ps1
 # backups
 _backups/
 
+
+# Allow tracking market holiday calendar
+!configs/market_holidays.json
