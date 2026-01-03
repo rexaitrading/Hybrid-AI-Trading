@@ -127,6 +127,7 @@ foreach ($ln in $lines) {
         pnl_samples        = $pnlSamples
         eligible           = [bool]$eligible
         notes              = $note
+        metrics_source     = $metricsSource
     }
     [void]$eventsOut.Add(($outObj | ConvertTo-Json -Compress))
     $count++
