@@ -131,6 +131,17 @@ if (Test-Path -LiteralPath $p4Path) {
     $p4 = (Get-Content -LiteralPath $p4Path -Raw -Encoding utf8 | ConvertFrom-Json)
     $d = [string]$p4.as_of_date
     if ($d -and $d.Length -ge 10) { $today = $d.Substring(0,10) }
+    # PHASE4_STAMP_TODAY_GUARD_BEGIN
+    # Fail-closed: do NOT let stale Phase4 stamp override local date.
+    $localToday = (Get-Date).ToString("yyyy-MM-dd")
+    $p4AsOf = ""
+    try { $p4AsOf = [string]$p4.as_of_date; if($p4AsOf.Length -ge 10){ $p4AsOf = $p4AsOf.Substring(0,10) } } catch { $p4AsOf = "" }
+
+    if($p4AsOf -and ($p4AsOf -ne $localToday)){
+      # keep today as local date; Phase4 is not valid for today
+      $today = $localToday
+    }
+    # PHASE4_STAMP_TODAY_GUARD_END
   } catch { }
 }
 
