@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -43,7 +44,7 @@ def main() -> int:
             for ev0 in scored:
                 ev = {
                     "ts_utc": iso_utc_now(),
-                    "as_of_date": as_of,
+                    "as_of_date": as_of_date,
                     "symbol": sym,
                     "source": "BARS_EDGE_V0",
                     "eligible": True,
@@ -73,7 +74,7 @@ def main() -> int:
         eligible = trades > 0
         base = {
             "ts_utc": iso_utc_now(),
-            "as_of_date": as_of,
+            "as_of_date": as_of_date,
             "symbol": sym,
             "source": "REAL_REPLAY_V0",
             "eligible": bool(eligible),
