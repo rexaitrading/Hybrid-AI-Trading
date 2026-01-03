@@ -322,6 +322,35 @@ $gsNVDA = Eval-GS "NVDA"
 $gsSPY  = Eval-GS "SPY"
 $gsQQQ  = Eval-GS "QQQ"
 
+# --- GateScore rolling truth (30 trading days) ---
+$ROLL_DAYS = 30
+$gsDays = LastNTradingDays $today $ROLL_DAYS
+$gsNVDA_roll = ComputeGateScoreRolling "NVDA" $logsDir $gsDays
+
+$gatescore_samples_rolling     = $gsNVDA_roll.samples
+$gatescore_pnl_samples_rolling = $gsNVDA_roll.pnl_samples
+$gatescore_mean_edge_ratio_rolling  = $gsNVDA_roll.mean_edge
+$gatescore_mean_micro_score_rolling = $gsNVDA_roll.mean_micro
+# --- Policy metrics should prefer rolling when available ---
+$gsCountPolicy = if($null -ne $gatescore_samples_rolling -and [int]$gatescore_samples_rolling -gt 0){ [int]$gatescore_samples_rolling } else { [int]$gsCountPolicy }
+$gsPnlPolicy   = if($null -ne $gatescore_pnl_samples_rolling -and [int]$gatescore_pnl_samples_rolling -gt 0){ [int]$gatescore_pnl_samples_rolling } else { [int]$gsPnlPolicy }
+$gsEdgePolicy  = if($null -ne $gatescore_mean_edge_ratio_rolling){ [double]$gatescore_mean_edge_ratio_rolling } else { [double]$gsEdgePolicy }
+$gsMicroPolicy = if($null -ne $gatescore_mean_micro_score_rolling){ [double]$gatescore_mean_micro_score_rolling } else { [double]$gsMicroPolicy }
+# --- end policy metrics ---
+
+# --- FIXED policy metrics + booleans (rolling-first) ---
+$gsCountPolicy = if([int]$gatescore_samples_rolling -gt 0){ [int]$gatescore_samples_rolling } else { [int]$gsCount }
+$gsPnlPolicy   = if([int]$gatescore_pnl_samples_rolling -gt 0){ [int]$gatescore_pnl_samples_rolling } else { [int]$gsPnl }
+$gsEdgePolicy  = [double]$gatescore_mean_edge_ratio_rolling
+$gsMicroPolicy = [double]$gatescore_mean_micro_score_rolling
+
+$gsSamplesOk = ($gsCountPolicy -ge [int]$minSignals -and $gsPnlPolicy -ge [int]$minPnl)
+$gsThreshOk  = (($gsEdgePolicy + 1e-9) -ge [double]$minEdge -and ($gsMicroPolicy + 1e-9) -ge [double]$minMicro)
+$gsOkToday   = ([bool]$gsFresh -and $gsSamplesOk -and $gsThreshOk)
+# NOTE: gsPolicyOk depends on gsRecentEnough, computed later (age policy); we will recompute it after age check.
+# --- END FIXED policy metrics + booleans ---
+
+
 # ---- Legacy GateScore vars (NVDA-based) for backward-compatible payload/reasons ----
 $gsFresh     = [bool]$gsNVDA.fresh
 $gsSamplesOk = [bool]$gsNVDA.samplesOk
@@ -368,6 +397,7 @@ try {
 } catch { $gsAgeDays = 9999 }
 
 $gsRecentEnough = ($gsAgeDays -le $MAX_GS_AGE_DAYS)
+$gsPolicyOk = [bool]($gsRecentEnough -and $gsSamplesOk -and $gsThreshOk)
 if (-not $gsRecentEnough) {
   $reasons.Add(("gatescore_too_old age_days=" + $gsAgeDays + " max=" + $MAX_GS_AGE_DAYS + " session=" + $gsAsOf + " today=" + $today)) | Out-Null
 }
@@ -389,21 +419,6 @@ $qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQ
 if (WantSym "NVDA" -and -not $nvdaReady) { $reasons.Add("nvda_blockg_ready=false") | Out-Null }
 if (WantSym "SPY" -and -not $spyReady) { $reasons.Add("spy_blockg_ready=false") | Out-Null }
 if (WantSym "QQQ" -and -not $qqqReady) { $reasons.Add("qqq_blockg_ready=false") | Out-Null }
-# --- GateScore rolling truth (30 trading days) ---
-$ROLL_DAYS = 30
-$gsDays = LastNTradingDays $today $ROLL_DAYS
-$gsNVDA_roll = ComputeGateScoreRolling "NVDA" $logsDir $gsDays
-
-$gatescore_samples_rolling     = $gsNVDA_roll.samples
-$gatescore_pnl_samples_rolling = $gsNVDA_roll.pnl_samples
-$gatescore_mean_edge_ratio_rolling  = $gsNVDA_roll.mean_edge
-$gatescore_mean_micro_score_rolling = $gsNVDA_roll.mean_micro
-# --- Policy metrics should prefer rolling when available ---
-$gsCountPolicy = if($null -ne $gatescore_samples_rolling -and [int]$gatescore_samples_rolling -gt 0){ [int]$gatescore_samples_rolling } else { [int]$gsCountPolicy }
-$gsPnlPolicy   = if($null -ne $gatescore_pnl_samples_rolling -and [int]$gatescore_pnl_samples_rolling -gt 0){ [int]$gatescore_pnl_samples_rolling } else { [int]$gsPnlPolicy }
-$gsEdgePolicy  = if($null -ne $gatescore_mean_edge_ratio_rolling){ [double]$gatescore_mean_edge_ratio_rolling } else { [double]$gsEdgePolicy }
-$gsMicroPolicy = if($null -ne $gatescore_mean_micro_score_rolling){ [double]$gatescore_mean_micro_score_rolling } else { [double]$gsMicroPolicy }
-# --- end policy metrics ---
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
