@@ -80,11 +80,7 @@ def require_blockg_ready_for_live(symbol: str, *, status: dict | None = None) ->
     sym = (symbol or "").upper().strip()
     if sym not in {"NVDA", "SPY", "QQQ"}:
         raise BlockGNotReady(f"Block-G not ready: unsupported_symbol={sym}")
-
-    is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
-    if not is_live:
-        return
-
+    # If status is provided, always enforce it (tests + deterministic auditing), regardless of env.
     if status is not None:
         key = f"{sym.lower()}_blockg_ready"
         if bool(status.get(key, False)) is not True:
@@ -95,6 +91,9 @@ def require_blockg_ready_for_live(symbol: str, *, status: dict | None = None) ->
             raise BlockGNotReady(";".join([str(x) for x in reasons])[:500])
         return
 
+    # Runtime path: only enforce when live
+    is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
+    if not is_live:
+        return
+
     require_blockg_ready(sym, is_live=True)
-
-
