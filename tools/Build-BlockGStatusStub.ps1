@@ -125,13 +125,17 @@ $logsDir  = Join-Path $repoRoot "logs"
 $gatescore_metrics_source = ""
 try {
   $p = Join-Path $logsDir "nvda_gatescore_events.jsonl"
-  if(Test-Path -LiteralPath $p){
+  if (Test-Path -LiteralPath $p) {
     $seen = @{}
-    foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)){
+    foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)) {
       $s = ($ln + "").Trim(); if(-not $s){ continue }
       try {
         $o = $s | ConvertFrom-Json
-        if((Slice-Date ([string]$o.as_of_date)) -ne $today){ continue }
+
+        $d = ($o.as_of_date + "")
+        if($d.Length -ge 10){ $d = $d.Substring(0,10) }
+        if($d -ne $today){ continue }
+
         if($o.PSObject.Properties.Name -contains "metrics_source"){
           $ms = ([string]$o.metrics_source).Trim()
           if($ms){
