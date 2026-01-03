@@ -55,7 +55,7 @@ function Read-Jsonl([string]$Path) {
         if (-not $s) { continue }
         try { $out += ($s | ConvertFrom-Json) } catch { }
     }
-    return $out
+    return @($out)
 }
 
 function Get-EventDate($e) {
