@@ -272,6 +272,16 @@ try {
   }
 } catch { $evHardReason = "" }
 # EVHARD_REASON_CAPTURE_END
+# EVH_SNAPSHOT_REASON_BEGIN
+$evHardSnapshotReason = ""
+try {
+  $p = Join-Path $logsDir "ev_hard_snapshot.json"
+  if(Test-Path -LiteralPath $p){
+    $jj = Get-Content -LiteralPath $p -Raw -Encoding utf8 | ConvertFrom-Json
+    if($jj.PSObject.Properties.Name -contains "reason"){ $evHardSnapshotReason = [string]$jj.reason }
+  }
+} catch { $evHardSnapshotReason = "" }
+# EVH_SNAPSHOT_REASON_END
 
 
 # ---- EV hard veto session preview (does NOT arm live; informational) ----
@@ -483,6 +493,7 @@ if (-not $gsRecentEnough) {
 if (-not $phase23Ok) { $reasons.Add("phase23_health_ok_today=false") }
 if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
 if (-not $evHardOk -and $evHardReason) { $reasons.Add(("ev_hard_daily_reason=" + $evHardReason)) }
+if (-not $evHardOk -and $evHardSnapshotReason) { $reasons.Add(("ev_hard_snapshot_reason=" + $evHardSnapshotReason)) }
 if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }
 if (-not $gsAsOf -or $gsAsOf -ne $today) { $reasons.Add("gatescore_fresh_today=false") }
 if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
