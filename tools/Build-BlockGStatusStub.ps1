@@ -11,6 +11,37 @@ function WantSym([string]$sym){
 
 
 Set-StrictMode -Version Latest
+
+function Read-JsonlLines([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path)){ return @() }
+  $out=@()
+  foreach($ln in (Get-Content -LiteralPath $Path -Encoding UTF8)){
+    $s=$ln.Trim(); if(-not $s){ continue }
+    try { $out += ($s | ConvertFrom-Json) } catch { }
+  }
+  return @($out)
+}
+
+function SliceDate([string]$d){
+  if(-not $d){ return "" }
+  if($d.Length -ge 10){ return $d.Substring(0,10) }
+  return $d
+}
+
+function IsTradingDay([datetime]$dt){
+  $dow = [int]$dt.DayOfWeek
+  return ($dow -ne 0 -and $dow -ne 6) # Mon-Fri
+}
+
+function LastNTradingDays([string]$asOf,[int]$n){
+  $d = [datetime]::ParseExact($asOf,"yyyy-MM-dd",$null)
+  $days=@()
+  while($days.Count -lt $n){
+    if(IsTradingDay $d){ $days += $d.ToString("yyyy-MM-dd") }
+    $d = $d.AddDays(-1)
+  }
+  return $days
+}
 $ErrorActionPreference = "Stop"
 
 function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
@@ -315,7 +346,56 @@ $payload = [ordered]@{
     gatescore_age_days = $gsAgeDays
     gatescore_recent_enough = $gsRecentEnough
     gatescore_fresh_for_session = [bool]$gsRecentEnough
-    gatescore_samples_ok    = $gsSamplesOk
+    # --- GateScore rolling truth (events_real) ---
+$ROLL_DAYS = 30
+$gsDays = LastNTradingDays $asOfDate $ROLL_DAYS
+
+function ComputeGateScoreRolling([string]$sym,[string]$logsDir,[string[]]$days){
+  $path = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $sym.ToLower())
+  $evs = @(Read-JsonlLines $path)
+  if($evs.Count -eq 0){
+    return [pscustomobject]@{ samples=0; pnl_samples=0; mean_edge=0.0; mean_micro=0.0 }
+  }
+
+  $sel = @()
+  foreach($e in $evs){
+    $d = SliceDate ([string]$e.as_of_date)
+    if($days -contains $d){
+      if(-not ($e.PSObject.Properties.Name -contains "eligible") -or [bool]$e.eligible){
+        $sel += $e
+      }
+    }
+  }
+
+  $edge=@(); $micro=@()
+  $pnlCount=0
+  foreach($e in $sel){
+    try { if($null -ne $e.edge_ratio){ $edge += [double]$e.edge_ratio } } catch {}
+    try { if($null -ne $e.micro_score){ $micro += [double]$e.micro_score } } catch {}
+    try { if($null -ne $e.realized_pnl){ $pnlCount += 1 } } catch {}
+  }
+
+  $meanEdge  = if($edge.Count -gt 0){ ($edge | Measure-Object -Average).Average } else { 0.0 }
+  $meanMicro = if($micro.Count -gt 0){ ($micro | Measure-Object -Average).Average } else { 0.0 }
+
+  return [pscustomobject]@{
+    samples     = [int]$sel.Count
+    pnl_samples = [int]$pnlCount
+    mean_edge   = [double]$meanEdge
+    mean_micro  = [double]$meanMicro
+  }
+}
+
+$gsNVDA_roll = ComputeGateScoreRolling "NVDA" $logsDir $gsDays
+# (optional later: SPY/QQQ roll)
+
+# Use rolling values for readiness
+$gatescore_samples_rolling     = $gsNVDA_roll.samples
+$gatescore_pnl_samples_rolling = $gsNVDA_roll.pnl_samples
+$gatescore_mean_edge_ratio_rolling  = $gsNVDA_roll.mean_edge
+$gatescore_mean_micro_score_rolling = $gsNVDA_roll.mean_micro
+
+gatescore_samples_ok    = $gsSamplesOk
     min_samples_ok_today   = $gsSamplesOk
     gatescore_threshold_ok_today = $gsThreshOk
     gatescore_ok_today      = $gsOkToday
