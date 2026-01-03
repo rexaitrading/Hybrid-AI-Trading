@@ -5,9 +5,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 from hybrid_ai_trading.replay.edge_model_v0 import read_bars_csv, gen_bplus_signals
-from hybrid_ai_trading.replay.edge_model_v1 import score_signals_v1
-
-
+from hybrid_ai_trading.replay.edge_model_v2 import score_signals_v2
 def iso_utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -40,7 +38,7 @@ def main() -> int:
         if bar_path.exists():
             bars = read_bars_csv(bar_path)
             sigs = gen_bplus_signals(bars)
-            scored = score_signals_v1(bars, sigs)
+            scored = score_signals_v2(bars, sigs)
 
             for ev0 in scored:
                 ev = {
