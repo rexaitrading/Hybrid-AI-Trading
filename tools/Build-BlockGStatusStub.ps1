@@ -146,6 +146,28 @@ try {
 
 $gsNvdaEligibleZero = ($nvdaEligibleCount -le 0)
 # GS_ELIGIBLE_ZERO_END
+# GS_NVDA_DIAG_BEGIN
+$nvdaLastEventDate = ""
+$nvdaMissingMetrics = $false
+try {
+  $nvdaPath = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+  if(Test-Path -LiteralPath $nvdaPath){
+    $tail = Get-Content -LiteralPath $nvdaPath -Tail 200 -Encoding utf8
+    foreach($ln in $tail){
+      $s = $ln.Trim(); if(-not $s){ continue }
+      try {
+        $o = $s | ConvertFrom-Json
+        $d = ""
+        if($o.PSObject.Properties.Name -contains "as_of_date"){ $d = Slice-Date ([string]$o.as_of_date) }
+        if($d){ $nvdaLastEventDate = $d }
+        $erNull = (-not ($o.PSObject.Properties.Name -contains "edge_ratio")) -or ($null -eq $o.edge_ratio)
+        $msNull = (-not ($o.PSObject.Properties.Name -contains "micro_score")) -or ($null -eq $o.micro_score)
+        if($erNull -and $msNull){ $nvdaMissingMetrics = $true }
+      } catch { }
+    }
+  }
+} catch { $nvdaLastEventDate=""; $nvdaMissingMetrics=$false }
+# GS_NVDA_DIAG_END
 if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
 # Session date (single source of truth): prefer Phase4 stamp as_of_date; fallback to local date
@@ -434,7 +456,10 @@ $spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSP
 $qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
 $reasons = New-Object System.Collections.Generic.List[string]
 # GateScore NVDA data-quality reason (audit-only; does not change gating)
+# GateScore NVDA data-quality reason (audit-only; does not change gating)
 if ($gsNvdaEligibleZero) { $reasons.Add("gatescore_nvda_eligible_zero=true") | Out-Null }
+if ($gsNvdaEligibleZero -and $nvdaMissingMetrics) { $reasons.Add("gatescore_nvda_missing_metrics=true") | Out-Null }
+if ($gsNvdaEligibleZero -and $nvdaLastEventDate) { $reasons.Add(("gatescore_nvda_last_event_date=" + $nvdaLastEventDate)) | Out-Null }
 if (-not $gsAsOf) { $reasons.Add("gatescore_missing_source_data") | Out-Null }
 
 
