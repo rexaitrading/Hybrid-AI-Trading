@@ -24,8 +24,13 @@ def _repo_root_from_here() -> Path:
 
 
 def get_default_blockg_status_path() -> Path:
-    # Env override first, else repo_root/logs/blockg_status_stub.json
-     p = os.environ.get("HAT_BLOCKG_STATUS_PATH", "").strip()
+    """
+    Env override precedence (institutional, deterministic):
+      1) HAT_BLOCKG_STATUS_PATH   (canonical)
+      2) HAT_BLOCKG_CONTRACT_PATH (legacy/back-compat)
+      3) repo_root/logs/blockg_status_stub.json
+    """
+    p = os.environ.get("HAT_BLOCKG_STATUS_PATH", "").strip()
     if p:
         return Path(p)
     p = os.environ.get("HAT_BLOCKG_CONTRACT_PATH", "").strip()
@@ -33,12 +38,14 @@ def get_default_blockg_status_path() -> Path:
         return Path(p)
     return _repo_root_from_here() / "logs" / "blockg_status_stub.json"
 
-
 @dataclass(frozen=True)
 class BlockGStatus:
     # Contract dates
     as_of_date: str
     date: str
+
+    # Market calendar / clarity
+    market_closed_today: bool
 
     # Per-symbol readiness
     nvda_blockg_ready: bool
@@ -70,6 +77,8 @@ def load_blockg_status(path: str | Path) -> BlockGStatus:
     return BlockGStatus(
         as_of_date=as_of,
         date=date,
+
+        market_closed_today=_as_bool(j.get("market_closed_today", False)),
 
         nvda_blockg_ready=_as_bool(j.get("nvda_blockg_ready", False)),
         spy_blockg_ready=_as_bool(j.get("spy_blockg_ready", False)),
