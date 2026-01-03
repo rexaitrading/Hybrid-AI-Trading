@@ -613,6 +613,14 @@ $qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQ
 if (WantSym "NVDA" -and -not $nvdaReady) { $reasons.Add("nvda_blockg_ready=false") | Out-Null }
 if (WantSym "SPY" -and -not $spyReady) { $reasons.Add("spy_blockg_ready=false") | Out-Null }
 if (WantSym "QQQ" -and -not $qqqReady) { $reasons.Add("qqq_blockg_ready=false") | Out-Null }
+# MARKET_CLOSED_FORCE_SYMBOL_READY_FINAL_BEGIN
+# FINAL AUTHORITY: on market-closed days, per-symbol readiness MUST be false in the payload.
+if ($marketClosedToday) {
+  $nvdaReady = $false
+  $spyReady  = $false
+  $qqqReady  = $false
+}
+# MARKET_CLOSED_FORCE_SYMBOL_READY_FINAL_END
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
