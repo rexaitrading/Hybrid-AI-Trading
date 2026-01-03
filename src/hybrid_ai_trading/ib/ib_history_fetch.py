@@ -36,8 +36,26 @@ class HistApp(EWrapper, EClient):
         self._err: Optional[str] = None
 
     def error(self, reqId, errorCode, errorString, advancedOrderRejectJson=""):
-        # record error but don't spam; fail-closed at end
-        self._err = f"reqId={reqId} code={errorCode} msg={errorString}"
+        # IBKR sends many non-fatal "error" callbacks that are warnings / status lines.
+        # We must NOT fail-closed on these, otherwise historical bar fetch will delete output.
+        try:
+            code = int(errorCode)
+        except Exception:
+            code = -1
+
+        # Non-fatal status / warnings (do not treat as failure)
+        non_fatal = {
+            2104,  # Market data farm connection is OK
+            2106,  # HMDS connection is OK
+            2107,  # HMDS connection inactive but available on demand
+            2158,  # Sec-def data farm connection is OK
+            2176,  # API version fractional share rules warning
+        }
+        if code in non_fatal:
+            return
+
+        # Fail-closed only on real errors
+        self._err = f"reqId={reqId} code={code} msg={errorString}"
 
     def historicalData(self, reqId, bar):
         # bar.date is usually "YYYYMMDD  HH:MM:SS" for intraday
