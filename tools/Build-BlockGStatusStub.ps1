@@ -126,12 +126,17 @@ $gatescore_metrics_source = ""
 $gsMsSeenCount = 0
 $gsMsTop = ""
 $gsMsPath = ""
-$gsMsToday = ($today + "")
+$gsMsToday = ""
 $gsMsExists = $false
+
 try {
+  $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+  $gsMsToday = $todayLocal
+
   $p = Join-Path $logsDir "nvda_gatescore_events.jsonl"
   $gsMsPath = $p
   $gsMsExists = [bool](Test-Path -LiteralPath $p)
+
   if ($gsMsExists) {
     $seen = @{}
     foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)) {
@@ -140,7 +145,7 @@ try {
         $o = $s | ConvertFrom-Json
         $d = ($o.as_of_date + "")
         if($d.Length -ge 10){ $d = $d.Substring(0,10) }
-        if($d -ne $gsMsToday){ continue }
+        if($d -ne $todayLocal){ continue }
 
         if($o.PSObject.Properties.Name -contains "metrics_source"){
           $ms = ([string]$o.metrics_source).Trim()
@@ -161,6 +166,8 @@ try {
   $gatescore_metrics_source = ""
   $gsMsSeenCount = 0
   $gsMsTop = ""
+  $gsMsToday = ""
+  $gsMsExists = $false
 }
 # GS_METRICS_SOURCE_CAPTURE_END
 # GS_ELIGIBLE_ZERO_BEGIN
