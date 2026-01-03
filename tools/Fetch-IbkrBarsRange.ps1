@@ -2,7 +2,7 @@
 param(
   [string]$Symbol="NVDA",
   [int]$TradingDays=30,
-  [string]$Host="127.0.0.1",
+  [string]$IbHost="127.0.0.1",
   [int]$Port=4002,
   [int]$ClientId=77,
   [switch]$UseRth
@@ -38,7 +38,7 @@ foreach($asOf in $need){
 
   Write-Host "`n[FETCH] $asOf" -ForegroundColor Cyan
   & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Fetch-IbkrBars.ps1") `
-    -Symbol $Symbol -AsOfDate $asOf -Host $Host -Port $Port -ClientId $ClientId -UseRth:$UseRth | Out-Host
+    -Symbol $Symbol -AsOfDate $asOf -Host $IbHost -Port $Port -ClientId $ClientId -UseRth:$UseRth | Out-Host
 
   if($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $dst)){
     $ok += 1
