@@ -16,9 +16,37 @@ $today = (Get-Date).ToString("yyyy-MM-dd")
 $outPath = Join-Path $logsDir "gatescore_pnl_summary.csv"
 
 function Resolve-EventFile([string]$logsDir,[string]$sym){
+    $std  = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
     $real = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $sym.ToLower())
-    if (Test-Path -LiteralPath $real) { return $real }
-    return Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
+
+    if (-not (Test-Path -LiteralPath $std) -and -not (Test-Path -LiteralPath $real)) { return "" }
+    if (Test-Path -LiteralPath $std -and -not (Test-Path -LiteralPath $real)) { return $std }
+    if (Test-Path -LiteralPath $real -and -not (Test-Path -LiteralPath $std)) { return $real }
+
+    function _MaxDate([string]$p){
+        $mx = ""
+        foreach($ln in (Get-Content -LiteralPath $p -Encoding UTF8)){
+            $s = ($ln + "").Trim(); if(-not $s){ continue }
+            try {
+                $o = $s | ConvertFrom-Json
+                $d = ($o.as_of_date + "")
+                if($d.Length -ge 10){ $d = $d.Substring(0,10) }
+                if($d -match '^\d{4}-\d{2}-\d{2}$'){
+                    if($mx -eq "" -or $d -gt $mx){ $mx = $d }
+                }
+            } catch { }
+        }
+        return $mx
+    }
+
+    $mStd  = _MaxDate $std
+    $mReal = _MaxDate $real
+    if($mStd -and $mReal){
+        if($mStd -ge $mReal){ return $std }
+        return $real
+    }
+    if($mStd){ return $std }
+    return $real
 }
 function Resolve-StdOnlyFile([string]$logsDir,[string]$sym){
     $std = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
