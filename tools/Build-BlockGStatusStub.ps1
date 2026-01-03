@@ -398,6 +398,12 @@ $gatescore_samples_rolling     = $gsNVDA_roll.samples
 $gatescore_pnl_samples_rolling = $gsNVDA_roll.pnl_samples
 $gatescore_mean_edge_ratio_rolling  = $gsNVDA_roll.mean_edge
 $gatescore_mean_micro_score_rolling = $gsNVDA_roll.mean_micro
+# --- Policy metrics should prefer rolling when available ---
+$gsCountPolicy = if($null -ne $gatescore_samples_rolling -and [int]$gatescore_samples_rolling -gt 0){ [int]$gatescore_samples_rolling } else { [int]$gsCountPolicy }
+$gsPnlPolicy   = if($null -ne $gatescore_pnl_samples_rolling -and [int]$gatescore_pnl_samples_rolling -gt 0){ [int]$gatescore_pnl_samples_rolling } else { [int]$gsPnlPolicy }
+$gsEdgePolicy  = if($null -ne $gatescore_mean_edge_ratio_rolling){ [double]$gatescore_mean_edge_ratio_rolling } else { [double]$gsEdgePolicy }
+$gsMicroPolicy = if($null -ne $gatescore_mean_micro_score_rolling){ [double]$gatescore_mean_micro_score_rolling } else { [double]$gsMicroPolicy }
+# --- end policy metrics ---
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
