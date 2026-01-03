@@ -1,106 +1,76 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import re
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, List
 
 from hybrid_ai_trading.replay.edge_model_v0 import read_bars_csv, gen_bplus_signals
 from hybrid_ai_trading.replay.edge_model_v2 import score_signals_v2
-def iso_utc_now() -> str:
+
+_BAR_RE = re.compile(r"^(?P<sym>[A-Z]+)_(?P<day>\d{4}-\d{2}-\d{2})_1m\.csv$")
+
+
+def _iso_utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _list_cached_days(logs_dir: Path, symbol: str) -> List[str]:
+    bars_dir = logs_dir / "bars"
+    symu = str(symbol).upper()
+    if not bars_dir.exists():
+        return []
+    days: List[str] = []
+    for p in bars_dir.glob(f"{symu}_*_1m.csv"):
+        m = _BAR_RE.match(p.name)
+        if not m:
+            continue
+        days.append(m.group("day"))
+    return sorted(set(days))
+
+
 def main() -> int:
-    repo = Path(__file__).resolve().parents[3]
-    logs = repo / "logs"
-    replay_dir = logs / "replay"
-    bars_dir = logs / "bars"
+    logs = Path("logs")
+    logs.mkdir(parents=True, exist_ok=True)
 
-    daily = sorted(replay_dir.glob("replay_summary_*.json"))
-    if not daily:
-        p = replay_dir / "replay_summary.json"
-        if not p.exists():
-            print("[gatescore-replay] missing replay summary")
-            return 2
-        daily = [p]
-
-    out_lines: list[str] = []
-
-    for sp in daily:
-        summ = json.loads(sp.read_text(encoding="utf-8"))
-        as_of = str(summ.get("as_of_date", ""))[:10]
-        sym = str(summ.get("symbol", "NVDA")).upper()
-        if not as_of:
-            continue
-
-        # ---- Prefer bar-based scoring when cached bars exist ----
-        bar_path = bars_dir / f"{sym}_{as_of}_1m.csv"
-        if bar_path.exists():
-            bars = read_bars_csv(bar_path)
-            sigs = gen_bplus_signals(bars)
-            scored = score_signals_v2(bars, sigs)
-
-            for ev0 in scored:
-                ev = {
-                    "ts_utc": iso_utc_now(),
-                    "as_of_date": as_of,
-                    "symbol": sym,
-                    "source": "BARS_EDGE_V0",
-                    "eligible": True,
-                    "edge_source": ev0.get("edge_source", "edge_model_v0"),
-                    "micro_score_source": ev0.get("micro_score_source", "edge_model_v0"),
-                    "realized_pnl": ev0.get("realized_pnl", 0.0),
-                    "edge_ratio": ev0.get("edge_ratio", 0.0),
-                    "micro_score": ev0.get("micro_score", 0.0),
-                    "pnl_samples": ev0.get("pnl_samples", 1),
-                    "count_signals": ev0.get("count_signals", 1),
-                    "notes": "derived_from_cached_bars",
-                }
-                out_lines.append(json.dumps(ev, separators=(",", ":")))
-            continue
-
-        # ---- Fallback: replay summary v0 (synthetic, wiring-safe) ----
-        net_pnl = float(summ.get("net_pnl", 0.0) or 0.0)
-        trades = int(float(summ.get("trades", 0.0) or 0.0))
-        est_fees = float(summ.get("est_fees", 0.0) or 0.0)
-        est_slip = float(summ.get("est_slippage", 0.0) or 0.0)
-        denom = max(1.0, float(trades))
-
-        edge_ratio_base = (net_pnl / denom) / 100.0
-        cost_per_trade = (est_fees + est_slip) / denom
-        micro_score_base = max(0.0, min(1.0, 1.0 - (cost_per_trade / 1.0)))
-
-        eligible = trades > 0
-        base = {
-            "ts_utc": iso_utc_now(),
-            "as_of_date": as_of,
-            "symbol": sym,
-            "source": "REAL_REPLAY_V0",
-            "eligible": bool(eligible),
-            "edge_source": "replay_v0" if eligible else "missing",
-            "micro_score_source": "replay_v0" if eligible else "missing",
-            "realized_pnl": net_pnl,
-            "notes": "derived_from_replay_summary_v0",
-        }
-
-        n = max(1, trades)
-        for i in range(n):
-            ev = dict(base)
-            if eligible:
-                jitter = (i % 5) * 1e-6
-                ev["edge_ratio"] = float(edge_ratio_base + jitter)
-                ev["micro_score"] = float(max(0.0, min(1.0, micro_score_base - jitter)))
-                ev["pnl_samples"] = 1
-                ev["count_signals"] = 1
-            else:
-                ev["edge_ratio"] = None
-                ev["micro_score"] = None
-                ev["pnl_samples"] = 0
-                ev["count_signals"] = 0
-            out_lines.append(json.dumps(ev, separators=(",", ":")))
-
+    symbol = "NVDA"
     out_path = logs / "nvda_gatescore_events_real.jsonl"
-    out_path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
+
+    days = _list_cached_days(logs, symbol)
+    if not days:
+        print("[gatescore-replay] no cached bars found")
+        return 2
+
+    ts_utc = _iso_utc_now()
+    out_lines: List[str] = []
+
+    for day in days:
+        bars_path = logs / "bars" / f"{symbol}_{day}_1m.csv"
+        try:
+            bars = read_bars_csv(bars_path)
+        except Exception:
+            continue
+        if not bars:
+            continue
+
+        sigs = gen_bplus_signals(bars)
+        scored = score_signals_v2(bars, sigs)
+
+        for ev in scored:
+            # Normalize + stamp day deterministically from filename
+            row: Dict = {
+                "ts_utc": ts_utc,
+                "as_of_date": day,
+                "symbol": symbol,
+                "source": "BARS_EDGE_V0",
+                "eligible": True,
+                "notes": "derived_from_cached_bars",
+            }
+            row.update(ev)
+            out_lines.append(json.dumps(row, ensure_ascii=False))
+
+    out_path.write_text("\n".join(out_lines) + ("\n" if out_lines else ""), encoding="utf-8")
     print("[gatescore-replay] wrote " + out_path.name)
     return 0
 
