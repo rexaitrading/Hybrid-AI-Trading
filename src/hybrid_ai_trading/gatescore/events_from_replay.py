@@ -1,0 +1,57 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+
+def iso_utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+def main() -> int:
+    repo = Path(__file__).resolve().parents[3]
+    replay_dir = repo / "logs" / "replay"
+    summ_path = replay_dir / "replay_summary.json"
+    if not summ_path.exists():
+        print(f"[gatescore-replay] missing {summ_path}")
+        return 2
+
+    summ = json.loads(summ_path.read_text(encoding="utf-8"))
+    as_of = str(summ.get("as_of_date", ""))[:10]
+    sym = str(summ.get("symbol", "NVDA")).upper()
+
+    net_pnl = float(summ.get("net_pnl", 0.0) or 0.0)
+    trades = float(summ.get("trades", 0.0) or 0.0)
+    est_fees = float(summ.get("est_fees", 0.0) or 0.0)
+    est_slip = float(summ.get("est_slippage", 0.0) or 0.0)
+
+    denom = max(1.0, trades)
+    edge_ratio = (net_pnl / denom) / 100.0
+
+    cost_per_trade = (est_fees + est_slip) / denom
+    micro_score = max(0.0, min(1.0, 1.0 - (cost_per_trade / 1.0)))
+
+    eligible = (as_of != "") and (trades > 0)
+
+    out = {
+        "ts_utc": iso_utc_now(),
+        "as_of_date": as_of,
+        "symbol": sym,
+        "source": "REAL_REPLAY_V0",
+        "eligible": bool(eligible),
+        "edge_ratio": edge_ratio if eligible else None,
+        "edge_source": "replay_v0" if eligible else "missing",
+        "micro_score": micro_score if eligible else None,
+        "micro_score_source": "replay_v0" if eligible else "missing",
+        "realized_pnl": net_pnl,
+        "pnl_samples": int(trades),
+        "count_signals": int(trades),
+        "notes": "derived_from_replay_summary_v0",
+    }
+
+    out_path = repo / "logs" / f"{sym.lower()}_gatescore_events_real.jsonl"
+    out_path.write_text(json.dumps(out, separators=(",", ":")) + "\n", encoding="utf-8")
+    print(f"[gatescore-replay] wrote {out_path}")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
