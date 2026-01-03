@@ -19,9 +19,9 @@ function Resolve-EventFile([string]$logsDir,[string]$sym){
     $std  = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
     $real = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $sym.ToLower())
 
-    if (-not (Test-Path -LiteralPath $std) -and -not (Test-Path -LiteralPath $real)) { return "" }
-    if (Test-Path -LiteralPath $std -and -not (Test-Path -LiteralPath $real)) { return $std }
-    if (Test-Path -LiteralPath $real -and -not (Test-Path -LiteralPath $std)) { return $real }
+    if ((-not (Test-Path -LiteralPath $std)) -and (-not (Test-Path -LiteralPath $real))) { return "" }
+    if ((Test-Path -LiteralPath $std) -and (-not (Test-Path -LiteralPath $real))) { return $std }
+    if ((Test-Path -LiteralPath $real) -and (-not (Test-Path -LiteralPath $std))) { return $real }
 
     function _MaxDate([string]$p){
         $mx = ""
