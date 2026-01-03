@@ -72,8 +72,11 @@ if(Test-Path -LiteralPath $chk){
   & powershell -NoProfile -ExecutionPolicy Bypass -File $chk -Symbol $Symbol | Out-Host
 # $finalExit already captured earlier
   $continue = $false
+} else {
+  Write-Host "[ONETAP] FAIL-CLOSED: missing checker: $chk" -ForegroundColor Yellow
+  $finalExit = 1
+  $continue = $false
 }
-throw "Missing checker: $chk"
 # --- ONETAP_SUMMARY ---
 # --- OneTap summary JSON (for Notion ingest) ---
 try {
