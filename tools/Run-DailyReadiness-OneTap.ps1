@@ -29,8 +29,8 @@ if(Test-Path $p23){
 }
 if ($LASTEXITCODE -ne 0) {
   Write-Host "[ONETAP] FAIL-CLOSED: Phase4 failed exit=$LASTEXITCODE" -ForegroundColor Red
-  $finalExit = $LASTEXITCODE
-  goto ONETAP_SUMMARY
+# $finalExit already captured earlier
+  $continue = $false
 }
 # 2) EV-hard snapshot
 $ev = Join-Path $repoRoot "tools\Build-EvHardSnapshot.ps1"
@@ -60,11 +60,11 @@ if(Test-Path $bg){
 $chk = Join-Path $repoRoot "tools\Check-BlockGReady.ps1"
 if(Test-Path $chk){
   & powershell -NoProfile -ExecutionPolicy Bypass -File $chk -Symbol $Symbol | Out-Host
-  $finalExit = $LASTEXITCODE
-  goto ONETAP_SUMMARY
+# $finalExit already captured earlier
+  $continue = $false
 }
 throw "Missing checker: $chk"
-:ONETAP_SUMMARY
+# --- ONETAP_SUMMARY ---
 # --- OneTap summary JSON (for Notion ingest) ---
 try {
   $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -93,7 +93,7 @@ try {
 }
 
 # --- OneTap FINAL_EXIT capture + summary JSON (Notion ingest) ---
-$finalExit = $LASTEXITCODE
+# $finalExit already captured earlier
 Write-Host ("[ONETAP] FINAL_EXIT={0}" -f $finalExit)
 
 try {
