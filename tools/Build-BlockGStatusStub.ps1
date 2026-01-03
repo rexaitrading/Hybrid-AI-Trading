@@ -170,6 +170,13 @@ try {
   $gsMsExists = $false
 }
 # GS_METRICS_SOURCE_CAPTURE_END
+# EVH_MARKET_CLOSED_AUDIT_BEGIN
+# Audit-only clarity: when market is closed we do not treat EV-hard as "passed".
+$ev_hard_not_evaluated_market_closed = $false
+try {
+  if($marketClosedToday){ $ev_hard_not_evaluated_market_closed = $true }
+} catch { $ev_hard_not_evaluated_market_closed = $false }
+# EVH_MARKET_CLOSED_AUDIT_END
 # GS_ELIGIBLE_ZERO_BEGIN
 # Weekend-aware clarity (no holiday calendar): market_closed_today is true on Sat/Sun.
 $marketClosedToday = $false
@@ -526,6 +533,7 @@ $nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsN
 $spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
 $qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
 $reasons = New-Object System.Collections.Generic.List[string]
+if ($marketClosedToday) { $reasons.Add("ev_hard_market_closed_today=true") | Out-Null }
 if ($gatescore_metrics_source) { $reasons.Add(("gatescore_metrics_source=" + $gatescore_metrics_source)) | Out-Null }
 # GateScore NVDA data-quality reason (audit-only; does not change gating)
 # GateScore NVDA data-quality reason (audit-only; does not change gating)
@@ -581,6 +589,7 @@ $payload = [ordered]@{
     gatescore_metrics_source_debug_path       = $gsMsPath
     gatescore_metrics_source_debug_exists     = $gsMsExists
     market_closed_today = $marketClosedToday
+    ev_hard_not_evaluated_market_closed = $ev_hard_not_evaluated_market_closed
     gatescore_nvda_eligible_zero = $gsNvdaEligibleZero
     date = $today
     phase23_health_ok_today = $phase23Ok
