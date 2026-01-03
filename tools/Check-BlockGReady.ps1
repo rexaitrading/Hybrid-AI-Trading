@@ -68,6 +68,16 @@ $st = Read-Json $statusPath
 # Institutional clarity: when market is closed we fail-closed with an explicit operator message.
 try {
   if ($st -and ($st.PSObject.Properties.Name -contains "market_closed_today") -and [bool]$st.market_closed_today) {
+    # MARKET_CLOSED_PRINT_PROXY_VETO_BEGIN
+    try {
+      if ($st.PSObject.Properties.Name -contains "gatescore_metrics_source") {
+        $ms = ([string]$st.gatescore_metrics_source).Trim()
+        if ($ms -match "^(?i)proxy_") {
+          Write-Host ("[BLOCKG] NOTE: gatescore_metrics_source_disallowed_for_live=" + $ms) -ForegroundColor Yellow
+        }
+      }
+    } catch { }
+    # MARKET_CLOSED_PRINT_PROXY_VETO_END
     Fail "market_closed_today=true (fail-closed; readiness not evaluated on closed days)"
   }
 } catch { }
