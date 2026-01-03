@@ -38,6 +38,14 @@ try {
 } catch { $effectiveTradingDay = $today }
 # EVH_RAW_EFFECTIVE_TRADING_DAY_END
 
+# EVH_RAW_INPUT_DAY_BEGIN
+# On market-closed days, Phase4/Phase23 stamps may be "today" while effective trading day is Fri.
+# Evaluate input freshness against snapshot_date (today) to avoid false-stale noise.
+$inputsDay = $effectiveTradingDay
+if ($effectiveTradingDay -ne $today) { $inputsDay = $today }
+# EVH_RAW_INPUT_DAY_END
+
+
 
 # ---- Phase4 ----
 $phase4Ok = $false
@@ -78,7 +86,7 @@ $gsCountSignals = 0
 if (Test-Path $gsPath) {
   try {
     $rows = @(Import-Csv $gsPath)
-    $row = $rows | Where-Object { $_.symbol -eq "NVDA" -and ($_.as_of_date + "") -eq $effectiveTradingDay } | Select-Object -First 1
+    $row = $rows | Where-Object { $_.symbol -eq "NVDA" -and ($_.as_of_date + "") -eq $inputsDay } | Select-Object -First 1
     if ($null -ne $row) {
       $gsFoundTodayRow = $true
       $gsAsOf = (($row.as_of_date) + "").Trim()
@@ -95,10 +103,10 @@ $reason = "missing_inputs_failclosed"
 $reasons = New-Object System.Collections.Generic.List[string]
 $warnings = New-Object System.Collections.Generic.List[string]
 
-if ($phase4AsOf -ne $effectiveTradingDay -or -not $phase4Ok) { $reasons.Add("phase4_not_ok_or_stale") }
-if ($phase23AsOf -ne $effectiveTradingDay -or -not $phase23Ok) { $reasons.Add("phase23_not_ok_or_stale") }
+if ($phase4AsOf -ne $inputsDay -or -not $phase4Ok) { $reasons.Add("phase4_not_ok_or_stale") }
+if ($phase23AsOf -ne $inputsDay -or -not $phase23Ok) { $reasons.Add("phase23_not_ok_or_stale") }
 # GateScore is recorded as a warning here; Block-G enforces strict today-ness for LIVE readiness
-if ($gsAsOf -ne $effectiveTradingDay -or -not $gsOk) { $warnings.Add("gatescore_not_ok_or_missing_today_row") }
+if ($gsAsOf -ne $inputsDay -or -not $gsOk) { $warnings.Add("gatescore_not_ok_or_missing_today_row") }
 
 if ($reasons.Count -eq 0) {
   $ok = $true
