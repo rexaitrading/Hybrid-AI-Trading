@@ -28,10 +28,22 @@ $argv = @("--symbol",$Symbol,"--as-of-date",$AsOfDate,"--host",$IbHost,"--port",
 if($UseRth){ $argv += @("--use-rth") }
 if($OutDir -and $OutDir.Trim().Length -gt 0){ $argv += @("--outdir",$OutDir) }
 
-& $py -m hybrid_ai_trading.ib.ib_history_fetch @argv
-# --- end args ---
-if($LASTEXITCODE -eq 0){
+# Run fetcher (never let terminating errors bypass our exit-code contract)
+$rawExit = 2
+try {
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  & $py -m hybrid_ai_trading.ib.ib_history_fetch @argv | Out-Host
+  $rawExit = $LASTEXITCODE
+} catch {
+  Write-Host ("[IBKR] FAIL-CLOSED: exception in wrapper: " + $_.Exception.Message) -ForegroundColor Yellow
+  $rawExit = 2
+} finally {
+  $ErrorActionPreference = $prev
+}
+
+if($rawExit -eq 0){
   exit 0
 }
-Write-Host ("[IBKR] FAIL-CLOSED: underlying exit=" + $LASTEXITCODE + " -> mapping to 2") -ForegroundColor Yellow
+Write-Host ("[IBKR] FAIL-CLOSED: underlying exit=" + $rawExit + " -> mapping to 2") -ForegroundColor Yellow
 exit 2
