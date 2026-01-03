@@ -31,7 +31,7 @@ def ensure_symbol_blockg_ready(symbol: str) -> None:
     Tests may monkeypatch this function to simulate Block-G failures without touching
     the underlying contract helper.
     """
-    contract_ensure_symbol_blockg_ready(symbol, allow_paper=True, is_paper=False, ctx=None)
+    contract_ensure_symbol_blockg_ready(symbol, allow_paper=False, is_paper=False, ctx=None)
 
 
 def place_order_phase5(
@@ -92,7 +92,7 @@ def place_order_phase5_with_guard(
     sym_u = str(symbol).upper()
     is_live_regime = ("_LIVE" in str(regime).upper()) or ("LIVE" in str(regime).upper())
     if (sym_u == "NVDA") and ((not is_paper) or is_live_regime):
-        ensure_symbol_blockg_ready(sym_u, engine=engine, regime=str(regime))
+        ensure_symbol_blockg_ready(sym_u)
     trade = {
         "symbol": symbol,
         "side": side,
