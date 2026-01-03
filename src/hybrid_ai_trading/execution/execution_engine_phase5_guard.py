@@ -92,8 +92,7 @@ def place_order_phase5_with_guard(
     sym_u = str(symbol).upper()
     is_live_regime = ("_LIVE" in str(regime).upper()) or ("LIVE" in str(regime).upper())
     if (sym_u == "NVDA") and ((not is_paper) or is_live_regime):
-        ensure_symbol_blockg_ready(sym_u)
-
+        ensure_symbol_blockg_ready(sym_u, engine=engine, regime=str(regime))
     trade = {
         "symbol": symbol,
         "side": side,
