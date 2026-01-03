@@ -39,7 +39,6 @@ def _orb_breakout_signals(bars) -> list[int]:
     if not bars:
         return []
     rth = _rth_mask(bars)
-    rth_true = sum(1 for x in rth if x)     min_rth = 360     if rth_true < min_rth:         row: Dict = {             "ts_utc": ts_utc,             "as_of_date": day,             "symbol": symbol,             "source": "BARS_EDGE_V0",             "eligible": False,             "edge_source": "edge_model_v2",             "micro_score_source": "edge_model_v2",             "realized_pnl": 0.0,             "edge_ratio": 0.0,             "micro_score": 0.0,             "pnl_samples": 0,             "count_signals": 0,             "signals_total": 0,             "rth_minutes": int(rth_true),             "notes": "insufficient_rth_coverage",         }         out_lines.append(json.dumps(row, ensure_ascii=False))         continue
 
     orb_idx = []
     after_idx = []
