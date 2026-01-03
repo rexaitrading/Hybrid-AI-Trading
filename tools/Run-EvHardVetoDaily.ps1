@@ -9,6 +9,13 @@ Set-Location $root
 
 $today = (Get-Date).ToString("yyyy-MM-dd")
 
+# EVHARD_REASON_DETAIL_BEGIN
+function _SliceDate([string]$d){
+  if(-not $d){ return "" }
+  if($d.Length -ge 10){ return $d.Substring(0,10) }
+  return $d
+}
+# EVHARD_REASON_DETAIL_END
 $logDir = Join-Path $root "logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $outCsv = Join-Path $logDir "phase5_ev_hard_veto_daily.csv"
