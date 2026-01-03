@@ -446,6 +446,10 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_samples       = $gsCount
     gatescore_min_samples   = $minSignals
     gatescore_pnl_samples   = $gsPnl
+    gatescore_samples_rolling          = $gatescore_samples_rolling
+    gatescore_pnl_samples_rolling      = $gatescore_pnl_samples_rolling
+    gatescore_mean_edge_ratio_rolling  = $gatescore_mean_edge_ratio_rolling
+    gatescore_mean_micro_score_rolling = $gatescore_mean_micro_score_rolling
     gatescore_min_pnl_samples = $minPnl
 
     gatescore_mean_edge_ratio  = $gsEdge
