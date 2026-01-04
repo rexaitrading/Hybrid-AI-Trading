@@ -166,3 +166,4 @@ tools/Disarm-NVDA-Live.ps1
 - GitHub Checks: CI Risk-First + ci-gates ✅ (PR #42)
 - Local spot-check: tests/execution/test_nvda_live_stamp_gate.py ✅
 
+- [2026-01-03 22:01:57] BLOCK-G INSTITUTIONAL LOCK: single-authority PS checker + closed-day semantics + no-bypass + LockPack wired into DailyReadiness.

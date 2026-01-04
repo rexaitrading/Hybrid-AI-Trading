@@ -10,3 +10,4 @@
 - Risk layer: 153 tests green (non-IB subset)
 - Backtest subset: green
 - Added safety/observability logs
+- [2026-01-03 22:01:57] BLOCK-G INSTITUTIONAL LOCK: single-authority PS checker + closed-day semantics + no-bypass + LockPack wired into DailyReadiness.
