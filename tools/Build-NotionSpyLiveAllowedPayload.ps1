@@ -78,9 +78,15 @@ $out = [ordered]@{
   # Primary boolean displayed in Notion
   spy_live_allowed = ([bool]$st.spy_live_ready -and [bool]$bg.spy_blockg_ready)
 
-  # Per-symbol contract flags
-  spy_blockg_ready = [bool]$bg.spy_blockg_ready
+    # Per-symbol contract flags (normalized)
+  nvda_blockg_ready = [bool]$bg.nvda_blockg_ready
+  spy_blockg_ready  = [bool]$bg.spy_blockg_ready
   qqq_blockg_ready  = [bool]$bg.qqq_blockg_ready
+
+  # Audit fields (contract-only; no recompute)
+  market_closed_today        = [bool]$bg.market_closed_today
+  ev_hard_daily_as_of_date   = [string]$bg.ev_hard_daily_as_of_date
+  ev_hard_session_as_of_date = [string]$bg.ev_hard_session_as_of_date
 
   # Required daily gates (contract-only)
   phase4_ok_today          = [bool]$bg.phase4_ok_today
