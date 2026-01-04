@@ -96,6 +96,22 @@ foreach($it in $eventFiles){
   if(-not (Test-Path $path)){ continue }
 
   $events = @(Read-Jsonl $path)
+
+  # --- Institutional: refuse ALL-STUB canonical event files (signals not computed) ---
+  $stubCount = 0
+  $nonStubCount = 0
+  foreach($e in $events){
+    try{
+      $src = ""
+      if($e.PSObject.Properties.Name -contains "source"){ $src = [string]$e.source }
+      if($src -eq "STUB"){ $stubCount++ } else { $nonStubCount++ }
+    } catch {}
+  }
+  if($events.Count -gt 0 -and $nonStubCount -eq 0){
+    Write-Error ("[GS-ALLDATES] " + $sym + ": event file is ALL-STUB; refusing. path=" + $path)
+    exit 2
+  }
+
   if($events.Count -eq 0){ continue }
 
   $byDate = @{}
