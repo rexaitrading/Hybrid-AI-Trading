@@ -469,6 +469,13 @@ function Get-GSFor([string]$sym) {
     return [pscustomobject]@{ fresh=$fresh; cnt=$cnt; pnl=$pnl; edge=$edge; micro=$micro }
 }
 
+
+# --- Institutional LIVE GateScore hard minima (separate from diagnostic thresholds.json) ---
+$GS_LIVE_MIN_SIGNALS = 100
+$GS_LIVE_MIN_PNL_SAMPLES = 300
+$GS_LIVE_MIN_EDGE_RATIO = 0.03
+$GS_LIVE_MIN_MICRO_SCORE = 0.55
+
 function Eval-GS([string]$sym) {
     $thr = Get-ThresholdsFor $sym
     $gs  = Get-GSFor $sym
