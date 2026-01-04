@@ -66,7 +66,7 @@ if(($st.as_of_date + "") -ne $today){
   $st = [pscustomobject]@{
     as_of_date = $today
     nvda_live_ready = $false
-    reasons_not_ready = @("stamp_stale") + @($st.reasons_not_ready)
+    reasons_not_ready = @("stamp_stale") + @($stReasons)
   }
 }
 
