@@ -106,6 +106,7 @@ $out = [ordered]@{
   gatescore_samples_ok     = [bool]$bg.gatescore_samples_ok
   gatescore_threshold_ok_today = [bool]$bg.gatescore_threshold_ok_today
   gatescore_ok_today       = [bool]$bg.gatescore_ok_today
+  gatescore_ok_live_today  = [bool]$bg.gatescore_ok_live_today
 
   reasons_not_ready = (
     @(
