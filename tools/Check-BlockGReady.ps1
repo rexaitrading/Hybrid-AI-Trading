@@ -78,7 +78,16 @@ try {
       }
     } catch { }
     # MARKET_CLOSED_PRINT_PROXY_VETO_END
-    Fail "market_closed_today=true (fail-closed; readiness not evaluated on closed days)"
+  # Institutional: closed-day diagnostic mode.
+  # Never allow LIVE on closed days, but allow deterministic pipeline verification for ops.
+  if ($st.market_closed_today -eq $true) {
+    $diagOk = (($st.phase4_ok_today -eq $true) -and ($st.gatescore_fresh_today -eq $true) -and ($st.ev_hard_daily_ok_today -eq $true))
+    if ($diagOk) {
+      Write-Host "[BLOCKG] CLOSED DAY: DIAGNOSTIC OK (pipeline healthy; LIVE remains disallowed)" -ForegroundColor Yellow
+      exit 10
+    }
+    Fail "market_closed_today=true (diagnostic failed prerequisites)"
+  }
   }
 } catch { }
 # MARKET_CLOSED_FAILCLOSED_CHECK_END
@@ -146,4 +155,3 @@ if ($s -eq "ALL") {
 
 Write-Host "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath" -ForegroundColor Green
 exit 0
-
