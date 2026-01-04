@@ -9,6 +9,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
+from hybrid_ai_trading.execution.live_arm import require_live_arm
+from hybrid_ai_trading.execution.blockg_ps_checker import require_blockg_ready_via_powershell
 
 
 # -----------------------------
@@ -66,7 +68,14 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
     if _is_live():
         if sym in ("NVDA", "SPY", "QQQ"):
             require_nvda_live_stamp(sym)
-            require_blockg_ready_for_live(sym)
+    # LIVE_2KEY_ARM_AND_BLOCKG_PS_BEGIN
+    # Institutional: LIVE requires operator arm token + PS-owned Block-G contract.
+    # Fail-closed: missing/expired arm OR ps checker non-zero => no live order.
+    is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
+    if is_live:
+        require_live_arm(sym)
+        require_blockg_ready_via_powershell(sym, build=True)
+    # LIVE_2KEY_ARM_AND_BLOCKG_PS_END
 
     # Place order
     try:
@@ -244,5 +253,4 @@ def map_ib_error(err: BaseException) -> str:
     if "unreachable" in msg:
         return "HOST_UNREACHABLE"
     return "UNKNOWN"
-
 
