@@ -109,12 +109,27 @@ try {
         if ($null -ne $v -and ([string]$v).Trim() -ne "") { $pnlSamples = TryI $v; break }
     }
     $rp = $null
+    $rpNum = $null
+    $hasRealPnl = $false
+    try {
+        if ($props -contains "realized_pnl") {
+            $rp = $j.realized_pnl
+            $tmp = 0.0
+            if ($null -ne $rp -and ([double]::TryParse(([string]$rp), [ref]$tmp))) {
+                $rpNum = [double]$tmp
+                $hasRealPnl = $true
+            }
+        }
+    } catch { $rp=$null; $rpNum=$null; $hasRealPnl=$false }
     if ($props -contains "realized_pnl") { $rp = [string]$j.realized_pnl }
     $ms = $micro
     $microSrc = "producer"
     if ($ms -eq $null -or [double]$ms -le 0.0) { $ms = Get-DerivedMicroScore -EdgeRatio $edge; $microSrc = "derived_v1" }
     # Fail-closed eligibility: require non-zero metrics OR real pnl samples
-    $eligible = ($edge -gt 0.0 -or [double]$ms -gt 0.0 -or $pnlSamples -gt 0)
+    $eligible = ($edge -gt 0.0 -or [double]$ms -gt 0.0 -or $pnlSamples -gt 0 -or $hasRealPnl)
+    # PNS_FROM_REALIZED_PNL_BEGIN
+    if($hasRealPnl){ $pnlSamples = 1 }
+    # PNS_FROM_REALIZED_PNL_END
     $src = if($eligible){"REAL"}else{"STUB"}
     # Fail-closed: STUB events must NOT emit fake zeros/derived values
     if (-not $eligible) {
@@ -131,7 +146,7 @@ try {
         edge_ratio         = $edge
         micro_score        = $ms
         micro_score_source = $microSrc
-        realized_pnl       = $rp
+        realized_pnl       = $rpNum
         count_signals      = 1
         pnl_samples        = $pnlSamples
         eligible           = [bool]$eligible
