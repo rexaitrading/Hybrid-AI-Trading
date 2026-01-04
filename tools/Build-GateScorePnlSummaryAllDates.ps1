@@ -108,9 +108,15 @@ foreach($it in $eventFiles){
     } catch {}
   }
   if($events.Count -gt 0 -and $nonStubCount -eq 0){
-    Write-Error ("[GS-ALLDATES] " + $sym + ": event file is ALL-STUB; refusing. path=" + $path)
+    $msg = ("[GS-ALLDATES] " + $sym + ": event file is ALL-STUB; refusing. path=" + $path)
+    if($Symbol.ToUpperInvariant() -eq "ALL"){
+      Write-Host ($msg + " (skipped under Symbol=ALL)") -ForegroundColor DarkYellow
+      continue
+    }
+    Write-Error $msg
     exit 2
   }
+
 
   if($events.Count -eq 0){ continue }
 
