@@ -78,6 +78,14 @@ $lines = Get-Content -LiteralPath $InputPath -Encoding UTF8
 if (-not $lines -or $lines.Count -eq 0) { Write-Error "[QQQ-GS-EVENTS] Input jsonl is empty: $InputPath"; exit 3 }
 
 $eventsOut = New-Object System.Collections.ArrayList
+
+# REAL_ONLY_SPLIT_BEGIN
+$eventsRealOut = New-Object System.Collections.ArrayList
+$eventsStubOut = New-Object System.Collections.ArrayList
+$realCount = 0
+$stubCount = 0
+# REAL_ONLY_SPLIT_END
+
 $count = 0
 
 foreach ($ln in $lines) {
@@ -139,11 +147,16 @@ foreach ($ln in $lines) {
         notes              = $note
     }
 
-    [void]$eventsOut.Add(($outObj | ConvertTo-Json -Compress))
+    $jsonLine = ($outObj | ConvertTo-Json -Compress)
+    if($eligible){
+        [void]$eventsRealOut.Add([string]$jsonLine); $realCount++
+    } else {
+        [void]$eventsStubOut.Add([string]$jsonLine); $stubCount++
+    }
     $count++
 }
 
-if ($count -lt $MinEvents) { Write-Error "[QQQ-GS-EVENTS] Too few events emitted ($count < $MinEvents)."; exit 4 }
+if ($realCount -lt $MinEvents) { Write-Error "[QQQ-GS-EVENTS] Too few REAL events emitted ($realCount < $MinEvents)."; exit 4 }
 
 $outFull = $OutPath
 if (-not [System.IO.Path]::IsPathRooted($outFull)) { $outFull = Join-Path $repoRoot $outFull }
@@ -151,10 +164,19 @@ if (-not [System.IO.Path]::IsPathRooted($outFull)) { $outFull = Join-Path $repoR
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 if ($Mode -eq "rewrite") {
-    [System.IO.File]::WriteAllLines($outFull, [string[]]$eventsOut.ToArray([string]), $utf8NoBom)
+    [System.IO.File]::WriteAllLines($outFull, [string[]]$eventsRealOut.ToArray([string]), $utf8NoBom)
+    # STUB_SINK_BEGIN
+    try {
+        if($stubCount -gt 0){
+            $stubPath = Join-Path $logsDir "qqq_gatescore_events_stub.jsonl"
+            [System.IO.File]::WriteAllLines($stubPath, [string[]]$eventsStubOut.ToArray([string]), $utf8NoBom)
+            Write-Host ("[QQQ-GS-EVENTS] STUB sink wrote " + $stubCount + " rows to " + $stubPath) -ForegroundColor DarkYellow
+        }
+    } catch { }
+    # STUB_SINK_END
 }
 elseif ($Mode -eq "append") {
-    [System.IO.File]::AppendAllLines($outFull, [string[]]$eventsOut.ToArray([string]), $utf8NoBom)
+    [System.IO.File]::AppendAllLines($outFull, [string[]]$eventsRealOut.ToArray([string]), $utf8NoBom)
 }
 else {
     $pd = $PruneDate; if (-not $pd) { $pd = $today }
@@ -170,10 +192,9 @@ else {
     }
     $merged = New-Object System.Collections.ArrayList
     foreach ($k in $kept) { [void]$merged.Add($k) }
-    foreach ($n in $eventsOut) { [void]$merged.Add($n) }
+    foreach ($n in $eventsRealOut) { [void]$merged.Add($n) }
     [System.IO.File]::WriteAllLines($outFull, [string[]]$merged.ToArray([string]), $utf8NoBom)
 }
 
-Write-Host "[QQQ-GS-EVENTS] Wrote $count events to $outFull (mode=$Mode)" -ForegroundColor Green
+Write-Host ("[QQQ-GS-EVENTS] Wrote REAL=" + $realCount + " (total_seen=" + $count + ", stub=" + $stubCount + ") to " + $outFull + " (mode=" + $Mode + ")") -ForegroundColor Green
 exit 0
-
