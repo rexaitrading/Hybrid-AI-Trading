@@ -330,10 +330,12 @@ $phase4Ok = Get-Phase4OkToday $repoRoot $today
 # ---- EV hard veto daily ----
 $evHardOk = $false
 $evPath = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
+  $evHardDailyAsOf = ""
 if (Test-Path $evPath) {
     $rows = @(Import-Csv $evPath)
     foreach ($r in $rows) {
         if ((Slice-Date ([string]$r.date)) -eq $today) {
+          $evHardDailyAsOf = $today
             if ($r.PSObject.Properties.Name -contains "ok") { $evHardOk = To-Bool $r.ok } else { $evHardOk = $true }
         }
     }
@@ -636,6 +638,8 @@ $payload = [ordered]@{
     date = $today
     phase23_health_ok_today = $phase23Ok
     ev_hard_daily_ok_today  = $evHardOk
+    ev_hard_daily_as_of_date = $evHardDailyAsOf
+    ev_hard_session_as_of_date = $evSessionAsOf
     ev_hard_as_of_date = $evSessionAsOf
     ev_hard_session_ok = $evSessionOk
     phase4_ok_today         = $phase4Ok
@@ -708,6 +712,5 @@ Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
 
 exit 0
-
 
 
