@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
-  [string]$Symbol="NVDA"
+  [string]$Symbol="NVDA",
+
+  [switch]$Build
 )
 
 Set-StrictMode -Version Latest
@@ -48,14 +50,13 @@ if ($LASTEXITCODE -ne 0) {
 # $finalExit already captured earlier
   $continue = $false
 }
-# 2) EV-hard snapshot
-$ev = Join-Path $repoRoot "tools\Build-EvHardSnapshot.ps1"
-if(Test-Path $ev){
-  & powershell -NoProfile -ExecutionPolicy Bypass -File $ev | Out-Host
+# 2) EV-hard daily (writes/updates logs\phase5_ev_hard_veto_daily.csv)
+$evd = Join-Path $repoRoot "tools\Run-EvHardVetoDaily.ps1"
+if(Test-Path $evd){
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $evd | Out-Host
 } else {
-  Write-Host "[ONETAP] WARN missing EV-hard snapshot builder: $ev" -ForegroundColor Yellow
+  Write-Host "[ONETAP] WARN missing EV-hard daily runner: $evd" -ForegroundColor Yellow
 }
-
 # 3) GateScore summary build
 $gs = Join-Path $repoRoot "tools\Build-GateScorePnlSummary.ps1"
 if(Test-Path $gs){
@@ -68,7 +69,7 @@ if(Test-Path $gs){
 # 5) Check readiness
 $chk = Join-Path $repoRoot "tools\Check-BlockGReady.ps1"
 if(Test-Path -LiteralPath $chk){
-  & powershell -NoProfile -ExecutionPolicy Bypass -File $chk -Symbol $Symbol | Out-Host -Build
+  $chkArgs = @("-Symbol", $Symbol)   if($Build){ $chkArgs += "-Build" }   & powershell -NoProfile -ExecutionPolicy Bypass -File $chk @chkArgs | Out-Host
   $finalExit = $LASTEXITCODE
 # $finalExit already captured earlier
   $continue = $false
