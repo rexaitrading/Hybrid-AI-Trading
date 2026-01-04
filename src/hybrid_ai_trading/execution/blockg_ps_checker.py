@@ -9,7 +9,7 @@ from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
 
 def _repo_root() -> Path:
     # .../src/hybrid_ai_trading/execution -> repo root is 4 parents up
-    return Path(__file__).resolve().parents[4]
+    return Path(__file__).resolve().parents[3]
 
 
 def _ps_exe() -> str:
