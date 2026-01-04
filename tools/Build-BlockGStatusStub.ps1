@@ -510,12 +510,6 @@ $gatescore_mean_micro_score_rolling = $gsNVDA_roll.mean_micro
 $gatescore_daily_samples_ok   = ([int]$gsNVDA.cnt -ge [int]$gsNVDA.minSignals -and [int]$gsNVDA.pnl -ge [int]$gsNVDA.minPnl)
 $gatescore_rolling_samples_ok = ([int]$gatescore_samples_rolling -ge [int]$gsNVDA.minSignals -and [int]$gatescore_pnl_samples_rolling -ge [int]$gsNVDA.minPnl)
 # --- end explicit policy flags ---
-# --- Policy metrics should prefer rolling when available ---
-$gsCountPolicy = if($null -ne $gatescore_samples_rolling -and [int]$gatescore_samples_rolling -gt 0){ [int]$gatescore_samples_rolling } else { [int]$gsCountPolicy }
-$gsPnlPolicy   = if($null -ne $gatescore_pnl_samples_rolling -and [int]$gatescore_pnl_samples_rolling -gt 0){ [int]$gatescore_pnl_samples_rolling } else { [int]$gsPnlPolicy }
-$gsEdgePolicy  = if($null -ne $gatescore_mean_edge_ratio_rolling){ [double]$gatescore_mean_edge_ratio_rolling } else { [double]$gsEdgePolicy }
-$gsMicroPolicy = if($null -ne $gatescore_mean_micro_score_rolling){ [double]$gatescore_mean_micro_score_rolling } else { [double]$gsMicroPolicy }
-# --- end policy metrics ---
 
 # --- FIXED policy metrics + booleans (rolling-first) ---
 $gsCountPolicy = if([int]$gatescore_samples_rolling -gt 0){ [int]$gatescore_samples_rolling } else { [int]$gsCount }
