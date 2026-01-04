@@ -122,7 +122,11 @@ def place_order_phase5_with_guard(
     sym_u = str(symbol).upper()
     ctx = None
     try:
-        ctx = getattr(engine, "ctx", None)
+        # Prefer explicit ctx passed via kwargs (unified RunContext semantics)
+        if "ctx" in kwargs and kwargs.get("ctx") is not None:
+            ctx = kwargs.get("ctx")
+        else:
+            ctx = getattr(engine, "ctx", None)
     except Exception:
         ctx = None
 
