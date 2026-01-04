@@ -14,9 +14,13 @@ $logsDir  = Join-Path $repoRoot "logs"
 $outPath = Join-Path $logsDir "gatescore_pnl_summary_all_dates.csv"
 
 function Resolve-EventFile([string]$logsDir,[string]$sym){
+  $std  = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
   $real = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $sym.ToLower())
+
+  # Institutional: std is canonical; real is fallback only.
+  if (Test-Path -LiteralPath $std)  { return $std }
   if (Test-Path -LiteralPath $real) { return $real }
-  return Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
+  return ""
 }
 
 function _SliceDate([string]$d){ if(-not $d){""} elseif($d.Length -ge 10){$d.Substring(0,10)} else {$d} }
@@ -59,6 +63,21 @@ $eventFiles=@(
   @{ sym="SPY";  path=(Resolve-EventFile $logsDir "SPY")  },
   @{ sym="QQQ";  path=(Resolve-EventFile $logsDir "QQQ")  }
 )
+
+# GS_ALLDATES_PATH_AUDIT_BEGIN
+foreach($t in $eventFiles){
+  try {
+    $p = [string]$t.path
+    if($p -and (Test-Path -LiteralPath $p)){
+      $sz = (Get-Item -LiteralPath $p).Length
+      Write-Host ("[GS-ALLDATES] " + $t.sym + " path=" + $p + " bytes=" + $sz) -ForegroundColor Yellow
+    } else {
+      Write-Host ("[GS-ALLDATES] " + $t.sym + " path=MISSING") -ForegroundColor Red
+    }
+  } catch { }
+}
+# GS_ALLDATES_PATH_AUDIT_END
+
 
 $wanted=@()
 switch($Symbol.ToUpperInvariant()){
