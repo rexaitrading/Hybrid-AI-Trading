@@ -17,7 +17,7 @@ def _ps_exe() -> str:
     return (os.environ.get("HAT_POWERSHELL_EXE") or "").strip() or "powershell"
 
 
-def require_blockg_ready_via_powershell(symbol: str, *, build: bool = True) -> None:
+def require_blockg_ready_via_powershell(symbol: str, *, build: bool = False) -> None:
     """
     Institutional: tools\\Check-BlockGReady.ps1 is the single semantic owner.
     Fail-closed on any non-zero exit code.
@@ -43,7 +43,7 @@ def require_blockg_ready_via_powershell(symbol: str, *, build: bool = True) -> N
     if build:
         args.append("-Build")
 
-    cp = subprocess.run(args, capture_output=True, text=True)
+    cp = subprocess.run(args, capture_output=True, text=True, cwd=str(_repo_root()), timeout=30)
 
     if cp.returncode != 0:
         out = (cp.stdout or "")[-1500:].strip()
