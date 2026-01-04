@@ -46,6 +46,9 @@ def test_blockg_contract_failure_blocks_nvda_live(monkeypatch):
     """
     import hybrid_ai_trading.execution.execution_engine_phase5_guard as guard_mod
 
+    # Force LIVE mode so Block-G gate executes
+    monkeypatch.setenv("HAT_IS_PAPER", "0")
+
     class DummyDecision:
         def __init__(self) -> None:
             self.allowed = True
@@ -61,7 +64,7 @@ def test_blockg_contract_failure_blocks_nvda_live(monkeypatch):
     def fake_guard_phase5_trade(rm, trade):
         return DummyDecision()
 
-    # 2) Block-G helper fails hard for NVDA
+    # 2) Block-G contract hook fails hard for NVDA
     def fake_ensure_symbol_blockg_ready(symbol: str):
         raise RuntimeError("Block-G NVDA not ready")
 
