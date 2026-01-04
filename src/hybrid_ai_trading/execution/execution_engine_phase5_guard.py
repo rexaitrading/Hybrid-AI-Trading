@@ -34,6 +34,40 @@ def ensure_symbol_blockg_ready(symbol: str) -> None:
     contract_ensure_symbol_blockg_ready(symbol, allow_paper=False, is_paper=False, ctx=None)
 
 
+def _infer_is_paper(engine: Any, regime: str, ctx: RunContext | None) -> bool:
+    """
+    Institutional: determine paper/live mode with defense-in-depth.
+    Priority:
+      1) ctx (if provided and has is_paper)
+      2) engine.is_paper attribute
+      3) env HAT_IS_PAPER (0 => live)
+      4) regime contains LIVE marker
+      default: paper
+    """
+    try:
+        if ctx is not None and hasattr(ctx, "is_paper"):
+            return bool(getattr(ctx, "is_paper"))
+    except Exception:
+        pass
+    try:
+        if hasattr(engine, "is_paper"):
+            return bool(getattr(engine, "is_paper"))
+    except Exception:
+        pass
+    try:
+        v = str(__import__("os").environ.get("HAT_IS_PAPER", "")).strip()
+        if v != "":
+            return (v != "0")
+    except Exception:
+        pass
+    try:
+        r = str(regime).upper()
+        if ("_LIVE" in r) or ("LIVE" in r):
+            return False
+    except Exception:
+        pass
+    return True
+
 def place_order_phase5(
     engine: Any,
     symbol: str,
@@ -84,15 +118,20 @@ def place_order_phase5_with_guard(
       - function returns a dict when risk is allowed
       - Block-G failure for NVDA raises and place_order_phase5 is never called.
     """
-    # 0) Hard Block-G enforcement for LIVE orders (fail-closed, contract-only)
-    try:
-        is_paper = bool(getattr(engine, "is_paper", True))
-    except Exception:
-        is_paper = True
+        # 0) Hard Block-G enforcement for LIVE orders (fail-closed, contract-only)
     sym_u = str(symbol).upper()
-    is_live_regime = ("_LIVE" in str(regime).upper()) or ("LIVE" in str(regime).upper())
-    if (sym_u == "NVDA") and ((not is_paper) or is_live_regime):
+    ctx = None
+    try:
+        ctx = getattr(engine, "ctx", None)
+    except Exception:
+        ctx = None
+
+    is_paper = _infer_is_paper(engine=engine, regime=str(regime), ctx=ctx)
+
+    # Institutional: enforce contract flags per symbol for NVDA/SPY/QQQ in LIVE mode.
+    if (sym_u in ("NVDA", "SPY", "QQQ")) and (not is_paper):
         ensure_symbol_blockg_ready(sym_u)
+
     trade = {
         "symbol": symbol,
         "side": side,
