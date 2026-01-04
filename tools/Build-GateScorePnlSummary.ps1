@@ -19,33 +19,29 @@ function Resolve-EventFile([string]$logsDir,[string]$sym){
     $std  = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
     $real = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $sym.ToLower())
 
-    if ((-not (Test-Path -LiteralPath $std)) -and (-not (Test-Path -LiteralPath $real))) { return "" }
-    if ((Test-Path -LiteralPath $std) -and (-not (Test-Path -LiteralPath $real))) { return $std }
-    if ((Test-Path -LiteralPath $real) -and (-not (Test-Path -LiteralPath $std))) { return $real }
+    # Institutional: prefer canonical std file when it is non-trivial (avoid full-file scans).
+    # Reason: std can be large (tens of MB). Scanning entire file to find max_date is slow and fragile.
+    $STD_MIN_BYTES = 1048576  # 1MB
 
-    function _MaxDate([string]$p){
-        $mx = ""
-        foreach($ln in (Get-Content -LiteralPath $p -Encoding UTF8)){
-            $s = ($ln + "").Trim(); if(-not $s){ continue }
-            try {
-                $o = $s | ConvertFrom-Json
-                $d = ($o.as_of_date + "")
-                if($d.Length -ge 10){ $d = $d.Substring(0,10) }
-                if($d -match '^\d{4}-\d{2}-\d{2}$'){
-                    if($mx -eq "" -or $d -gt $mx){ $mx = $d }
-                }
-            } catch { }
-        }
-        return $mx
+    $hasStd  = Test-Path -LiteralPath $std
+    $hasReal = Test-Path -LiteralPath $real
+
+    if((-not $hasStd) -and (-not $hasReal)){ return "" }
+
+    if($hasStd){
+        try {
+            $len = (Get-Item -LiteralPath $std).Length
+            if($len -ge $STD_MIN_BYTES){ return $std }
+        } catch { return $std }
+        # std exists but is small: still prefer it over real unless real is larger
+        if(-not $hasReal){ return $std }
+        try {
+            $rlen = (Get-Item -LiteralPath $real).Length
+            if($rlen -gt (Get-Item -LiteralPath $std).Length){ return $real }
+        } catch { }
+        return $std
     }
 
-    $mStd  = _MaxDate $std
-    $mReal = _MaxDate $real
-    if($mStd -and $mReal){
-        if($mStd -ge $mReal){ return $std }
-        return $real
-    }
-    if($mStd){ return $std }
     return $real
 }
 function Resolve-StdOnlyFile([string]$logsDir,[string]$sym){
