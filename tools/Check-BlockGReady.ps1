@@ -95,6 +95,15 @@ try {
     $diagOk = (($st.phase4_ok_today -eq $true) -and ($st.gatescore_fresh_today -eq $true) -and ($st.ev_hard_daily_ok_today -eq $true))
     if ($diagOk) {
       Write-Host "[BLOCKG] CLOSED DAY: DIAGNOSTIC OK (pipeline healthy; LIVE remains disallowed)" -ForegroundColor Yellow
+      # GS_LIVE_STATUS_NOTE_CLOSED_BEGIN
+      try {
+        if(($st.PSObject.Properties.Name -contains "gatescore_ok_today") -and ($st.PSObject.Properties.Name -contains "gatescore_ok_live_today")){
+          if([bool]$st.gatescore_ok_today -and (-not [bool]$st.gatescore_ok_live_today)){
+            Write-Host "[BLOCKG] NOTE: GateScore passes diagnostic thresholds but FAILS LIVE thresholds (insufficient samples/edge for live)" -ForegroundColor Yellow
+          }
+        }
+      } catch { }
+      # GS_LIVE_STATUS_NOTE_CLOSED_END
       exit 10
     }
     Fail "market_closed_today=true (diagnostic failed prerequisites)"
