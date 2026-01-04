@@ -3,6 +3,9 @@ param([ValidateSet("NVDA","SPY","QQQ")] [string]$Symbol="NVDA")
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
+$toolsDir = Split-Path -Parent $PSCommandPath
+$repoRoot = Split-Path -Parent $toolsDir
+
 
 Write-Host "`n[BLOCKG-LOCKPACK] 1) closed-day semantics (ready=10 diag=0)..." -ForegroundColor Cyan
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-BlockGWeekendSemantics.ps1 -Symbol $Symbol | Out-Host
@@ -21,7 +24,14 @@ if($paths.Count -ne 1 -or ($paths[0] -notmatch '\\tools\\Arm-NVDA-Live\.ps1$')){
 Write-Host ("[BLOCKG-LOCKPACK] READY executor OK: " + $paths[0]) -ForegroundColor Green
 
 Write-Host "`n[BLOCKG-LOCKPACK] 4) Python import sanity (no runtime orders)..." -ForegroundColor Cyan
+
+# Fail-closed: ensure repo src/ is on sys.path for this probe.
+$env:PYTHONPATH = (Join-Path $repoRoot "src")
 python -c "import hybrid_ai_trading.brokers.ib_adapter as a; import hybrid_ai_trading.execution.execution_engine_phase5_guard as g; print('PY_IMPORT_OK')" | Out-Host
+if($LASTEXITCODE -ne 0){
+  Write-Host ("PY_IMPORT_FAIL (exit=" + $LASTEXITCODE + ")") -ForegroundColor Red
+  exit 2
+}
 
 Write-Host "`n[BLOCKG-LOCKPACK] PASS" -ForegroundColor Green
 exit 0
