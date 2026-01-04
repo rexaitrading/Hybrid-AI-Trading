@@ -165,7 +165,39 @@ if ($Mode -eq "rewrite") {
     [System.IO.File]::WriteAllLines($outFull, [string[]]$eventsOut.ToArray([string]), $utf8NoBom)
 }
 elseif ($Mode -eq "append") {
-    [System.IO.File]::AppendAllLines($outFull, [string[]]$eventsOut.ToArray([string]), $utf8NoBom)
+    # DEDUP_EVENT_ID_APPEND_BEGIN
+    # Institutional: append must be idempotent by event_id to prevent artificial sample inflation.
+    $existing = New-Object "System.Collections.Generic.HashSet[string]"
+    if (Test-Path -LiteralPath $outFull) {
+        try {
+            foreach($oln in (Get-Content -LiteralPath $outFull -Encoding UTF8)) {
+                $t = ($oln + "").Trim(); if(-not $t){ continue }
+                try {
+                    $oj = $t | ConvertFrom-Json
+                    $id = $null
+                    if($oj -and ($oj.PSObject.Properties.Name -contains "event_id")){ $id = [string]$oj.event_id }
+                    if($id){ [void]$existing.Add($id) }
+                } catch { }
+            }
+        } catch { }
+    }
+
+    $newLines = New-Object System.Collections.ArrayList
+    $skipped = 0
+    foreach($ln in $eventsOut){
+        $t = ($ln + "").Trim(); if(-not $t){ continue }
+        $id = $null
+        try { $oj = $t | ConvertFrom-Json; if($oj -and ($oj.PSObject.Properties.Name -contains "event_id")){ $id = [string]$oj.event_id } } catch { $id = $null }
+        if($id -and $existing.Contains($id)){ $skipped++; continue }
+        if($id){ [void]$existing.Add($id) }
+        [void]$newLines.Add([string]$t)
+    }
+
+    if($newLines.Count -gt 0){
+        [System.IO.File]::AppendAllLines($outFull, [string[]]$newLines.ToArray([string]), $utf8NoBom)
+    }
+    Write-Host ("[NVDA-GS-EVENTS] append_dedup: added=" + $newLines.Count + " skipped_duplicates=" + $skipped) -ForegroundColor Yellow
+    # DEDUP_EVENT_ID_APPEND_END
 }
 else {
     $pd = $PruneDate; if (-not $pd) { $pd = $today }
