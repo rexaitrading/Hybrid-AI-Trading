@@ -7,11 +7,29 @@ $ErrorActionPreference = "Stop"
 $tools = Split-Path -Parent $PSCommandPath
 $repo  = Split-Path -Parent $tools
 
-$live = @(
-  Join-Path $repo "src\hybrid_ai_trading\execution\**\*.py",
-  Join-Path $repo "src\hybrid_ai_trading\broker\**\*.py",
-  Join-Path $repo "src\hybrid_ai_trading\runners\**\*.py"
+$liveRoots = @(
+  (Join-Path $repo "src\hybrid_ai_trading\execution"),
+  (Join-Path $repo "src\hybrid_ai_trading\broker"),
+  (Join-Path $repo "src\hybrid_ai_trading\runners")
 )
+
+# Enumerate concrete files (no globs) for deterministic auditing
+$liveFiles = New-Object System.Collections.Generic.List[string]
+foreach($root in $liveRoots){
+  if(Test-Path -LiteralPath $root){
+    foreach($fi in (Get-ChildItem -LiteralPath $root -Recurse -File -Filter "*.py" -ErrorAction SilentlyContinue)){
+      $liveFiles.Add($fi.FullName) | Out-Null
+    }
+  }
+}
+
+if($liveFiles.Count -eq 0){
+  Write-Host "[AUDIT] ERROR: no live .py files found under execution/broker/runners" -ForegroundColor Yellow
+  exit 1
+}
+
+$live = @($liveFiles.ToArray())
+
 
 $pat = 'events_real\.jsonl|gatescore_events_real\.jsonl'
 $m = @(Select-String -Path $live -Pattern $pat -ErrorAction SilentlyContinue)
