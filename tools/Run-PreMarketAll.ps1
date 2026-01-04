@@ -38,7 +38,7 @@ if ($LASTEXITCODE -ne 0) { throw "[PRE] BlockG build failed rc=$LASTEXITCODE" }
 $effective = $Symbol
 if ($Symbol -eq "ALL" -and -not $RequireAllReady) { $effective = "NVDA" }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Check-BlockGReady.ps1") -Symbol $effective | Out-Host
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Check-BlockGDiagnosticOk.ps1") -Symbol $effective | Out-Host
 $rc = $LASTEXITCODE
 Write-Host "[PRE] BlockG RC=$rc" -ForegroundColor Yellow
 if ($rc -ne 0) { throw "[PRE] BlockG NOT READY rc=$rc (fail-closed)" }

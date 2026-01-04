@@ -136,7 +136,7 @@ if(Test-Path $evEvidence){
 
 # --- 7) Build Block-G status + check (authoritative) ---
 & ".\tools\Build-BlockGStatusStub.ps1"
-& ".\tools\Check-BlockGReady.ps1" -Symbol $Symbol
+& ".\tools\Check-BlockGDiagnosticOk.ps1" -Symbol $Symbol
 
 $rc = $LASTEXITCODE
 Write-Host "[PRE] BlockG check rc=$rc" -ForegroundColor Yellow

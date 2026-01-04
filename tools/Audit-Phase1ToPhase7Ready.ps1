@@ -34,7 +34,7 @@ $must = @(
   "tools\Run-Phase2FromPhase1.ps1",
   "tools\Build-GateScorePnlSummary.ps1",
   "tools\Build-BlockGStatusStub.ps1",
-  "tools\Check-BlockGReady.ps1",
+  "tools\Check-BlockGDiagnosticOk.ps1",
   "tools\Build-EvHardEvidenceRaw.ps1",
   "tools\Build-EvHardSnapshot.ps1",
   "tools\Run-EvHardVetoDaily.ps1",
@@ -81,7 +81,7 @@ if($RunPytests){
 
 # --- E) Block-G readiness (weekend expected fail) ---
 try {
-  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "tools\Check-BlockGReady.ps1") -Symbol NVDA -Build | Out-Host
+  powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "tools\Check-BlockGDiagnosticOk.ps1") -Symbol NVDA -Build | Out-Host
   $code = $LASTEXITCODE
   if($code -eq 0){
     WARN "Block-G READY (this should only happen on open market + all gates true)"
