@@ -137,6 +137,8 @@ def place_order_phase5_with_guard(
     # Institutional: enforce via PowerShell checker for NVDA/SPY/QQQ in LIVE mode.
     # (Paper allowed to proceed; closed-day exit=10 remains LIVE-disallowed.)
     if (sym_u in ("NVDA", "SPY", "QQQ")) and (not is_paper):
+        # Contract hook (tests may monkeypatch) - fail-closed
+        ensure_symbol_blockg_ready(sym_u)
         require_blockg_ready_via_powershell(sym_u, build=False)
 
     trade = {
