@@ -69,9 +69,10 @@ if(Test-Path $gs){
 # 5) Check readiness
 $chk = Join-Path $repoRoot "tools\Check-BlockGReady.ps1"
 if(Test-Path -LiteralPath $chk){
-  $chkArgs = @("-Symbol", $Symbol)   if($Build){ $chkArgs += "-Build" }   & powershell -NoProfile -ExecutionPolicy Bypass -File $chk @chkArgs | Out-Host
+  $chkArgs = @("-Symbol", $Symbol)
+  if($Build){ $chkArgs += "-Build" }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $chk @chkArgs | Out-Host
   $finalExit = $LASTEXITCODE
-# $finalExit already captured earlier
   $continue = $false
 } else {
   Write-Host "[ONETAP] FAIL-CLOSED: missing checker: $chk" -ForegroundColor Yellow
