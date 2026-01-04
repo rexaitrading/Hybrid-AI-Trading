@@ -113,6 +113,7 @@ foreach($it in $eventFiles){
       Write-Host ($msg + " (skipped under Symbol=ALL)") -ForegroundColor DarkYellow
       continue
     }
+    Write-Host ("[GS-ALLDATES] NEXT: fix upstream producer for " + $sym + " (paper_live missing metrics -> ALL-STUB).") -ForegroundColor DarkYellow
     Write-Error $msg
     exit 2
   }
