@@ -56,3 +56,16 @@ def require_blockg_ready_via_powershell(symbol: str, *, build: bool = False) -> 
         if err:
             msg += "\n" + err
         raise BlockGNotReady(msg)
+
+
+def check_blockg_diagnostic_ok(symbol: str, *, build: bool = False) -> None:
+    """
+    Ops-only: accept ps_checker_exit=10 (closed-day diagnostic OK).
+    NEVER use this for live order gating.
+    """
+    try:
+        require_blockg_ready_via_powershell(symbol, build=build)
+    except BlockGNotReady as e:
+        if "ps_checker_exit=10" in str(e):
+            return
+        raise
