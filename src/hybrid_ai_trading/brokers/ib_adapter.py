@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from hybrid_ai_trading.runtime.run_context import RunContext
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready
 from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
+from hybrid_ai_trading.execution.blockg_ps_checker import require_blockg_ready_via_powershell
 
 def require_blockg_ready_for_live(symbol: str) -> None:
     """
@@ -101,6 +102,13 @@ class IBAdapter(Broker):
             is_paper=(meta0.get("is_paper", None) if isinstance(meta0, dict) else None),
             ctx=ctx,
         )
+
+        # BLOCKG_PS_SECOND_GATE_BEGIN
+        # Institutional defense-in-depth: PowerShell checker is semantic owner for LIVE.
+        # Paper is allowed to pass without PS checker (weekend exit=10 diagnostic OK).
+        if not is_paper:
+            require_blockg_ready_via_powershell(str(getattr(contract, "symbol", symbol)).upper(), build=False)
+        # BLOCKG_PS_SECOND_GATE_END
 
         trade = ib_place_order_chokepoint(self.ib, contract, order, ctx=ctx, meta=meta0)
         self.ib.sleep(0.1)
