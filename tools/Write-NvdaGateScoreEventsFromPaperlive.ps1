@@ -140,6 +140,7 @@ try {
     $note = if($eligible){"from_paperlive"}else{"from_paperlive;ineligible_zero_metrics"}
     $outObj = [ordered]@{
         as_of_date         = $asOf
+        event_id           = (($asOf + "") + "|NVDA|" + $count.ToString())
         symbol             = "NVDA"
         source             = $src
         score              = $edge
