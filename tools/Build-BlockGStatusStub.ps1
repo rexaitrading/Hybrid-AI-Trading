@@ -511,6 +511,20 @@ $gatescore_daily_samples_ok   = ([int]$gsNVDA.cnt -ge [int]$gsNVDA.minSignals -a
 $gatescore_rolling_samples_ok = ([int]$gatescore_samples_rolling -ge [int]$gsNVDA.minSignals -and [int]$gatescore_pnl_samples_rolling -ge [int]$gsNVDA.minPnl)
 # --- end explicit policy flags ---
 
+
+# GS_LEGACY_DEFAULTS_STRICTMODE_BEGIN
+# StrictMode-safe defaults (overwritten later after Eval-GS).
+$gsCount = 0
+$gsPnl   = 0
+$gsEdge  = 0.0
+$gsMicro = 0.0
+$gsFresh = $false
+$minSignals = 999999
+$minPnl     = 999999
+$minEdge    = 999.0
+$minMicro   = 999.0
+# GS_LEGACY_DEFAULTS_STRICTMODE_END
+
 # --- FIXED policy metrics + booleans (rolling-first) ---
 $gsCountPolicy = if([int]$gatescore_samples_rolling -gt 0){ [int]$gatescore_samples_rolling } else { [int]$gsCount }
 $gsPnlPolicy   = if([int]$gatescore_pnl_samples_rolling -gt 0){ [int]$gatescore_pnl_samples_rolling } else { [int]$gsPnl }
