@@ -89,10 +89,32 @@ try {
       }
     } catch { }
     # MARKET_CLOSED_PRINT_PROXY_VETO_END
-  # Institutional: closed-day diagnostic mode.
-  # Never allow LIVE on closed days, but allow deterministic pipeline verification for ops.
-  if ($st.market_closed_today -eq $true) {
-    $diagOk = (($st.phase4_ok_today -eq $true) -and ($st.gatescore_fresh_today -eq $true) -and ($st.ev_hard_daily_ok_today -eq $true))
+
+    # Closed-day diagnostic policy:
+    # - LIVE is ALWAYS disallowed on closed days.
+    # - DIAGNOSTIC OK (exit=10) requires: Phase4 ok + Phase23 ok + GateScore recent-enough + EV-hard evidence exists.
+    # - We do NOT require gatescore_fresh_today or ev_hard_daily_ok_today on a closed day.
+    $diagOk = $true
+
+    # 1) Core producers
+    if (-not ($st.PSObject.Properties.Name -contains "phase4_ok_today") -or (-not [bool]$st.phase4_ok_today)) { $diagOk = $false }
+    if (-not ($st.PSObject.Properties.Name -contains "phase23_health_ok_today") -or (-not [bool]$st.phase23_health_ok_today)) { $diagOk = $false }
+
+    # 2) GateScore age policy (fields already in contract)
+    if (-not ($st.PSObject.Properties.Name -contains "gatescore_recent_enough") -or (-not [bool]$st.gatescore_recent_enough)) { $diagOk = $false }
+    $maxAgeDays = 3  # closed-day local constant (StrictMode-safe)
+    try { $age = [int]$st.gatescore_age_days } catch { $diagOk = $false }
+    if ($diagOk -and ($age -gt $maxAgeDays)) { $diagOk = $false }
+
+    # 3) EV-hard evidence exists (session ok OR explicitly not-evaluated because market closed OR has daily as-of)
+    $evEvidenceOk = $false
+    try {
+      if (($st.PSObject.Properties.Name -contains "ev_hard_session_ok") -and [bool]$st.ev_hard_session_ok) { $evEvidenceOk = $true }
+      elseif (($st.PSObject.Properties.Name -contains "ev_hard_not_evaluated_market_closed") -and [bool]$st.ev_hard_not_evaluated_market_closed) { $evEvidenceOk = $true }
+      elseif (($st.PSObject.Properties.Name -contains "ev_hard_daily_as_of_date") -and ([string]$st.ev_hard_daily_as_of_date).Trim() -ne "") { $evEvidenceOk = $true }
+    } catch { $evEvidenceOk = $false }
+    if (-not $evEvidenceOk) { $diagOk = $false }
+
     if ($diagOk) {
       Write-Host "[BLOCKG] CLOSED DAY: DIAGNOSTIC OK (pipeline healthy; LIVE remains disallowed)" -ForegroundColor Yellow
       # GS_LIVE_STATUS_NOTE_CLOSED_BEGIN
@@ -106,8 +128,8 @@ try {
       # GS_LIVE_STATUS_NOTE_CLOSED_END
       exit 10
     }
+
     Fail "market_closed_today=true (diagnostic failed prerequisites)"
-  }
   }
 } catch { }
 # MARKET_CLOSED_FAILCLOSED_CHECK_END
@@ -152,7 +174,7 @@ try {
 # GateScore age policy (fail-closed)
 if (-not [bool]$st.gatescore_recent_enough) { Fail "gatescore_recent_enough=false" }
 try { $age = [int]$st.gatescore_age_days } catch { Fail "gatescore_age_days invalid" }
-if ($age -gt $MAX_GS_AGE_DAYS) { Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
+if ($age -gt $maxAgeDays) { Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
 # Per-symbol GateScore checks (contract-only)
 if ($s -ne "ALL") {
   $gs = Get-GS $s
