@@ -102,17 +102,20 @@ foreach ($ln in $lines) {
 
     $edge = 0.0
     foreach ($k in @("edge_ratio","mean_edge_ratio","edge","edge_mean","gatescore_edge","edgeValue","edge_score")) {
-        if ($props -contains $k) { $edge = TryD (Get-FromResult0 $j $k); break }
+        $v = Get-FromResult0 $j $k
+        if ($null -ne $v -and ([string]$v).Trim() -ne "") { $edge = TryD $v; break }
     }
 
     $micro = 0.0
     foreach ($k in @("micro_score","mean_micro_score","micro","micro_mean","gatescore_micro","microValue","micro_score_mean")) {
-        if ($props -contains $k) { $micro = TryD (Get-FromResult0 $j $k); break }
+        $v = Get-FromResult0 $j $k
+        if ($null -ne $v -and ([string]$v).Trim() -ne "") { $micro = TryD $v; break }
     }
 
     $pnlSamples = 0
     foreach ($k in @("pnl_samples","pnlSamples","pnl_n","trades_n","trade_count","n_trades","samples","sample_count")) {
-        if ($props -contains $k) { $pnlSamples = TryI (Get-FromResult0 $j $k); break }
+        $v = Get-FromResult0 $j $k
+        if ($null -ne $v -and ([string]$v).Trim() -ne "") { $pnlSamples = TryI $v; break }
     }
 
     $rp = $null
