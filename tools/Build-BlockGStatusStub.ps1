@@ -39,7 +39,7 @@ function LastNTradingDays([string]$asOf,[int]$n){
   return $days
 }
 function ComputeGateScoreRolling([string]$sym,[string]$logsDir,[string[]]$days){
-  $path = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $sym.ToLower())
+  $path = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
   $evs = @(Read-JsonlLines $path)
   if($evs.Count -eq 0){ return [pscustomobject]@{ samples=0; pnl_samples=0; mean_edge=0.0; mean_micro=0.0 } }
 
