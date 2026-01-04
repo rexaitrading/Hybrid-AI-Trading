@@ -77,6 +77,10 @@ try {
     $result.ok = $true
     $result.notes += "BLOCKG_READY"
     Write-Host "`n=== PRE-MARKET READY: PASS ===" -ForegroundColor Green
+  } elseif($result.blockg_exit -eq 10){
+    $result.ok = $true
+    $result.notes += "BLOCKG_CLOSED_DAY_DIAGNOSTIC_OK"
+    Write-Host "`n=== PRE-MARKET READY: PASS (DIAGNOSTIC ONLY; MARKET CLOSED) ===" -ForegroundColor Yellow
   } else {
     $result.ok = $false
     $result.notes += ("BLOCKG_NOT_READY exit=" + $result.blockg_exit)
