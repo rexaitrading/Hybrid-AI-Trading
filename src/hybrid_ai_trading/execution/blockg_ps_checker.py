@@ -49,6 +49,8 @@ def require_blockg_ready_via_powershell(symbol: str, *, build: bool = False) -> 
         out = (cp.stdout or "")[-1500:].strip()
         err = (cp.stderr or "")[-1500:].strip()
         msg = f"BLOCK-G FAIL-CLOSED: ps_checker_exit={cp.returncode} symbol={sym}"
+        if cp.returncode == 10:
+            msg += "\\n[BLOCKG] NOTE: exit=10 is closed-day DIAGNOSTIC OK; LIVE remains disallowed (fail-closed)."
         if out:
             msg += "\n" + out
         if err:
