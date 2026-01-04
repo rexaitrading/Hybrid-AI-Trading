@@ -129,6 +129,17 @@ foreach ($k in $reqFields) {
   if (-not [bool]$st.$k) { Fail "$k=false" }
 }
 
+
+# GS_LIVE_STATUS_NOTE_BEGIN
+try {
+  if($st -and ($st.PSObject.Properties.Name -contains "gatescore_ok_today") -and ($st.PSObject.Properties.Name -contains "gatescore_ok_live_today")){
+    if([bool]$st.gatescore_ok_today -and (-not [bool]$st.gatescore_ok_live_today)){
+      Write-Host "[BLOCKG] NOTE: GateScore passes diagnostic thresholds but FAILS LIVE thresholds (insufficient samples/edge for live)" -ForegroundColor Yellow
+    }
+  }
+} catch { }
+# GS_LIVE_STATUS_NOTE_END
+
 # GateScore age policy (fail-closed)
 if (-not [bool]$st.gatescore_recent_enough) { Fail "gatescore_recent_enough=false" }
 try { $age = [int]$st.gatescore_age_days } catch { Fail "gatescore_age_days invalid" }
