@@ -73,7 +73,6 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
     # Fail-closed: missing/expired arm OR ps checker non-zero => no live order.
     is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
     if is_live:
-        require_blockg_ready_for_live(sym)
         require_blockg_ready_via_powershell(sym, build=False)
     # LIVE_2KEY_ARM_AND_BLOCKG_PS_END
 
