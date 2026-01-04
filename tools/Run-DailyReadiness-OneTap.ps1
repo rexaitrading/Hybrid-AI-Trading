@@ -5,6 +5,12 @@ param(
 )
 
 Set-StrictMode -Version Latest
+# BLOCKG_LOCKPACK_BEGIN
+Write-Host "
+[OPS] Block-G LOCKPACK..." -ForegroundColor Cyan
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-BlockGLockPack.ps1 -Symbol NVDA | Out-Host
+if($LASTEXITCODE -ne 0){ throw "[OPS] Block-G LOCKPACK failed (drift detected)" }
+# BLOCKG_LOCKPACK_END
 $ErrorActionPreference="Stop"
 
 # --- repo root: walk up from this script until .git is found (fail-closed) ---
