@@ -67,6 +67,15 @@ Write-Host "[NVDA-GS-EVENTS] Input=$InputPath" -ForegroundColor Cyan
 $lines = @(Get-Content -LiteralPath $InputPath -Encoding UTF8)
 if ($lines.Count -eq 0) { Write-Error "[NVDA-GS-EVENTS] Input jsonl is empty: $InputPath"; exit 3 }
 $eventsOut = New-Object System.Collections.ArrayList
+
+# REAL_ONLY_SPLIT_BEGIN
+# Institutional: canonical events file must contain REAL-only rows. STUB rows go to stub sink (debug).
+$eventsRealOut = New-Object System.Collections.ArrayList
+$eventsStubOut = New-Object System.Collections.ArrayList
+$realCount = 0
+$stubCount = 0
+# REAL_ONLY_SPLIT_END
+
 $count = 0
 foreach ($ln in $lines) {
     $s = ($ln + "").Trim()
@@ -154,15 +163,29 @@ try {
         notes              = $note
         metrics_source     = $metricsSource
     }
-    [void]$eventsOut.Add(($outObj | ConvertTo-Json -Compress))
+    # STUB_SINK_BEGIN
+    try {
+        if($stubCount -gt 0){
+            $stubPath = Join-Path $logsDir "nvda_gatescore_events_stub.jsonl"
+            [System.IO.File]::WriteAllLines($stubPath, [string[]]$eventsStubOut.ToArray([string]), $utf8NoBom)
+            Write-Host ("[NVDA-GS-EVENTS] STUB sink wrote " + $stubCount + " rows to " + $stubPath) -ForegroundColor DarkYellow
+        }
+    } catch { }
+    # STUB_SINK_END
+    $jsonLine = ($outObj | ConvertTo-Json -Compress)
+    if($eligible){
+        [void]$eventsRealOut.Add([string]$jsonLine); $realCount++
+    } else {
+        [void]$eventsStubOut.Add([string]$jsonLine); $stubCount++
+    }
     $count++
 }
-if ($count -lt $MinEvents) { Write-Error "[NVDA-GS-EVENTS] Too few events emitted ($count < $MinEvents)."; exit 4 }
+if ($realCount -lt $MinEvents) { Write-Error "[NVDA-GS-EVENTS] Too few REAL events emitted ($realCount < $MinEvents)."; exit 4 }
 $outFull = $OutPath
 if (-not [System.IO.Path]::IsPathRooted($outFull)) { $outFull = Join-Path $repoRoot $outFull }
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 if ($Mode -eq "rewrite") {
-    [System.IO.File]::WriteAllLines($outFull, [string[]]$eventsOut.ToArray([string]), $utf8NoBom)
+    [System.IO.File]::WriteAllLines($outFull, [string[]]$eventsRealOut.ToArray([string]), $utf8NoBom)
 }
 elseif ($Mode -eq "append") {
     # DEDUP_EVENT_ID_APPEND_BEGIN
@@ -184,7 +207,7 @@ elseif ($Mode -eq "append") {
 
     $newLines = New-Object System.Collections.ArrayList
     $skipped = 0
-    foreach($ln in $eventsOut){
+    foreach($ln in $eventsRealOut){
         $t = ($ln + "").Trim(); if(-not $t){ continue }
         $id = $null
         try { $oj = $t | ConvertFrom-Json; if($oj -and ($oj.PSObject.Properties.Name -contains "event_id")){ $id = [string]$oj.event_id } } catch { $id = $null }
@@ -213,8 +236,8 @@ else {
     }
     $merged = New-Object System.Collections.ArrayList
     foreach ($k in $kept) { [void]$merged.Add($k) }
-    foreach ($n in $eventsOut) { [void]$merged.Add($n) }
+    foreach ($n in $eventsRealOut) { [void]$merged.Add($n) }
     [System.IO.File]::WriteAllLines($outFull, [string[]]$merged.ToArray([string]), $utf8NoBom)
 }
-Write-Host "[NVDA-GS-EVENTS] Wrote $count events to $outFull (mode=$Mode)" -ForegroundColor Green
+Write-Host ("[NVDA-GS-EVENTS] Wrote REAL=" + $realCount + " (total_seen=" + $count + ", stub=" + $stubCount + ") to " + $outFull + " (mode=" + $Mode + ")") -ForegroundColor Green
 exit 0
