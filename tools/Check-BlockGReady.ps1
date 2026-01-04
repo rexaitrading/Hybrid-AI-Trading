@@ -174,7 +174,7 @@ try {
 # GateScore age policy (fail-closed)
 if (-not [bool]$st.gatescore_recent_enough) { Fail "gatescore_recent_enough=false" }
 try { $age = [int]$st.gatescore_age_days } catch { Fail "gatescore_age_days invalid" }
-if ($age -gt $maxAgeDays) { Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
+if ($age -gt $MAX_GS_AGE_DAYS) { Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
 # Per-symbol GateScore checks (contract-only)
 if ($s -ne "ALL") {
   $gs = Get-GS $s
