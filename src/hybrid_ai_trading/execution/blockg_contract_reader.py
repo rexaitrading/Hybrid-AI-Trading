@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
+from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
 
 
 def _as_bool(v: Any) -> bool:
@@ -102,8 +103,12 @@ def require_blockg_date_today(*, status: BlockGStatus, today: str) -> None:
     today10 = str(today).strip()[:10]
     contract10 = (str(status.date).strip()[:10] or str(status.as_of_date).strip()[:10])
 
+    if not contract10:
+        raise BlockGNotReady(f"BLOCK-G FAIL-CLOSED: contract_date_missing today={today10}")
+
+
     if contract10 != today10:
-        raise RuntimeError(
+        raise BlockGNotReady(
             f"BLOCK-G FAIL-CLOSED: contract_not_today contract_date={contract10} today={today10}"
         )
 
@@ -122,6 +127,6 @@ def require_blockg_ready_for_live_symbol(*, symbol: str, status_path: str | Path
         ok = False
 
     if not ok:
-        raise RuntimeError(
+        raise BlockGNotReady(
             f"BLOCK-G FAIL-CLOSED: symbol={sym} as_of_date={s.as_of_date} reasons={list(s.reasons_not_ready)}"
         )
