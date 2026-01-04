@@ -9,6 +9,7 @@ from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
 from hybrid_ai_trading.execution.blockg_contract import (
     ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready,
 )
+from hybrid_ai_trading.execution.blockg_ps_checker import require_blockg_ready_via_powershell
 def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
     """
     Thin shim so tests and callers have a single place to hook Phase-5 guards.
