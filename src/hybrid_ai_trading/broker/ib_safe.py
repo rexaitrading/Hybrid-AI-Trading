@@ -68,6 +68,7 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
     if _is_live():
         if sym in ("NVDA", "SPY", "QQQ"):
             require_nvda_live_stamp(sym)
+            # Block-G contract JSON gate (fail-closed). Applies to NVDA/SPY/QQQ in LIVE mode.             require_blockg_ready_for_live(sym)
     # LIVE_2KEY_ARM_AND_BLOCKG_PS_BEGIN
     # Institutional: LIVE requires operator arm token + PS-owned Block-G contract.
     # Fail-closed: missing/expired arm OR ps checker non-zero => no live order.
@@ -252,4 +253,3 @@ def map_ib_error(err: BaseException) -> str:
     if "unreachable" in msg:
         return "HOST_UNREACHABLE"
     return "UNKNOWN"
-
