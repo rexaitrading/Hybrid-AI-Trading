@@ -330,13 +330,22 @@ $phase4Ok = Get-Phase4OkToday $repoRoot $today
 # ---- EV hard veto daily ----
 $evHardOk = $false
 $evPath = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
-  $evHardDailyAsOf = ""
+$evHardDailyAsOf = ""
+$evHardOk = $false
 if (Test-Path $evPath) {
     $rows = @(Import-Csv $evPath)
-    foreach ($r in $rows) {
-        if ((Slice-Date ([string]$r.date)) -eq $today) {
-          $evHardDailyAsOf = $today
-            if ($r.PSObject.Properties.Name -contains "ok") { $evHardOk = To-Bool $r.ok } else { $evHardOk = $true }
+    if ($rows -and $rows.Count -gt 0) {
+        # As-of date is last row date (audit). Today-ness enforced separately.
+        $last = $rows[-1]
+        $evHardDailyAsOf = Slice-Date ([string]$last.date)
+
+        # Find today row (if any) and enforce ok only for today.
+        foreach ($r in $rows) {
+            if ((Slice-Date ([string]$r.date)) -eq $today) {
+                $evHardDailyAsOf = $today
+                if ($r.PSObject.Properties.Name -contains "ok") { $evHardOk = To-Bool $r.ok } else { $evHardOk = $true }
+                break
+            }
         }
     }
 }
