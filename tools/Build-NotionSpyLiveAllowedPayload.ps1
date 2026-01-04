@@ -60,6 +60,15 @@ if(($bg.as_of_date + "") -ne $today){
   Write-Host ("[NOTION] WARN: BlockG as_of_date mismatch; adopting contract date for payload :: bg.as_of_date=" + ($bg.as_of_date + "") + " local_today=" + $today) -ForegroundColor Yellow
   $today = ($bg.as_of_date + "")
 }
+# FIXUP_ST_REASONS_BEGIN
+# StrictMode-safe: define stReasons used by stale-stamp rebuild
+$stReasons = @()
+try {
+  if($st -and ($st.PSObject.Properties.Name -contains "reasons_not_ready")){
+    $stReasons = @($st.reasons_not_ready)
+  }
+} catch { $stReasons = @() }
+# FIXUP_ST_REASONS_END
 # Fail-closed sanity: stamp must be for today IF it exists
 if(($st.as_of_date + "") -ne $today){
   Write-Host ("[NOTION] WARN: stamp stale -> fail-closed spy_live_allowed=false :: st.as_of_date=" + ($st.as_of_date + "") + " today=" + $today) -ForegroundColor Yellow
