@@ -118,8 +118,9 @@ def place_order_phase5_with_guard(
       - function returns a dict when risk is allowed
       - Block-G failure for NVDA raises and place_order_phase5 is never called.
     """
-        # 0) Hard Block-G enforcement for LIVE orders (fail-closed, contract-only)
+    # 0) Hard Block-G enforcement for LIVE orders (PowerShell is semantic owner; fail-closed)
     sym_u = str(symbol).upper()
+
     ctx = None
     try:
         # Prefer explicit ctx passed via kwargs (unified RunContext semantics)
@@ -132,9 +133,10 @@ def place_order_phase5_with_guard(
 
     is_paper = _infer_is_paper(engine=engine, regime=str(regime), ctx=ctx)
 
-    # Institutional: enforce contract flags per symbol for NVDA/SPY/QQQ in LIVE mode.
+    # Institutional: enforce via PowerShell checker for NVDA/SPY/QQQ in LIVE mode.
+    # (Paper allowed to proceed; closed-day exit=10 remains LIVE-disallowed.)
     if (sym_u in ("NVDA", "SPY", "QQQ")) and (not is_paper):
-        ensure_symbol_blockg_ready(sym_u)
+        require_blockg_ready_via_powershell(sym_u, build=False)
 
     trade = {
         "symbol": symbol,
