@@ -11,3 +11,4 @@ Last updated: 2025-12-22 11:57:15 -08:00
 - RunContext JSON reader added (ctx-first intent)
 
 - [2026-01-03 22:01:57] BLOCK-G INSTITUTIONAL LOCK: single-authority PS checker + closed-day semantics + no-bypass + LockPack wired into DailyReadiness.
+- [2026-01-03] CHECKPOINT_BLOCKG_LOCK_20260103_220202 — Block-G institutional lock (LockPack green; READY execution allowlist enforced).
