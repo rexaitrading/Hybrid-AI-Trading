@@ -27,7 +27,10 @@ class RunContext:
         # Convenience: preserve older API by producing a full context with safe defaults.
         v = str(os.environ.get("HAT_IS_PAPER", "")).strip()
         m = "live" if v == "0" else "paper"
-        return RunContext.from_env_and_args(symbol="NVDA", regime="unknown", mode=m)@staticmethod
+        return RunContext.from_env_and_args(symbol="NVDA", regime="unknown", mode=m)
+
+        
+    @staticmethod
     def _repo_root() -> Path:
         # .../src/hybrid_ai_trading/runtime/run_context.py -> repo root
         return Path(__file__).resolve().parents[3]
