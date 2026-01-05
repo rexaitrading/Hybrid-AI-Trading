@@ -94,11 +94,12 @@ def require_blockg_ready_for_live(symbol: str, *, status: dict | None = None) ->
             raise BlockGNotReady(";".join([str(x) for x in reasons])[:500])
         return
     # Runtime path: only enforce when live
-        # PS is semantic owner: enforce via Check-BlockGReady.ps1 (fail-closed).
-        require_blockg_ready_via_powershell(sym, build=False)
     is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
     if not is_live:
         return
+
+    # PS is semantic owner: enforce via Check-BlockGReady.ps1 (fail-closed).
+    require_blockg_ready_via_powershell(sym, build=False)
 
     # Institutional hard checks (fail-closed):
     # - market_closed_today must be false
