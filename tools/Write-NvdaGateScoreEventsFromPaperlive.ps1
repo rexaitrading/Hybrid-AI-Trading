@@ -131,7 +131,24 @@ try {
         }
     } catch { $rp=$null; $rpNum=$null; $hasRealPnl=$false }
     if ($props -contains "realized_pnl") { $rp = [string]$j.realized_pnl }
-    $ms = $micro
+        # REALIZED_PNL_FALLBACK_FROM_PAPERLIVE_BEGIN
+    # Prefer result[0].realized_pnl if present (paper_live schema), else top-level.
+    if(-not $hasRealPnl){
+        foreach($k in @("realized_pnl","pnl","net_pnl","profit","pl")){
+            try {
+                $vv = Get-FromResult0 $j $k
+                if ($null -eq $vv -or ([string]$vv).Trim() -eq "") { continue }
+                $tmp2 = 0.0
+                if([double]::TryParse(([string]$vv), [ref]$tmp2)){
+                    $rpNum = [double]$tmp2
+                    $hasRealPnl = $true
+                    break
+                }
+            } catch { }
+        }
+    }
+    # REALIZED_PNL_FALLBACK_FROM_PAPERLIVE_END
+$ms = $micro
     $microSrc = "producer"
     if ($ms -eq $null -or [double]$ms -le 0.0) { $ms = Get-DerivedMicroScore -EdgeRatio $edge; $microSrc = "derived_v1" }
     # Fail-closed eligibility: require non-zero metrics OR real pnl samples

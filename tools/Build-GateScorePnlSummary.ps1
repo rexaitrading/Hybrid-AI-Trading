@@ -136,7 +136,7 @@ function Get-EventPnlSamples($events) {
 }
 
 $eventFiles = @(
-    @{ sym="NVDA"; path=(Resolve-EventFile $logsDir "NVDA"); std=(Resolve-StdOnlyFile $logsDir "NVDA") },
+    @{ sym="NVDA"; path=(Resolve-StdOnlyFile $logsDir "NVDA"); std=(Resolve-StdOnlyFile $logsDir "NVDA") },
     @{ sym="SPY";  path=(Resolve-EventFile $logsDir "SPY");  std=(Resolve-StdOnlyFile $logsDir "SPY") },
     @{ sym="QQQ";  path=(Resolve-EventFile $logsDir "QQQ");  std=(Resolve-StdOnlyFile $logsDir "QQQ") }
 )

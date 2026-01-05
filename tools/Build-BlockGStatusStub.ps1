@@ -669,6 +669,23 @@ if (-not $evHardOk -and $evHardSnapshotReason) { $reasons.Add(("ev_hard_snapshot
 if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }
 if (-not $gsAsOf -or $gsAsOf -ne $today) { $reasons.Add("gatescore_fresh_today=false") }
 if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
+# LIVE_HARD_REASONS_BEGIN
+try {
+  # NVDA live-hard specifics (institutional)
+  if (-not $gsNVDA.samplesOkLive) {
+    $reasons.Add(("gatescore_live_samples_below_min cnt=" + $gsNVDA.cnt + " pnl=" + $gsNVDA.pnl + " min_cnt=" + $GS_LIVE_MIN_SIGNALS + " min_pnl=" + $GS_LIVE_MIN_PNL_SAMPLES)) | Out-Null
+  }
+  if (-not $gsNVDA.threshOkLive) {
+    if (([double]$gsNVDA.edge + 1e-9) -lt [double]$GS_LIVE_MIN_EDGE_RATIO) {
+      $reasons.Add(("gatescore_live_edge_below_min edge=" + $gsNVDA.edge + " min=" + $GS_LIVE_MIN_EDGE_RATIO)) | Out-Null
+    }
+    if (([double]$gsNVDA.micro + 1e-9) -lt [double]$GS_LIVE_MIN_MICRO_SCORE) {
+      $reasons.Add(("gatescore_live_micro_below_min micro=" + $gsNVDA.micro + " min=" + $GS_LIVE_MIN_MICRO_SCORE)) | Out-Null
+    }
+  }
+} catch { }
+# LIVE_HARD_REASONS_END
+
 if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
 
 # Recompute per-symbol readiness AFTER GateScore age policy (StrictMode-safe)
