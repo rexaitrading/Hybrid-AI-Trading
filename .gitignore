@@ -129,3 +129,7 @@ _backups/
 
 # Allow tracking market holiday calendar
 !configs/market_holidays.json
+
+# Allowlist: versioned schemas
+!docs/schema/
+!docs/schema/**

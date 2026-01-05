@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blockg_status_stub.schema.v1",
+  "title": "Block-G Status Stub (v1)",
+  "type": "object",
+  "required": [
+    "as_of_date",
+    "ts_utc",
+    "market_closed_today",
+    "phase4_ok_today",
+    "phase23_health_ok_today",
+    "ev_hard_daily_ok_today",
+    "gatescore_fresh_today",
+    "nvda_blockg_ready",
+    "spy_blockg_ready",
+    "qqq_blockg_ready",
+    "reasons_not_ready"
+  ],
+  "properties": {
+    "ts_utc": { "type": "string" },
+    "as_of_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "market_closed_today": { "type": "boolean" },
+
+    "phase4_ok_today": { "type": "boolean" },
+    "phase23_health_ok_today": { "type": "boolean" },
+    "ev_hard_daily_ok_today": { "type": "boolean" },
+    "gatescore_fresh_today": { "type": "boolean" },
+
+    "gatescore_as_of_date": { "type": "string" },
+    "gatescore_age_days": { "type": "integer", "minimum": 0 },
+    "gatescore_samples": { "type": "integer", "minimum": 0 },
+    "gatescore_pnl_samples": { "type": "integer", "minimum": 0 },
+    "gatescore_ok_today": { "type": "boolean" },
+
+    "nvda_blockg_ready": { "type": "boolean" },
+    "spy_blockg_ready": { "type": "boolean" },
+    "qqq_blockg_ready": { "type": "boolean" },
+
+    "reasons_not_ready": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "schema_version": { "type": "string", "const": "v1" }
+  },
+  "additionalProperties": true
+}
