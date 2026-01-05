@@ -121,6 +121,19 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
+# GS_PATH_RESOLVER_BEGIN
+function Resolve-GsPath([string]$sym){
+  $s = ($sym + "").ToLowerInvariant()
+  $real = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $s)
+  if(Test-Path -LiteralPath $real){
+    try {
+      $n = @(Get-Content -LiteralPath $real -Encoding utf8 -ErrorAction SilentlyContinue).Count
+      if($n -gt 0){ return $real }
+    } catch { }
+  }
+  return (Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $s))
+}
+# GS_PATH_RESOLVER_END
 # GS_METRICS_SOURCE_CAPTURE_BEGIN
 $gatescore_metrics_source = ""
 $gsMsSeenCount = 0
@@ -133,7 +146,7 @@ try {
   $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
   $gsMsToday = $todayLocal
 
-  $p = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+  $p = Resolve-GsPath "NVDA"
   $gsMsPath = $p
   $gsMsExists = [bool](Test-Path -LiteralPath $p)
 
@@ -200,7 +213,7 @@ try {
 # GateScore NVDA data-quality guard: eligible events count
 $nvdaEligibleCount = 0
 try {
-  $nvdaPath = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+  $nvdaPath = Resolve-GsPath "NVDA"
   if(Test-Path -LiteralPath $nvdaPath){
     foreach($ln in (Get-Content -LiteralPath $nvdaPath -Encoding utf8)){
       $s = $ln.Trim(); if(-not $s){ continue }
@@ -230,7 +243,7 @@ try {
 $nvdaLastEventDate = ""
 $nvdaMissingMetrics = $false
 try {
-  $nvdaPath = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+  $nvdaPath = Resolve-GsPath "NVDA"
   if(Test-Path -LiteralPath $nvdaPath){
     $tail = Get-Content -LiteralPath $nvdaPath -Tail 200 -Encoding utf8
     foreach($ln in $tail){
@@ -281,7 +294,7 @@ $statusPath = Join-Path $logsDir "blockg_status_stub.json"
 $GS_MIN_EVENTS_REQUIRED = 25
 
 function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
-  $p = Join-Path $RepoRoot ("logs\{0}_gatescore_events.jsonl" -f $Sym.ToLower())
+  $p = Resolve-GsPath $Sym
   $rows = 0; $fresh = $false; $ts = ""
   if(Test-Path -LiteralPath $p){
     try { $rows = @(Get-Content -LiteralPath $p -Encoding utf8).Count } catch { $rows = 0 }
