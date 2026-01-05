@@ -88,21 +88,14 @@ function RunPyTimeout([string[]]$pyArgs,[int]$timeoutSec){
     $py = Join-Path $root ".venv\Scripts\python.exe"
     if(-not (Test-Path -LiteralPath $py)){ throw "[GS-BUILD] python missing: $py" }
 
-    $p =     # --- DEBUG (only matters when args are weird) ---
     if($null -eq $pyArgs){
-      Write-Host "[GS-BUILD] DEBUG: RunPyTimeout received args=NULL" -ForegroundColor Yellow
-      Write-Host ("[GS-BUILD] DEBUG: PSBoundParameters=" + ($PSBoundParameters.Keys -join ",")) -ForegroundColor Yellow
     } else {
-      Write-Host ("[GS-BUILD] DEBUG: RunPyTimeout received args_count=" + (@($pyArgs).Count)) -ForegroundColor Yellow
       $i = 0
       foreach($a in @($pyArgs)){
-        if($null -eq $a){ Write-Host ("[GS-BUILD] DEBUG: arg[" + $i + "]=<NULL>") -ForegroundColor Yellow }
-        else { Write-Host ("[GS-BUILD] DEBUG: arg[" + $i + "]='" + ($a + "") + "'") -ForegroundColor Yellow }
         $i++
         if($i -ge 12){ break } # cap spam
       }
     }
-    # --- DEBUG END ---
     # sanitize args (Start-Process rejects null/empty elements)
     $argsClean = @()
     foreach($a in @($pyArgs)){
@@ -124,12 +117,11 @@ function RunPyTimeout([string[]]$pyArgs,[int]$timeoutSec){
       try { Kill-LeftoverVenvPython -sinceUtc $startUtc } catch { }
       return 124
     }
-
-    $rc = $p.ExitCode
+    $rc = [int]$p.ExitCode
     if(Test-Path -LiteralPath $outLog){ Get-Content -LiteralPath $outLog -Encoding utf8 -ErrorAction SilentlyContinue | Out-Host }
     if(Test-Path -LiteralPath $errLog){ Get-Content -LiteralPath $errLog -Encoding utf8 -ErrorAction SilentlyContinue | Out-Host }
     try { Kill-LeftoverVenvPython -sinceUtc $startUtc } catch { }
-    return $rc
+    return ([int]$rc)
   } catch {
     Write-Host ("[GS-BUILD] RunPyTimeout exception: " + $_.Exception.Message) -ForegroundColor Yellow
     try { Kill-LeftoverVenvPython -sinceUtc $startUtc } catch { }
@@ -157,6 +149,17 @@ if (-not $RunPython) {
 foreach($s in $syms){
   $code = "import sys,runpy; sys.path.insert(0,r'$env:PYTHONPATH'); runpy.run_module('hybrid_ai_trading.gatescore.daily_build', run_name='__main__')"
   $rc = RunPyTimeout -pyArgs @("-I","-X","faulthandler","-m","hybrid_ai_trading.gatescore.daily_build","--csv",$csv,"--symbol",$s) -timeoutSec $TimeoutSec
+  # FAIL-CLOSED: python may exit 0 even when it reports ok_today=False; treat as rc=2.
+  try {
+    $latest = Get-ChildItem -Path (Join-Path $root "logs") -File -Filter "_gs_py_stdout_*.log" -ErrorAction SilentlyContinue |
+      Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if($latest){
+      $tail = (Get-Content -LiteralPath $latest.FullName -Encoding utf8 -Tail 12 -ErrorAction SilentlyContinue | Out-String)
+      if($tail -match "ok_today\s*:\s*False" -or $tail -match "ok_today'\s*:\s*False" -or $tail -match '"ok_today"\s*:\s*false'){
+        $rc = 2
+      }
+    }
+  } catch { }
   if ($rc -ne 0) {
     Write-Host "[GS-BUILD] FAIL symbol=$s rc=$rc logs=$logDir" -ForegroundColor Yellow
     exit $rc
