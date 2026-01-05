@@ -114,3 +114,23 @@ def require_blockg_ready_for_live(symbol: str, *, status: dict | None = None) ->
 
     # Finally: enforce symbol readiness from the contract JSON
     require_blockg_ready(sym, is_live=True)
+
+def check_blockg_diagnostic_ok(symbol: str) -> bool:
+    """
+    Diagnostic-only health check.
+
+    Returns True if the pipeline is healthy for the symbol, even on closed days.
+    - ps_checker_exit=0  => True (live-ready gate passed)
+    - ps_checker_exit=10 => True (closed-day DIAGNOSTIC OK)
+    - otherwise          => False
+    """
+    sym = (symbol or "").upper().strip()
+    if sym not in {"NVDA", "SPY", "QQQ"}:
+        return False
+    try:
+        require_blockg_ready_via_powershell(sym, build=False)
+        return True
+    except BlockGNotReady as e:
+        msg = str(e)
+        return ("ps_checker_exit=10" in msg)
+
