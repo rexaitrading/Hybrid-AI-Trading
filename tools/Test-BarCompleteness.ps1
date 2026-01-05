@@ -30,7 +30,7 @@ if(-not $rows -or $rows.Count -lt 3){ Fail "Too few rows (<3) to validate" }
 # --- Detect timestamp column ---
 $cols = @($rows[0].PSObject.Properties.Name)
 $tsCol = $null
-foreach($cand in @("timestamp","time","datetime","date","t","ts")){
+foreach($cand in @("ts","timestamp","time","datetime","date")){
   $hit = $cols | Where-Object { $_.ToLowerInvariant() -eq $cand }
   if($hit){ $tsCol = $hit[0]; break }
 }
@@ -44,7 +44,10 @@ if(-not $tsCol){ Fail ("Could not detect timestamp column. Columns=" + ($cols -j
 # --- Parse timestamps robustly (assume UTC or local; we only need deltas) ---
 $ts = New-Object System.Collections.Generic.List[DateTime]
 foreach($r in $rows){
-  $v = [string]($r.$tsCol)
+  if(-not ($r.PSObject.Properties.Name -contains $tsCol)){
+  Fail ("Timestamp column not present tsCol=" + $tsCol + " cols=" + ($cols -join ","))
+}
+$v = [string]($r.PSObject.Properties[$tsCol].Value)
   if(-not $v){ Fail "Empty timestamp value found" }
   try {
     $dt = # ParseExact for IB-style "yyyyMMdd  HH:mm:ss" (double-space) and single-space fallback

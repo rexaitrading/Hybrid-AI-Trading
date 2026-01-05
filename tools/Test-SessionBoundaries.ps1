@@ -44,7 +44,7 @@ if($ext -eq ".csv"){
 
   $cols = @($rows[0].PSObject.Properties.Name)
   $tsCol = $null
-  foreach($cand in @("timestamp","time","datetime","date","t","ts")){
+  foreach($cand in @("ts","timestamp","time","datetime","date")){
     $hit = $cols | Where-Object { $_.ToLowerInvariant() -eq $cand }
     if($hit){ $tsCol = $hit[0]; break }
   }
@@ -55,7 +55,10 @@ if($ext -eq ".csv"){
   if(-not $tsCol){ Fail ("Could not detect timestamp column. Columns=" + ($cols -join ",")) }
 
   foreach($r in $rows){
-    $v = [string]($r.$tsCol)
+    if(-not ($rows[0].PSObject.Properties.Name -contains $tsCol)){
+  Fail ("Timestamp column not present tsCol=" + $tsCol + " cols=" + ($cols -join ","))
+}
+$v = [string]($r.PSObject.Properties[$tsCol].Value)
     if(-not $v){ Fail "Empty timestamp" }
     try {
       $dt = [DateTime]::Parse($v, [System.Globalization.CultureInfo]::InvariantCulture,

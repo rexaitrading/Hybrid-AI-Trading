@@ -21,7 +21,7 @@ if(-not $rows -or $rows.Count -lt 3){ Fail "Too few rows (<3)" }
 # Detect timestamp column
 $cols = @($rows[0].PSObject.Properties.Name)
 $tsCol = $null
-foreach($cand in @("timestamp","time","datetime","date","t","ts")){
+foreach($cand in @("ts","timestamp","time","datetime","date")){
   $hit = $cols | Where-Object { $_.ToLowerInvariant() -eq $cand }
   if($hit){ $tsCol = $hit[0]; break }
 }
@@ -41,7 +41,10 @@ try {
 # Tagging boundaries (ET)
 # PRE: 04:00-09:30, RTH: 09:30-16:00, POST: 16:00-20:00, else: OFF
 foreach($r in $rows){
-  $v = [string]($r.$tsCol)
+  if(-not ($rows[0].PSObject.Properties.Name -contains $tsCol)){
+  Fail ("Timestamp column not present tsCol=" + $tsCol + " cols=" + ($cols -join ","))
+}
+$v = [string]($r.PSObject.Properties[$tsCol].Value)
   if(-not $v){ Fail "Empty timestamp value found" }
   try {
     $dt = [DateTime]::Parse($v, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AssumeUniversal)
