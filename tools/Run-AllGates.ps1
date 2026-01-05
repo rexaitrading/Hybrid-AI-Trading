@@ -27,6 +27,12 @@ if($LASTEXITCODE -ne 0){ Fail "Gate P1-B failed" }
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Normalize-SessionTags.ps1 -BarsPath $bars | Out-Host
 if($LASTEXITCODE -ne 0){ Fail "Gate P1-C failed" }
 
+
+# Phase-5 contract build + checker gate (single authority: tools\Check-BlockGReady.ps1)
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-BlockGStatusStub.ps1 | Out-Host
+if($LASTEXITCODE -ne 0){ Fail "Gate P5-Builder failed" }
+
+
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-BlockGLockPack.ps1 -Symbol $Symbol | Out-Host
 if($LASTEXITCODE -ne 0){ Fail "Gate P5-A failed" }
 
