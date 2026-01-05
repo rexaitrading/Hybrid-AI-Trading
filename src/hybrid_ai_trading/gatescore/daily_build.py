@@ -69,3 +69,13 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+# --- FAIL-CLOSED EXIT CODE (Block-G relies on this) ---
+# If module prints ok_today=False, exit non-zero so PS wrappers can fail-closed deterministically.
+try:
+    import sys as _sys
+    _ok = bool(globals().get("ok_today", None))
+    if not _ok:
+        _sys.exit(2)
+except Exception:
+    pass
+# --- END FAIL-CLOSED EXIT CODE ---
