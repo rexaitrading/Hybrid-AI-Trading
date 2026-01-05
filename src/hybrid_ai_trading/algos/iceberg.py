@@ -1,5 +1,5 @@
 """
-Iceberg Executor (Hybrid AI Quant Pro v2.0 Ã¢â‚¬â€œ Hedge Fund Level)
+Iceberg Executor (Hybrid AI Quant Pro v2.0 �?" Hedge Fund Level)
 --------------------------------------------------------------
 Responsibilities:
 - Hide true order size by slicing into visible portions
@@ -61,7 +61,7 @@ class IcebergExecutor:
 
         if size <= 0:
             logger.warning(
-                "[Iceberg] Zero/negative size for %s Ã¢â€ â€™ no execution", symbol
+                "[Iceberg] Zero/negative size for %s �?' no execution", symbol
             )
             return {"status": "filled", "algo": "Iceberg", "details": results}
 
@@ -83,7 +83,7 @@ class IcebergExecutor:
                 remaining -= slice_size
 
                 logger.info(
-                    "[Iceberg] Slice %d | %s %d %s @ %.2f Ã¢â€ â€™ %s | Remaining=%d",
+                    "[Iceberg] Slice %d | %s %d %s @ %.2f �?' %s | Remaining=%d",
                     len(results),
                     side,
                     slice_size,

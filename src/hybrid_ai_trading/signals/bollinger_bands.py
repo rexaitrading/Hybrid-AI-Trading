@@ -1,18 +1,18 @@
 """
-Bollinger Bands Signal (Hybrid AI Quant Pro Ã¢â‚¬â€œ Hedge Fund Grade v24.0)
+Bollinger Bands Signal (Hybrid AI Quant Pro �?,???o Hedge Fund Grade v24.0)
 ---------------------------------------------------------------------
 Logic:
-- Uses SMA Ã‚Â± (N * stdev) bands (default: 20-period SMA, 2.0 stdev).
+- Uses SMA ?,� (N * stdev) bands (default: 20-period SMA, 2.0 stdev).
 - BUY  if last close < lower band (oversold).
 - SELL if last close > upper band (overbought).
 - HOLD otherwise.
 
 Guards:
-- Empty or insufficient bars Ã¢â€ â€™ HOLD
-- Missing close field(s) Ã¢â€ â€™ HOLD + WARNING
-- NaN values Ã¢â€ â€™ HOLD + WARNING
-- Parse errors (statistics failure) Ã¢â€ â€™ HOLD + ERROR
-- Flat stdev Ã¢â€ â€™ HOLD
+- Empty or insufficient bars �?????T HOLD
+- Missing close field(s) �?????T HOLD + WARNING
+- NaN values �?????T HOLD + WARNING
+- Parse errors (statistics failure) �?????T HOLD + ERROR
+- Flat stdev �?????T HOLD
 
 Exports:
 - BollingerBandsSignal (class)

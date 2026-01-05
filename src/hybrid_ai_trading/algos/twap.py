@@ -1,5 +1,5 @@
 """
-TWAP Executor (Hybrid AI Quant Pro v2.3 Ã¢â‚¬â€œ Hedge Fund Grade, AAA Coverage)
+TWAP Executor (Hybrid AI Quant Pro v2.3 �?,???o Hedge Fund Grade, AAA Coverage)
 -------------------------------------------------------------------------
 Responsibilities:
 - Split large order into equal slices over time
@@ -77,7 +77,7 @@ class TWAPExecutor:
                 results.append(normalized)
 
                 logger.info(
-                    "[TWAP] Slice %d/%d | %s %d %s @ %.2f Ã¢â€ â€™ %s",
+                    "[TWAP] Slice %d/%d | %s %d %s @ %.2f �?????T %s",
                     i + 1,
                     self.slices,
                     side,

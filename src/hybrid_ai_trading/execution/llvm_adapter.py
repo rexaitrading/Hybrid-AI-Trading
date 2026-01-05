@@ -1,5 +1,5 @@
 """
-LLVM Engine Adapter (Hybrid AI Quant Pro v3.2 Ã¢â‚¬â€œ Hedge Fund Level)
+LLVM Engine Adapter (Hybrid AI Quant Pro v3.2 �?,???o Hedge Fund Level)
 -----------------------------------------------------------------
 - Wraps llvmlite ExecutionEngine for JIT compilation
 - Provides safe module add, finalize, dispose
@@ -13,7 +13,7 @@ from llvmlite import binding
 
 logger = logging.getLogger(__name__)
 
-# Ã¢Å“â€¦ Re-export binding.create_mcjit_compiler so tests can monkeypatch here
+# �?"??? Re-export binding.create_mcjit_compiler so tests can monkeypatch here
 create_mcjit_compiler = binding.create_mcjit_compiler
 
 
@@ -25,12 +25,12 @@ class LLVMEngineAdapter:
             # use the re-exported symbol, patchable in tests
             self.engine = create_mcjit_compiler(llvm_module, target_machine)
         except Exception as e:
-            logger.error("Ã¢ÂÅ’ Failed to create LLVM engine: %s", e)
+            logger.error("�?' Failed to create LLVM engine: %s", e)
             raise RuntimeError("Failed to create LLVM engine") from e
 
         self.modules = {llvm_module}
         self.finalized = False
-        logger.debug("Ã¢Å“â€¦ LLVMEngineAdapter initialized")
+        logger.debug("�?"??? LLVMEngineAdapter initialized")
 
     # ------------------------------------------------------------------
     def add_module(self, module):
@@ -39,9 +39,9 @@ class LLVMEngineAdapter:
         try:
             self.engine.add_module(module)
             self.modules.add(module)
-            logger.debug("Ã¢Å“â€¦ Module added to LLVM engine")
+            logger.debug("�?"??? Module added to LLVM engine")
         except Exception as e:
-            logger.error("Ã¢ÂÅ’ add_module failed: %s", e)
+            logger.error("�?' add_module failed: %s", e)
             raise
 
     # ------------------------------------------------------------------
@@ -49,9 +49,9 @@ class LLVMEngineAdapter:
         try:
             self.engine.finalize_object()
             self.finalized = True
-            logger.debug("Ã¢Å“â€¦ LLVM engine finalized")
+            logger.debug("�?"??? LLVM engine finalized")
         except Exception as e:
-            logger.error("Ã¢ÂÅ’ Finalize failed: %s", e)
+            logger.error("�?' Finalize failed: %s", e)
 
     # ------------------------------------------------------------------
     def get_fn_addr(self, name: str) -> int:
@@ -59,10 +59,10 @@ class LLVMEngineAdapter:
             addr = self.engine.get_function_address(name)
             if not addr:
                 raise RuntimeError(f"Function not found: {name}")
-            logger.debug("Ã¢Å“â€¦ Function %s resolved at %s", name, addr)
+            logger.debug("�?"??? Function %s resolved at %s", name, addr)
             return addr
         except Exception as e:
-            logger.error("Ã¢ÂÅ’ get_fn_addr failed: %s", e)
+            logger.error("�?' get_fn_addr failed: %s", e)
             raise RuntimeError(f"Failed to resolve function: {name}") from e
 
     # ------------------------------------------------------------------
@@ -71,6 +71,6 @@ class LLVMEngineAdapter:
             self.engine = None
             self.modules.clear()
             self.finalized = False
-            logger.debug("Ã°Å¸â€”â€˜Ã¯Â¸Â LLVM engine disposed")
+            logger.debug("�Y??"??~️ LLVM engine disposed")
         except Exception as e:
-            logger.warning("Ã¢Å¡Â Ã¯Â¸Â Dispose error: %s", e)
+            logger.warning("�s�️ Dispose error: %s", e)

@@ -1,5 +1,5 @@
 """
-Algo Orchestrator (Hybrid AI Quant Pro v2.6 Ã¢â‚¬â€œ Hedge-Fund Grade, Loop-Proof, AAA Coverage)
+Algo Orchestrator (Hybrid AI Quant Pro v2.6 �?,???o Hedge-Fund Grade, Loop-Proof, AAA Coverage)
 -----------------------------------------------------------------------------------------
 
 Central orchestrator for algorithmic execution strategies.
@@ -17,7 +17,7 @@ from typing import Any, Dict, Type
 
 from hybrid_ai_trading.signals.vwap import VWAPSignal, vwap_signal
 
-# Ã¢Å¡Â Ã¯Â¸Â NOTE: Do not import VWAPExecutor/TWAPExecutor/IcebergExecutor at top level to avoid circular imports.
+# �s�️ NOTE: Do not import VWAPExecutor/TWAPExecutor/IcebergExecutor at top level to avoid circular imports.
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

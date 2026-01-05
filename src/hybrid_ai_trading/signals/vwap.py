@@ -1,5 +1,5 @@
 """
-VWAP Signal (Hybrid AI Quant Pro v47.2 Ã¢â‚¬â€œ Hedge-Fund OE Grade, AAA Coverage)
+VWAP Signal (Hybrid AI Quant Pro v47.2 �?,???o Hedge-Fund OE Grade, AAA Coverage)
 ---------------------------------------------------------------------------
 Strict truth table for trading signals with full logging for test coverage.
 """
@@ -33,21 +33,21 @@ def _compute_vwap(bars: List[Dict[str, Union[float, int]]]) -> float:
         closes, vols = [], []
         for b in bars:
             if "c" not in b or "v" not in b:
-                logger.warning("Ã¢ÂÅ’ VWAP invalid bar: missing 'c' or 'v'")
+                logger.warning("�?' VWAP invalid bar: missing 'c' or 'v'")
                 return float("nan")
             c, v = b.get("c"), b.get("v")
             try:
                 c, v = float(c), float(v)
             except Exception:
-                logger.warning("Ã¢ÂÅ’ VWAP invalid bar: non-numeric values")
+                logger.warning("�?' VWAP invalid bar: non-numeric values")
                 return float("nan")
             if c is None or v is None or math.isnan(c) or math.isnan(v) or v <= 0:
-                logger.warning("Ã¢ÂÅ’ VWAP invalid bar: contains NaN or bad values")
+                logger.warning("�?' VWAP invalid bar: contains NaN or bad values")
                 return float("nan")
             closes.append(c)
             vols.append(v)
         if not vols or sum(vols) <= 0:
-            logger.warning("Ã¢ÂÅ’ VWAP invalid: no usable volume")
+            logger.warning("�?' VWAP invalid: no usable volume")
             return float("nan")
         return float(np.dot(closes, vols) / sum(vols))
     except Exception as e:
@@ -61,11 +61,11 @@ def vwap_signal(
     cfg = config or VWAPConfig()
     try:
         if not bars:
-            logger.info("Ã¢ÂÅ’ VWAP no bars Ã¢â€ â€™ HOLD")
+            logger.info("�?' VWAP no bars �?????T HOLD")
             return "HOLD"
 
         if "c" not in bars[-1] or "v" not in bars[-1]:
-            logger.warning("Ã¢ÂÅ’ VWAP invalid: missing 'c' or 'v'")
+            logger.warning("�?' VWAP invalid: missing 'c' or 'v'")
             return "HOLD"
 
         try:
@@ -77,15 +77,15 @@ def vwap_signal(
                 or math.isnan(last_vol)
             ):
                 logger.warning(
-                    "Ã¢ÂÅ’ VWAP invalid: last bar contains NaN or bad values"
+                    "�?' VWAP invalid: last bar contains NaN or bad values"
                 )
                 return "HOLD"
         except Exception:
-            logger.warning("Ã¢ÂÅ’ VWAP invalid: non-numeric last bar")
+            logger.warning("�?' VWAP invalid: non-numeric last bar")
             return "HOLD"
 
         if len(bars) == 1:
-            logger.info("Ã¢ÂÅ’ VWAP insufficient bars (n=1) Ã¢â€ â€™ HOLD")
+            logger.info("�?' VWAP insufficient bars (n=1) �?????T HOLD")
             return "HOLD"
 
         # --- Symmetry safeguard ---
@@ -104,45 +104,45 @@ def vwap_signal(
                 ):
                     if cfg.tie_policy == "SELL":
                         logger.info(
-                            "Ã¢Å“â€¦ VWAP symmetric safeguard Ã¢â€ â€™ SELL (policy=SELL)"
+                            "�?"??? VWAP symmetric safeguard �?????T SELL (policy=SELL)"
                         )
                         return "SELL"
                     logger.info(
-                        "Ã¢Å“â€¦ VWAP symmetric safeguard Ã¢â€ â€™ HOLD (policy=HOLD)"
+                        "�?"??? VWAP symmetric safeguard �?????T HOLD (policy=HOLD)"
                     )
                     return "HOLD"
             except Exception as e:
-                logger.warning("Ã¢ÂÅ’ VWAP invalid during symmetry check: %s", e)
+                logger.warning("�?' VWAP invalid during symmetry check: %s", e)
                 return "HOLD"
 
         vwap_val = _compute_vwap(bars[:-1])
         if math.isnan(vwap_val):
-            logger.warning("Ã¢ÂÅ’ VWAP computed NaN Ã¢â€ â€™ HOLD")
+            logger.warning("�?' VWAP computed NaN �?????T HOLD")
             return "HOLD"
 
         if abs(last_close - vwap_val) <= cfg.tolerance:
             if cfg.tie_policy == "SELL":
-                logger.info("VWAP tie/tolerance Ã¢â€ â€™ SELL (policy=SELL)")
+                logger.info("VWAP tie/tolerance �?????T SELL (policy=SELL)")
                 return "SELL"
-            logger.info("VWAP tie/tolerance Ã¢â€ â€™ HOLD (default)")
+            logger.info("VWAP tie/tolerance �?????T HOLD (default)")
             return "HOLD"
 
         if last_close > vwap_val:
             logger.info(
-                "VWAP decision Ã¢â€ â€™ BUY (last=%.2f, vwap=%.2f)",
+                "VWAP decision �?????T BUY (last=%.2f, vwap=%.2f)",
                 last_close,
                 vwap_val,
             )
             return "BUY"
         if last_close < vwap_val:
             logger.info(
-                "VWAP decision Ã¢â€ â€™ SELL (last=%.2f, vwap=%.2f)",
+                "VWAP decision �?????T SELL (last=%.2f, vwap=%.2f)",
                 last_close,
                 vwap_val,
             )
             return "SELL"
 
-        logger.info("VWAP tie fallback Ã¢â€ â€™ %s", cfg.tie_policy)
+        logger.info("VWAP tie fallback �?????T %s", cfg.tie_policy)
         return cfg.tie_policy
     except Exception as e:
         logger.error("VWAP evaluation failed: %s", e, exc_info=True)
@@ -188,6 +188,6 @@ class VWAPSignal:
             "bar_count": len(bars),
             "tie_policy": self.config.tie_policy,
             "symmetry_enabled": self.config.enable_symmetry,
-            "symmetry_triggered": symmetry_triggered,  # Ã¢Å“â€¦ added for test
+            "symmetry_triggered": symmetry_triggered,  # �?"??? added for test
             "vwap": vwap_val,
         }
