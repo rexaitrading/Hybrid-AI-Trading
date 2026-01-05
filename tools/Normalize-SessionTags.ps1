@@ -32,6 +32,7 @@ try {
   $tz = [System.TimeZoneInfo]::FindSystemTimeZoneById("Eastern Standard Time")
 } catch {
   Fail "Could not load Windows TZ 'Eastern Standard Time'"
+}
 # --- Timestamp parse allowlist (explicit, fail-closed) ---
 $TS_FORMATS = @(
   "yyyyMMdd  HH:mm:ss",
@@ -56,7 +57,6 @@ function Try-ParseTsUtc([string]$S){
   } catch {
     return $null
   }
-}
 }
 
 # Tagging boundaries (ET)
