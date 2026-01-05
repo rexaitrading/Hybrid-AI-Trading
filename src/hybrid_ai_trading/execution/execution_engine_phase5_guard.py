@@ -3,13 +3,11 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any, Dict
 from hybrid_ai_trading.runtime.run_context import RunContext
+from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 from hybrid_ai_trading.portfolio.halts import require_portfolio_halt_ok
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
-from hybrid_ai_trading.execution.blockg_contract import (
-    ensure_symbol_blockg_ready as contract_ensure_symbol_blockg_ready,
-)
-from hybrid_ai_trading.execution.blockg_ps_checker import require_blockg_ready_via_powershell
+
 def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
     """
     Thin shim so tests and callers have a single place to hook Phase-5 guards.
@@ -24,15 +22,11 @@ def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
 
 def ensure_symbol_blockg_ready(symbol: str) -> None:
     """
-    Block-G contract enforcement for live NVDA / SPY / QQQ.
-
-    In production, this delegates to hybrid_ai_trading.execution.blockg_contract.ensure_symbol_blockg_ready,
-    which reads logs/blockg_status_stub.json written by Build-BlockGStatusStub.ps1.
-
-    Tests may monkeypatch this function to simulate Block-G failures without touching
-    the underlying contract helper.
+    Backward-compatible shim.
+    Single Python entrypoint is hybrid_ai_trading.execution.blockg_enforce.require_blockg_ready_for_live.
+    Tests may monkeypatch this function to simulate failures.
     """
-    contract_ensure_symbol_blockg_ready(symbol, allow_paper=False, is_paper=False, ctx=None)
+    require_blockg_ready_for_live(str(symbol).upper().strip())
 
 
 def _infer_is_paper(engine: Any, regime: str, ctx: RunContext | None) -> bool:
@@ -137,9 +131,8 @@ def place_order_phase5_with_guard(
     # Institutional: enforce via PowerShell checker for NVDA/SPY/QQQ in LIVE mode.
     # (Paper allowed to proceed; closed-day exit=10 remains LIVE-disallowed.)
     if (sym_u in ("NVDA", "SPY", "QQQ")) and (not is_paper):
-        # Contract hook (tests may monkeypatch) - fail-closed
-        ensure_symbol_blockg_ready(sym_u)
-        require_blockg_ready_via_powershell(sym_u, build=False)
+        # Unified Block-G gate (JSON + PS checker; fail-closed)
+        require_blockg_ready_for_live(sym_u)
 
     trade = {
         "symbol": symbol,

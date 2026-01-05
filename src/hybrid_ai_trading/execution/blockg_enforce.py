@@ -4,6 +4,7 @@ import json
 import os
 from datetime import datetime
 from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
+from hybrid_ai_trading.execution.blockg_ps_checker import require_blockg_ready_via_powershell
 from hybrid_ai_trading.execution.blockg_contract_reader import get_default_blockg_status_path, load_blockg_status, require_blockg_date_today
 from dataclasses import dataclass
 from pathlib import Path
@@ -93,6 +94,8 @@ def require_blockg_ready_for_live(symbol: str, *, status: dict | None = None) ->
             raise BlockGNotReady(";".join([str(x) for x in reasons])[:500])
         return
     # Runtime path: only enforce when live
+        # PS is semantic owner: enforce via Check-BlockGReady.ps1 (fail-closed).
+        require_blockg_ready_via_powershell(sym, build=False)
     is_live = str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
     if not is_live:
         return
