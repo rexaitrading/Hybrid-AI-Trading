@@ -24,10 +24,17 @@ $k = ("HAT_" + "BLOCKG_" + "STATUS_" + "PATH")
 Write-Host "[PHASE3] ROOT=$root" -ForegroundColor Cyan
 Write-Host "[PHASE3] SYMBOL=$Symbol" -ForegroundColor Cyan
 
-# 1) Build Block-G contract first (single source of truth)
-$builder = Join-Path $root "tools\Build-BlockGStatusStub.ps1"
-if (-not (Test-Path $builder)) { throw "[PHASE3] Missing $builder" }
-Write-Host "[PHASE3] NOTE: Block-G build is owned by strict premarket runner; skipping local rebuild." -ForegroundColor Yellow
+# 1) Build + validate Block-G via the single semantic owner (Check-BlockGReady.ps1)
+$checker = Join-Path $root "tools\Check-BlockGReady.ps1"
+if (-not (Test-Path -LiteralPath $checker)) { throw "[PHASE3] Missing $checker" }
+Write-Host "[PHASE3] Block-G: build+check (single semantic owner)..." -ForegroundColor Cyan
+powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol -Build | Out-Host
+$bg = $LASTEXITCODE
+Write-Host ("[PHASE3] blockg_exit=" + $bg) -ForegroundColor Yellow
+# Closed-day diagnostic OK => do not run daily_build; LIVE remains disallowed.
+if ($bg -eq 10) { Write-Host "[PHASE3] Market closed: DIAGNOSTIC OK; skipping GateScore daily_build." -ForegroundColor Yellow; exit 10 }
+# Any non-zero besides 10 is fail-closed.
+if ($bg -ne 0) { exit $bg }
 # 2) Choose CSV input for daily_build (REAL CLI)
 if (-not $Csv) {
   $cands = @(
