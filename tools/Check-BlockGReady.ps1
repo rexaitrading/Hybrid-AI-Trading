@@ -66,14 +66,14 @@ if (-not $statusPath) { $statusPath = $defaultPath }
 $st = Read-Json $statusPath
 
 # --- EV-hard date clarity (audit-only; contract semantics unchanged) ---
-try {
-  if($st -and ($st.PSObject.Properties.Name -contains "ev_hard_daily_as_of_date")){
+if($st){
+  if($st.PSObject.Properties.Name -contains "ev_hard_daily_as_of_date"){
     Write-Host ("[BLOCKG] ev_hard_daily_as_of_date=" + [string]$st.ev_hard_daily_as_of_date) -ForegroundColor DarkGray
   }
-  if($st -and ($st.PSObject.Properties.Name -contains "ev_hard_session_as_of_date")){
+  if($st.PSObject.Properties.Name -contains "ev_hard_session_as_of_date"){
     Write-Host ("[BLOCKG] ev_hard_session_as_of_date=" + [string]$st.ev_hard_session_as_of_date) -ForegroundColor DarkGray
   }
-} catch { }
+}
 
 # MARKET_CLOSED_FAILCLOSED_CHECK_BEGIN
 # Institutional clarity: when market is closed we fail-closed with an explicit operator message.
