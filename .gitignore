@@ -133,3 +133,8 @@ _backups/
 # Allowlist: versioned schemas
 !docs/schema/
 !docs/schema/**
+
+# Allowlist: versioned templates
+!docs/templates/
+!docs/templates/**
+!docs/templates/*.json

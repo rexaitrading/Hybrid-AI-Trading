@@ -1,0 +1,9 @@
+{
+  "schema_version": "v1",
+  "as_of_date": "YYYY-MM-DD",
+  "symbols": {
+    "NVDA": { "source": "IBKR", "notes": "authoritative bars for replay/live today" },
+    "SPY":  { "source": "IBKR", "notes": "authoritative bars for replay/live today" },
+    "QQQ":  { "source": "IBKR", "notes": "authoritative bars for replay/live today" }
+  }
+}
