@@ -32,6 +32,31 @@ try {
   $tz = [System.TimeZoneInfo]::FindSystemTimeZoneById("Eastern Standard Time")
 } catch {
   Fail "Could not load Windows TZ 'Eastern Standard Time'"
+# --- Timestamp parse allowlist (explicit, fail-closed) ---
+$TS_FORMATS = @(
+  "yyyyMMdd  HH:mm:ss",
+  "yyyyMMdd HH:mm:ss",
+  "yyyy-MM-dd HH:mm:ss",
+  "yyyy-MM-ddTHH:mm:ss",
+  "yyyy-MM-ddTHH:mm:ss.fff",
+  "yyyy-MM-ddTHH:mm:ssZ",
+  "yyyy-MM-ddTHH:mm:ss.fffZ"
+)
+function Try-ParseTsUtc([string]$S){
+  $s2 = ($S + "").Trim()
+  $ci = [System.Globalization.CultureInfo]::InvariantCulture
+  try {
+    if($s2.EndsWith("Z") -or $s2.Contains("T")){
+      $dtz = [DateTime]::Parse($s2, $ci, [System.Globalization.DateTimeStyles]::AssumeUniversal)
+      return $dtz.ToUniversalTime()
+    }
+    $dtLocal = [DateTime]::ParseExact($s2, [string[]]$TS_FORMATS, $ci, [System.Globalization.DateTimeStyles]::None)
+    $dtLocal = [DateTime]::SpecifyKind($dtLocal, [DateTimeKind]::Unspecified)
+    return [System.TimeZoneInfo]::ConvertTimeToUtc($dtLocal, $tz)
+  } catch {
+    return $null
+  }
+}
 }
 
 # Tagging boundaries (ET)
@@ -43,8 +68,8 @@ foreach($r in $rows){
 $v = [string]($r.PSObject.Properties[$tsCol].Value)
   if(-not $v){ Fail "Empty timestamp value found" }
   try {
-    $dt = [DateTime]::Parse($v, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AssumeUniversal)
-    $utc = $dt.ToUniversalTime()
+    $utc = Try-ParseTsUtc -S $v
+    if(-not $utc){ throw "bad_ts" }
     $et  = [System.TimeZoneInfo]::ConvertTimeFromUtc($utc, $tz)
 
     $tod = $et.TimeOfDay

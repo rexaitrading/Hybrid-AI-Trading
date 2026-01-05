@@ -19,6 +19,33 @@ if(-not (Test-Path -LiteralPath $BarsPath)){ Fail "Missing BarsPath: $BarsPath" 
 # America/New_York on Windows
 try { $tz = [System.TimeZoneInfo]::FindSystemTimeZoneById("Eastern Standard Time") }
 catch { Fail "Could not load Windows TZ 'Eastern Standard Time'" }
+# --- Timestamp parse allowlist (explicit, fail-closed) ---
+$TS_FORMATS = @(
+  "yyyyMMdd  HH:mm:ss",
+  "yyyyMMdd HH:mm:ss",
+  "yyyy-MM-dd HH:mm:ss",
+  "yyyy-MM-ddTHH:mm:ss",
+  "yyyy-MM-ddTHH:mm:ss.fff",
+  "yyyy-MM-ddTHH:mm:ssZ",
+  "yyyy-MM-ddTHH:mm:ss.fffZ"
+)
+function Try-ParseTs([string]$S){
+  $s2 = ($S + "").Trim()
+  $ci = [System.Globalization.CultureInfo]::InvariantCulture
+  try {
+    # If explicit Z/ISO, treat as UTC
+    if($s2.EndsWith("Z") -or $s2.Contains("T")){
+      $dtz = [DateTime]::Parse($s2, $ci, [System.Globalization.DateTimeStyles]::AssumeUniversal)
+      return $dtz.ToUniversalTime()
+    }
+    # Otherwise, treat as ET-local clock time and convert to UTC
+    $dtLocal = [DateTime]::ParseExact($s2, [string[]]$TS_FORMATS, $ci, [System.Globalization.DateTimeStyles]::None)
+    $dtLocal = [DateTime]::SpecifyKind($dtLocal, [DateTimeKind]::Unspecified)
+    return [System.TimeZoneInfo]::ConvertTimeToUtc($dtLocal, $tz)
+  } catch {
+    return $null
+  }
+}
 
 function Get-Tag([DateTime]$utc){
   $et = [System.TimeZoneInfo]::ConvertTimeFromUtc($utc, $tz)
@@ -57,9 +84,9 @@ if($ext -eq ".csv"){
 $v = [string]($r.PSObject.Properties[$tsCol].Value)
     if(-not $v){ Fail "Empty timestamp" }
     try {
-      $dt = [DateTime]::Parse($v, [System.Globalization.CultureInfo]::InvariantCulture,
-        [System.Globalization.DateTimeStyles]::AssumeUniversal)
-      $ts.Add($dt.ToUniversalTime())
+      $dt = Try-ParseTs -S $v
+      if(-not $dt){ throw "bad_ts" }
+      $ts.Add($dt)
     } catch { Fail ("Unparseable timestamp: " + $v) }
   }
 }
@@ -78,9 +105,9 @@ elseif($ext -eq ".jsonl"){
     if(-not $v){ Fail "JSONL missing timestamp field (ts/timestamp/time/datetime/date)" }
 
     try {
-      $dt = [DateTime]::Parse($v, [System.Globalization.CultureInfo]::InvariantCulture,
-        [System.Globalization.DateTimeStyles]::AssumeUniversal)
-      $ts.Add($dt.ToUniversalTime())
+      $dt = Try-ParseTs -S $v
+      if(-not $dt){ throw "bad_ts" }
+      $ts.Add($dt)
     } catch { Fail ("Unparseable timestamp: " + $v) }
   }
 }
