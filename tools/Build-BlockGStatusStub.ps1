@@ -247,6 +247,39 @@ try {
   }
 } catch { $gsMetricsSourceDisallowedForLive = $false }
 # PROXY_METRICS_SOURCE_LIVE_VETO_END
+# MICRO_SOURCE_LIVE_VETO_BEGIN
+# Institutional: derived micro_score is DIAGNOSTIC-ONLY and must never arm live.
+$microSourceDisallowedForLive = $false
+$microSourceTop = ""
+try {
+  $todayLocal2 = (Get-Date).ToString("yyyy-MM-dd")
+  $p = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+  if(Test-Path -LiteralPath $p){
+    $seen = @{}
+    foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)){
+      $s = ($ln + "").Trim(); if(-not $s){ continue }
+      try {
+        $o = $s | ConvertFrom-Json
+        $d = ($o.as_of_date + "")
+        if($d.Length -ge 10){ $d = $d.Substring(0,10) }
+        if($d -ne $todayLocal2){ continue }
+        if($o.PSObject.Properties.Name -contains "micro_score_source"){
+          $ms = ([string]$o.micro_score_source).Trim()
+          if($ms){
+            if(-not $seen.ContainsKey($ms)){ $seen[$ms]=0 }
+            $seen[$ms] += 1
+          }
+        }
+      } catch { }
+    }
+    if($seen.Count -gt 0){
+      $microSourceTop = ($seen.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1).Name
+      if($microSourceTop -match '^(?i)derived_'){ $microSourceDisallowedForLive = $true }
+    }
+  }
+} catch { $microSourceDisallowedForLive = $false; $microSourceTop="" }
+# MICRO_SOURCE_LIVE_VETO_END
+
 # GS_ELIGIBLE_ZERO_BEGIN
 # Weekend-aware clarity (no holiday calendar): market_closed_today is true on Sat/Sun.
 $marketClosedToday = $false
@@ -685,6 +718,20 @@ try {
   }
 } catch { }
 # LIVE_HARD_REASONS_END
+# MICRO_SOURCE_LIVE_VETO_APPLY_BEGIN
+try{
+  if($microSourceDisallowedForLive){
+    $reasons.Add(("micro_score_source_disallowed_for_live=" + $microSourceTop)) | Out-Null
+    # Force live deny
+    $gsOkToday = $false
+    $gsPolicyOk = $false
+    $nvdaReady = $false
+    $spyReady  = $false
+    $qqqReady  = $false
+  }
+} catch { }
+# MICRO_SOURCE_LIVE_VETO_APPLY_END
+
 
 if (-not $gsThreshOk)  { $reasons.Add("gatescore_below_threshold") }
 
