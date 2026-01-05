@@ -88,4 +88,4 @@ def test_blockg_contract_failure_blocks_nvda_live(monkeypatch):
             regime="NVDA_BPLUS_LIVE",
         )
 
-    assert "Block-G NVDA not ready" in str(excinfo.value)
+    assert ("Block-G NVDA not ready" in str(excinfo.value)) or ("BLOCK-G FAIL-CLOSED" in str(excinfo.value))

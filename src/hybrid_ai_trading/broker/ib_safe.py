@@ -8,6 +8,8 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
+from hybrid_ai_trading.execution.blockg_ps_checker import require_blockg_ready_via_powershell
+require_blockg_ready_via_powershell = require_blockg_ready_via_powershell
 from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 from hybrid_ai_trading.execution.live_arm import require_live_arm
 
@@ -66,7 +68,7 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
     # Enforce Block-G (single gate)
     if _is_live():
         # LIVE 2-key: operator arm token required (fail-closed).
-        require_live_arm()
+        require_live_arm(sym)
         if sym in ("NVDA", "SPY", "QQQ"):
             require_nvda_live_stamp(sym)
             # Block-G contract JSON gate (fail-closed). Applies to NVDA/SPY/QQQ in LIVE mode.
