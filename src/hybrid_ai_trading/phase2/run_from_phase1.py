@@ -9,10 +9,22 @@ from datetime import datetime, timedelta
 
 
 def _parse_ts(ts: str) -> datetime:
+    s = (ts or "").strip()
+
+    # 1) ISO (existing behavior)
     try:
-        return datetime.fromisoformat(ts)
-    except Exception as e:
-        raise SystemExit(f"Phase2: bad ts '{ts}': {e}")
+        return datetime.fromisoformat(s)
+    except Exception:
+        pass
+
+    # 2) Compact bars: yyyyMMdd  HH:mm:ss (double space) or single space
+    for fmt in ("%Y%m%d  %H:%M:%S", "%Y%m%d %H:%M:%S"):
+        try:
+            return datetime.strptime(s, fmt)
+        except Exception:
+            pass
+
+    raise SystemExit("Phase2: bad ts '{}'".format(ts))
 
 
 def _iso(dt: datetime) -> str:
@@ -36,6 +48,9 @@ def main() -> None:
         raise SystemExit(f"Phase2: missing session: {session_path}")
 
     sess = json.loads(session_path.read_text(encoding="utf-8"))
+    session_symbol = (sess.get("symbol") or "").strip().upper()
+    if not session_symbol:
+        raise SystemExit("Phase2: session missing symbol (fail-closed)")
     bars_source = sess.get("bars_source")
     bars_path = sess.get("bars_path")
     if bars_source != "csv" or not bars_path:
@@ -68,7 +83,7 @@ def main() -> None:
                 if args.max_rows and n >= args.max_rows:
                     break
 
-                sym = (row.get("symbol") or "").strip().upper()
+                sym = (row.get("symbol") or session_symbol).strip().upper()
                 ts_raw = (row.get("ts") or "").strip()
                 px_raw = row.get("price") or row.get("last") or row.get("close") or row.get("vwap")
                 if not sym or not ts_raw or px_raw is None:
