@@ -12,11 +12,13 @@ function WantSym([string]$sym){
 
 function Resolve-GatescoreEventsPath([string]$sym,[string]$logsDir){
   $s = ($sym + "").ToLowerInvariant()
-  $pReal = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $s)
-  if(Test-Path -LiteralPath $pReal){ return $pReal }
-
+  # Prefer canonical STD file first (freshest truth).
   $pMain = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $s)
   if(Test-Path -LiteralPath $pMain){ return $pMain }
+
+  # Fallback: legacy/real file
+  $pReal = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $s)
+  if(Test-Path -LiteralPath $pReal){ return $pReal }
 
   return $pMain  # deterministic fallback (may not exist)
 }
