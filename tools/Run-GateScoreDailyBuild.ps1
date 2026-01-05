@@ -76,35 +76,65 @@ function Kill-LeftoverVenvPython([datetime]$sinceUtc){
     }
 }
 
-function RunPyTimeout([string[]]$args,[int]$timeoutSec){
-  $psi = New-Object System.Diagnostics.ProcessStartInfo
-  $psi.FileName = $py
-  $psi.Arguments = ($args -join " ")
-  $psi.WorkingDirectory = $root
-  $psi.RedirectStandardOutput = $true
-  $psi.RedirectStandardError  = $true
-  $psi.UseShellExecute = $false
-  $psi.CreateNoWindow = $true
+function RunPyTimeout([string[]]$pyArgs,[int]$timeoutSec){
+  # Hardened: never hang forever; on timeout kill entire process tree; fail-closed.
+  $startUtc = [datetime]::UtcNow
+  $logDir = Join-Path $root "logs"
+  if(-not (Test-Path -LiteralPath $logDir)){ New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+  $outLog = Join-Path $logDir ("_gs_py_stdout_" + (Get-Date -Format yyyyMMdd_HHmmss) + ".log")
+  $errLog = Join-Path $logDir ("_gs_py_stderr_" + (Get-Date -Format yyyyMMdd_HHmmss) + ".log")
 
-  $proc = New-Object System.Diagnostics.Process
-  $proc.StartInfo = $psi
-  [void]$proc.Start()
-  $childPid = $proc.Id
+  try {
+    $py = Join-Path $root ".venv\Scripts\python.exe"
+    if(-not (Test-Path -LiteralPath $py)){ throw "[GS-BUILD] python missing: $py" }
 
-  if (-not $proc.WaitForExit($timeoutSec * 1000)) {
-    try { Stop-Process -Id $childPid -Force } catch { }
-    "[TIMEOUT] killed pid=$childPid after ${timeoutSec}s args=$($args -join ' ')" | Out-File -FilePath $errLog -Encoding utf8
-    Kill-LeftoverVenvPython -sinceUtc $startUtc
-    return 124
+    $p =     # --- DEBUG (only matters when args are weird) ---
+    if($null -eq $pyArgs){
+      Write-Host "[GS-BUILD] DEBUG: RunPyTimeout received args=NULL" -ForegroundColor Yellow
+      Write-Host ("[GS-BUILD] DEBUG: PSBoundParameters=" + ($PSBoundParameters.Keys -join ",")) -ForegroundColor Yellow
+    } else {
+      Write-Host ("[GS-BUILD] DEBUG: RunPyTimeout received args_count=" + (@($pyArgs).Count)) -ForegroundColor Yellow
+      $i = 0
+      foreach($a in @($pyArgs)){
+        if($null -eq $a){ Write-Host ("[GS-BUILD] DEBUG: arg[" + $i + "]=<NULL>") -ForegroundColor Yellow }
+        else { Write-Host ("[GS-BUILD] DEBUG: arg[" + $i + "]='" + ($a + "") + "'") -ForegroundColor Yellow }
+        $i++
+        if($i -ge 12){ break } # cap spam
+      }
+    }
+    # --- DEBUG END ---
+    # sanitize args (Start-Process rejects null/empty elements)
+    $argsClean = @()
+    foreach($a in @($pyArgs)){
+      if($null -ne $a){
+        $s = ($a + "")
+        if($s.Trim().Length -gt 0){ $argsClean += $s }
+      }
+    }
+    if(-not $argsClean -or $argsClean.Count -eq 0){
+      throw "[GS-BUILD] RunPyTimeout: empty ArgumentList after sanitization"
+    }
+
+    $p = Start-Process -FilePath $py -ArgumentList $argsClean -PassThru -NoNewWindow `
+      -RedirectStandardOutput $outLog -RedirectStandardError $errLog
+
+    if(-not $p.WaitForExit($timeoutSec * 1000)){
+      Write-Host ("[GS-BUILD] TIMEOUT: killing python tree pid=" + $p.Id + " timeoutSec=" + $timeoutSec) -ForegroundColor Yellow
+      try { taskkill /PID $p.Id /F /T | Out-Null } catch { }
+      try { Kill-LeftoverVenvPython -sinceUtc $startUtc } catch { }
+      return 124
+    }
+
+    $rc = $p.ExitCode
+    if(Test-Path -LiteralPath $outLog){ Get-Content -LiteralPath $outLog -Encoding utf8 -ErrorAction SilentlyContinue | Out-Host }
+    if(Test-Path -LiteralPath $errLog){ Get-Content -LiteralPath $errLog -Encoding utf8 -ErrorAction SilentlyContinue | Out-Host }
+    try { Kill-LeftoverVenvPython -sinceUtc $startUtc } catch { }
+    return $rc
+  } catch {
+    Write-Host ("[GS-BUILD] RunPyTimeout exception: " + $_.Exception.Message) -ForegroundColor Yellow
+    try { Kill-LeftoverVenvPython -sinceUtc $startUtc } catch { }
+    return 125
   }
-
-  $out = $proc.StandardOutput.ReadToEnd()
-  $err = $proc.StandardError.ReadToEnd()
-  if ($out) { $out | Out-File -FilePath $outLog -Encoding utf8 }
-  if ($err) { $err | Out-File -FilePath $errLog -Encoding utf8 }
-
-  Kill-LeftoverVenvPython -sinceUtc $startUtc
-  return $proc.ExitCode
 }
 
 $syms = @("NVDA","SPY","QQQ")
@@ -126,7 +156,7 @@ if (-not $RunPython) {
 
 foreach($s in $syms){
   $code = "import sys,runpy; sys.path.insert(0,r'$env:PYTHONPATH'); runpy.run_module('hybrid_ai_trading.gatescore.daily_build', run_name='__main__')"
-  $rc = RunPyTimeout @("-I","-X","faulthandler","-c",$code,"--csv",$csv,"--symbol",$s) $TimeoutSec
+  $rc = RunPyTimeout -pyArgs @("-I","-X","faulthandler","-c",$code,"--csv",$csv,"--symbol",$s) -timeoutSec $TimeoutSec
   if ($rc -ne 0) {
     Write-Host "[GS-BUILD] FAIL symbol=$s rc=$rc logs=$logDir" -ForegroundColor Yellow
     exit $rc
