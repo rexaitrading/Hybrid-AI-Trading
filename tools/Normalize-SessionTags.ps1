@@ -25,10 +25,6 @@ foreach($cand in @("ts","timestamp","time","datetime","date")){
   $hit = $cols | Where-Object { $_.ToLowerInvariant() -eq $cand }
   if($hit){ $tsCol = $hit[0]; break }
 }
-if(-not $tsCol){
-  $hit2 = $cols | Where-Object { $_.ToLowerInvariant() -match 'time|date' } | Select-Object -First 1
-  if($hit2){ $tsCol = $hit2 }
-}
 if(-not $tsCol){ Fail ("Could not detect timestamp column. Columns=" + ($cols -join ",")) }
 
 # ZoneInfo (py not allowed; use .NET)
