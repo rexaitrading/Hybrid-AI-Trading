@@ -32,7 +32,7 @@ $cols = @($rows[0].PSObject.Properties.Name)
 $tsCol = $null
 foreach($cand in @("ts","timestamp","time","datetime","date")){
   $hit = $cols | Where-Object { $_.ToLowerInvariant() -eq $cand }
-  if($hit){ $tsCol = $hit[0]; break }
+  if($hit){ $tsCol = [string]$hit; break }
 }
 if(-not $tsCol){ Fail ("Could not detect timestamp column. Columns=" + ($cols -join ",")) }
 
