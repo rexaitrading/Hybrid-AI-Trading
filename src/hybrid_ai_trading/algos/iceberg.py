@@ -13,6 +13,7 @@ import logging
 import time
 from typing import Any, Dict, List
 
+from hybrid_ai_trading.runtime.run_context import RunContext
 logger = logging.getLogger(__name__)
 
 
@@ -39,6 +40,7 @@ class IcebergExecutor:
         side: str,
         size: int,
         price: float,
+        ctx: RunContext | None = None,
     ) -> Dict[str, Any]:
         """
         Execute iceberg order by slicing into display orders.
@@ -67,7 +69,7 @@ class IcebergExecutor:
         while remaining > 0:
             slice_size = min(self.display_size, remaining)
             try:
-                raw = self.order_manager.place_order(symbol, side, slice_size, price)
+                raw = self.order_manager.place_order(symbol, side, slice_size, price, ctx=ctx)
 
                 normalized = {
                     "slice": len(results) + 1,

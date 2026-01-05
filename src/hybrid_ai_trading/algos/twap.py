@@ -13,6 +13,7 @@ import logging
 import time
 from typing import Any, Dict, List
 
+from hybrid_ai_trading.runtime.run_context import RunContext
 logger = logging.getLogger("hybrid_ai_trading.algos.twap_executor")
 
 
@@ -31,7 +32,7 @@ class TWAPExecutor:
         self.delay = float(delay)
 
     def execute(
-        self, symbol: str, side: str, size: int, price: float
+        self, symbol: str, side: str, size: int, price: float, ctx: RunContext | None = None
     ) -> Dict[str, Any]:
         """
         Execute a TWAP order.
@@ -59,7 +60,7 @@ class TWAPExecutor:
 
         for i in range(self.slices):
             try:
-                raw = self.order_manager.place_order(symbol, side, slice_size, price)
+                raw = self.order_manager.place_order(symbol, side, slice_size, price, ctx=ctx)
 
                 status = raw.get("status", "unknown")
                 if status == "ok":  # normalize common variant

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+from hybrid_ai_trading.runtime.run_context import RunContext
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 
 from .brokers.factory import make_broker
@@ -26,20 +27,20 @@ class OrderManager:
         self.broker.disconnect()
 
     def buy_market(
-        self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None
+        self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None, ctx: RunContext | None = None
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
-        oid, info = self.broker.place_order(symbol, "BUY", qty, "MARKET", meta=meta)
+        oid, info = self.broker.place_order(symbol, "BUY", qty, "MARKET", meta=meta, ctx=ctx)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
         return out
 
     # NEW: sell market
     def sell_market(
-        self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None
+        self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None, ctx: RunContext | None = None
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
-        oid, info = self.broker.place_order(symbol, "SELL", qty, "MARKET", meta=meta)
+        oid, info = self.broker.place_order(symbol, "SELL", qty, "MARKET", meta=meta, ctx=ctx)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
         return out
@@ -51,6 +52,7 @@ class OrderManager:
         qty: float,
         limit_price: float,
         meta: Optional[Dict[str, Any]] = None,
+        ctx: RunContext | None = None,
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
         oid, info = self.broker.place_order(
@@ -67,6 +69,7 @@ class OrderManager:
         qty: float,
         limit_price: float,
         meta: Optional[Dict[str, Any]] = None,
+        ctx: RunContext | None = None,
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
         oid, info = self.broker.place_order(
