@@ -10,6 +10,16 @@ function WantSym([string]$sym){
 }
 
 
+function Resolve-GatescoreEventsPath([string]$sym,[string]$logsDir){
+  $s = ($sym + "").ToLowerInvariant()
+  $pReal = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $s)
+  if(Test-Path -LiteralPath $pReal){ return $pReal }
+
+  $pMain = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $s)
+  if(Test-Path -LiteralPath $pMain){ return $pMain }
+
+  return $pMain  # deterministic fallback (may not exist)
+}
 Set-StrictMode -Version Latest
 function Read-JsonlLines([string]$Path){
   if(-not (Test-Path -LiteralPath $Path)){ return @() }
@@ -39,7 +49,7 @@ function LastNTradingDays([string]$asOf,[int]$n){
   return $days
 }
 function ComputeGateScoreRolling([string]$sym,[string]$logsDir,[string[]]$days){
-  $path = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
+  $path = Resolve-GatescoreEventsPath $sym $logsDir
   $evs = @(Read-JsonlLines $path)
   if($evs.Count -eq 0){ return [pscustomobject]@{ samples=0; pnl_samples=0; mean_edge=0.0; mean_micro=0.0 } }
 
@@ -101,6 +111,45 @@ function LastNTradingDays([string]$asOf,[int]$n){
   }
   return $days
 }
+function Get-GSFromEvents([string]$sym, [string]$asOf, [string]$todayLocal){
+  # Compute GateScore metrics for a single as_of_date from resolved events source.
+  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+  $logsDir  = Join-Path $repoRoot "logs"
+
+  $path = Resolve-GatescoreEventsPath $sym $logsDir
+  $evs = @(Read-JsonlLines $path)
+  if($evs.Count -eq 0){
+    return [pscustomobject]@{ fresh=$false; cnt=0; pnl=0; edge=0.0; micro=0.0 }
+  }
+
+  $sel=@()
+  foreach($e in $evs){
+    $d = SliceDate ([string]$e.as_of_date)
+    if($d -eq $asOf){
+      if(-not ($e.PSObject.Properties.Name -contains "eligible") -or [bool]$e.eligible){
+        $sel += $e
+      }
+    }
+  }
+
+  $edge=@(); $micro=@(); $pnlCount=0
+  foreach($e in $sel){
+    if($null -ne $e.edge_ratio){ $edge += [double]$e.edge_ratio }
+    if($null -ne $e.micro_score){ $micro += [double]$e.micro_score }
+    if($null -ne $e.realized_pnl){ $pnlCount += 1 }
+  }
+
+  $meanEdge  = if($edge.Count -gt 0){ ($edge | Measure-Object -Average).Average } else { 0.0 }
+  $meanMicro = if($micro.Count -gt 0){ ($micro | Measure-Object -Average).Average } else { 0.0 }
+
+  return [pscustomobject]@{
+    fresh = ([int]$sel.Count -gt 0)
+    cnt   = [int]$sel.Count
+    pnl   = [int]$pnlCount
+    edge  = [double]$meanEdge
+    micro = [double]$meanMicro
+  }
+}
 $ErrorActionPreference = "Stop"
 
 function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
@@ -121,19 +170,6 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
-# GS_PATH_RESOLVER_BEGIN
-function Resolve-GsPath([string]$sym){
-  $s = ($sym + "").ToLowerInvariant()
-  $real = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $s)
-  if(Test-Path -LiteralPath $real){
-    try {
-      $n = @(Get-Content -LiteralPath $real -Encoding utf8 -ErrorAction SilentlyContinue).Count
-      if($n -gt 0){ return $real }
-    } catch { }
-  }
-  return (Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $s))
-}
-# GS_PATH_RESOLVER_END
 # GS_METRICS_SOURCE_CAPTURE_BEGIN
 $gatescore_metrics_source = ""
 $gsMsSeenCount = 0
@@ -144,9 +180,24 @@ $gsMsExists = $false
 
 try {
   $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+# GS_ASOF_FORCE_FROM_EVENTS_BEGIN
+# FINAL AUTHORITY: gsAsOf must follow the resolved NVDA events file (array OR jsonl).
+try {
+  $selNvda = Resolve-GsPath "NVDA" $todayLocal
+  $mx = Get-MaxAsOfDateFromJsonl $selNvda
+  if($mx){ $gsAsOf = $mx }
+} catch { }
+# GS_ASOF_FORCE_FROM_EVENTS_END
+# GS_ASOF_FROM_EVENTS_BEGIN
+# GateScore session date must follow the selected NVDA source for TODAY (paper vs replay).
+try {
+  $sel = Resolve-GsPath "NVDA" $todayLocal
+  $gsAsOf = Get-MaxAsOfDateFromJsonl $sel
+} catch { $gsAsOf = "" }
+# GS_ASOF_FROM_EVENTS_END
   $gsMsToday = $todayLocal
 
-  $p = Resolve-GsPath "NVDA"
+  $p = Join-Path $logsDir "nvda_gatescore_events.jsonl"
   $gsMsPath = $p
   $gsMsExists = [bool](Test-Path -LiteralPath $p)
 
@@ -213,7 +264,7 @@ try {
 # GateScore NVDA data-quality guard: eligible events count
 $nvdaEligibleCount = 0
 try {
-  $nvdaPath = Resolve-GsPath "NVDA"
+  $nvdaPath = Join-Path $logsDir "nvda_gatescore_events.jsonl"
   if(Test-Path -LiteralPath $nvdaPath){
     foreach($ln in (Get-Content -LiteralPath $nvdaPath -Encoding utf8)){
       $s = $ln.Trim(); if(-not $s){ continue }
@@ -243,7 +294,7 @@ try {
 $nvdaLastEventDate = ""
 $nvdaMissingMetrics = $false
 try {
-  $nvdaPath = Resolve-GsPath "NVDA"
+  $nvdaPath = Join-Path $logsDir "nvda_gatescore_events.jsonl"
   if(Test-Path -LiteralPath $nvdaPath){
     $tail = Get-Content -LiteralPath $nvdaPath -Tail 200 -Encoding utf8
     foreach($ln in $tail){
@@ -294,7 +345,7 @@ $statusPath = Join-Path $logsDir "blockg_status_stub.json"
 $GS_MIN_EVENTS_REQUIRED = 25
 
 function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
-  $p = Resolve-GsPath $Sym
+  $p = Join-Path $RepoRoot ("logs\{0}_gatescore_events.jsonl" -f $Sym.ToLower())
   $rows = 0; $fresh = $false; $ts = ""
   if(Test-Path -LiteralPath $p){
     try { $rows = @(Get-Content -LiteralPath $p -Encoding utf8).Count } catch { $rows = 0 }
@@ -477,18 +528,9 @@ $gsRows = @()
 if (Test-Path $gsPath) { $gsRows = @(Import-Csv $gsPath) }
 
 function Get-GSFor([string]$sym) {
-    $fresh=$false; $cnt=0; $pnl=0; $edge=0.0; $micro=0.0
-    foreach ($r in $gsRows) {
-        if (($r.symbol + "").ToUpperInvariant() -ne $sym.ToUpperInvariant()) { continue }
-        if ((Slice-Date ([string]$r.as_of_date)) -ne $gsAsOf) { continue }
-        $fresh = $true
-        [void][int]::TryParse([string]$r.count_signals, [ref]$cnt)
-        if ($cnt -le 0) { $fresh = $false }
-        [void][int]::TryParse([string]$r.pnl_samples, [ref]$pnl)
-        [void][double]::TryParse([string]$r.mean_edge_ratio, [ref]$edge)
-        [void][double]::TryParse([string]$r.mean_micro_score, [ref]$micro)
-    }
-    return [pscustomobject]@{ fresh=$fresh; cnt=$cnt; pnl=$pnl; edge=$edge; micro=$micro }
+    # Use the selected events source as truth (paper vs replay) for the computed gsAsOf.
+    $gs0 = Get-GSFromEvents $sym $gsAsOf $todayLocal
+    return [pscustomobject]@{ fresh=$gs0.fresh; cnt=$gs0.cnt; pnl=$gs0.pnl; edge=$gs0.edge; micro=$gs0.micro }
 }
 
 
