@@ -29,5 +29,6 @@ Run "Export-Phase5EvHardVetoDailySnapshot.ps1"
 Run "Run-EvHardVetoDaily.ps1"
 
 Write-Host ("=== CHECK BLOCKG: " + $Symbol + " (build) ===") -ForegroundColor Cyan
-powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Check-BlockGDiagnosticOk.ps1") -Symbol $Symbol -Build | Out-Host
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Check-BlockGDiagnosticOk.ps1") -Symbol $Symbol | Out-Host
+if($LASTEXITCODE -ne 0){ Write-Host "[PH5-SNAPSHOT] FAIL step=blockg_diag rc=$LASTEXITCODE" -ForegroundColor Yellow; exit 91 }
 exit $LASTEXITCODE

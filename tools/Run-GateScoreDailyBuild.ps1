@@ -156,7 +156,7 @@ if (-not $RunPython) {
 
 foreach($s in $syms){
   $code = "import sys,runpy; sys.path.insert(0,r'$env:PYTHONPATH'); runpy.run_module('hybrid_ai_trading.gatescore.daily_build', run_name='__main__')"
-  $rc = RunPyTimeout -pyArgs @("-I","-X","faulthandler","-c",$code,"--csv",$csv,"--symbol",$s) -timeoutSec $TimeoutSec
+  $rc = RunPyTimeout -pyArgs @("-I","-X","faulthandler","-m","hybrid_ai_trading.gatescore.daily_build","--csv",$csv,"--symbol",$s) -timeoutSec $TimeoutSec
   if ($rc -ne 0) {
     Write-Host "[GS-BUILD] FAIL symbol=$s rc=$rc logs=$logDir" -ForegroundColor Yellow
     exit $rc
