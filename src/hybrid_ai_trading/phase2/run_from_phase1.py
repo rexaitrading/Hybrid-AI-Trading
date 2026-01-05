@@ -5,6 +5,28 @@ import argparse
 import csv
 import json
 import pathlib
+import os
+
+def _load_micro_mult(repo_root: pathlib.Path) -> float:
+    """
+    Phase-2 micro multiplier from logs/phase2_micro_cost_snapshot.json.
+    Fail-soft: returns 1.0 if missing/invalid.
+    """
+    try:
+        p = repo_root / "logs" / "phase2_micro_cost_snapshot.json"
+        if not p.exists():
+            return 1.0
+        j = json.loads(p.read_text(encoding="utf-8"))
+        if not j.get("ok"):
+            return 1.0
+        spy = float(((j.get("inputs") or {}).get("spy") or {}).get("micro_avg") or 0.0)
+        qqq = float(((j.get("inputs") or {}).get("qqq") or {}).get("micro_avg") or 0.0)
+        base = (spy + qqq) / 2.0 if (spy > 0 or qqq > 0) else (spy or qqq or 0.0)
+        m = 1.0 + max(0.0, min(base, 1.0))
+        return max(1.0, min(m, 2.0))
+    except Exception:
+        return 1.0
+
 from datetime import datetime, timedelta
 
 
@@ -63,6 +85,8 @@ def main() -> None:
     outdir = pathlib.Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
+    micro_mult = _load_micro_mult(pathlib.Path('.').resolve())
+
     fee_bps = float(args.fee_bps)
     slip_bps = float(args.slip_bps)
     spread_bps = float(args.spread_bps)
@@ -91,6 +115,18 @@ def main() -> None:
 
                 try:
                     mid = float(px_raw)
+
+                    # volatility proxy from bar range (bps)
+                    hi_raw = row.get("high")
+                    lo_raw = row.get("low")
+                    range_bps = 0.0
+                    try:
+                        hi = float(hi_raw) if hi_raw is not None else mid
+                        lo = float(lo_raw) if lo_raw is not None else mid
+                        if mid > 0 and hi >= lo:
+                            range_bps = ((hi - lo) / mid) * 10000.0
+                    except Exception:
+                        range_bps = 0.0
                 except Exception:
                     continue
                 if mid <= 0:
@@ -99,7 +135,11 @@ def main() -> None:
                 ts = _parse_ts(ts_raw)
                 fill_ts = ts + timedelta(milliseconds=latency_ms)
 
-                spread = mid * (spread_bps / 10000.0)
+                # Apply micro multiplier + volatility-scaled slippage
+                spread_bps_eff = spread_bps * micro_mult
+                slip_bps_eff = slip_bps * micro_mult * (1.0 + min(range_bps, 50.0) / 10.0)
+
+                spread = mid * (spread_bps_eff / 10000.0)
                 bid = mid - spread / 2.0
                 ask = mid + spread / 2.0
 
@@ -107,7 +147,7 @@ def main() -> None:
                 notional = mid * qty
 
                 fee = notional * (fee_bps / 10000.0)
-                slip = notional * (slip_bps / 10000.0)
+                slip = notional * (slip_bps_eff / 10000.0)
 
                 if side == "BUY":
                     fill_price = ask + (slip / max(qty, 1e-9))
