@@ -24,6 +24,7 @@ import uuid
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live, BlockGNotReady
+from hybrid_ai_trading.execution.blockg_gate import run_blockg_check
 from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
 logger = logging.getLogger(__name__)
@@ -524,6 +525,12 @@ class OrderManager:
                 is_ib_like = (hasattr(client, "placeOrder") or ("ib" in (client_name + " " + client_mod).lower()))
                 if is_ib_like and sym_u in ("NVDA","SPY","QQQ"):
                     ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=_get_ctx_cached(self))
+                # BLOCKG_PS_CHECK_BEFORE_LIVE_SUBMIT (authoritative, fail-closed)
+                r = run_blockg_check(sym_u)
+                if not r.ok:
+                    raise RuntimeError(f"BLOCKG PS DENY {sym_u}: exit={r.exit_code}
+{r.stdout}
+{r.stderr}")
 
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
