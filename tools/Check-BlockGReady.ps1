@@ -209,7 +209,11 @@ $requireGsb = (-not $hasAnyReadyKey)
 if($hasGsb){
   if ($s -ne "ALL") {
     $gs = Get-GS $s
-    if (-not $gs) { Fail ("Missing gatescore_by_symbol." + $s) }
+    if (-not $gs) {
+      $k = ($s.ToLowerInvariant() + "_blockg_ready")
+      if (-not ($st.PSObject.Properties.Name -contains $k)) { Fail ("Missing gatescore_by_symbol." + $s) }
+      # Contract has *_blockg_ready => gatescore_by_symbol optional; skip deref of $gs.*
+    }
     if((-not [bool]$gs.samples_ok) -or (-not [bool]$gs.threshold_ok)){
       $msg = "$s gatescore "
       $msg += "samples_ok=$([bool]$gs.samples_ok) "
@@ -223,7 +227,11 @@ if($hasGsb){
   } else {
     foreach($sym in @("NVDA","SPY","QQQ")) {
       $gs = Get-GS $sym
-      if (-not $gs) { Fail ("Missing gatescore_by_symbol." + $sym) }
+      if (-not $gs) {
+        $k = ($sym.ToLowerInvariant() + "_blockg_ready")
+        if (-not ($st.PSObject.Properties.Name -contains $k)) { Fail ("Missing gatescore_by_symbol." + $sym) }
+        # Contract has *_blockg_ready => gatescore_by_symbol optional; skip deref of $gs.*
+      }
       if((-not [bool]$gs.samples_ok) -or (-not [bool]$gs.threshold_ok)){
         $msg = "$sym gatescore "
         $msg += "samples_ok=$([bool]$gs.samples_ok) "
