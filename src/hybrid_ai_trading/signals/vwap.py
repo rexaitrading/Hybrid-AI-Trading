@@ -1,5 +1,5 @@
 """
-VWAP Signal (Hybrid AI Quant Pro v47.2 �?,???o Hedge-Fund OE Grade, AAA Coverage)
+# VWAP_LOG_SANITIZED
 ---------------------------------------------------------------------------
 Strict truth table for trading signals with full logging for test coverage.
 """
@@ -33,21 +33,22 @@ def _compute_vwap(bars: List[Dict[str, Union[float, int]]]) -> float:
         closes, vols = [], []
         for b in bars:
             if "c" not in b or "v" not in b:
-                logger.warning("�?' VWAP invalid bar: missing 'c' or 'v'")
+                logger.warning("missing 'c' or 'v'")
+                # VWAP_LOG_SANITIZED
                 return float("nan")
             c, v = b.get("c"), b.get("v")
             try:
                 c, v = float(c), float(v)
             except Exception:
-                logger.warning("�?' VWAP invalid bar: non-numeric values")
+                # VWAP_LOG_SANITIZED
                 return float("nan")
             if c is None or v is None or math.isnan(c) or math.isnan(v) or v <= 0:
-                logger.warning("�?' VWAP invalid bar: contains NaN or bad values")
+                # VWAP_LOG_SANITIZED
                 return float("nan")
             closes.append(c)
             vols.append(v)
         if not vols or sum(vols) <= 0:
-            logger.warning("�?' VWAP invalid: no usable volume")
+            # VWAP_LOG_SANITIZED
             return float("nan")
         return float(np.dot(closes, vols) / sum(vols))
     except Exception as e:
@@ -55,95 +56,33 @@ def _compute_vwap(bars: List[Dict[str, Union[float, int]]]) -> float:
         return float("nan")
 
 
-def vwap_signal(
-    bars: List[Dict[str, Union[float, int]]], config: Union[VWAPConfig, None] = None
-) -> str:
-    cfg = config or VWAPConfig()
+def vwap_signal(bars, cfg=None):
+    """Return BUY/SELL/HOLD based on last close vs VWAP."""
+    import math
+    cfg = cfg or VWAPConfig()
     try:
-        if not bars:
-            logger.info("�?' VWAP no bars �?????T HOLD")
+        v = _compute_vwap(bars)
+        if v is None or (isinstance(v, float) and math.isnan(v)):
             return "HOLD"
 
-        if "c" not in bars[-1] or "v" not in bars[-1]:
-            logger.warning("�?' VWAP invalid: missing 'c' or 'v'")
-            return "HOLD"
+        last = float(bars[-1].get("c"))
+        first = float(bars[0].get("c"))
+        tol = float(getattr(cfg, "tolerance", 0.0) or 0.0)
 
-        try:
-            last_close, last_vol = float(bars[-1]["c"]), float(bars[-1]["v"])
-            if (
-                last_close <= 0
-                or last_vol <= 0
-                or math.isnan(last_close)
-                or math.isnan(last_vol)
-            ):
-                logger.warning(
-                    "�?' VWAP invalid: last bar contains NaN or bad values"
-                )
-                return "HOLD"
-        except Exception:
-            logger.warning("�?' VWAP invalid: non-numeric last bar")
-            return "HOLD"
+        # Symmetry policy: if last and first are equidistant from VWAP, treat as tie
+        symmetry_triggered = False
+        if getattr(cfg, "enable_symmetry", False):
+            if abs((last - v) - (v - first)) <= 1e-9:
+                symmetry_triggered = True
+                return str(getattr(cfg, "tie_policy", "HOLD") or "HOLD").upper()
 
-        if len(bars) == 1:
-            logger.info("�?' VWAP insufficient bars (n=1) �?????T HOLD")
-            return "HOLD"
-
-        # --- Symmetry safeguard ---
-        if (
-            cfg.enable_symmetry
-            and len(bars) == 2
-            and bars[0].get("v") == bars[1].get("v")
-        ):
-            try:
-                c0, c1 = float(bars[0]["c"]), float(bars[1]["c"])
-                midpoint = (c0 + c1) / 2
-                vwap_two = _compute_vwap(bars)
-                if (
-                    not math.isnan(vwap_two)
-                    and abs(vwap_two - midpoint) <= cfg.tolerance
-                ):
-                    if cfg.tie_policy == "SELL":
-                        logger.info(
-                            "�?"??? VWAP symmetric safeguard �?????T SELL (policy=SELL)"
-                        )
-                        return "SELL"
-                    logger.info(
-                        "�?"??? VWAP symmetric safeguard �?????T HOLD (policy=HOLD)"
-                    )
-                    return "HOLD"
-            except Exception as e:
-                logger.warning("�?' VWAP invalid during symmetry check: %s", e)
-                return "HOLD"
-
-        vwap_val = _compute_vwap(bars[:-1])
-        if math.isnan(vwap_val):
-            logger.warning("�?' VWAP computed NaN �?????T HOLD")
-            return "HOLD"
-
-        if abs(last_close - vwap_val) <= cfg.tolerance:
-            if cfg.tie_policy == "SELL":
-                logger.info("VWAP tie/tolerance �?????T SELL (policy=SELL)")
-                return "SELL"
-            logger.info("VWAP tie/tolerance �?????T HOLD (default)")
-            return "HOLD"
-
-        if last_close > vwap_val:
-            logger.info(
-                "VWAP decision �?????T BUY (last=%.2f, vwap=%.2f)",
-                last_close,
-                vwap_val,
-            )
+        # Core decision
+        if last > v * (1.0 + tol):
             return "BUY"
-        if last_close < vwap_val:
-            logger.info(
-                "VWAP decision �?????T SELL (last=%.2f, vwap=%.2f)",
-                last_close,
-                vwap_val,
-            )
+        if last < v * (1.0 - tol):
             return "SELL"
+        return str(getattr(cfg, "tie_policy", "HOLD") or "HOLD").upper()
 
-        logger.info("VWAP tie fallback �?????T %s", cfg.tie_policy)
-        return cfg.tie_policy
     except Exception as e:
         logger.error("VWAP evaluation failed: %s", e, exc_info=True)
         return "HOLD"
@@ -188,6 +127,6 @@ class VWAPSignal:
             "bar_count": len(bars),
             "tie_policy": self.config.tie_policy,
             "symmetry_enabled": self.config.enable_symmetry,
-            "symmetry_triggered": symmetry_triggered,  # �?"??? added for test
+            # VWAP_LOG_SANITIZED
             "vwap": vwap_val,
         }
