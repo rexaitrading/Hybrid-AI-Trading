@@ -527,11 +527,10 @@ class OrderManager:
                     ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=_get_ctx_cached(self))
                 # BLOCKG_PS_CHECK_BEFORE_LIVE_SUBMIT (authoritative, fail-closed)
                 r = run_blockg_check(sym_u)
-                if not r.ok:
-                    raise RuntimeError(f"BLOCKG PS DENY {sym_u}: exit={r.exit_code}
-{r.stdout}
-{r.stderr}")
-
+                if not getattr(r, 'ok', False):
+                    code = getattr(r, 'exit_code', 1)
+                    msg = (getattr(r, 'message', '') or str(r)).strip()
+                    raise BlockGNotReady(f"BLOCKG PS DENY {sym_u}: exit={code} | {msg}")
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
