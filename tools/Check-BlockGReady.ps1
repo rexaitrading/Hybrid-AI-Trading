@@ -34,8 +34,23 @@ function Read-Json {
   return ($raw | ConvertFrom-Json -ErrorAction Stop)
 }
 
+
+function Dump-Reasons($st){
+  try{
+    if($st -and ($st.PSObject.Properties.Name -contains "reasons_not_ready")){
+      $r = @($st.reasons_not_ready)
+      if($r -and $r.Count -gt 0){
+        Write-Host "[BLOCKG] reasons_not_ready:" -ForegroundColor DarkYellow
+        foreach($x in $r){
+          Write-Host ("[BLOCKG]  - " + ($x + "")) -ForegroundColor DarkYellow
+        }
+      }
+    }
+  } catch { }
+}
 function Fail-Contract([string]$Msg) {
   Write-Host "[BLOCKG] NOT READY: $Msg" -ForegroundColor Red
+  try { Dump-Reasons $st } catch { }
   exit 2
 }
 
@@ -176,20 +191,57 @@ if (-not [bool]$st.gatescore_recent_enough) { Fail "gatescore_recent_enough=fals
 try { $age = [int]$st.gatescore_age_days } catch { Fail "gatescore_age_days invalid" }
 if ($age -gt $MAX_GS_AGE_DAYS) { Fail ("gatescore_age_days=" + $age + " max=" + $MAX_GS_AGE_DAYS) }
 # Per-symbol GateScore checks (contract-only)
-if ($s -ne "ALL") {
-  $gs = Get-GS $s
-  if (-not $gs) { Fail ("Missing gatescore_by_symbol." + $s) }
-  if (-not [bool]$gs.samples_ok) { Fail ($s + " gatescore samples_ok=false") }
-  if (-not [bool]$gs.threshold_ok) { Fail ($s + " gatescore threshold_ok=false") }
-} else {
-  foreach($sym in @("NVDA","SPY","QQQ")) {
-    $gs = Get-GS $sym
-    if (-not $gs) { Fail ("Missing gatescore_by_symbol." + $sym) }
-    if (-not [bool]$gs.samples_ok) { Fail ($sym + " gatescore samples_ok=false") }
-    if (-not [bool]$gs.threshold_ok) { Fail ($sym + " gatescore threshold_ok=false") }
-  }
+# OPTIONAL_GATESCORE_BY_SYMBOL_POLICY_BEGIN
+# Policy:
+# - If contract contains per-symbol *_blockg_ready keys, then gatescore_by_symbol is OPTIONAL and we DO NOT
+#   dereference per-symbol GateScore objects (avoids StrictMode property-not-found).
+# - If *_blockg_ready keys are absent, we require gatescore_by_symbol.<SYM> (legacy behavior).
+function Has-SymReadyKey([string]$sym){
+  $k = ($sym.ToLowerInvariant() + "_blockg_ready")
+  return ($st -and ($st.PSObject.Properties.Name -contains $k))
 }
 
+$hasGsb = ($st.PSObject.Properties.Name -contains "gatescore_by_symbol")
+$hasAnyReadyKey = (Has-SymReadyKey "NVDA") -or (Has-SymReadyKey "SPY") -or (Has-SymReadyKey "QQQ")
+$requireGsb = (-not $hasAnyReadyKey)
+
+# GateScore object checks (only when present OR required)
+if($hasGsb){
+  if ($s -ne "ALL") {
+    $gs = Get-GS $s
+    if (-not $gs) { Fail ("Missing gatescore_by_symbol." + $s) }
+    if((-not [bool]$gs.samples_ok) -or (-not [bool]$gs.threshold_ok)){
+      $msg = "$s gatescore "
+      $msg += "samples_ok=$([bool]$gs.samples_ok) "
+      $msg += "threshold_ok=$([bool]$gs.threshold_ok) "
+      $msg += "cnt=$($gs.count_signals) min_cnt=$($gs.min_signals) "
+      $msg += "pnl=$($gs.pnl_samples) min_pnl=$($gs.min_pnl_samples) "
+      $msg += "edge=$($gs.mean_edge_ratio) min_edge=$($gs.min_edge_ratio) "
+      $msg += "micro=$($gs.mean_micro_score) min_micro=$($gs.min_micro_score)"
+      Fail $msg
+    }
+  } else {
+    foreach($sym in @("NVDA","SPY","QQQ")) {
+      $gs = Get-GS $sym
+      if (-not $gs) { Fail ("Missing gatescore_by_symbol." + $sym) }
+      if((-not [bool]$gs.samples_ok) -or (-not [bool]$gs.threshold_ok)){
+        $msg = "$sym gatescore "
+        $msg += "samples_ok=$([bool]$gs.samples_ok) "
+        $msg += "threshold_ok=$([bool]$gs.threshold_ok) "
+        $msg += "cnt=$($gs.count_signals) min_cnt=$($gs.min_signals) "
+        $msg += "pnl=$($gs.pnl_samples) min_pnl=$($gs.min_pnl_samples) "
+        $msg += "edge=$($gs.mean_edge_ratio) min_edge=$($gs.min_edge_ratio) "
+        $msg += "micro=$($gs.mean_micro_score) min_micro=$($gs.min_micro_score)"
+        Fail $msg
+      }
+    }
+  }
+} elseif($requireGsb) {
+  # Legacy fail-closed: no *_blockg_ready keys to trust, so gatescore_by_symbol is required.
+  if ($s -ne "ALL") { Fail ("Missing gatescore_by_symbol." + $s) }
+  foreach($sym in @("NVDA","SPY","QQQ")) { Fail ("Missing gatescore_by_symbol." + $sym) }
+}
+# OPTIONAL_GATESCORE_BY_SYMBOL_POLICY_END
 
 # 4) Per-symbol readiness (fail-closed)
 function SymReady([string]$sym) {
