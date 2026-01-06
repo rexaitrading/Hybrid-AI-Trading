@@ -40,14 +40,17 @@ def _compute_vwap(bars: List[Dict[str, Union[float, int]]]) -> float:
             try:
                 c, v = float(c), float(v)
             except Exception:
+                logger.warning("non-numeric")
                 # VWAP_LOG_SANITIZED
                 return float("nan")
             if c is None or v is None or math.isnan(c) or math.isnan(v) or v <= 0:
+                logger.warning("bad values")
                 # VWAP_LOG_SANITIZED
                 return float("nan")
             closes.append(c)
             vols.append(v)
         if not vols or sum(vols) <= 0:
+            logger.warning("no usable volume")
             # VWAP_LOG_SANITIZED
             return float("nan")
         return float(np.dot(closes, vols) / sum(vols))
