@@ -379,9 +379,9 @@ def main(argv=None) -> int:
         "provider_only": bool(args.provider_only),
         "once": bool(args.once),
     }
-    print("[PaperRunner] args:", json.dumps(info, ensure_ascii=False))
+    print("[PaperRunner] args:", json.dumps(info, ensure_ascii=True))
 
-    print("[PaperRunner] ctx:", json.dumps({"as_of_date": ctx.as_of_date, "mode": ctx.mode, "is_paper": ctx.is_paper, "symbol": ctx.symbol}, ensure_ascii=False))
+    print("[PaperRunner] ctx:", json.dumps({"as_of_date": ctx.as_of_date, "mode": ctx.mode, "is_paper": ctx.is_paper, "symbol": ctx.symbol}, ensure_ascii=True))
     # Build risk manager (Phase-6 step)
     try:
         risk_mgr = _build_risk_mgr(cfg)
@@ -442,7 +442,7 @@ def main(argv=None) -> int:
                 rec = {"ts_utc": iso_utc_now(), "status": "bad_price", "symbols": symbols, "price_map": price_map, "result": [], "price_source": "bad_price", "error": f"bad_price_map:{bad}"}
                 if args.log_file:
                     _append_jsonl(args.log_file, rec)
-                print("[PaperRunner] tick BAD_PRICE:", json.dumps(rec, ensure_ascii=False))
+                print("[PaperRunner] tick BAD_PRICE:", json.dumps(rec, ensure_ascii=True))
                 return 4
 
             out = qc.run_once(symbols, price_map, risk_mgr)
@@ -459,7 +459,7 @@ def main(argv=None) -> int:
             }
             if args.log_file:
                 _append_jsonl(args.log_file, rec)
-            print("[PaperRunner] tick ERROR:", json.dumps(rec, ensure_ascii=False))
+            print("[PaperRunner] tick ERROR:", json.dumps(rec, ensure_ascii=True))
             return 3
 
         rec = {
@@ -472,7 +472,7 @@ def main(argv=None) -> int:
         }
         if args.log_file:
             _append_jsonl(args.log_file, rec)
-        print("[PaperRunner] tick OK:", json.dumps({"status": "ok", "symbols": symbols}, ensure_ascii=False))
+        print("[PaperRunner] tick OK:", json.dumps({"status": "ok", "symbols": symbols}, ensure_ascii=True))
 
         # heartbeat (each tick)
         _write_heartbeat(symbols, int(tick_no), price_source, getattr(args, "log_file", None))
