@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from hybrid_ai_trading.execution.blockg_ps_checker import require_blockg_ready_via_powershell
+from hybrid_ai_trading.execution.portfolio_enforce import require_portfolio_gate_for_live
 from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 from hybrid_ai_trading.execution.live_arm import require_live_arm
 
@@ -69,9 +70,11 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
         # LIVE 2-key: operator arm token required (fail-closed).
         require_live_arm(sym)
         if sym in ("NVDA", "SPY", "QQQ"):
-            require_nvda_live_stamp(sym)
             # Block-G contract JSON gate (fail-closed). Applies to NVDA/SPY/QQQ in LIVE mode.
             require_blockg_ready_for_live(sym)
+            require_nvda_live_stamp(sym)
+            # Phase-7 portfolio guard (fail-closed). Applies to NVDA/SPY/QQQ in LIVE mode.
+            require_portfolio_gate_for_live(sym)
     # LIVE_2KEY_ARM_AND_BLOCKG_PS_BEGIN
     # Removed: PS checker is enforced inside require_blockg_ready_for_live()
     # LIVE_2KEY_ARM_AND_BLOCKG_PS_END
