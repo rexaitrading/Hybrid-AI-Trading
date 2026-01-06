@@ -57,7 +57,7 @@ def main() -> None:
     rows: List[Dict[str, Any]] = []
 
     for group, symbols in asset_groups.items():
-        logger.info("�Y??o� Fetching %s (%d)", group, len(symbols))
+        logger.info("[daily_close] fetching %s (%d)", group, len(symbols))
 
         if group == "Core_Crypto":
             try:
@@ -78,9 +78,9 @@ def main() -> None:
                             "status": r.get("status", "NO_DATA"),
                         }
                     )
-                logger.info("�?"??? %s complete", group)
+                logger.info("[daily_close] %s complete", group)
             except Exception as e:
-                logger.error("�?' %s error: %s", group, e)
+                logger.error("[daily_close] %s error: %s", group, e)
             continue
 
         # Stock / ETF assets
@@ -103,7 +103,7 @@ def main() -> None:
                             "status": data.get("status", "OK"),
                         }
                     )
-                    logger.info("�?"??? %s close=%s", symbol, r.get("c"))
+                    logger.info("[daily_close] %s close=%s", symbol, r.get("c"))
                 else:
                     rows.append(
                         {
@@ -119,7 +119,7 @@ def main() -> None:
                             "status": f"NO_DATA: {data}",
                         }
                     )
-                    logger.warning("�s�️ %s no data", symbol)
+                    logger.warning("[daily_close] %s no data", symbol)
             except Exception as e:
                 rows.append(
                     {
@@ -135,7 +135,7 @@ def main() -> None:
                         "status": f"ERROR: {e}",
                     }
                 )
-                logger.error("�?' %s error: %s", symbol, e)
+                logger.error("[daily_close] %s error: %s", symbol, e)
 
     # ------------------------------------------------------------------
     # Export results
@@ -165,9 +165,9 @@ def main() -> None:
             writer.writerows(rows)
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(rows, f, ensure_ascii=False, indent=2)
-        logger.info("�Y??o??s Exported:\n- %s\n- %s", csv_path, json_path)
+        logger.info("[daily_close] Exported: %s | %s", csv_path, json_path)
     except Exception as e:
-        logger.error("�?' Export failed: %s", e)
+        logger.error("[daily_close] export failed: %s", e)
         return
 
 
