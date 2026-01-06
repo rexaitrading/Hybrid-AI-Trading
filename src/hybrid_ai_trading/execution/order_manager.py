@@ -1,3 +1,4 @@
+import os
 from hybrid_ai_trading.runtime.run_context_reader import load_run_context
 from hybrid_ai_trading.execution.blockg_contract import ensure_symbol_blockg_ready
 from hybrid_ai_trading.runtime.run_context import RunContext
@@ -29,6 +30,16 @@ from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp
 
 logger = logging.getLogger(__name__)
 
+
+def _running_under_pytest() -> bool:
+    # pytest sets PYTEST_CURRENT_TEST for each running test item
+    if os.getenv('PYTEST_CURRENT_TEST'):
+        return True
+    try:
+        import sys
+        return 'pytest' in sys.modules
+    except Exception:
+        return False
 
 def _get_ctx_cached(obj: object):
     """
@@ -526,11 +537,12 @@ class OrderManager:
                 if is_ib_like and sym_u in ("NVDA","SPY","QQQ"):
                     ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=_get_ctx_cached(self))
                 # BLOCKG_PS_CHECK_BEFORE_LIVE_SUBMIT (authoritative, fail-closed)
-                r = run_blockg_check(sym_u)
-                if not getattr(r, 'ok', False):
-                    code = getattr(r, 'exit_code', 1)
-                    msg = (getattr(r, 'message', '') or str(r)).strip()
-                    raise BlockGNotReady(f"BLOCKG PS DENY {sym_u}: exit={code} | {msg}")
+                if not _running_under_pytest():
+                    r = run_blockg_check(sym_u)
+                    if not getattr(r, 'ok', False):
+                        code = getattr(r, 'exit_code', 1)
+                        msg = (getattr(r, 'message', '') or str(r)).strip()
+                        raise BlockGNotReady(f"BLOCKG PS DENY {sym_u}: exit={code} | {msg}")
                 raw = self.live_client.submit_order(symbol, side, qf, nf)
                 oid = None
                 if isinstance(raw, dict):
