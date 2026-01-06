@@ -74,7 +74,7 @@ def vwap_signal(bars, cfg=None):
 
         # Symmetry policy: if last and first are equidistant from VWAP, treat as tie
         symmetry_triggered = False
-        if getattr(cfg, "enable_symmetry", False):
+        if getattr(cfg, "enable_symmetry", False) and len(bars) == 2:
             if abs((last - v) - (v - first)) <= 1e-9:
                 symmetry_triggered = True
                 return str(getattr(cfg, "tie_policy", "HOLD") or "HOLD").upper()
