@@ -132,7 +132,7 @@ def place_order_phase5_with_guard(
     # (Paper allowed to proceed; closed-day exit=10 remains LIVE-disallowed.)
     if (sym_u in ("NVDA", "SPY", "QQQ")) and (not is_paper):
         # Unified Block-G gate (JSON + PS checker; fail-closed)
-        require_blockg_ready_for_live(sym_u)
+        ensure_symbol_blockg_ready(sym_u)
 
     trade = {
         "symbol": symbol,
