@@ -130,6 +130,7 @@ class VWAPSignal:
             "bar_count": len(bars),
             "tie_policy": self.config.tie_policy,
             "symmetry_enabled": self.config.enable_symmetry,
+            "symmetry_triggered": symmetry_triggered,
             # VWAP_LOG_SANITIZED
             "vwap": vwap_val,
         }
