@@ -25,6 +25,18 @@ function Step([string]$name, [scriptblock]$sb){
   & $sb
 }
 
+function Invoke-ToolStrictExitcode([string]$Label, [string]$File, [string[]]$Args=@()){
+  if(-not (Test-Path -LiteralPath $File)){ throw "Missing $File" }
+  $old = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $File @Args 2>&1
+  $ec  = $LASTEXITCODE
+  $ErrorActionPreference = $old
+  $out | Out-Host
+  "EXIT_{0}={1}" -f $Label,$ec | Out-Host
+  if($ec -ne 0){ throw "[CONTRACTPACK] FAIL: $Label exit=$ec" }
+}
+
 # 1) Phase23 daily
 Step "PH23 daily health" {
   if(Test-Path .\tools\Run-Phase23HealthDaily.ps1){
