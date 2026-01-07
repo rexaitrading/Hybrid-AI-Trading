@@ -54,7 +54,7 @@ class MarketLogger:
         try:
             self.ib = IB()
             self.ib.connect(host, port, clientId=client_id)
-            logger.info("�?"??? Connected to IBKR at %s:%d", host, port)
+            logger.info("[MarketLogger] connected to IBKR at %s:%d", host, port)
         except Exception as exc:  # noqa: BLE001
             logger.error("�?' Failed to connect to IBKR: %s", exc)
             raise RuntimeError("IBKR connection failed") from exc

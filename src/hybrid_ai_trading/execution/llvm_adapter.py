@@ -30,7 +30,7 @@ class LLVMEngineAdapter:
 
         self.modules = {llvm_module}
         self.finalized = False
-        logger.debug("�?"??? LLVMEngineAdapter initialized")
+        logger.debug("[LLVMEngineAdapter] initialized")
 
     # ------------------------------------------------------------------
     def add_module(self, module):
@@ -39,7 +39,7 @@ class LLVMEngineAdapter:
         try:
             self.engine.add_module(module)
             self.modules.add(module)
-            logger.debug("�?"??? Module added to LLVM engine")
+            logger.debug("[LLVMEngineAdapter] module added")
         except Exception as e:
             logger.error("�?' add_module failed: %s", e)
             raise
@@ -49,7 +49,7 @@ class LLVMEngineAdapter:
         try:
             self.engine.finalize_object()
             self.finalized = True
-            logger.debug("�?"??? LLVM engine finalized")
+            logger.debug("[LLVMEngineAdapter] finalized")
         except Exception as e:
             logger.error("�?' Finalize failed: %s", e)
 
@@ -59,7 +59,7 @@ class LLVMEngineAdapter:
             addr = self.engine.get_function_address(name)
             if not addr:
                 raise RuntimeError(f"Function not found: {name}")
-            logger.debug("�?"??? Function %s resolved at %s", name, addr)
+            logger.debug("[LLVMEngineAdapter] function %s resolved at %s", name, addr)
             return addr
         except Exception as e:
             logger.error("�?' get_fn_addr failed: %s", e)
@@ -71,6 +71,6 @@ class LLVMEngineAdapter:
             self.engine = None
             self.modules.clear()
             self.finalized = False
-            logger.debug("�Y??"??~️ LLVM engine disposed")
+            logger.debug("[LLVMEngineAdapter] disposed")
         except Exception as e:
             logger.warning("�s�️ Dispose error: %s", e)

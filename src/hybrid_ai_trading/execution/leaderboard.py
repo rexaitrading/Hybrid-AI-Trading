@@ -45,14 +45,14 @@ def export_leaderboard(df: pd.DataFrame, out_file: Path) -> None:
             return
 
         df.to_csv(out_file, index=False)
-        logger.info("�?"??? Leaderboard exported to %s", out_file)
+        logger.info("[Leaderboard] exported to %s", out_file)
 
     except Exception as e:
-        logger.error("�?' Failed to export leaderboard: %s", e, exc_info=True)
+        logger.error("[Leaderboard] failed to export leaderboard: %s", e, exc_info=True)
         # Ensure no corrupted file remains
         if out_file.exists():
             try:
                 out_file.unlink()
-                logger.debug("�Y??"??~️ Removed half-written file: %s", out_file)
+                logger.debug("[Leaderboard] removed half-written file: %s", out_file)
             except Exception as cleanup_error:
-                logger.debug("�s�️ Failed to cleanup file: %s", cleanup_error)
+                logger.debug("[Leaderboard] failed to cleanup file: %s", cleanup_error)

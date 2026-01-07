@@ -30,7 +30,7 @@ class OrderManager:
         self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None, ctx: RunContext | None = None
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
-        oid, info = self.broker.place_order(symbol, "BUY", qty, "MARKET", meta=meta, ctx=ctx)
+        oid, info = self.broker.place_order(symbol, "BUY", qty, "MARKET", meta=meta)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
         return out
@@ -40,7 +40,7 @@ class OrderManager:
         self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None, ctx: RunContext | None = None
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
-        oid, info = self.broker.place_order(symbol, "SELL", qty, "MARKET", meta=meta, ctx=ctx)
+        oid, info = self.broker.place_order(symbol, "SELL", qty, "MARKET", meta=meta)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
         return out

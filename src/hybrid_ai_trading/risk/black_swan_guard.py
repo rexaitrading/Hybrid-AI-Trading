@@ -19,14 +19,14 @@ class BlackSwanGuard:
     def __init__(self) -> None:
         # Map: source �?????T reason
         self.events: Dict[str, str] = {}
-        logger.info("�?"??? BlackSwanGuard initialized | events=%s", self.events)
+        logger.info("[BlackSwanGuard] initialized | events=%s", self.events)
 
     # --------------------------------------------------
     def trigger_event(self, source: str, reason: str = "unspecified") -> None:
         """Activate guard due to a catastrophic event."""
         self.events[source] = reason
         logger.warning(
-            "[BlackSwanGuard] �s�️ Triggered | source=%s, reason=%s",
+            "[BlackSwanGuard] triggered | source=%s, reason=%s",
             source,
             reason,
         )
@@ -34,13 +34,13 @@ class BlackSwanGuard:
     def clear_event(self, source: str) -> None:
         """Clear a specific event if it exists."""
         if source in self.events:
-            logger.info("[BlackSwanGuard] �?"??? Event Cleared | source=%s", source)
+            logger.info("[BlackSwanGuard] event cleared | source=%s", source)
             self.events.pop(source)
 
     def clear_all(self) -> None:
         """Clear all active events."""
         if self.events:
-            logger.info("[BlackSwanGuard] �?"??? All events cleared")
+            logger.info("[BlackSwanGuard] all events cleared")
             self.events.clear()
 
     # --------------------------------------------------
@@ -60,7 +60,7 @@ class BlackSwanGuard:
 
         if signal.upper() in {"BUY", "SELL"}:
             logger.warning(
-                "[BlackSwanGuard] �?' Trade Blocked | signal=%s, active_events=%s",
+                "[BlackSwanGuard] trade blocked | signal=%s, active_events=%s",
                 signal,
                 list(self.events.keys()),
             )

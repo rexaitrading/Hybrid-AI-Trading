@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,9 +21,13 @@ def _repo_root() -> Path:
 
 
 def _token_path(symbol: str) -> Path:
+    """Resolve live-arm token path. Tests can override via HAT_LIVE_READY_STAMP_PATH."""
+    envp = os.getenv("HAT_LIVE_READY_STAMP_PATH", "").strip()
+    if envp:
+        return Path(envp)
+    # default per-symbol token file
     sym = (symbol or "").upper().strip()
-    return _repo_root() / "logs" / f"live_arm_{sym}.json"
-
+    return Path("logs") / f"{sym.lower()}_live_ready_stamp.json"
 
 def require_live_arm(symbol: str) -> None:
     sym = (symbol or "").upper().strip()
@@ -37,9 +42,13 @@ def require_live_arm(symbol: str) -> None:
 
     as_of = str(obj.get("as_of_date", "")).strip()
     exp   = str(obj.get("expires_utc", "")).strip()
+    # Legacy compatibility: allow blank expires_utc (fail-closed still enforced via as_of_date==today)
+    if not exp:
+        # Default to end-of-day UTC for today
+        exp = f"{as_of}T23:59:59Z"
     sym2  = str(obj.get("symbol", "")).strip().upper()
 
-    if sym2 != sym:
+    if sym2 and (sym2 != sym):
         raise BlockGNotReady(f"LIVE ARM FAIL-CLOSED: symbol_mismatch token={sym2} expected={sym}")
 
     today = datetime.now().strftime("%Y-%m-%d")

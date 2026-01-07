@@ -119,7 +119,7 @@ class PerformanceTracker:
         avg = mean(self.trades)
         downside = [t for t in self.trades if t < 0]
         if not downside:
-            logger.warning("No downside trades ?f��?,?��?,??"? fallback")
+            logger.warning("No downside trades; using fallback")
             return (avg - risk_free) / (pstdev(self.trades) or 1.0)
         try:
             dd_std = pstdev(downside)
@@ -215,6 +215,6 @@ class PerformanceTracker:
         try:
             with open(path, "w") as f:
                 json.dump(self.snapshot(), f, indent=2)
-            logger.info(f"Performance snapshot exported ?f��?,?��?,??"? {path}")
+            logger.info("Performance snapshot exported: %s", path)
         except Exception as e:
             logger.error(f"Failed to export performance snapshot: {e}")

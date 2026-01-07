@@ -60,7 +60,7 @@ class TWAPExecutor:
 
         for i in range(self.slices):
             try:
-                raw = self.order_manager.place_order(symbol, side, slice_size, price, ctx=ctx)
+                raw = self.order_manager.place_order(symbol, side, slice_size, price)
 
                 status = raw.get("status", "unknown")
                 if status == "ok":  # normalize common variant
