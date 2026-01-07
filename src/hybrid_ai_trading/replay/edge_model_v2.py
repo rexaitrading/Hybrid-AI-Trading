@@ -12,12 +12,20 @@ def _parse_ts(ts: str) -> Optional[datetime]:
     ts = (ts or "").strip()
     if not ts:
         return None
-    # IB format: "YYYYMMDD  HH:MM:SS"
+
+    # IB format observed in logs/bars: "YYYYMMDD  HH:MM:SS" (two spaces)
+    # Treat as UTC, then convert to America/New_York for RTH classification.
     try:
-        if len(ts) >= 17 and ts[8:10] == "  ":
-            return datetime.strptime(ts[:17], "%Y%m%d  %H:%M:%S")
-        # fallback
-        return datetime.fromisoformat(ts.replace("Z", ""))
+        s = ts.replace("T", " ").replace("Z", "").strip()
+        while "  " in s:
+            s = s.replace("  ", " ")
+        # "YYYYMMDD HH:MM:SS"
+        if len(s) >= 17 and s[8] == " " and s[11] == ":":
+            dt = datetime.strptime(s[:17], "%Y%m%d %H:%M:%S")
+            return dt.replace(tzinfo=timezone.utc)
+        # ISO fallback (may include offset)
+        dt2 = datetime.fromisoformat(s)
+        return dt2 if dt2.tzinfo else dt2.replace(tzinfo=timezone.utc)
     except Exception:
         return None
 
