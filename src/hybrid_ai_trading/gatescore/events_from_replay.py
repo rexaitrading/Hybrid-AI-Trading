@@ -90,9 +90,17 @@ def _orb_breakout_signals(bars) -> list[int]:
             next_allowed = hhmm + cooldown_minutes
     return sigs
 def main() -> int:
+    p = argparse.ArgumentParser(prog="gatescore-replay")
+    p.add_argument("--symbol", required=True, help="Symbol (NVDA/SPY/QQQ)")
+    p.add_argument("--logs", default="logs", help="Logs root directory (default: logs)")
+    args = p.parse_args()
+
     logs = Path(args.logs)
     logs.mkdir(parents=True, exist_ok=True)
-    # symbol is set by CLI (PH3_CLI_BEGIN)
+
+    symbol = str(args.symbol).upper()
+    symbol_lower = symbol.lower()
+
     out_path = logs / f"{symbol_lower}_gatescore_events.jsonl"
     days = _list_cached_days(logs, symbol)
     if not days:
