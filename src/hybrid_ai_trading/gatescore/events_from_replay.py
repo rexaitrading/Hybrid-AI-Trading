@@ -1,5 +1,21 @@
 from __future__ import annotations
 
+# PH3_CLI_BEGIN
+import argparse
+from pathlib import Path
+
+def _parse_args():
+    p = argparse.ArgumentParser(prog="gatescore-replay")
+    p.add_argument("--symbol", required=True, help="Symbol (NVDA/SPY/QQQ)")
+    p.add_argument("--logs", default="logs", help="Logs root directory (default: logs)")
+    return p.parse_args()
+
+def _resolve_outpath(logs_root: str, symbol: str) -> str:
+    sym = (symbol or "").strip().lower()
+    root = Path(logs_root)
+    root.mkdir(parents=True, exist_ok=True)
+    return str(root / f"{sym}_gatescore_events.jsonl")
+# PH3_CLI_END
 import json
 import re
 from datetime import datetime, timezone
@@ -74,12 +90,10 @@ def _orb_breakout_signals(bars) -> list[int]:
             next_allowed = hhmm + cooldown_minutes
     return sigs
 def main() -> int:
-    logs = Path("logs")
+    logs = Path(args.logs)
     logs.mkdir(parents=True, exist_ok=True)
-
-    symbol = "NVDA"
-    out_path = logs / "nvda_gatescore_events_real.jsonl"
-
+    # symbol is set by CLI (PH3_CLI_BEGIN)
+    out_path = logs / f"{symbol_lower}_gatescore_events.jsonl"
     days = _list_cached_days(logs, symbol)
     if not days:
         print("[gatescore-replay] no cached bars found")
