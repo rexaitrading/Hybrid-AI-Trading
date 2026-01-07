@@ -63,6 +63,71 @@ function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal)
 
 Set-StrictMode -Version Latest
 
+function Get-LatestIntelRunToday {
+  param(
+    [Parameter(Mandatory=$true)][string]$LogsIntelFeedPath,
+    [Parameter(Mandatory=$true)][string]$Kind,  # intel_news_run | intel_youtube_run
+    [Parameter(Mandatory=$true)][string]$TodayLocal
+  )
+  if(-not (Test-Path -LiteralPath $LogsIntelFeedPath)){ return $null }
+  $lines = Get-Content -LiteralPath $LogsIntelFeedPath -Encoding utf8 -ErrorAction SilentlyContinue
+  if(-not $lines){ return $null }
+  $best = $null
+  foreach($ln in ($lines | Select-Object -Last 5000)){
+    $s = ($ln + "").Trim()
+    if(-not $s){ continue }
+    try {
+      $j = $s | ConvertFrom-Json -ErrorAction Stop
+      if(($j.kind + "") -ne $Kind){ continue }
+      if(($j.as_of_date + "") -ne $TodayLocal){ continue }
+      $best = $j
+    } catch { continue }
+  }
+  return $best
+}
+
+function Resolve-IntelOkToday {
+  param(
+    [Parameter(Mandatory=$true)][string]$RepoRoot,
+    [Parameter(Mandatory=$true)][string]$TodayLocal,
+    [switch]$YouTubeOptional
+  )
+  $logsIntelFeed = Join-Path $RepoRoot "logs\intel_feed.jsonl"
+  $news = Get-LatestIntelRunToday -LogsIntelFeedPath $logsIntelFeed -Kind "intel_news_run" -TodayLocal $TodayLocal
+  $yt   = Get-LatestIntelRunToday -LogsIntelFeedPath $logsIntelFeed -Kind "intel_youtube_run" -TodayLocal $TodayLocal
+
+  # If any full-run pulses exist, they become authoritative
+  $hasFull = ($null -ne $news) -or ($null -ne $yt)
+
+  if($hasFull){
+    $newsOk = $false
+    if($null -ne $news){ $newsOk = [bool]$news.ok }
+
+    $ytOk = $false
+    if($null -ne $yt){ $ytOk = [bool]$yt.ok }
+
+    $ok = $newsOk -and ( $YouTubeOptional.IsPresent -or $ytOk )
+    return [ordered]@{
+      intel_ok_today = [bool]$ok
+      intel_kind = "intel_full_pulses"
+      intel_as_of_date = $TodayLocal
+      intel_source_path = $logsIntelFeed
+      intel_news_ok_today = [bool]$newsOk
+      intel_youtube_ok_today = [bool]$ytOk
+    }
+  }
+
+  # No full pulses found: do not allow minimal pulse to green-light live readiness
+  return [ordered]@{
+    intel_ok_today = $false
+    intel_kind = "intel_minimal_only"
+    intel_as_of_date = $TodayLocal
+    intel_source_path = (Join-Path $RepoRoot "logs\risk_pulse.jsonl")
+    intel_news_ok_today = $false
+    intel_youtube_ok_today = $false
+  }
+}
+
 
 # --- PATCH1: type-safe field setter (hashtable OR pscustomobject) ---
 function Set-ObjField([object]$obj,[string]$name,[object]$value){
