@@ -81,6 +81,11 @@ Step "PH6/PH7 smoke tests" {
   & $py -m pytest -q .\tests\test_phase3_quality_smoke.py .\tests\test_phase3_micro_score_notional.py *>&1 | Out-Host
   if($LASTEXITCODE -ne 0){ throw "PH3 FAIL: quality tests exit=$LASTEXITCODE" }
 }
+# STRICT policy: SPY/QQQ must remain blocked until true paper/live GateScore metrics exist
+Step "STRICT-BLOCKG SPY/QQQ must remain blocked" {
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Strict-BlockG-SpyQqqBlocked.ps1 *>&1 | Out-Host
+  if($LASTEXITCODE -ne 0){ throw "STRICT-BLOCKG FAIL: SPY/QQQ blocked policy violated exit=$LASTEXITCODE" }
+}
 Write-Host "`n[OK] Daily PH1-PH5 Upgrade complete - NVDA Live Ready enforced (fail-closed)" -ForegroundColor Green
 exit 0
 
