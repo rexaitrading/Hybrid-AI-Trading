@@ -69,5 +69,14 @@ Step "PH5 BlockG final NVDA readiness" {
   if($LASTEXITCODE -ne 0){ throw "BLOCKG FAIL-CLOSED: NVDA not ready exit=$LASTEXITCODE" }
 }
 
+# PH6/PH7 — Smoke tests (fail-closed; ensures Intel + Optimizer modules import cleanly)
+Step "PH6/PH7 smoke tests" {
+  if(-not (Test-Path .\tests\test_phase6_smoke.py)){ throw "PH6 FAIL-CLOSED: missing tests/test_phase6_smoke.py" }
+  if(-not (Test-Path .\tests\test_phase7_optimizer_smoke.py)){ throw "PH7 FAIL-CLOSED: missing tests/test_phase7_optimizer_smoke.py" }
+  & $py -m pytest -q .\tests\test_phase6_smoke.py .\tests\test_phase7_optimizer_smoke.py *>&1 | Out-Host
+  if($LASTEXITCODE -ne 0){ throw "PH6/PH7 FAIL: smoke tests exit=$LASTEXITCODE" }
+}
 Write-Host "`n[OK] Daily PH1-PH5 Upgrade complete - NVDA Live Ready enforced (fail-closed)" -ForegroundColor Green
+exit 0
+
 exit 0
