@@ -111,6 +111,24 @@ try {
     # - We do NOT require gatescore_fresh_today or ev_hard_daily_ok_today on a closed day.
     $diagOk = $true
 
+  # INTEL_CHECK_BEGIN
+  try{
+    $intelOk = $false
+    if($bg.PSObject.Properties.Name -contains "intel_ok_today"){ $intelOk = [bool]$bg.intel_ok_today }
+    $symIntelOk = $intelOk
+    if($s -eq "NVDA" -and ($bg.PSObject.Properties.Name -contains "nvda_intel_ok_today")){
+      $symIntelOk = [bool]$bg.nvda_intel_ok_today
+    }
+
+    if(-not $symIntelOk){
+      $diagOk = $false
+      $why += "intel_not_ok_today"
+    }
+  } catch {
+    $diagOk = $false
+    $why += "intel_check_exception"
+  }
+  # INTEL_CHECK_END
     # 1) Core producers
     if (-not ($st.PSObject.Properties.Name -contains "phase4_ok_today") -or (-not [bool]$st.phase4_ok_today)) { $diagOk = $false }
     if (-not ($st.PSObject.Properties.Name -contains "phase23_health_ok_today") -or (-not [bool]$st.phase23_health_ok_today)) { $diagOk = $false }

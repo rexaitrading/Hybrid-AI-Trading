@@ -246,6 +246,61 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
+
+# INTEL_CONTRACT_BEGIN
+function _SliceDate([string]$d){
+  if(-not $d){ return "" }
+  if($d.Length -ge 10){ return $d.Substring(0,10) }
+  return $d
+}
+function _TryParseUtc([string]$s){
+  try { return [datetime]::Parse($s, $null, [System.Globalization.DateTimeStyles]::AssumeUniversal).ToUniversalTime() } catch { return $null }
+}
+
+# Fail-closed intel contract fields (source of truth: logs\risk_pulse.jsonl)
+$intel_ok_today = $false
+$intel_as_of_date = ""
+$intel_age_minutes = 999999
+$intel_kind = ""
+$intel_source_path = (Join-Path $logsDir "risk_pulse.jsonl")
+
+try{
+  if(Test-Path -LiteralPath $intel_source_path){
+    $lines = @(Get-Content -LiteralPath $intel_source_path -Encoding utf8)
+    # scan from bottom for most recent intel_* pulse
+    for($i=$lines.Count-1; $i -ge 0; $i--){
+      $s = ($lines[$i] + "").Trim()
+      if(-not $s){ continue }
+      $j = $null
+      try { $j = $s | ConvertFrom-Json } catch { continue }
+      if($null -eq $j){ continue }
+      $props = $j.PSObject.Properties.Name
+      if($props -contains "kind"){
+        $k = (($j.kind)+"").Trim()
+        if($k -match '^(?i)intel_'){
+          $intel_kind = $k
+          if($props -contains "as_of_date"){ $intel_as_of_date = _SliceDate(([string]$j.as_of_date)) }
+          if($props -contains "ts_utc"){
+            $dt = _TryParseUtc(([string]$j.ts_utc))
+            if($dt){
+              $intel_age_minutes = [int][math]::Floor(((Get-Date).ToUniversalTime() - $dt).TotalMinutes)
+            }
+          }
+          break
+        }
+      }
+    }
+  }
+}catch{ }
+
+# Today-ness + freshness: require as_of_date == today and age <= 180 minutes (tuneable)
+$todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+$intel_ok_today = ($intel_as_of_date -eq $todayLocal -and $intel_age_minutes -le 180)
+
+# Per-symbol field (NVDA only right now)
+$nvda_intel_ok_today = $intel_ok_today
+# INTEL_CONTRACT_END
+
 # GS_METRICS_SOURCE_CAPTURE_BEGIN
 $gatescore_metrics_source = ""
 $gsMsSeenCount = 0
@@ -996,6 +1051,13 @@ $payload = [ordered]@{
     ev_hard_as_of_date = $evSessionAsOf
     ev_hard_session_ok = $evSessionOk
     phase4_ok_today         = $phase4Ok
+    intel_ok_today           = [bool]$intel_ok_today
+    intel_as_of_date          = $intel_as_of_date
+    intel_age_minutes         = [int]$intel_age_minutes
+    intel_kind                = $intel_kind
+    intel_source_path         = $intel_source_path
+    nvda_intel_ok_today        = [bool]$nvda_intel_ok_today
+
 
     gatescore_fresh_today   = (($gsAsOf -ne "") -and ($gsAsOf -eq $today))
 
@@ -1057,8 +1119,7 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_mean_micro_score = $gsMicro
     gatescore_min_edge_ratio   = $minEdge
     gatescore_min_micro_score  = $minMicro
-
-    nvda_blockg_ready = $nvdaReady
+    nvda_blockg_ready = ([bool]$nvdaReady -and [bool]$nvda_intel_ok_today)
     spy_blockg_ready  = $spyReady
     qqq_blockg_ready  = $qqqReady
 
