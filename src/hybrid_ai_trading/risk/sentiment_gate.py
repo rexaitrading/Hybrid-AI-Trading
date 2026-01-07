@@ -11,6 +11,7 @@ from typing import Any, Dict, List
 import yaml
 
 from hybrid_ai_trading.data.news_aggregator import aggregate_news
+from hybrid_ai_trading.intel.intel_news_bridge import aggregate_news_intel
 from hybrid_ai_trading.risk.sentiment_filter import SentimentFilter
 
 
@@ -31,8 +32,10 @@ def score_headlines_for_symbols(
     date_from = (datetime.now(timezone.utc) - timedelta(hours=hours_back)).strftime(
         "%Y-%m-%d"
     )
-    stories = aggregate_news(symbols_csv, limit, date_from)
-
+    # intel-first (fail-closed): read local intel feeds; fallback to provider APIs if empty
+    stories = aggregate_news_intel(symbols_csv, limit, date_from)
+    if not stories:
+        stories = aggregate_news(symbols_csv, limit, date_from)
     filt = SentimentFilter()  # uses YAML defaults + lexicon
     per_symbol: Dict[str, Dict[str, Any]] = {}
     out_stories: List[Dict[str, Any]] = []
