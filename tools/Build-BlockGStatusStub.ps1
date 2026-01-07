@@ -23,6 +23,51 @@ function Resolve-GatescoreEventsPath([string]$sym,[string]$logsDir){
   return $pMain  # deterministic fallback (may not exist)
 }
 Set-StrictMode -Version Latest
+
+
+# --- PATCH1: type-safe field setter (hashtable OR pscustomobject) ---
+function Set-ObjField([object]$obj,[string]$name,[object]$value){
+  if($null -eq $obj){ return }
+  if($obj -is [hashtable] -or $obj -is [System.Collections.IDictionary]){
+    $obj[$name] = $value
+    return
+  }
+  # PSCustomObject / other: Add-Member if missing, else set
+  if($obj.PSObject.Properties.Name -notcontains $name){
+    Add-Member -InputObject $obj -NotePropertyName $name -NotePropertyValue $value -Force
+  } else {
+    $obj.$name = $value
+  }
+}
+# --- END PATCH1 ---
+
+# --- PATCH1: robust GateScore events loader (JSON array OR JSONL), micro field detection ---
+function Get-GSEventsObjects([string]$path){
+  if(-not (Test-Path $path)){ return @() }
+  $raw = Get-Content -LiteralPath $path -Encoding UTF8 -Raw
+  $t = ($raw+"").Trim()
+  if(-not $t){ return @() }
+
+  if($t.StartsWith("[")){
+    try { return @($t | ConvertFrom-Json) } catch { return @() }
+  }
+
+  $out=@()
+  foreach($ln in Get-Content -LiteralPath $path -Encoding UTF8){
+    $s=($ln+"").Trim(); if(-not $s){ continue }
+    try { $out += @($s | ConvertFrom-Json) } catch { }
+  }
+  return $out
+}
+
+function Find-FirstMatchingKey([object]$obj,[string]$regex){
+  foreach($p in $obj.PSObject.Properties.Name){
+    if($p -match $regex){ return $p }
+  }
+  return $null
+}
+# --- END PATCH1 ---
+
 function Read-JsonlLines([string]$Path){
   if(-not (Test-Path -LiteralPath $Path)){ return @() }
   $out=@()
@@ -69,7 +114,17 @@ function ComputeGateScoreRolling([string]$sym,[string]$logsDir,[string[]]$days){
   foreach($e in $sel){
     if($null -ne $e.edge_ratio){ $edge += [double]$e.edge_ratio }
     if($null -ne $e.micro_score){ $micro += [double]$e.micro_score }
-    if($null -ne $e.realized_pnl){ $pnlCount += 1 }
+    # PNL_SAMPLE_COUNT_BEGIN
+try {
+  if($e.PSObject.Properties.Name -contains "realized_pnl" -and $null -ne $e.realized_pnl){
+    $pnlCount += 1
+  } elseif($e.PSObject.Properties.Name -contains "pnl_samples") {
+    $n = 0
+    try { $n = [int]$e.pnl_samples } catch { $n = 0 }
+    if($n -gt 0){ $pnlCount += $n }
+  }
+} catch { }
+# PNL_SAMPLE_COUNT_END
   }
 
   $meanEdge  = if($edge.Count -gt 0){ ($edge | Measure-Object -Average).Average } else { 0.0 }
@@ -138,7 +193,17 @@ function Get-GSFromEvents([string]$sym, [string]$asOf, [string]$todayLocal){
   foreach($e in $sel){
     if($null -ne $e.edge_ratio){ $edge += [double]$e.edge_ratio }
     if($null -ne $e.micro_score){ $micro += [double]$e.micro_score }
-    if($null -ne $e.realized_pnl){ $pnlCount += 1 }
+    # PNL_SAMPLE_COUNT_BEGIN
+try {
+  if($e.PSObject.Properties.Name -contains "realized_pnl" -and $null -ne $e.realized_pnl){
+    $pnlCount += 1
+  } elseif($e.PSObject.Properties.Name -contains "pnl_samples") {
+    $n = 0
+    try { $n = [int]$e.pnl_samples } catch { $n = 0 }
+    if($n -gt 0){ $pnlCount += $n }
+  }
+} catch { }
+# PNL_SAMPLE_COUNT_END
   }
 
   $meanEdge  = if($edge.Count -gt 0){ ($edge | Measure-Object -Average).Average } else { 0.0 }
@@ -583,7 +648,12 @@ function Eval-GS([string]$sym) {
     $okToday   = ($gs.fresh -and $samplesOk -and $threshOk)
     # LIVE-hard thresholds (institutional; independent of gatescore_thresholds.json)
     $samplesOkLive = ($gs.cnt -ge $GS_LIVE_MIN_SIGNALS -and $gs.pnl -ge $GS_LIVE_MIN_PNL_SAMPLES)
-    $threshOkLive  = (($gs.edge + 1e-9) -ge $GS_LIVE_MIN_EDGE_RATIO -and ($gs.micro + 1e-9) -ge $GS_LIVE_MIN_MICRO_SCORE)
+    # LIVE_THRESH_ROUNDING_BEGIN
+    # Institutional: deterministic compares (avoid float-representation luck).
+    $edgeLive  = [math]::Round([double]$gs.edge, 6)
+    $microLive = [math]::Round([double]$gs.micro, 6)
+    $threshOkLive = ($edgeLive -ge [double]$GS_LIVE_MIN_EDGE_RATIO -and $microLive -ge [double]$GS_LIVE_MIN_MICRO_SCORE)
+    # LIVE_THRESH_ROUNDING_END
     $okLiveToday   = ($gs.fresh -and $samplesOkLive -and $threshOkLive)
     return [pscustomobject]@{
         fresh=$gs.fresh; samplesOk=$samplesOk; threshOk=$threshOk; okToday=$okToday; okLiveToday=$okLiveToday; samplesOkLive=$samplesOkLive; threshOkLive=$threshOkLive;
@@ -709,12 +779,16 @@ try {
     $reasons.Add(("gatescore_live_samples_below_min cnt=" + $gsNVDA.cnt + " pnl=" + $gsNVDA.pnl + " min_cnt=" + $GS_LIVE_MIN_SIGNALS + " min_pnl=" + $GS_LIVE_MIN_PNL_SAMPLES)) | Out-Null
   }
   if (-not $gsNVDA.threshOkLive) {
-    if (([double]$gsNVDA.edge + 1e-9) -lt [double]$GS_LIVE_MIN_EDGE_RATIO) {
-      $reasons.Add(("gatescore_live_edge_below_min edge=" + $gsNVDA.edge + " min=" + $GS_LIVE_MIN_EDGE_RATIO)) | Out-Null
+    # LIVE_REASON_ROUNDING_BEGIN
+    $edgeLive6  = [math]::Round([double]$gsNVDA.edge, 6)
+    $microLive6 = [math]::Round([double]$gsNVDA.micro, 6)
+    if ($edgeLive6 -lt [double]$GS_LIVE_MIN_EDGE_RATIO) {
+      $reasons.Add(("gatescore_live_edge_below_min edge=" + $edgeLive6 + " min=" + $GS_LIVE_MIN_EDGE_RATIO)) | Out-Null
     }
-    if (([double]$gsNVDA.micro + 1e-9) -lt [double]$GS_LIVE_MIN_MICRO_SCORE) {
-      $reasons.Add(("gatescore_live_micro_below_min micro=" + $gsNVDA.micro + " min=" + $GS_LIVE_MIN_MICRO_SCORE)) | Out-Null
+    if ($microLive6 -lt [double]$GS_LIVE_MIN_MICRO_SCORE) {
+      $reasons.Add(("gatescore_live_micro_below_min micro=" + $microLive6 + " min=" + $GS_LIVE_MIN_MICRO_SCORE)) | Out-Null
     }
+    # LIVE_REASON_ROUNDING_END
   }
 } catch { }
 # LIVE_HARD_REASONS_END
@@ -772,6 +846,24 @@ if ($marketClosedToday) {
   $qqqReady  = $false
 }
 # MARKET_CLOSED_FORCE_SYMBOL_READY_FINAL_END
+# REASONS_SANITIZE_BEGIN
+# Contract integrity: reasons_not_ready must never contradict final readiness flags.
+try {
+  $tmp = New-Object System.Collections.Generic.List[string]
+  foreach($r in @($reasons)){
+    $s = ($r + "")
+    if(-not $s){ continue }
+
+    # Drop false negatives after final recompute
+    if($nvdaReady -and $s -eq "nvda_blockg_ready=false"){ continue }
+    if($spyReady  -and $s -eq "spy_blockg_ready=false"){  continue }
+    if($qqqReady  -and $s -eq "qqq_blockg_ready=false"){  continue }
+
+    $tmp.Add($s) | Out-Null
+  }
+  $reasons = $tmp
+} catch { }
+# REASONS_SANITIZE_END
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
@@ -843,6 +935,10 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_pnl_samples_rolling      = $gatescore_pnl_samples_rolling
     gatescore_mean_edge_ratio_rolling  = $gatescore_mean_edge_ratio_rolling
     gatescore_mean_micro_score_rolling = $gatescore_mean_micro_score_rolling
+    gatescore_mean_edge_ratio_rolling_rounded6  = [math]::Round([double]$gatescore_mean_edge_ratio_rolling,6)
+    gatescore_mean_micro_score_rolling_rounded6 = [math]::Round([double]$gatescore_mean_micro_score_rolling,6)
+    gatescore_min_edge_ratio_live_rounded6      = [math]::Round([double]$GS_LIVE_MIN_EDGE_RATIO,6)
+    gatescore_min_micro_score_live_rounded6     = [math]::Round([double]$GS_LIVE_MIN_MICRO_SCORE,6)
     gatescore_min_pnl_samples = $minPnl
 
     gatescore_mean_edge_ratio  = $gsEdge
@@ -856,6 +952,52 @@ gatescore_samples_ok    = $gsSamplesOk
 
     reasons_not_ready = @($reasons)
 }
+# --- PATCH1: micro diagnostics persisted into payload (guaranteed) ---
+try {
+  $evPath = ($payload["gatescore_metrics_source_debug_path"] + "")
+  $ev = Get-GSEventsObjects $evPath
+  if($ev -and $ev.Count -gt 0){
+    $microSrcKey   = Find-FirstMatchingKey $ev[0] '(?i)micro.*(source|src)'
+    $microScoreKey = Find-FirstMatchingKey $ev[0] '(?i)^micro_score$|(?i)micro.*score'
+
+    $payload["micro_source_field_detected"] = ($microSrcKey + "")
+    $payload["micro_score_field_detected"]  = ($microScoreKey + "")
+
+    $top=@{}
+    if($microSrcKey){
+      foreach($e in $ev){
+        $v=""
+        try { $v = ($e.$microSrcKey + "") } catch { $v="" }
+        if(-not $v){ $v="(missing)" }
+        if(-not $top.ContainsKey($v)){ $top[$v]=0 }
+        $top[$v]++
+      }
+    }
+
+    if($top.Count -gt 0){
+      $payload["micro_score_source_top"] = @(
+        $top.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 5 |
+          ForEach-Object { "{0}:{1}" -f $_.Name,$_.Value }
+      )
+      $derived = @($top.Keys | Where-Object { $_ -match '^(?i)derived_' })
+      $payload["micro_score_source_disallowed_for_live_detected"] = [bool]($derived.Count -gt 0)
+    } else {
+      $payload["micro_score_source_top"] = @()
+      $payload["micro_score_source_disallowed_for_live_detected"] = $true
+    }
+  } else {
+    $payload["micro_source_field_detected"] = ""
+    $payload["micro_score_field_detected"]  = ""
+    $payload["micro_score_source_top"] = @()
+    $payload["micro_score_source_disallowed_for_live_detected"] = $true
+  }
+} catch {
+  $payload["micro_source_field_detected"] = ""
+  $payload["micro_score_field_detected"]  = ""
+  $payload["micro_score_source_top"] = @()
+  $payload["micro_score_source_disallowed_for_live_detected"] = $true
+}
+# --- END PATCH1 ---
 
 $payloadJson = $payload | ConvertTo-Json -Depth 6
 Write-Host "[BLOCK-G] Writing Block-G status stub to $statusPath" -ForegroundColor Cyan

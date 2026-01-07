@@ -59,5 +59,19 @@ try {
   $line | Out-File -LiteralPath $intelFeedLog -Encoding utf8 -Append
 } catch { }
 Write-Host "[INTEL-MIN] mirrored $pulse -> $pulseLog and appended -> $intelFeedLog" -ForegroundColor Green
+# LOGS_INTEL_MIRROR_BEGIN
+# Institutional: logs\.intel is the audit surface for Phase-6 (must be populated each run).
+try {
+  $logsIntel = Join-Path $repoRoot "logs\.intel"
+  New-Item -ItemType Directory -Force -Path $logsIntel | Out-Null
 
+  # Mirror from the known-good log outputs (already written by this script)
+  if(Test-Path -LiteralPath $pulseLog){
+    Copy-Item -LiteralPath $pulseLog -Destination (Join-Path $logsIntel "risk_pulse.jsonl") -Force
+  }
+  if(Test-Path -LiteralPath $intelFeedLog){
+    Copy-Item -LiteralPath $intelFeedLog -Destination (Join-Path $logsIntel "intel_feed.jsonl") -Force
+  }
+} catch { }
+# LOGS_INTEL_MIRROR_END
 exit 0

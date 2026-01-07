@@ -14,7 +14,7 @@ $tsUtc  = (Get-Date).ToUniversalTime().ToString("o")
 
 $logDir = Join-Path $root "logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-$outJson = Join-Path $logDir "phase4_validation_passed.json"
+$outJson = Join-Path $logDir "phase4_stamp_last.json"
 
 $py = Join-Path $root ".venv\Scripts\python.exe"
 $env:PYTHONNOUSERSITE="1"
