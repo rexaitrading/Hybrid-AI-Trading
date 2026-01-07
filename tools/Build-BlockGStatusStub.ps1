@@ -415,7 +415,9 @@ $statusPath = Join-Path $logsDir "blockg_status_stub.json"
 $GS_MIN_EVENTS_REQUIRED = 25
 
 function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
-  $p = Join-Path $RepoRoot ("logs\{0}_gatescore_events.jsonl" -f $Sym.ToLower())
+  $logsDir = Join-Path $RepoRoot "logs"
+  $p = Resolve-GatescoreEventsPath $Sym $logsDir
+
   $rows = 0; $fresh = $false; $ts = ""
   if(Test-Path -LiteralPath $p){
     try { $rows = @(Get-Content -LiteralPath $p -Encoding utf8).Count } catch { $rows = 0 }
@@ -597,13 +599,36 @@ $gsPath = $pnlPath  # source-of-truth: gatescore_pnl_summary.csv (fallback daily
 $gsRows = @()
 if (Test-Path $gsPath) { $gsRows = @(Import-Csv $gsPath) }
 
+function Get-GSAsOfFromEvents([string]$sym, [string]$logsDir){
+  $p = Resolve-GatescoreEventsPath $sym $logsDir
+  if(-not (Test-Path -LiteralPath $p)){ return "" }
+
+  $max = ""
+  foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)){
+    $s = ($ln + "").Trim(); if(-not $s){ continue }
+    try {
+      $o = $s | ConvertFrom-Json
+      $d = ""
+      if($o.PSObject.Properties.Name -contains "as_of_date"){ $d = Slice-Date ([string]$o.as_of_date) }
+      if($d){
+        if((-not $max) -or ($d -gt $max)){ $max = $d }
+      }
+    } catch { }
+  }
+  return ($max + "")
+}
 function Get-GSFor([string]$sym) {
-    # Use the selected events source as truth (paper vs replay) for the computed gsAsOf.
-    $gs0 = Get-GSFromEvents $sym $gsAsOf $todayLocal
+    # Per-symbol GateScore session date (do not reuse NVDA global $gsAsOf)
+    if(-not $script:todayLocal){ try { $script:todayLocal = $today } catch { $script:todayLocal = (Get-Date).ToString("yyyy-MM-dd") } }
+
+    $asOfSym = Get-GSAsOfFromEvents $sym $logsDir
+    if(-not $asOfSym){
+      return [pscustomobject]@{ fresh=$false; cnt=0; pnl=0; edge=0.0; micro=0.0 }
+    }
+
+    $gs0 = Get-GSFromEvents $sym $asOfSym $todayLocal
     return [pscustomobject]@{ fresh=$gs0.fresh; cnt=$gs0.cnt; pnl=$gs0.pnl; edge=$gs0.edge; micro=$gs0.micro }
 }
-
-
 # --- Institutional LIVE GateScore hard minima (separate from diagnostic thresholds.json) ---
 $GS_LIVE_MIN_SIGNALS = 100
 $GS_LIVE_MIN_PNL_SAMPLES = 300
