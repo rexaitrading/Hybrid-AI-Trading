@@ -61,6 +61,18 @@ def load_blockg_status(path: Optional[str] = None) -> BlockGStatus:
         raise BlockGNotReady(f"Block-G status missing at: {p}")
     return BlockGStatus.from_dict(d)
 
+# ---------------------------------------------------------------------------
+# Backward-compatible API for older Phase-6 readiness snapshots
+# ---------------------------------------------------------------------------
+def read_blockg_status(path: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Legacy helper expected by some Phase-6 modules:
+    returns raw dict form of Block-G contract status.
+    """
+    st = load_blockg_status(path)
+    # dataclass -> dict without importing asdict to keep deps minimal
+    return st.__dict__.copy()
+
 
 def symbol_ready(st: BlockGStatus, symbol: str) -> bool:
     s = (symbol or "").upper().strip()
