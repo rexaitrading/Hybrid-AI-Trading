@@ -16,6 +16,10 @@ $pythonExe      = ".\.venv\Scripts\python.exe"
 
 $stampPath = Join-Path $repoRoot "logs\phase4_validation_passed.json"
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$phase4TmpRoot = "C:\Trading\_pytest_tmp"
+New-Item -ItemType Directory -Force -Path $phase4TmpRoot | Out-Null
+$runTag = (Get-Date).ToString("yyyyMMdd_HHmmss")
+
 
 function Write-Phase4Stamp {
   param(
@@ -41,7 +45,8 @@ function Invoke-Phase4PyTest {
     [Parameter(Mandatory)][string]$Label
   )
   Write-Host "`n[PHASE4] $Label" -ForegroundColor Yellow
-  & $pythonExe -m pytest @Args
+  $baseTemp = Join-Path $phase4TmpRoot ("{0}_{1}" -f ($Label -replace '[^\w\-]+','_'), $runTag)
+  & $pythonExe -m pytest @Args --basetemp $baseTemp
   $code = $LASTEXITCODE
   if ($code -ne 0) { throw "pytest_failed:$Label:exit=$code" }
 }
