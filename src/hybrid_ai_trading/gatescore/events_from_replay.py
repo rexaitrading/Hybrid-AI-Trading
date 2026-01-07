@@ -23,6 +23,15 @@ from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Dict, List
 
+# --- PH3_QUALITY_GATES_BEGIN ---
+# GateScore quality gates (prevent toxic "eligible" events from polluting PH3).
+# NVDA unchanged; SPY/QQQ require non-negative edge and micro_score > 0.
+_QUALITY = {
+    "NVDA": {"min_edge_ratio": -1e9, "min_micro_score": -1e9},
+    "SPY":  {"min_edge_ratio": 0.0,  "min_micro_score": 1e-9},
+    "QQQ":  {"min_edge_ratio": 0.0,  "min_micro_score": 1e-9},
+}
+# --- PH3_QUALITY_GATES_END ---
 from hybrid_ai_trading.replay.edge_model_v0 import read_bars_csv, gen_bplus_signals
 from hybrid_ai_trading.replay.edge_model_v2 import score_signals_v2, _rth_mask, _parse_ts
 _BAR_RE = re.compile(r"^(?P<sym>[A-Z]+)_(?P<day>\d{4}-\d{2}-\d{2})_1m\.csv$")
@@ -168,6 +177,49 @@ def main() -> int:
         sigs = _orb_breakout_signals(bars)
         sigs = [i for i in sigs if (0 <= i < len(rth) and rth[i])]
         scored = score_signals_v2(bars, sigs)
+        # --- PH3_QUALITY_FILTER_APPLIED ---
+        q = _QUALITY.get(symbol, {"min_edge_ratio": 0.0, "min_micro_score": 0.0})
+        min_edge = float(q.get("min_edge_ratio", 0.0) or 0.0)
+        min_micro = float(q.get("min_micro_score", 0.0) or 0.0)
+
+        kept = []
+        for ev in scored:
+            try:
+                er = float(ev.get("edge_ratio", 0.0) or 0.0)
+                ms = float(ev.get("micro_score", 0.0) or 0.0)
+            except Exception:
+                er = 0.0
+                ms = 0.0
+            if (er >= min_edge) and (ms >= min_micro):
+                kept.append(ev)
+
+        # If we had scored events but all failed quality, write a sentinel (fail-closed, never silent)
+        if len(scored) > 0 and len(kept) == 0:
+            row: Dict = {
+                "ts_utc": ts_utc,
+                "as_of_date": day,
+                "symbol": symbol,
+                "source": "BARS_EDGE_V0",
+                "eligible": False,
+                "edge_source": "edge_model_v2",
+                "micro_score_source": "edge_model_v2",
+                "realized_pnl": 0.0,
+                "edge_ratio": 0.0,
+                "micro_score": 0.0,
+                "pnl_samples": 0,
+                "count_signals": 0,
+                "signals_total": int(len(sigs)),
+                "rth_minutes": int(sum(1 for x in rth if x)),
+                "notes": "filtered_by_quality",
+                "min_edge_ratio": min_edge,
+                "min_micro_score": min_micro,
+                "filtered_out": int(len(scored)),
+            }
+            out_lines.append(json.dumps(row, ensure_ascii=False))
+            continue
+
+        scored = kept
+        # --- PH3_QUALITY_FILTER_APPLIED_END ---
         # Sentinel row: day exists, signals existed, but 0 eligible events were produced.
         # This preserves truth for freshness/today-ness without inflating samples or edge.
         if len(scored) == 0:
