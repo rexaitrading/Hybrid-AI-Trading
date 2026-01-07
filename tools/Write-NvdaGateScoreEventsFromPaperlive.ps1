@@ -21,6 +21,11 @@ function Pick-LatestPaperlive([string]$dir) {
     $p1 = $all | Where-Object { $_.Name -match '(?i)^nvda_phase5_paperlive_results\.jsonl$' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if($p1){ return $p1.FullName }
 
+    # 1b) phase5 paperlive results TODAY (daily producer)
+    $p1b = $all | Where-Object { $_.Name -match '(?i)^nvda_phase5_paperlive_results_today\.jsonl$' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if($p1b){ return $p1b.FullName }
+
+
     # 2) phase5 paperexec results
     $p2 = $all | Where-Object { $_.Name -match '(?i)^nvda_phase5_paperexec_results\.jsonl$' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if($p2){ return $p2.FullName }
