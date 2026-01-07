@@ -10,34 +10,34 @@ $root = (Resolve-Path ".").Path
 Set-Location $root
 
 Write-Host "[OPS] 1) Merge tick files -> stream" -ForegroundColor Cyan
-& powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Merge-NvdaPaperTicks.ps1 *>&1 | Out-Host
+& .\tools\Merge-NvdaPaperTicks.ps1 *>&1 | Out-Host
 if($LASTEXITCODE -ne 0){ throw "[OPS] merge failed rc=$LASTEXITCODE" }
 
 Write-Host "[OPS] 2) Rebuild NVDA GateScore events from stream" -ForegroundColor Cyan
 $stream = ".\logs\nvda_paperlive_stream_today.jsonl"
 if(-not (Test-Path $stream)){ throw "[OPS] missing stream: $stream" }
-& powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Write-NvdaGateScoreEventsFromPaperlive.ps1 -InputPath $stream -Mode rewrite -MinEvents $MinEvents *>&1 | Out-Host
+& .\tools\Write-NvdaGateScoreEventsFromPaperlive.ps1 -InputPath $stream -Mode rewrite -MinEvents $MinEvents *>&1 | Out-Host
 if($LASTEXITCODE -ne 0){ throw "[OPS] gatescore events failed rc=$LASTEXITCODE" }
 
 Write-Host "[OPS] 3) Summaries" -ForegroundColor Cyan
-& powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-GateScorePnlSummary.ps1 *>&1 | Out-Host
+& .\tools\Build-GateScorePnlSummary.ps1 *>&1 | Out-Host
 if($LASTEXITCODE -ne 0){ throw "[OPS] pnl summary failed rc=$LASTEXITCODE" }
-& powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-GateScoreDailySummary.ps1 *>&1 | Out-Host
+& .\tools\Build-GateScoreDailySummary.ps1 *>&1 | Out-Host
 if($LASTEXITCODE -ne 0){ throw "[OPS] daily summary failed rc=$LASTEXITCODE" }
 
 Write-Host "[OPS] 4) EV-hard snapshot" -ForegroundColor Cyan
-& powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-EvHardEvidenceRaw.ps1 *>&1 | Out-Host
+& .\tools\Build-EvHardEvidenceRaw.ps1 *>&1 | Out-Host
 if($LASTEXITCODE -ne 0){ throw "[OPS] evhard evidence failed rc=$LASTEXITCODE" }
-& powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-EvHardSnapshot.ps1 *>&1 | Out-Host
+& .\tools\Build-EvHardSnapshot.ps1 *>&1 | Out-Host
 if($LASTEXITCODE -ne 0){ throw "[OPS] evhard snapshot failed rc=$LASTEXITCODE" }
-& powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Write-EvHardVetoSnapshot.ps1 *>&1 | Out-Host
+& .\tools\Write-EvHardVetoSnapshot.ps1 *>&1 | Out-Host
 if($LASTEXITCODE -ne 0){ throw "[OPS] evhard veto snapshot failed rc=$LASTEXITCODE" }
-& powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-EvHardVetoDaily.ps1 *>&1 | Out-Host
+& .\tools\Run-EvHardVetoDaily.ps1 *>&1 | Out-Host
 if($LASTEXITCODE -ne 0){ throw "[OPS] evhard daily failed rc=$LASTEXITCODE" }
 
 Write-Host "[OPS] 5) BlockG rebuild + check (NVDA)" -ForegroundColor Cyan
-& powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-BlockGStatusStub.ps1 -Symbol NVDA *>&1 | Out-Host
-& powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Check-BlockGReady.ps1 -Symbol NVDA *>&1 | Out-Host
+& .\tools\Build-BlockGStatusStub.ps1 -Symbol NVDA *>&1 | Out-Host
+& .\tools\Check-BlockGReady.ps1 -Symbol NVDA *>&1 | Out-Host
 if($LASTEXITCODE -ne 0){ throw "[OPS] BlockG not ready rc=$LASTEXITCODE" }
 
 Write-Host "[OPS] OK: NVDA paper ops green" -ForegroundColor Green
