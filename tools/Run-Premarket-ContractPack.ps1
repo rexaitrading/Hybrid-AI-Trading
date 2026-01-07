@@ -10,6 +10,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
 
+# UTF-8 hardening for OneDrive non-ASCII paths (prevents cp1252 UnicodeEncodeError)
+$env:PYTHONUTF8 = "1"
+$env:PYTHONIOENCODING = "utf-8"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
