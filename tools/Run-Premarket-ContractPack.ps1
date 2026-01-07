@@ -67,6 +67,16 @@ Step "PH3 GateScore PnL summary" {
   }
 }
 
+
+# 4b) GateScore daily summary (EV-hard evidence reads this)
+Step "PH3 GateScore daily summary" {
+  if(Test-Path .\tools\Build-GateScoreDailySummary.ps1){
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-GateScoreDailySummary.ps1 *>&1 | Out-Host
+    "EXIT_GS_DAILY=$LASTEXITCODE" | Out-Host
+  } else {
+    throw "Missing tools\Build-GateScoreDailySummary.ps1"
+  }
+}
 # 5) BlockG build + check (PS is semantic owner)
 Step "PH5 BlockG build+check" {
   powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-BlockGStatusStub.ps1 -Symbol $Symbol *>&1 | Out-Host
