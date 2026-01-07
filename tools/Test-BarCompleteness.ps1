@@ -2,13 +2,21 @@
 param(
   [ValidateSet("NVDA","SPY","QQQ")]
   [string]$Symbol = "NVDA",
-  [Parameter(Mandatory=$true)]
-  [string]$BarsPath,
+  [string]$BarsPath = "",
   [ValidateSet("AUTO","RTH","ALL")]
   [string]$Window = "AUTO"
 )
 
 Set-StrictMode -Version Latest
+# NONINTERACTIVE_BARSROOT_BEGIN
+try {
+  if (-not $BarsPath -or ($BarsPath + "").Trim().Length -eq 0) {
+    $envp = ($env:HAT_BARS_ROOT + "").Trim()
+    if ($envp) { $BarsPath = $envp }
+    else { $BarsPath = (Join-Path (Split-Path -Parent $PSScriptRoot) "logs\bars") }
+  }
+} catch { }
+# NONINTERACTIVE_BARSROOT_END
 $ErrorActionPreference = "Stop"
 
 function Fail([string]$Msg){
@@ -16,6 +24,50 @@ function Fail([string]$Msg){
   exit 2
 }
 
+# PH1_AUTO_BARSROOT_BEGIN
+function Resolve-BarsPath([string]$Symbol,[string]$BarsPath){
+  $sym = ($Symbol + "").ToUpperInvariant().Trim()
+  $bp = ($BarsPath + "").Trim()
+
+  # A) explicit path wins
+  if($bp){
+    if(Test-Path -LiteralPath $bp){ return $bp }
+    Fail ("Missing BarsPath: " + $bp)
+  }
+
+  # B) env override (may be a directory or a file)
+  $envp = ($env:HAT_BARS_ROOT + "").Trim()
+  if($envp){
+    if(Test-Path -LiteralPath $envp){
+      $it = Get-Item -LiteralPath $envp
+      if($it.PSIsContainer){
+        # prefer today's file then newest
+        $today = (Get-Date).ToString("yyyy-MM-dd")
+        $cand = Join-Path $envp ("{0}_{1}_1m.csv" -f $sym,$today)
+        if(Test-Path -LiteralPath $cand){ return $cand }
+        $latest = Get-ChildItem -LiteralPath $envp -File -Filter ("{0}_*_1m.csv" -f $sym) -ErrorAction SilentlyContinue |
+          Sort-Object Name | Select-Object -Last 1
+        if($latest){ return $latest.FullName }
+      } else {
+        return $it.FullName
+      }
+    }
+  }
+
+  # C) canonical repo location logs\bars
+  $barsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "logs\bars"
+  $today2 = (Get-Date).ToString("yyyy-MM-dd")
+  $cand2 = Join-Path $barsDir ("{0}_{1}_1m.csv" -f $sym,$today2)
+  if(Test-Path -LiteralPath $cand2){ return $cand2 }
+
+  $latest2 = Get-ChildItem -LiteralPath $barsDir -File -Filter ("{0}_*_1m.csv" -f $sym) -ErrorAction SilentlyContinue |
+    Sort-Object Name | Select-Object -Last 1
+  if($latest2){ return $latest2.FullName }
+
+  Fail ("Could not resolve bars file for symbol=" + $sym + " (set -BarsPath or env:HAT_BARS_ROOT)")
+}
+$BarsPath = Resolve-BarsPath -Symbol $Symbol -BarsPath $BarsPath
+# PH1_AUTO_BARSROOT_END
 if(-not (Test-Path -LiteralPath $BarsPath)){ Fail "Missing BarsPath: $BarsPath" }
 
 # --- Load CSV (minimal dependency) ---
