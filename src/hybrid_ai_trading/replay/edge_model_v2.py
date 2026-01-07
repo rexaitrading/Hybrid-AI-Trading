@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# --- TZ_IMPORT_GUARD_BEGIN ---
+try:
+    from zoneinfo import ZoneInfo  # Python 3.9+
+except Exception as _e:
+    ZoneInfo = None  # type: ignore
+    raise RuntimeError(f"FAIL-CLOSED: ZoneInfo import failed: {_e}")
+# --- TZ_IMPORT_GUARD_END ---
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
