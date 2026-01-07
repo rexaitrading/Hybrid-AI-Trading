@@ -12,24 +12,19 @@ def _parse_ts(ts: str) -> Optional[datetime]:
     ts = (ts or "").strip()
     if not ts:
         return None
-
-    # IB format observed in logs/bars: "YYYYMMDD  HH:MM:SS" (two spaces)
-    # Treat as UTC, then convert to America/New_York for RTH classification.
     try:
+        # IB format: "YYYYMMDD  HH:MM:SS" (two spaces) -> treat as UTC
         s = ts.replace("T", " ").replace("Z", "").strip()
         while "  " in s:
             s = s.replace("  ", " ")
-        # "YYYYMMDD HH:MM:SS"
         if len(s) >= 17 and s[8] == " " and s[11] == ":":
             dt = datetime.strptime(s[:17], "%Y%m%d %H:%M:%S")
             return dt.replace(tzinfo=timezone.utc)
-        # ISO fallback (may include offset)
+        # ISO fallback
         dt2 = datetime.fromisoformat(s)
         return dt2 if dt2.tzinfo else dt2.replace(tzinfo=timezone.utc)
     except Exception:
         return None
-
-
 def _rth_mask(bars: List[Bar]) -> List[bool]:
     # RTH: 09:30–16:00 local exchange time (IB timestamps are typically exchange-local)
     out: List[bool] = []
@@ -38,7 +33,8 @@ def _rth_mask(bars: List[Bar]) -> List[bool]:
         if dt is None:
             out.append(False)
             continue
-        hhmm = dt.hour * 60 + dt.minute
+        dt_ny = dt.astimezone(ZoneInfo("America/New_York"))
+        hhmm = dt_ny.hour * 60 + dt_ny.minute
         out.append(hhmm >= (9 * 60 + 30) and hhmm <= (16 * 60))
     return out
 
