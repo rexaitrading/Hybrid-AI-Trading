@@ -11,9 +11,6 @@ Set-StrictMode -Version Latest
 # NONINTERACTIVE_BARSROOT_BEGIN
 try {
   if (-not $BarsPath -or ($BarsPath + "").Trim().Length -eq 0) {
-    $envp = ($env:HAT_BARS_ROOT + "").Trim()
-    if ($envp) { $BarsPath = $envp }
-    else { $BarsPath = (Join-Path (Split-Path -Parent $PSScriptRoot) "logs\bars") }
   }
 } catch { }
 # NONINTERACTIVE_BARSROOT_END
