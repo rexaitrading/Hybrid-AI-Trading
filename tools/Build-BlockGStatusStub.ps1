@@ -22,6 +22,45 @@ function Resolve-GatescoreEventsPath([string]$sym,[string]$logsDir){
 
   return $pMain  # deterministic fallback (may not exist)
 }
+# GS_METRICS_SOURCE_BY_SYMBOL_BEGIN
+# Audit: capture metrics_source per symbol from RESOLVED events file (today-only).
+function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal){
+  $p = Resolve-GatescoreEventsPath $sym $logsDir
+  $seen = @{}
+  $exists = [bool](Test-Path -LiteralPath $p)
+
+  if($exists){
+    foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)){
+      $s = ($ln + "").Trim(); if(-not $s){ continue }
+      try {
+        $o = $s | ConvertFrom-Json
+        $d = ""
+        if($o.PSObject.Properties.Name -contains "as_of_date"){
+          $d = ([string]$o.as_of_date)
+          if($d.Length -ge 10){ $d = $d.Substring(0,10) }
+        }
+        if($d -ne $todayLocal){ continue }
+
+        $ms = ""
+        if($o.PSObject.Properties.Name -contains "metrics_source"){
+          $ms = ([string]$o.metrics_source).Trim()
+        }
+        if(-not $ms){ $ms = "(missing)" }
+
+        if(-not $seen.ContainsKey($ms)){ $seen[$ms]=0 }
+        $seen[$ms] += 1
+      } catch { }
+    }
+  }
+
+  $top = ""
+  if($seen.Count -gt 0){
+    $top = ($seen.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1).Name
+  }
+  return [pscustomobject]@{ path=$p; exists=$exists; seen_count=[int]$seen.Count; top=$top }
+}
+# GS_METRICS_SOURCE_BY_SYMBOL_END
+
 Set-StrictMode -Version Latest
 
 
@@ -418,17 +457,51 @@ function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
   $logsDir = Join-Path $RepoRoot "logs"
   $p = Resolve-GatescoreEventsPath $Sym $logsDir
 
-  $rows = 0; $fresh = $false; $ts = ""
+  $rowsTotal = 0
+  $eligibleToday = 0
+  $fresh = $false
+  $ts = ""
+
   if(Test-Path -LiteralPath $p){
-    try { $rows = @(Get-Content -LiteralPath $p -Encoding utf8).Count } catch { $rows = 0 }
+    try { $rowsTotal = @(Get-Content -LiteralPath $p -Encoding utf8).Count } catch { $rowsTotal = 0 }
+
     try {
       $it = Get-Item -LiteralPath $p
       $ts = $it.LastWriteTime.ToString("yyyy-MM-dd")
       $fresh = ($ts -eq $Today)
     } catch { $fresh = $false; $ts = "" }
+
+    # Quality: count eligible rows for TODAY (prevents toxic files from reporting ok)
+    try {
+      foreach($ln in (Get-Content -LiteralPath $p -Encoding utf8)){
+        $s = ($ln + "").Trim(); if(-not $s){ continue }
+        try {
+          $o = $s | ConvertFrom-Json
+          $d = ""
+          if($o.PSObject.Properties.Name -contains "as_of_date"){
+            $d = [string]$o.as_of_date
+            if($d.Length -ge 10){ $d = $d.Substring(0,10) }
+          }
+          if($d -ne $Today){ continue }
+
+          # Eligible semantics: if field missing -> treat as eligible (legacy)
+          $ok = $true
+          if($o.PSObject.Properties.Name -contains "eligible"){ $ok = [bool]$o.eligible }
+          if($ok){ $eligibleToday += 1 }
+        } catch { }
+      }
+    } catch { $eligibleToday = 0 }
   }
-  $ok = ($fresh -and $rows -ge $GS_MIN_EVENTS_REQUIRED)
-  return [pscustomobject]@{ path=$p; rows=$rows; fresh=$fresh; ts=$ts; ok=$ok }
+
+  $okMeta = ($fresh -and ($eligibleToday -ge $GS_MIN_EVENTS_REQUIRED))
+  return [pscustomobject]@{
+    path=$p
+    rows_total=[int]$rowsTotal
+    eligible_rows_today=[int]$eligibleToday
+    fresh=[bool]$fresh
+    ts=$ts
+    ok=[bool]$okMeta
+  }
 }
 function To-Bool([object]$v) {
     if ($null -eq $v) { return $false }
@@ -880,6 +953,13 @@ $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
     gatescore_metrics_source = $gatescore_metrics_source
+
+    # Audit: per-symbol metrics_source (do NOT use for gating in strict Option-B)
+    gatescore_metrics_source_by_symbol = [ordered]@{
+      NVDA = (Get-MetricsSourceTop "NVDA" $logsDir $todayLocal).top
+      SPY  = (Get-MetricsSourceTop "SPY"  $logsDir $todayLocal).top
+      QQQ  = (Get-MetricsSourceTop "QQQ"  $logsDir $todayLocal).top
+    }
     gatescore_metrics_source_debug_seen_count = $gsMsSeenCount
     gatescore_metrics_source_debug_top        = $gsMsTop
     gatescore_metrics_source_debug_today      = $gsMsToday
