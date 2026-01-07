@@ -49,14 +49,8 @@ Step "PH23 daily health" {
 
 # 2) Phase4 validation stamp
 Step "PH4 validation" {
-  if(Test-Path .\tools\Run-Phase4Validation.ps1){
-    powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-Phase4Validation.ps1 *>&1 | Out-Host
-    "EXIT_PH4=$LASTEXITCODE" | Out-Host
-  } else {
-    throw "Missing tools\Run-Phase4Validation.ps1"
-  }
+  Invoke-ToolStrictExitcode "PH4" ".\tools\Run-Phase4Validation.ps1"
 }
-
 # 3) EV-hard snapshot chain
 Step "PH5 EV-hard snapshot" {
   foreach($p in @(".\tools\Build-EvHardEvidenceRaw.ps1",".\tools\Build-EvHardSnapshot.ps1",".\tools\Write-EvHardVetoSnapshot.ps1",".\tools\Run-EvHardVetoDaily.ps1")){
