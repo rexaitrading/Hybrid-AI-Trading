@@ -138,36 +138,6 @@ try {
   }
 }
 
-function Read-JsonlLines([string]$Path){
-  if(-not (Test-Path -LiteralPath $Path)){ return @() }
-  $out=@()
-  foreach($ln in (Get-Content -LiteralPath $Path -Encoding UTF8)){
-    $s=$ln.Trim(); if(-not $s){ continue }
-    try { $out += ($s | ConvertFrom-Json) } catch { }
-  }
-  return @($out)
-}
-
-function SliceDate([string]$d){
-  if(-not $d){ return "" }
-  if($d.Length -ge 10){ return $d.Substring(0,10) }
-  return $d
-}
-
-function IsTradingDay([datetime]$dt){
-  $dow = [int]$dt.DayOfWeek
-  return ($dow -ne 0 -and $dow -ne 6) # Mon-Fri
-}
-
-function LastNTradingDays([string]$asOf,[int]$n){
-  $d = [datetime]::ParseExact($asOf,"yyyy-MM-dd",$null)
-  $days=@()
-  while($days.Count -lt $n){
-    if(IsTradingDay $d){ $days += $d.ToString("yyyy-MM-dd") }
-    $d = $d.AddDays(-1)
-  }
-  return $days
-}
 function Get-GSFromEvents([string]$sym, [string]$asOf, [string]$todayLocal){
   # Compute GateScore metrics for a single as_of_date from resolved events source.
   $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
@@ -864,6 +834,23 @@ try {
   $reasons = $tmp
 } catch { }
 # REASONS_SANITIZE_END
+# STRICT_OPTION_B_VETO_BEGIN
+# Option B (strict): SPY/QQQ must remain blocked until GateScore metrics source is true paper/live for them.
+# This is defense-in-depth; your daily runner also enforces this.
+try {
+  $ms = ([string]$gatescore_metrics_source).Trim()
+  $allow = ($ms -eq "paperlive_real_v1")
+  if(-not $allow){
+    $spyReady = $false
+    $qqqReady = $false
+    $reasons.Add("strict_option_b_blocks_spy_qqq=true") | Out-Null
+  }
+} catch {
+  $spyReady = $false
+  $qqqReady = $false
+  try { $reasons.Add("strict_option_b_blocks_spy_qqq=true") | Out-Null } catch { }
+}
+# STRICT_OPTION_B_VETO_END
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
