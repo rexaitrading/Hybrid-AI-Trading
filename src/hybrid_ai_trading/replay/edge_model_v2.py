@@ -180,8 +180,10 @@ def score_signals_v2(
         net = gross - (slip * shares) - fees
 
         edge_ratio = net / max(1e-9, risk_unit_usd)
-        micro_cost = ((slip * shares) + fees) / max(1e-9, risk_unit_usd)
-        micro_score = max(0.0, min(1.0, 1.0 - micro_cost))
+        notional = max(1e-9, entry * float(shares))
+        micro_cost_bps = (((slip * shares) + fees) / notional) * 10000.0
+        micro_budget_bps = 50.0
+        micro_score = max(0.0, min(1.0, 1.0 - (micro_cost_bps / max(1e-9, micro_budget_bps))))
 
         events.append(
             {
