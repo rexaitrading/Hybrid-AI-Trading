@@ -7,10 +7,9 @@ logger = logging.getLogger(__name__)
 
 # Optional deps �?,???? tests may monkeypatch these names to None
 try:
-    from nltk.sentiment import SentimentIntensityAnalyzer  # type: ignore
+    from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer  # type: ignore
 except Exception:  # pragma: no cover
     SentimentIntensityAnalyzer = None  # type: ignore
-
 try:
     from transformers import pipeline  # type: ignore
 except Exception:  # pragma: no cover

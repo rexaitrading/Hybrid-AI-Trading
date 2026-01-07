@@ -53,7 +53,7 @@ def score_headlines_for_symbols(
             continue
         title = s.get("title", "")
         score = filt.score(title)
-        allow = filt.allow_trade(title, side=side, precomputed_score=score)
+        allow = filt.allow_trade(title, side=side)
         rec = {
             "created": s.get("created"),
             "title": title,
