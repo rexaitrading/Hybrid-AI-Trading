@@ -40,7 +40,7 @@ def _rth_mask(bars: List[Bar]) -> List[bool]:
     We auto-detect by picking the interpretation that yields the most RTH minutes.
     """
     ny = ZoneInfo("America/New_York")
-
+    sys_tz = datetime.now().astimezone().tzinfo or timezone.utc
     parsed: List[Optional[datetime]] = []
     for b in bars:
         parsed.append(_parse_ts(b.ts))
@@ -52,7 +52,7 @@ def _rth_mask(bars: List[Bar]) -> List[bool]:
             if dt is None:
                 continue
             # if tz-aware, convert to NY; else treat as NY
-            dtny = dt.astimezone(ny) if dt.tzinfo else dt.replace(tzinfo=ny)
+            dtny = dt.astimezone(ny) if dt.tzinfo else dt.replace(tzinfo=sys_tz).astimezone(ny)
             m = dtny.hour * 60 + dtny.minute
             if (9 * 60 + 30) <= m <= (15 * 60 + 59):
                 seen.add((dtny.hour, dtny.minute))
@@ -85,7 +85,7 @@ def _rth_mask(bars: List[Bar]) -> List[bool]:
             dtutc = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
             dtny = dtutc.astimezone(ny)
         else:
-            dtny = dt.astimezone(ny) if dt.tzinfo else dt.replace(tzinfo=ny)
+            dtny = dt.astimezone(ny) if dt.tzinfo else dt.replace(tzinfo=sys_tz).astimezone(ny)
         hhmm = dtny.hour * 60 + dtny.minute
         out.append(hhmm >= (9 * 60 + 30) and hhmm <= (16 * 60))
     return out
