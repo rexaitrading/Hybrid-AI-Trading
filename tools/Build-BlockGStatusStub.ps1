@@ -949,6 +949,26 @@ try {
   try { $reasons.Add("strict_option_b_blocks_spy_qqq=true") | Out-Null } catch { }
 }
 # STRICT_OPTION_B_VETO_END
+# AUDIT_METRICS_SOURCE_MISSING_BEGIN
+# Audit-only: add explicit reasons when per-symbol metrics_source is missing (does not change gating)
+try {
+  $msSpy = ((Get-MetricsSourceTop "SPY" $logsDir $todayLocal).top + "")
+  if((-not $msSpy) -or ($msSpy -eq "(missing)")){
+    $reasons.Add("metrics_source_missing_for_symbol=SPY") | Out-Null
+  }
+} catch {
+  try { $reasons.Add("metrics_source_missing_for_symbol=SPY") | Out-Null } catch { }
+}
+
+try {
+  $msQqq = ((Get-MetricsSourceTop "QQQ" $logsDir $todayLocal).top + "")
+  if((-not $msQqq) -or ($msQqq -eq "(missing)")){
+    $reasons.Add("metrics_source_missing_for_symbol=QQQ") | Out-Null
+  }
+} catch {
+  try { $reasons.Add("metrics_source_missing_for_symbol=QQQ") | Out-Null } catch { }
+}
+# AUDIT_METRICS_SOURCE_MISSING_END
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
