@@ -26,19 +26,61 @@ def _parse_ts(ts: str) -> Optional[datetime]:
     except Exception:
         return None
 def _rth_mask(bars: List[Bar]) -> List[bool]:
-    # RTH: 09:30–16:00 local exchange time (IB timestamps are typically exchange-local)
-    out: List[bool] = []
+    """
+    RTH: 09:30–16:00 America/New_York.
+    IBKR timestamps may be exchange-local OR UTC-stamped.
+    We auto-detect by picking the interpretation that yields the most RTH minutes.
+    """
+    ny = ZoneInfo("America/New_York")
+
+    parsed: List[Optional[datetime]] = []
     for b in bars:
-        dt = _parse_ts(b.ts)
+        parsed.append(_parse_ts(b.ts))
+
+    # Candidate A: treat naive dt as NY-local
+    def _count_rth_local() -> int:
+        seen = set()
+        for dt in parsed:
+            if dt is None:
+                continue
+            # if tz-aware, convert to NY; else treat as NY
+            dtny = dt.astimezone(ny) if dt.tzinfo else dt.replace(tzinfo=ny)
+            m = dtny.hour * 60 + dtny.minute
+            if (9 * 60 + 30) <= m <= (15 * 60 + 59):
+                seen.add((dtny.hour, dtny.minute))
+        return len(seen)
+
+    # Candidate B: treat naive dt as UTC then convert to NY
+    def _count_rth_utc2ny() -> int:
+        seen = set()
+        for dt in parsed:
+            if dt is None:
+                continue
+            dtutc = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+            dtny = dtutc.astimezone(ny)
+            m = dtny.hour * 60 + dtny.minute
+            if (9 * 60 + 30) <= m <= (15 * 60 + 59):
+                seen.add((dtny.hour, dtny.minute))
+        return len(seen)
+
+    c_local = _count_rth_local()
+    c_utc2ny = _count_rth_utc2ny()
+
+    use_utc2ny = (c_utc2ny > c_local)
+
+    out: List[bool] = []
+    for dt in parsed:
         if dt is None:
             out.append(False)
             continue
-        dt_ny = dt.astimezone(ZoneInfo("America/New_York"))
-        hhmm = dt_ny.hour * 60 + dt_ny.minute
+        if use_utc2ny:
+            dtutc = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+            dtny = dtutc.astimezone(ny)
+        else:
+            dtny = dt.astimezone(ny) if dt.tzinfo else dt.replace(tzinfo=ny)
+        hhmm = dtny.hour * 60 + dtny.minute
         out.append(hhmm >= (9 * 60 + 30) and hhmm <= (16 * 60))
     return out
-
-
 def _atr(bars: List[Bar], mask: List[bool], n: int = 14) -> float:
     # ATR on RTH bars only (simple, stable)
     trs: List[float] = []
