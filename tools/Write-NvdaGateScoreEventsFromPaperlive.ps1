@@ -15,17 +15,22 @@ $today    = (Get-Date).ToString("yyyy-MM-dd")
 function Pick-LatestPaperlive([string]$dir) {
     $all = @(Get-ChildItem -LiteralPath $dir -File -Force -ErrorAction SilentlyContinue)
     if (-not $all -or $all.Length -eq 0) { return "" }
-    $matches = @(
-        $all | Where-Object {
-            $_.Name -match '(?i)^paper_live_nvda_.*\.jsonl$' -or
-            $_.Name -match '(?i)nvda.*paperlive.*\.jsonl$' -or
-            $_.Name -match '(?i)nvda.*phase5.*\.jsonl$'
-        }
-    )
-    if (-not $matches -or $matches.Length -eq 0) { return "" }
-    ($matches | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
-}
-function TryD([object]$v) { $x=0.0; if($null -ne $v){[void][double]::TryParse([string]$v,[ref]$x)}; return $x }
+
+    # Institutional priority order (fail-closed, deterministic):
+    # 1) phase5 paperlive results (richer schema, has realized_pnl evidence)
+    $p1 = $all | Where-Object { $_.Name -match '(?i)^nvda_phase5_paperlive_results\.jsonl$' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if($p1){ return $p1.FullName }
+
+    # 2) phase5 paperexec results
+    $p2 = $all | Where-Object { $_.Name -match '(?i)^nvda_phase5_paperexec_results\.jsonl$' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if($p2){ return $p2.FullName }
+
+    # 3) last resort: paper_live_NVDA_* (provider-only stubs are diagnostic-only)
+    $p3 = $all | Where-Object { $_.Name -match '(?i)^paper_live_nvda_.*\.jsonl$' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if($p3){ return $p3.FullName }
+
+    return ""
+}function TryD([object]$v) { $x=0.0; if($null -ne $v){[void][double]::TryParse([string]$v,[ref]$x)}; return $x }
 function TryI([object]$v) { $x=0;   if($null -ne $v){[void][int]::TryParse([string]$v,[ref]$x)}; return $x }
 function Get-FromResult0([object]$j, [string]$k) {
     # Prefer paper_live schema: metrics are inside first result item
@@ -61,6 +66,67 @@ function Get-DerivedMicroScore { param([double]$EdgeRatio)
     $edge = [Math]::Max(0.0, [Math]::Min(1.0, ($EdgeRatio - 0.005) / 0.05))
     return [Math]::Round($edge, 6)
 }
+
+function Get-MicroLiveV1FromBar { param([double]$High,[double]$Low,[double]$Close)
+    if($Close -le 0){ return 0.0 }
+    $rng = [Math]::Max(0.0, ($High - $Low))
+    $cost = $rng / $Close
+    if($cost -gt 0.02){ $cost = 0.02 }
+    $score = 1.0 - ($cost / 0.02)
+    if($score -lt 0.0){ $score = 0.0 }
+    if($score -gt 1.0){ $score = 1.0 }
+    return [Math]::Round($score, 6)
+}
+
+function Build-MicroLiveDailyFromBars { param([string]$BarsDir,[string]$Symbol)
+    $map = @{}
+    if(-not (Test-Path -LiteralPath $BarsDir)){ return $map }
+
+    # Deterministic day mapping from ALL cached bar files: SYMBOL_YYYY-MM-DD_1m.csv
+    $pat = ($Symbol + "_*_1m.csv")
+    $files = @(Get-ChildItem -LiteralPath $BarsDir -Filter $pat -File -ErrorAction SilentlyContinue | Sort-Object Name)
+    if(-not $files -or $files.Count -eq 0){ return $map }
+
+    function Pick-Col([string[]]$cols,[string[]]$wants){
+      foreach($w in $wants){
+        foreach($x in $cols){
+          if($x -and $x.ToLowerInvariant() -eq $w.ToLowerInvariant()){ return $x }
+        }
+      }
+      return ""
+    }
+
+    foreach($csv in $files){
+        $day = ""
+        try { if($csv.BaseName -match '_(\d{4}-\d{2}-\d{2})_1m$'){ $day = $Matches[1] } } catch { $day="" }
+        if(-not $day){ continue }
+
+        $rows = @()
+        try { $rows = @(Import-Csv -LiteralPath $csv.FullName) } catch { $rows = @() }
+        if(-not $rows -or $rows.Count -eq 0){ continue }
+
+        $cols = @($rows[0].PSObject.Properties.Name)
+        $hcol = Pick-Col $cols @("high","h")
+        $lcol = Pick-Col $cols @("low","l")
+        $ccol = Pick-Col $cols @("close","c","adj_close","adjclose")
+        if(-not $hcol -or -not $lcol -or -not $ccol){ continue }
+
+        $sum = 0.0; $cnt = 0
+        foreach($r in $rows){
+          $hi=0.0; $lo=0.0; $cl=0.0
+          [void][double]::TryParse(([string]$r.$hcol), [ref]$hi)
+          [void][double]::TryParse(([string]$r.$lcol), [ref]$lo)
+          [void][double]::TryParse(([string]$r.$ccol), [ref]$cl)
+          $sc = Get-MicroLiveV1FromBar -High $hi -Low $lo -Close $cl
+          $sum += [double]$sc
+          $cnt += 1
+        }
+        if($cnt -gt 0){ $map[$day] = [Math]::Round(($sum / [double]$cnt), 6) }
+    }
+
+    return $map
+}
+
 if (-not $InputPath) { $InputPath = Pick-LatestPaperlive $logsDir }
 if (-not $InputPath -or -not (Test-Path -LiteralPath $InputPath)) { Write-Error "[NVDA-GS-EVENTS] No input paperlive jsonl found."; exit 2 }
 Write-Host "[NVDA-GS-EVENTS] Input=$InputPath" -ForegroundColor Cyan
@@ -68,6 +134,11 @@ $lines = @(Get-Content -LiteralPath $InputPath -Encoding UTF8)
 if ($lines.Count -eq 0) { Write-Error "[NVDA-GS-EVENTS] Input jsonl is empty: $InputPath"; exit 3 }
 $eventsOut = New-Object System.Collections.ArrayList
 
+
+# --- MICRO_LIVE_V1_DAILY_BEGIN ---
+$barsDir = Join-Path $logsDir "bars"
+$microLiveDaily = Build-MicroLiveDailyFromBars -BarsDir $barsDir -Symbol "NVDA"
+# --- MICRO_LIVE_V1_DAILY_END ---
 # REAL_ONLY_SPLIT_BEGIN
 # Institutional: canonical events file must contain REAL-only rows. STUB rows go to stub sink (debug).
 $eventsRealOut = New-Object System.Collections.ArrayList
@@ -150,9 +221,13 @@ try {
     # REALIZED_PNL_FALLBACK_FROM_PAPERLIVE_END
 $ms = $micro
     $microSrc = "producer"
-    if ($ms -eq $null -or [double]$ms -le 0.0) { $ms = Get-DerivedMicroScore -EdgeRatio $edge; $microSrc = "derived_v1" }
+    if ($ms -eq $null -or [double]$ms -le 0.0) { $ms = 0.0; $microSrc = "derived_micro_live_v1_zero"; if($microLiveDaily -and $microLiveDaily.ContainsKey($asOf)){ $ms = [double]$microLiveDaily[$asOf]; if([double]$ms -gt 0.0){ $microSrc = "micro_live_v1" } } }
     # Fail-closed eligibility: require non-zero metrics OR real pnl samples
-    $eligible = ($edge -gt 0.0 -or [double]$ms -gt 0.0 -or $pnlSamples -gt 0 -or $hasRealPnl)
+    # ELIGIBILITY_FAILCLOSED_LIVE_BEGIN
+# Institutional: micro_score alone is NOT sufficient to count an event as eligible for GateScore.
+# Eligible requires: edge evidence OR pnl evidence.
+$eligible = ($edge -gt 0.0 -or $pnlSamples -gt 0 -or $hasRealPnl)
+# ELIGIBILITY_FAILCLOSED_LIVE_END
     # PNS_FROM_REALIZED_PNL_BEGIN
     if($hasRealPnl){ $pnlSamples = 1 }
     # PNS_FROM_REALIZED_PNL_END
