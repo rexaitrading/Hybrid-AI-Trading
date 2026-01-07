@@ -19,6 +19,7 @@ def _resolve_outpath(logs_root: str, symbol: str) -> str:
 import json
 import re
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Dict, List
 
@@ -64,7 +65,8 @@ def _orb_breakout_signals(bars) -> list[int]:
         dt = _parse_ts(b.ts)
         if dt is None:
             continue
-        hhmm = dt.hour * 60 + dt.minute
+        dt_ny = dt.astimezone(ZoneInfo("America/New_York"))
+        hhmm = dt_ny.hour * 60 + dt_ny.minute
         if (9*60 + 30) <= hhmm <= (9*60 + 34):
             orb_idx.append(i)
         elif (9*60 + 35) <= hhmm <= (16*60):
@@ -82,7 +84,8 @@ def _orb_breakout_signals(bars) -> list[int]:
         dt = _parse_ts(bars[i].ts)
         if dt is None:
             continue
-        hhmm = dt.hour * 60 + dt.minute
+        dt_ny = dt.astimezone(ZoneInfo("America/New_York"))
+        hhmm = dt_ny.hour * 60 + dt_ny.minute
         if hhmm < next_allowed:
             continue
         if bars[i].h > orb_high:
@@ -138,7 +141,26 @@ def main() -> int:
                 }
                 out_lines.append(json.dumps(row, ensure_ascii=False))
                 continue
-        except Exception:
+        except Exception as e:
+            row: Dict = {
+                "ts_utc": ts_utc,
+                "as_of_date": day,
+                "symbol": symbol,
+                "source": "BARS_EDGE_V0",
+                "eligible": False,
+                "edge_source": "edge_model_v2",
+                "micro_score_source": "edge_model_v2",
+                "realized_pnl": 0.0,
+                "edge_ratio": 0.0,
+                "micro_score": 0.0,
+                "pnl_samples": 0,
+                "count_signals": 0,
+                "signals_total": 0,
+                "rth_minutes": 0,
+                "notes": "exception_in_day_loop",
+                "error": (repr(e)[:180] if e is not None else "unknown"),
+            }
+            out_lines.append(json.dumps(row, ensure_ascii=False))
             continue
         if not bars:
             continue

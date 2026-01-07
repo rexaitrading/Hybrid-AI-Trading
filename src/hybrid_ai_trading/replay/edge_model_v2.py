@@ -8,7 +8,7 @@ except Exception as _e:
     raise RuntimeError(f"FAIL-CLOSED: ZoneInfo import failed: {_e}")
 # --- TZ_IMPORT_GUARD_END ---
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -20,16 +20,17 @@ def _parse_ts(ts: str) -> Optional[datetime]:
     if not ts:
         return None
     try:
-        # IB format: "YYYYMMDD  HH:MM:SS" (two spaces) -> treat as UTC
-        s = ts.replace("T", " ").replace("Z", "").strip()
-        while "  " in s:
-            s = s.replace("  ", " ")
-        if len(s) >= 17 and s[8] == " " and s[11] == ":":
-            dt = datetime.strptime(s[:17], "%Y%m%d %H:%M:%S")
-            return dt.replace(tzinfo=timezone.utc)
-        # ISO fallback
-        dt2 = datetime.fromisoformat(s)
-        return dt2 if dt2.tzinfo else dt2.replace(tzinfo=timezone.utc)
+        # IB format in logs/bars: "YYYYMMDD␠␠HH:MM:SS" (TWO spaces)
+        if len(ts) >= 17 and ts[8:10] == "  ":
+            return datetime.strptime(ts[:17], "%Y%m%d  %H:%M:%S")
+
+        # Also accept collapsed-space variant: "YYYYMMDD HH:MM:SS"
+        if len(ts) >= 17 and ts[8] == " " and ts[11] == ":":
+            return datetime.strptime(ts[:17], "%Y%m%d %H:%M:%S")
+
+        # ISO fallback (strip trailing Z)
+        s = ts.replace("Z", "")
+        return datetime.fromisoformat(s)
     except Exception:
         return None
 def _rth_mask(bars: List[Bar]) -> List[bool]:
