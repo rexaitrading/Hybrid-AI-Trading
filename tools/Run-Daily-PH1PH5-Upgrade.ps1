@@ -75,6 +75,11 @@ Step "PH6/PH7 smoke tests" {
   if(-not (Test-Path .\tests\test_phase7_optimizer_smoke.py)){ throw "PH7 FAIL-CLOSED: missing tests/test_phase7_optimizer_smoke.py" }
   & $py -m pytest -q .\tests\test_phase6_smoke.py .\tests\test_phase7_optimizer_smoke.py *>&1 | Out-Host
   if($LASTEXITCODE -ne 0){ throw "PH6/PH7 FAIL: smoke tests exit=$LASTEXITCODE" }
+  # PH3 quality tests (fail-closed: prevent toxic eligible events)
+  if(-not (Test-Path .\tests\test_phase3_quality_smoke.py)){ throw "PH3 FAIL-CLOSED: missing tests/test_phase3_quality_smoke.py" }
+  if(-not (Test-Path .\tests\test_phase3_micro_score_notional.py)){ throw "PH3 FAIL-CLOSED: missing tests/test_phase3_micro_score_notional.py" }
+  & $py -m pytest -q .\tests\test_phase3_quality_smoke.py .\tests\test_phase3_micro_score_notional.py *>&1 | Out-Host
+  if($LASTEXITCODE -ne 0){ throw "PH3 FAIL: quality tests exit=$LASTEXITCODE" }
 }
 Write-Host "`n[OK] Daily PH1-PH5 Upgrade complete - NVDA Live Ready enforced (fail-closed)" -ForegroundColor Green
 exit 0
