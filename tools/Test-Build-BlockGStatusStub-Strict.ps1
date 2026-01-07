@@ -30,6 +30,32 @@ if(-not (Test-Path $outPath)){ Fail "Missing output contract: $outPath" }
 
 $j = Get-Content $outPath -Encoding utf8 | ConvertFrom-Json
 
+
+# ASSERT_METRICS_SOURCE_MISSING_REASONS_BEGIN
+# Defense-in-depth: if per-symbol metrics_source is missing for SPY/QQQ, contract must include audit reasons.
+try {
+  $msb = $null
+  if($j.PSObject.Properties.Name -contains "gatescore_metrics_source_by_symbol"){
+    $msb = $j.gatescore_metrics_source_by_symbol
+  }
+
+  $spyMs = ""
+  $qqqMs = ""
+  try { if($msb -ne $null -and $msb.PSObject.Properties.Name -contains "SPY"){ $spyMs = ($msb.SPY + "") } } catch { $spyMs = "" }
+  try { if($msb -ne $null -and $msb.PSObject.Properties.Name -contains "QQQ"){ $qqqMs = ($msb.QQQ + "") } } catch { $qqqMs = "" }
+
+  $rt = (@($j.reasons_not_ready) | ForEach-Object { "$_" }) -join ";"
+
+  if((-not $spyMs) -or ($spyMs -eq "(missing)")){
+    if($rt -notmatch "metrics_source_missing_for_symbol=SPY"){ Fail "Missing audit reason metrics_source_missing_for_symbol=SPY" }
+  }
+  if((-not $qqqMs) -or ($qqqMs -eq "(missing)")){
+    if($rt -notmatch "metrics_source_missing_for_symbol=QQQ"){ Fail "Missing audit reason metrics_source_missing_for_symbol=QQQ" }
+  }
+} catch {
+  Fail ("Audit reasons assertion error: " + $_.Exception.Message)
+}
+# ASSERT_METRICS_SOURCE_MISSING_REASONS_END
 # Strict Option-B: SPY/QQQ must remain blocked
 if($j.spy_blockg_ready -ne $false){ Fail "spy_blockg_ready must be False (strict Option-B)" }
 if($j.qqq_blockg_ready -ne $false){ Fail "qqq_blockg_ready must be False (strict Option-B)" }
