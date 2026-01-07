@@ -69,5 +69,5 @@ Step "PH5 BlockG final NVDA readiness" {
   if($LASTEXITCODE -ne 0){ throw "BLOCKG FAIL-CLOSED: NVDA not ready exit=$LASTEXITCODE" }
 }
 
-Write-Host "`n[OK] Daily PH1–PH5 Upgrade complete — NVDA Live Ready enforced (fail-closed)" -ForegroundColor Green
+Write-Host "`n[OK] Daily PH1-PH5 Upgrade complete - NVDA Live Ready enforced (fail-closed)
 exit 0
