@@ -5,12 +5,49 @@ param(
 
   [switch]$Build
 )
+function Resolve-FullPath([string]$p){
+  try {
+    if([string]::IsNullOrWhiteSpace($p)){ return $p }
+    $rp = Resolve-Path -LiteralPath $p -ErrorAction Stop
+    return $rp.Path
+  } catch {
+    return $p
+  }
+}
+# --- PATH BAN (institutional) ---
+try {
+  $pwdPath = (Get-Location).Path
+  if($pwdPath -match '\?\?'){
+    Write-Host ("[PATH] FAIL-CLOSED: banned token '??' in PWD => " + $pwdPath) -ForegroundColor Red
+    exit 2
+  }
+} catch {
+  Write-Host ("[PATH] FAIL-CLOSED: guard error => " + $_.Exception.Message) -ForegroundColor Red
+  exit 2
+}
+# --- END PATH BAN ---
 
 Set-StrictMode -Version Latest
+# --- OUTPUT ENCODING (institutional) ---
+try {
+  $utf8 = New-Object System.Text.UTF8Encoding($false)
+  [Console]::OutputEncoding = $utf8
+  [Console]::InputEncoding  = $utf8
+  $global:OutputEncoding    = $utf8
+} catch { }
+# --- END OUTPUT ENCODING ---
 $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
+# --- CANONICALIZE repoRoot (institutional) ---
+try {
+  $rr = Resolve-Path -LiteralPath $repoRoot -ErrorAction Stop
+  $repoRoot = $rr.Path
+} catch {
+  # keep original, but do not allow wildcard-like tokens
+}
+# --- END CANONICALIZE repoRoot ---
 
 # --- Normalize symbol early (defensive, deterministic) ---
 $s = ($Symbol + "").ToUpperInvariant()
@@ -69,7 +106,8 @@ if ($Build) {
   if (-not (Test-Path -LiteralPath $builder)) { Fail "Missing builder: $builder" }
 
   Write-Host "[BLOCKG] Build requested: running Build-BlockGStatusStub.ps1" -ForegroundColor Cyan
-  powershell -NoProfile -ExecutionPolicy Bypass -File $builder | Out-Host
+  $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+  & $psExe -NoProfile -ExecutionPolicy Bypass -Command "& '$builder' -Symbol '$Symbol'" *>&1 | Out-Host
   if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub.ps1 failed exit=$LASTEXITCODE" }
 }
 
@@ -78,6 +116,13 @@ $defaultPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
 $statusPath = $env:HAT_BLOCKG_STATUS_PATH
 if (-not $statusPath) { $statusPath = $defaultPath }
 
+# --- CANONICALIZE + BAN statusPath (institutional) ---
+$statusPath = Resolve-FullPath $statusPath
+if(($statusPath + "") -match "\?\?"){
+  Write-Host ("[PATH] FAIL-CLOSED: banned token '??' in statusPath => " + $statusPath) -ForegroundColor Red
+  exit 2
+}
+# --- END CANONICALIZE + BAN statusPath ---
 $st = Read-Json $statusPath
 
 # --- EV-hard date clarity (audit-only; contract semantics unchanged) ---
@@ -284,5 +329,7 @@ if ($s -eq "ALL") {
   if (-not (SymReady $s)) { Fail "$s not ready ($($s.ToLower())_blockg_ready=false)" }
 }
 
-Write-Host "[BLOCKG] READY: Symbol=$Symbol Path=$statusPath" -ForegroundColor Green
+Write-Host ("[BLOCKG] READY: Symbol={0} Path={1}" -f $Symbol,(Resolve-FullPath $statusPath)) -ForegroundColor Green
 exit 0
+
+

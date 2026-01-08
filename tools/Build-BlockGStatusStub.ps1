@@ -69,6 +69,14 @@ function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal)
 
 Set-StrictMode -Version Latest
 
+# --- OUTPUT ENCODING (institutional) ---
+try {
+  $utf8 = New-Object System.Text.UTF8Encoding($false)
+  [Console]::OutputEncoding = $utf8
+  [Console]::InputEncoding  = $utf8
+  $global:OutputEncoding    = $utf8
+} catch { }
+# --- END OUTPUT ENCODING ---
 function Canon([string]$p){
   try {
     if([string]::IsNullOrWhiteSpace($p)){ return $p }
