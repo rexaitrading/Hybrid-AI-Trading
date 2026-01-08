@@ -3,6 +3,12 @@ param(
     [ValidateSet("NVDA","SPY","QQQ","ALL")]
     [string]$Symbol = "ALL"
 )
+function Resolve-RepoRoot(){
+  # Canonical filesystem path; never trust invocation-string representation
+  $toolsDir = Split-Path -Parent $PSCommandPath
+  $rr = Split-Path -Parent $toolsDir
+  try { return (Resolve-Path -LiteralPath $rr -ErrorAction Stop).Path } catch { return $rr }
+}
 
 function WantSym([string]$sym){
   $s = $Symbol.ToUpperInvariant()
@@ -63,6 +69,12 @@ function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal)
 
 Set-StrictMode -Version Latest
 
+function Canon([string]$p){
+  try {
+    if([string]::IsNullOrWhiteSpace($p)){ return $p }
+    return (Resolve-Path -LiteralPath $p -ErrorAction Stop).Path
+  } catch { return $p }
+}
 function Get-LatestIntelRunToday {
   param(
     [Parameter(Mandatory=$true)][string]$LogsIntelFeedPath,
@@ -244,7 +256,7 @@ try {
 
 function Get-GSFromEvents([string]$sym, [string]$asOf, [string]$todayLocal){
   # Compute GateScore metrics for a single as_of_date from resolved events source.
-  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+  $repoRoot = Resolve-RepoRoot
   $logsDir  = Join-Path $repoRoot "logs"
 
   $path = Resolve-GatescoreEventsPath $sym $logsDir
@@ -308,8 +320,8 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
   }
 }
 
-$toolsDir = Split-Path -Parent $PSCommandPath
-$repoRoot = Split-Path -Parent $toolsDir
+$repoRoot = Resolve-RepoRoot
+# repoRoot resolved above (canonical)
 $logsDir  = Join-Path $repoRoot "logs"
 
 # INTEL_CONTRACT_BEGIN
@@ -1103,6 +1115,11 @@ $payload = [ordered]@{
     gatescore_metrics_source_debug_seen_count = $gsMsSeenCount
     gatescore_metrics_source_debug_top        = $gsMsTop
     gatescore_metrics_source_debug_today      = $gsMsToday
+    # --- CANONICALIZE OUTPUT PATHS (institutional) ---
+    $statusPath = Canon $statusPath
+    $intel_source_path = Canon $intel_source_path
+    $gsMsPath = Canon $gsMsPath
+    # --- END CANONICALIZE OUTPUT PATHS ---
     gatescore_metrics_source_debug_path       = $gsMsPath
     gatescore_metrics_source_debug_exists     = $gsMsExists
     market_closed_today = $marketClosedToday
@@ -1247,3 +1264,5 @@ Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
 
 exit 0
+
+
