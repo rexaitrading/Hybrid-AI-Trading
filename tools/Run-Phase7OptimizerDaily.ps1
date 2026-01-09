@@ -149,12 +149,21 @@ if(-not $SymbolList -or @($SymbolList).Count -eq 0){
   Fail-Closed "no_symbols" @{ raw=$raw; symbols=@(); eligible=@() }
 }
 
+# Eligibility: trust checker exit codes (cached)
+$blockgCache = @{}
+function Get-BlockGExitCached([string]$sym){
+  $k = (($sym + "")).Trim().ToUpperInvariant()
+  if($blockgCache.ContainsKey($k)){ return [int]$blockgCache[$k] }
+  $code = [int](Invoke-BlockGReady -Symbol $k)
+  $blockgCache[$k] = $code
+  return $code
+}
+
 # Eligibility: trust checker exit codes
 $eligible = @()
 foreach($s in @($SymbolList)){
-  if((Invoke-BlockGReady -Symbol $s) -eq 0){ $eligible += $s }
+  if((Get-BlockGExitCached -sym $s) -eq 0){ $eligible += $s }
 }
-
 if(-not $eligible -or @($eligible).Count -eq 0){
   Fail-Closed "no_eligible_symbols" @{ symbols=@($SymbolList); eligible=@($eligible); raw=$raw }
 }
@@ -213,7 +222,7 @@ $csvPath = Join-Path $fullOutDir "phase7_weights.csv"
 $csv = @()
 $csv += "as_of_date,symbol,weight,eligible,blockg_ready"
 foreach($s in @($SymbolList)){
-  $csv += ("{0},{1},{2},{3},{4}" -f $today,$s,[double]$w[$s],([bool](@($eligible) -contains $s)),([bool]((Invoke-BlockGReady -Symbol $s) -eq 0)))
+  $csv += ("{0},{1},{2},{3},{4}" -f $today,$s,[double]$w[$s],([bool](@($eligible) -contains $s)),([bool]((Get-BlockGExitCached -sym $s) -eq 0)))
 }
 Write-Utf8NoBom -Path $csvPath -Text ($csv -join "`n")
 
