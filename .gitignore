@@ -145,3 +145,5 @@ data/feature_store/
 .secrets/hat_keys.env
 .secrets/hat_keys.env.cleaned
 .secrets/hat_keys.env.report.txt
+!tools/Load-HatSecrets.ps1
+!tools/Set-HatApiKeys.ps1
