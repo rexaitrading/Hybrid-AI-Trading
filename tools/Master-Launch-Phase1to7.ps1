@@ -115,7 +115,7 @@ Step "Phase-4 Validation"   { RunTool "tools\Run-Phase4Validation.ps1" }
 Step "Phase-5 Safety Suite" { RunTool "tools\Run-Phase5SafetySuite.ps1" }
 Step "Phase-6 Portfolio State"   { RunTool "tools\Build-Phase6PortfolioState.ps1" }
 Step "Phase-6 Portfolio Metrics" { RunTool "tools\Build-Phase6PortfolioMetrics.ps1" }
-Step "Phase-7 Optimizer Daily"   { RunTool "tools\Run-Phase7OptimizerDaily.ps1" @("-Enable") }
+Step "Phase-7 Optimizer Daily"   { RunTool "tools\Run-Phase7OptimizerDaily.ps1" "-Enable" }
 # -------- SAFE ops --------
 Step "PaperLive Ops (SAFE)" { RunTool "tools\Start-PaperLiveOps.ps1" @("-Symbol",$Symbol) }
 
