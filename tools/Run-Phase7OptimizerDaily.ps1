@@ -27,7 +27,7 @@ $ErrorActionPreference = "Stop"
 function Write-Utf8NoBom {
   param([string]$Path, [string]$Text)
   $enc = New-Object System.Text.UTF8Encoding($false)
-  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+# $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)   # disabled (use env-first bootstrap repoRoot)
   $full = $Path
   if (-not [System.IO.Path]::IsPathRooted($full)) { $full = Join-Path $repoRoot $Path }
   $dir = Split-Path -Parent $full
@@ -173,7 +173,7 @@ if($sum -le 0){ Fail-Closed "weights_sum_nonpositive_after_cap" @{ MaxWeight=$Ma
 foreach($s in @($eligible)){ $w[$s] = [double]$capped[$s] / $sum }
 
 # Emit artifacts
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+# $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)   # disabled (use env-first bootstrap repoRoot)
 $fullOutDir = $OutDir
 if (-not [System.IO.Path]::IsPathRooted($fullOutDir)) { $fullOutDir = Join-Path $repoRoot $OutDir }
 if (-not (Test-Path $fullOutDir)) { New-Item -ItemType Directory -Force -Path $fullOutDir | Out-Null }
