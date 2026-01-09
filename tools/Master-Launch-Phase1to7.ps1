@@ -115,9 +115,9 @@ Step "Phase-4 Validation"   { RunTool "tools\Run-Phase4Validation.ps1" }
 Step "Phase-5 Safety Suite" { RunTool "tools\Run-Phase5SafetySuite.ps1" }
 Step "Phase-6 Portfolio State"   { RunTool "tools\Build-Phase6PortfolioState.ps1" }
 Step "Phase-6 Portfolio Metrics" { RunTool "tools\Build-Phase6PortfolioMetrics.ps1" }
-Step "Phase-7 Optimizer Daily"   { RunTool "tools\Run-Phase7OptimizerDaily.ps1" "-Enable" }
-# -------- SAFE ops --------
-Step "PaperLive Ops (SAFE)" { RunTool "tools\Start-PaperLiveOps.ps1" @("-Symbol",$Symbol) }
-
-Write-Host "`n[MASTER-LAUNCH] GREEN: Phase1Phase7 + Intel + BlockG + SAFE PaperLiveOps complete." -ForegroundColor Green
+Step "Phase-7 Optimizer Daily"   {
+  $abs = Join-Path $repoRoot "tools\Run-Phase7OptimizerDaily.ps1"
+  powershell -NoProfile -ExecutionPolicy Bypass -File $abs -Enable *>&1 | Out-Host
+  if($LASTEXITCODE -ne 0){ Fail ("tool failed exit=" + $LASTEXITCODE + " file=tools\Run-Phase7OptimizerDaily.ps1") }
+}
 exit 0
