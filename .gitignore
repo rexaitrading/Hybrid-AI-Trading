@@ -138,3 +138,7 @@ _backups/
 !docs/templates/
 !docs/templates/**
 !docs/templates/*.json
+configs/HAT_REPO_ID.txt
+tools/Load-HatSecrets.ps1
+tools/Set-HatApiKeys.ps1
+data/feature_store/
