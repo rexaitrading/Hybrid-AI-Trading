@@ -2,6 +2,8 @@
 param()
 
 Set-StrictMode -Version Latest
+# --- secrets (canonical) ---
+. (Join-Path $PSScriptRoot "Load-HatSecrets.ps1")
 chcp 65001 | Out-Null
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::InputEncoding  = [System.Text.Encoding]::UTF8

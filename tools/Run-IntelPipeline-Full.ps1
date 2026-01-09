@@ -2,6 +2,8 @@
 param()
 
 Set-StrictMode -Version Latest
+# --- secrets (canonical) ---
+. (Join-Path $PSScriptRoot "Load-HatSecrets.ps1")
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
 
