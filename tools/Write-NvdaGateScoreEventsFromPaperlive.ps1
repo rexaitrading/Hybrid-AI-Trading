@@ -9,6 +9,15 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+# --- UTF8_CONSOLE_BEGIN (deterministic, fixes "文件" -> "??") ---
+try {
+  $utf8 = New-Object System.Text.UTF8Encoding($false)
+  [Console]::OutputEncoding = $utf8
+  [Console]::InputEncoding  = $utf8
+  $global:OutputEncoding    = $utf8
+} catch { }
+# --- UTF8_CONSOLE_END ---
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $logsDir  = Join-Path $repoRoot "logs"
 $today    = (Get-Date).ToString("yyyy-MM-dd")
@@ -58,7 +67,15 @@ function Get-FromResult0([object]$j, [string]$k) {
 }
 function Pick-Date([object]$j, [string[]]$keys, [string]$fallback) {
     $props = $j.PSObject.Properties.Name
-    foreach ($k in $keys) {
+    # --- FAIL-CLOSED: skip non-trade quote rows (prevent GateScore contamination) ---
+    try {
+        if ($props -contains "status") {
+            $st = (($j.status + "")).Trim()
+            if ($st -eq "ok_ib_quote") { continue }
+        }
+    } catch { }
+    # --- END skip non-trade quote rows ---
+foreach ($k in $keys) {
         if ($props -contains $k) {
             $v = ($j.$k + "").Trim()
             if ($v -match '^\d{4}-\d{2}-\d{2}$') { return $v }
@@ -229,9 +246,9 @@ $ms = $micro
     if ($ms -eq $null -or [double]$ms -le 0.0) { $ms = 0.0; $microSrc = "derived_micro_live_v1_zero"; if($microLiveDaily -and $microLiveDaily.ContainsKey($asOf)){ $ms = [double]$microLiveDaily[$asOf]; if([double]$ms -gt 0.0){ $microSrc = "micro_live_v1" } } }
     # Fail-closed eligibility: require non-zero metrics OR real pnl samples
     # ELIGIBILITY_FAILCLOSED_LIVE_BEGIN
-# Institutional: micro_score alone is NOT sufficient to count an event as eligible for GateScore.
-# Eligible requires: edge evidence OR pnl evidence.
-$eligible = ($edge -gt 0.0 -or $pnlSamples -gt 0 -or $hasRealPnl)
+# Institutional: to prevent GateScore contamination, eligible requires EDGE evidence.
+# PnL-only or quote-derived rows must NEVER count toward GateScore live thresholds.
+$eligible = ($edge -gt 0.0)
 # ELIGIBILITY_FAILCLOSED_LIVE_END
     # PNS_FROM_REALIZED_PNL_BEGIN
     if($hasRealPnl){ $pnlSamples = 1 }

@@ -1,16 +1,45 @@
 [CmdletBinding()]
 param(
-    [string]$InputPath = "",
+  [string]$InputPath = ".\logs\qqq_phase5_paperlive_results_with_micro_today.jsonl",
     [string]$OutPath = ".\logs\qqq_gatescore_events.jsonl",
     [int]$MinEvents = 10,
     [ValidateSet("rewrite","append","prune")]
     [string]$Mode = "rewrite",
     [string]$PruneDate = ""
 )
+# --- FAIL-CLOSED: reject stub inputs (institutional) ---
+try {
+  if($InputPath -and (Test-Path -LiteralPath $InputPath)){
+    $probe = Get-Content -LiteralPath $InputPath -Tail 600 -Encoding utf8
+    $txt = ($probe -join "`n")
+    if($txt -match 'stub_engine' -or
+       $txt -match '"metrics_source"\s*:\s*".*stub_engine' -or
+       $txt -match '"status"\s*:\s*"ok_stub_engine"'){
+      Write-Host ("[QQQ-GS-EVENTS] FAIL-CLOSED: stub input detected => " + $InputPath) -ForegroundColor Red
+      exit 2
+    }
+  } else {
+    Write-Host ("[QQQ-GS-EVENTS] FAIL-CLOSED: missing InputPath => " + $InputPath) -ForegroundColor Red
+    exit 2
+  }
+} catch {
+  Write-Host ("[QQQ-GS-EVENTS] FAIL-CLOSED: guard error => " + $_.Exception.Message) -ForegroundColor Red
+  exit 2
+}
+# --- END FAIL-CLOSED GUARD ---
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+
+# --- UTF8_CONSOLE_BEGIN (deterministic, fixes "文件" -> "??") ---
+try {
+  $utf8 = New-Object System.Text.UTF8Encoding($false)
+  [Console]::OutputEncoding = $utf8
+  [Console]::InputEncoding  = $utf8
+  $global:OutputEncoding    = $utf8
+} catch { }
+# --- UTF8_CONSOLE_END ---
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $logsDir  = Join-Path $repoRoot "logs"
 $today    = (Get-Date).ToString("yyyy-MM-dd")
@@ -73,9 +102,8 @@ if (-not $InputPath) { $InputPath = Pick-LatestPaperlive $logsDir }
 if (-not $InputPath -or -not (Test-Path -LiteralPath $InputPath)) { Write-Error "[QQQ-GS-EVENTS] No input paperlive jsonl found."; exit 2 }
 
 Write-Host "[QQQ-GS-EVENTS] Input=$InputPath" -ForegroundColor Cyan
-
-$lines = Get-Content -LiteralPath $InputPath -Encoding UTF8
-if (-not $lines -or $lines.Count -eq 0) { Write-Error "[QQQ-GS-EVENTS] Input jsonl is empty: $InputPath"; exit 3 }
+$lines = @(Get-Content -LiteralPath $InputPath -Encoding UTF8)
+if((-not $lines) -or ((($lines | Measure-Object -Line).Lines) -eq 0)){ Write-Error "[QQQ-GS-EVENTS] Input jsonl is empty: $InputPath"; exit 3 }
 
 $eventsOut = New-Object System.Collections.ArrayList
 
@@ -201,3 +229,5 @@ else {
 
 Write-Host ("[QQQ-GS-EVENTS] Wrote REAL=" + $realCount + " (total_seen=" + $count + ", stub=" + $stubCount + ") to " + $outFull + " (mode=" + $Mode + ")") -ForegroundColor Green
 exit 0
+
+
