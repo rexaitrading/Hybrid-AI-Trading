@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path ".").Path
-$py = "C:\HAT\.venv\Scripts\python.exe"
+$py = Join-Path (& (Join-Path $PSScriptRoot "Go-RepoRoot.ps1")) ".venv\Scripts\python.exe"
 if(-not (Test-Path $py)){ throw "python not found: $py" }
 
 & $py -m pytest -q `

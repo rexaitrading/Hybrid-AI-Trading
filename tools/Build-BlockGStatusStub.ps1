@@ -1263,8 +1263,7 @@ try {
 # --- END PATCH1 ---
 
 $payloadJson = $payload | ConvertTo-Json -Depth 6
-Write-Host "[BLOCK-G] Writing Block-G status stub to $statusPath" -ForegroundColor Cyan
-
+Write-Host ("[BLOCK-G] Writing Block-G status stub: " + (Split-Path -Leaf $statusPath)) -ForegroundColor Cyan
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($statusPath, $payloadJson, $utf8NoBom)
 

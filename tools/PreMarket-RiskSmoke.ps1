@@ -8,31 +8,27 @@ param(
 
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-. 'C:\IBC\Watch-IBG.Functions.ps1'
-
-function Load-Heartbeat { $p='C:\IBC\status\ibg_status.json'; if(Test-Path $p){ try{Get-Content $p|ConvertFrom-Json}catch{}} }
-function Test-IBGHealthy { param([int]$MaxRssMB=2000,[int]$MinUptimeSec=30)
-  $hb=Load-Heartbeat; if(-not $hb){return $false}
-  if(-not $hb.portUp){return $false}
-  if($hb.uptimeSec -lt $MinUptimeSec){return $false}
-  if($hb.rssMB -and $hb.rssMB -gt $MaxRssMB){return $false}
-  return $true
+$ibcFn = ($env:IBC_FUNCTIONS + "").Trim()
+if(-not $ibcFn){
+  $ibcHome = ($env:IBC_HOME + "").Trim()
+  if($ibcHome){
+    $ibcFn = (Join-Path $ibcHome "Watch-IBG.Functions.ps1")
+  } else {
+    $ibcFn = ""   # no default hardcode
+  }
 }
-
-function Run-TestNode {
-  param([string]$NodeId,[string]$Repo,[string]$Python='python')
-  if(Test-Path $Repo){Push-Location $Repo}else{throw "Repo not found: $Repo"}
-  try{
-    $sw=[Diagnostics.Stopwatch]::StartNew()
-    $output=& $Python -m pytest -q $NodeId -s --maxfail=1 2>&1
-    $code=$LASTEXITCODE; $sw.Stop(); $dur=[math]::Round($sw.Elapsed.TotalSeconds,2)
-    $status=if($code -eq 0){'pass'}else{'fail'}
-    $tail=($output|Select-Object -Last 30) -join "`n"
-    [pscustomobject]@{node=$NodeId;status=$status;seconds=$dur;tail=$tail;code=$code}
-  } finally {Pop-Location}
+if(Test-Path -LiteralPath $ibcFn){
+  . $ibcFn
+} else {
+  Write-Host ("[RISKSMOKE] WARN: IBC functions not found: " + $ibcFn) -ForegroundColor Yellow
 }
-
-function Post-SmokeResult {
+function Load-Heartbeat {
+  $p = ($env:IBC_HEARTBEAT_PATH + "").Trim()
+  if(-not $p){
+    $p = Join-Path $env:TEMP "ibc_heartbeat.json"
+  }
+  return $p
+}function Post-SmokeResult {
   param([string]$Channel,[object]$Heartbeat,[object[]]$Results)
   $failed=$Results|Where-Object {$_.status -ne 'pass'}; $ok= -not $failed
   $lines = foreach($r in $Results){ $mark=if($r.status -eq 'pass'){''}else{''}; "{0} {1}  ({2}s)" -f $mark,$r.node,$r.seconds }

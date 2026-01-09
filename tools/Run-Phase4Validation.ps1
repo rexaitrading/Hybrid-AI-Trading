@@ -16,7 +16,7 @@ $pythonExe      = ".\.venv\Scripts\python.exe"
 
 $stampPath = Join-Path $repoRoot "logs\phase4_validation_passed.json"
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-$phase4TmpRoot = "C:\Trading\_pytest_tmp"
+$phase4TmpRoot = (Join-Path $env:TEMP "HybridAITrading\phase4")
 New-Item -ItemType Directory -Force -Path $phase4TmpRoot | Out-Null
 $runTag = (Get-Date).ToString("yyyyMMdd_HHmmss")
 

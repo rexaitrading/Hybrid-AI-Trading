@@ -328,8 +328,7 @@ if ($s -eq "ALL") {
 } else {
   if (-not (SymReady $s)) { Fail "$s not ready ($($s.ToLower())_blockg_ready=false)" }
 }
-
-Write-Host ("[BLOCKG] READY: Symbol={0} Path={1}" -f $Symbol,(Resolve-FullPath $statusPath)) -ForegroundColor Green
+Write-Host ("[BLOCKG] READY: Symbol={0} StatusFile={1}" -f $Symbol,(Split-Path -Leaf $statusPath)) -ForegroundColor Green
 exit 0
 
 

@@ -6,14 +6,19 @@ param(
 
 Set-StrictMode -Version Latest
 # --- secrets (canonical) ---
-. (Join-Path $PSScriptRoot "Load-HatSecrets.ps1")
+# --- repo root bootstrap (canonical) ---
+$repoRoot = & (Join-Path $PSScriptRoot "Go-RepoRoot.ps1")
+if(-not $repoRoot){ throw "[INTEL] FAIL-CLOSED: Go-RepoRoot returned empty" }
+$repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
+
+. (Join-Path $PSScriptRoot "Load-HatSecrets.ps1") -RepoRoot $repoRoot
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
-
-$toolsDir = Split-Path -Parent $PSCommandPath
-$repoRoot = Split-Path -Parent $toolsDir
-Set-Location $repoRoot
-
+Set-Location -LiteralPath $repoRoot
+[System.Environment]::CurrentDirectory = $repoRoot
+# $toolsDir = Split-Path -Parent $PSCommandPath   # disabled (use bootstrap repoRoot)
+# $repoRoot = Split-Path -Parent $toolsDir        # disabled (use bootstrap repoRoot)
+# Set-Location $repoRoot                          # disabled (use bootstrap repoRoot)
 $py = Join-Path $repoRoot ".venv\Scripts\python.exe"
 if(-not (Test-Path $py)){ throw "Missing venv python: $py" }
 $env:PYTHONPATH = Join-Path $repoRoot "src"

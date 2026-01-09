@@ -1,19 +1,36 @@
 [CmdletBinding()]
-param()
+param(
+  [string]$RepoRoot = ""
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+chcp 65001 | Out-Null
 
-# --- HAT_KEYS_SOURCE_BEGIN (canonical) ---
+function Fail([string]$m){ throw ("[SECRETS] FAIL-CLOSED: " + $m) }
+
 $toolsDir = $PSScriptRoot
-if(-not $toolsDir){ throw "[SECRETS] FAIL-CLOSED: PSScriptRoot empty (unexpected)" }
+if(-not $toolsDir){ Fail "PSScriptRoot empty" }
 
-$repoRoot = & (Join-Path $toolsDir "Go-RepoRoot.ps1")
-if(-not $repoRoot){ throw "[SECRETS] FAIL-CLOSED: Go-RepoRoot.ps1 returned empty repoRoot" }
-$repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
+# RepoRoot resolution order:
+# 1) explicit -RepoRoot
+# 2) env:HAT_REPO_ROOT
+# 3) tools\Go-RepoRoot.ps1
+if($RepoRoot){
+  $RepoRoot = ($RepoRoot + "").Trim()
+} elseif($env:HAT_REPO_ROOT){
+  $RepoRoot = ($env:HAT_REPO_ROOT + "").Trim()
+} else {
+  $RepoRoot = & (Join-Path $toolsDir "Go-RepoRoot.ps1")
+  $RepoRoot = ($RepoRoot + "").Trim()
+}
 
-$keysFile = Join-Path $repoRoot ".secrets\hat_keys.env.cleaned"
-if(-not (Test-Path -LiteralPath $keysFile)){ throw ("[SECRETS] Missing canonical keys file: " + $keysFile) }
+if(-not $RepoRoot){ Fail "RepoRoot empty (arg/env/go-reporoot)" }
+$RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
+if(-not (Test-Path -LiteralPath $RepoRoot)){ Fail ("RepoRoot not found: " + $RepoRoot) }
+
+$keysFile = Join-Path $RepoRoot ".secrets\hat_keys.env.cleaned"
+if(-not (Test-Path -LiteralPath $keysFile)){ Fail ("Missing canonical keys file: " + $keysFile) }
 
 # Load KEY=VALUE pairs into env (no echo of secrets)
 $lines = @(Get-Content -LiteralPath $keysFile -Encoding utf8)
@@ -31,12 +48,10 @@ foreach($ln in $lines){
     if($v.Length -ge 2){ $v = $v.Substring(1,$v.Length-2) }
   }
 
-  if($k){
-    Set-Item -Path ("Env:" + $k) -Value $v
-  }
+  if($k){ Set-Item -Path ("Env:" + $k) -Value $v }
 }
 
-# Canonical aliases (legacy compatibility, forced to canonical)
+# Canonical aliases (legacy)
 if($env:POLYGON_API_KEY){ $env:POLYGON_KEY = $env:POLYGON_API_KEY }
 if($env:ALPACA_API_KEY){
   $env:ALPACA_KEY    = $env:ALPACA_API_KEY
@@ -49,7 +64,6 @@ function _IsBad([string]$v){
   $t = $v.Trim()
   return ($t -match '<' -or $t -match '(?i)placeholder' -or $t -match '(?i)your' -or $t.Length -lt 16)
 }
-
 function _GetEnv([string]$name){
   $it = Get-Item -Path ("Env:" + $name) -ErrorAction SilentlyContinue
   if($it){ return ($it.Value + "") }
@@ -58,8 +72,7 @@ function _GetEnv([string]$name){
 
 foreach($rk in @("POLYGON_API_KEY","ALPACA_API_KEY","ALPACA_SECRET_KEY")){
   $v = _GetEnv $rk
-  if(_IsBad $v){ throw ("[SECRETS] FAIL-CLOSED: " + $rk + " missing/placeholder") }
+  if(_IsBad $v){ Fail ($rk + " missing/placeholder") }
 }
 
-Write-Host ("[SECRETS] Loaded canonical keys from " + $keysFile) -ForegroundColor Green
-# --- HAT_KEYS_SOURCE_END ---
+Write-Host "[SECRETS] Loaded canonical keys (cleaned)" -ForegroundColor Green
