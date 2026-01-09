@@ -4,10 +4,67 @@ param(
   [string]$Csv = ""
 )
 
+
+# --- repo root bootstrap (env-first) ---
+$repoRoot = ($env:HAT_REPO_ROOT + "").Trim()
+if(-not $repoRoot){
+  $repoRoot = & (Join-Path $PSScriptRoot "Go-RepoRoot.ps1")
+}
+if(-not $repoRoot){ throw "[REPOROOT] FAIL-CLOSED: repoRoot empty (env+Go-RepoRoot)" }
+$repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
+Set-Location -LiteralPath $repoRoot
+[System.Environment]::CurrentDirectory = $repoRoot
+$root = $repoRoot
+
 $ErrorActionPreference="Stop"
 Set-StrictMode -Version Latest
 
-$root = (Resolve-Path ".").Path
+function Invoke-BlockGCheckSafe([string]$Symbol){
+  $checker = Join-Path $repoRoot "tools\Check-BlockGReady.ps1"
+  if(-not (Test-Path -LiteralPath $checker)){ throw "[PHASE3] FAIL-CLOSED: missing Check-BlockGReady.ps1" }  # NOTE: We intentionally do NOT use -Build here.
+  # Builder is handled by our reuse+timeout path below to avoid hangs and noisy "[BLOCKG] Build requested" output.# Fallback: reuse stub if fresh; else build with timeout; then check
+  $status = Join-Path $repoRoot "logs\blockg_status_stub.json"
+  $needBuild = $true
+  if(Test-Path -LiteralPath $status){
+    $ageMin = ((Get-Date) - (Get-Item $status).LastWriteTime).TotalMinutes
+    if($ageMin -le 30){
+      $needBuild = $false
+      Write-Host ("[PHASE3] BlockG stub fresh (age_min=" + [int]$ageMin + "); skip build") -ForegroundColor DarkGray
+    }
+  }
+
+  if($needBuild){
+    $exe = (Get-Command powershell).Source
+    $builder = Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1"
+    if(-not (Test-Path -LiteralPath $builder)){ throw "[PHASE3] FAIL-CLOSED: missing Build-BlockGStatusStub.ps1" }
+
+    $stdout = Join-Path $repoRoot "logs\blockg_build_stdout.txt"
+    $stderr = Join-Path $repoRoot "logs\blockg_build_stderr.txt"
+    $argList = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$builder,"-Symbol",$Symbol)
+
+    $p = Start-Process -FilePath $exe -ArgumentList $argList -PassThru -NoNewWindow `
+          -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+
+    if(-not $p.WaitForExit(90)){
+      Stop-Process -Id $p.Id -Force
+try{
+  Write-Host "[PHASE3] builder timeout; stderr tail:" -ForegroundColor Yellow
+  if(Test-Path -LiteralPath $stderr){
+    Get-Content -LiteralPath $stderr -Tail 80 -Encoding utf8 | Out-Host
+  }
+}catch{}
+throw "[PHASE3] FAIL-CLOSED: BlockG builder exceeded 90s (killed). See logs\blockg_build_stderr.txt"
+    }
+    if($p.ExitCode -ne 0){
+      throw ("[PHASE3] FAIL-CLOSED: BlockG builder exit=" + $p.ExitCode + " (see logs\blockg_build_stderr.txt)")
+    }
+    Write-Host "[PHASE3] BlockG builder OK" -ForegroundColor Green
+  }
+
+  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol *>&1 | Out-Host
+  if($LASTEXITCODE -ne 0){ throw ("[PHASE3] FAIL-CLOSED: BlockG check failed exit=" + $LASTEXITCODE) }
+}
+# $root is pinned to $repoRoot (env-first)
 $py   = Join-Path $root ".venv\Scripts\python.exe"
 if (-not (Test-Path $py)) { throw "[PHASE3] Python exe not found: $py" }
 
@@ -24,17 +81,8 @@ $k = ("HAT_" + "BLOCKG_" + "STATUS_" + "PATH")
 Write-Host "[PHASE3] ROOT=$root" -ForegroundColor Cyan
 Write-Host "[PHASE3] SYMBOL=$Symbol" -ForegroundColor Cyan
 
-# 1) Build + validate Block-G via the single semantic owner (Check-BlockGReady.ps1)
-$checker = Join-Path $root "tools\Check-BlockGReady.ps1"
-if (-not (Test-Path -LiteralPath $checker)) { throw "[PHASE3] Missing $checker" }
-Write-Host "[PHASE3] Block-G: build+check (single semantic owner)..." -ForegroundColor Cyan
-powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol -Build | Out-Host
-$bg = $LASTEXITCODE
-Write-Host ("[PHASE3] blockg_exit=" + $bg) -ForegroundColor Yellow
-# Closed-day diagnostic OK => do not run daily_build; LIVE remains disallowed.
-if ($bg -eq 10) { Write-Host "[PHASE3] Market closed: DIAGNOSTIC OK; skipping GateScore daily_build." -ForegroundColor Yellow; exit 10 }
-# Any non-zero besides 10 is fail-closed.
-if ($bg -ne 0) { exit $bg }
+# 1) Build + validate Block-G (safe wrapper)
+Invoke-BlockGCheckSafe -Symbol $Symbol
 # 2) Choose CSV input for daily_build (REAL CLI)
 if (-not $Csv) {
   $cands = @(

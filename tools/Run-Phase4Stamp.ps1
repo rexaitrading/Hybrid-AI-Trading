@@ -3,11 +3,21 @@ param(
   [int]$TimeoutSec = 60
 )
 
+
+# --- repo root bootstrap (env-first) ---
+$repoRoot = ($env:HAT_REPO_ROOT + "").Trim()
+if(-not $repoRoot){
+  $repoRoot = & (Join-Path $PSScriptRoot "Go-RepoRoot.ps1")
+}
+if(-not $repoRoot){ throw "[REPOROOT] FAIL-CLOSED: repoRoot empty (env+Go-RepoRoot)" }
+$repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
+Set-Location -LiteralPath $repoRoot
+[System.Environment]::CurrentDirectory = $repoRoot
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
-
-$toolsDir = Split-Path -Parent $PSCommandPath
-$root = Split-Path -Parent $toolsDir
+# $toolsDir = Split-Path -Parent $PSCommandPath   # disabled (use env HAT_REPO_ROOT)
+$root = $repoRoot
 Set-Location $root
 $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 $tsUtc  = (Get-Date).ToUniversalTime().ToString("o")

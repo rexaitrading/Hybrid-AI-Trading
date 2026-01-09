@@ -6,10 +6,20 @@ param(
   [switch]$KeepArtifacts
 )
 
+
+# --- repo root bootstrap (env-first) ---
+$repoRoot = ($env:HAT_REPO_ROOT + "").Trim()
+if(-not $repoRoot){
+  $repoRoot = & (Join-Path $PSScriptRoot "Go-RepoRoot.ps1")
+}
+if(-not $repoRoot){ throw "[REPOROOT] FAIL-CLOSED: repoRoot empty (env+Go-RepoRoot)" }
+$repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
+Set-Location -LiteralPath $repoRoot
+[System.Environment]::CurrentDirectory = $repoRoot
+
 $ErrorActionPreference="Stop"
 Set-StrictMode -Version Latest
-
-$root = (Resolve-Path ".").Path
+# $root = (Resolve-Path ".").Path                 # disabled (use env HAT_REPO_ROOT)
 $logs = Join-Path $root "logs"
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
 

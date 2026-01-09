@@ -1,15 +1,24 @@
 [CmdletBinding()]
 param()
 
+
+# --- repo root bootstrap (env-first) ---
+$repoRoot = ($env:HAT_REPO_ROOT + "").Trim()
+if(-not $repoRoot){
+  $repoRoot = & (Join-Path $PSScriptRoot "Go-RepoRoot.ps1")
+}
+if(-not $repoRoot){ throw "[REPOROOT] FAIL-CLOSED: repoRoot empty (env+Go-RepoRoot)" }
+$repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
+Set-Location -LiteralPath $repoRoot
+[System.Environment]::CurrentDirectory = $repoRoot
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-
-$toolsDir = Split-Path -Parent $PSCommandPath
-$repoRoot = Split-Path -Parent $toolsDir
-Set-Location $repoRoot
-
+# $toolsDir = Split-Path -Parent $PSCommandPath   # disabled (use env HAT_REPO_ROOT)
+# $repoRoot = Split-Path -Parent $toolsDir        # disabled (use env HAT_REPO_ROOT)
+# Set-Location $repoRoot                          # disabled (use env HAT_REPO_ROOT)
 Write-Host "`n[PHASE4] Phase-4 validation harness RUN" -ForegroundColor Cyan
-Write-Host "[PHASE4] RepoRoot = $repoRoot" -ForegroundColor DarkCyan
+Write-Host "[PHASE] RepoRoot OK" -ForegroundColor DarkGray
 
 $env:PYTHONPATH = Join-Path $repoRoot "src"
 $pythonExe      = ".\.venv\Scripts\python.exe"

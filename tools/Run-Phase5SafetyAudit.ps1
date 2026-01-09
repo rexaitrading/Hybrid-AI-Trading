@@ -1,13 +1,21 @@
 [CmdletBinding()]
 param()
 
+
+# --- repo root bootstrap (env-first) ---
+$repoRoot = ($env:HAT_REPO_ROOT + "").Trim()
+if(-not $repoRoot){
+  $repoRoot = & (Join-Path $PSScriptRoot "Go-RepoRoot.ps1")
+}
+if(-not $repoRoot){ throw "[REPOROOT] FAIL-CLOSED: repoRoot empty (env+Go-RepoRoot)" }
+$repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
+Set-Location -LiteralPath $repoRoot
+[System.Environment]::CurrentDirectory = $repoRoot
+
 $ErrorActionPreference = "Stop"
-
-$toolsDir = Split-Path -Parent $PSCommandPath
-$repoRoot = Split-Path -Parent $toolsDir
-
-Set-Location $repoRoot
-
+# $toolsDir = Split-Path -Parent $PSCommandPath   # disabled (use env HAT_REPO_ROOT)
+# $repoRoot = Split-Path -Parent $toolsDir        # disabled (use env HAT_REPO_ROOT)
+# Set-Location $repoRoot                          # disabled (use env HAT_REPO_ROOT)
 Write-Host "`n[PHASE5-AUDIT] Phase-5 Safety Audit RUN" -ForegroundColor Cyan
 Write-Host "[PHASE5-AUDIT] RepoRoot = $repoRoot" -ForegroundColor DarkCyan
 
