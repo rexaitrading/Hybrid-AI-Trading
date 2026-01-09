@@ -114,7 +114,12 @@ if (-not (Test-Path $BlockGPath)) { Fail-Closed "blockg_status_missing_failclose
 try { $s6 = Get-Content -Path $StatePath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail-Closed "phase6_state_parse_fail" @{ StatePath=$StatePath } }
 try { $bg = Get-Content -Path $BlockGPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail-Closed "blockg_parse_fail" @{ BlockGPath=$BlockGPath } }
 
-if (($s6.as_of_date + "").Substring(0,10) -ne $today) { Fail-Closed "phase6_state_stale" @{ as_of_date=$s6.as_of_date; today=$today } }
+$as6 = (($s6.as_of_date + "")).Substring(0,10)
+$todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+$todayUtc   = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+if($as6 -ne $todayLocal -and $as6 -ne $todayUtc){
+  Fail-Closed "phase6_state_stale" @{ as_of_date=$s6.as_of_date; today_local=$todayLocal; today_utc=$todayUtc }
+}
 if (-not [bool]$s6.ok) { Fail-Closed "phase6_state_not_ok" @{ ok=$s6.ok; reason=$s6.reason } }
 
 if (($bg.as_of_date + "").Substring(0,10) -ne $today) { Fail-Closed "blockg_stale" @{ as_of_date=$bg.as_of_date; today=$today } }
