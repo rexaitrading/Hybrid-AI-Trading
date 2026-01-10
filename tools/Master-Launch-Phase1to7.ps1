@@ -13,6 +13,8 @@ param(
   [switch]$SkipPaperOps,
 
   # Hold window at end (useful for transient launch/shortcut)
+  [switch]$SkipPhase7,
+
   [switch]$Hold
 )
 
@@ -62,16 +64,17 @@ function Step([string]$name,[scriptblock]$sb){
   }
 }
 
-# --- Repo root (canonical) ---
-$repoRoot = & .\tools\Go-RepoRoot.ps1
-if(-not $repoRoot){ Fail "Go-RepoRoot returned empty" }
-
+# --- Repo root (canonical, in-proc, UTF8-safe) ---
+$toolsDir = Split-Path -Parent $PSCommandPath
+$repoRoot = Split-Path -Parent $toolsDir
+$repoRoot = (Resolve-Path -LiteralPath $repoRoot -ErrorAction Stop).Path
 $repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
-if(-not (Test-Path -LiteralPath $repoRoot)){ Fail "repoRoot not found: $repoRoot" }
+if(-not (Test-Path -LiteralPath $repoRoot)){ Fail ("repoRoot not found: " + $repoRoot) }
 
 Set-Location -LiteralPath $repoRoot
 [System.Environment]::CurrentDirectory = $repoRoot
 $env:HAT_REPO_ROOT = $repoRoot
+Write-Host ("[REPOROOT] " + $repoRoot) -ForegroundColor DarkGray
 
 $logsDir  = Join-Path $repoRoot "logs"
 $intelDir = Join-Path $repoRoot "src\.intel"
@@ -173,6 +176,7 @@ Step "Preflight directories" {
 }
 
 if(-not $SkipIntel){
+  Write-Host "[INTEL-MODE] DEGRADED_OK (earnings missing => allowed; FULL_REQUIRED remains fail-closed)" -ForegroundColor Yellow
   Step "Intel: News"    { RunTool "tools\Run-IntelNews.ps1" }
   Step "Intel: YouTube" { RunTool "tools\Run-IntelYouTube.ps1" }
   Step "Intel: Full"    { RunTool "tools\Run-IntelPipeline-Full.ps1" @("-IntelMode","DEGRADED_OK") }
@@ -185,8 +189,9 @@ Step "Block-G build status stub (timeout/reuse)" {
   $stdout = Join-Path $logsDir "blockg_build_stdout.txt"
   $stderr = Join-Path $logsDir "blockg_build_stderr.txt"
 
+  $needBuild = $true
   if(Test-Path -LiteralPath $status){
-    $ageMin = ((Get-Date) - (Get-Item $status).LastWriteTime).TotalMinutes
+    $ageMin = ((Get-Date) - (Get-Item -LiteralPath $status).LastWriteTime).TotalMinutes
     if($ageMin -le $BlockGReuseMinutes){
       Write-Host ("[BLOCK-G] Using existing stub (age_min=" + [int]$ageMin + ")") -ForegroundColor Green
       $global:LASTEXITCODE = 0
@@ -194,34 +199,45 @@ Step "Block-G build status stub (timeout/reuse)" {
     }
   }
 
-  $exe = (Get-Command powershell).Source
-  $scriptPath = Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1"
-  $argList = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$scriptPath,"-Symbol",$Symbol)
+  $builder = Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1"
+  if(-not (Test-Path -LiteralPath $builder)){ throw "[BLOCK-G] FAIL-CLOSED: missing tools\Build-BlockGStatusStub.ps1" }
 
-  Write-Host ("[BLOCK-G] start : " + $scriptPath) -ForegroundColor DarkGray
-  Write-Host ("[BLOCK-G] stdout: " + $stdout) -ForegroundColor DarkGray
-  Write-Host ("[BLOCK-G] stderr: " + $stderr) -ForegroundColor DarkGray
+  try { Remove-Item -LiteralPath $stdout,$stderr -Force -ErrorAction SilentlyContinue } catch {}
 
-  $p = Start-Process -FilePath $exe -ArgumentList $argList -PassThru -NoNewWindow `
-        -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-
-  if(-not $p.WaitForExit($BlockGTimeoutSec)){
-    Stop-Process -Id $p.Id -Force
-
-    if($BlockGFallbackToExistingStubOnTimeout -and (Test-Path -LiteralPath $status)){
-      Write-Host "[BLOCK-G] WARN: builder timed out; falling back to existing stub" -ForegroundColor Yellow
-      $global:LASTEXITCODE = 0
-      return
+  $job = Start-Job -ScriptBlock {
+    param($RepoRoot,$Builder,$Sym,$Stdout,$Stderr)
+    $ErrorActionPreference="Stop"; Set-StrictMode -Version Latest
+    Set-Location -LiteralPath $RepoRoot
+    [System.Environment]::CurrentDirectory = $RepoRoot
+    $env:HAT_BLOCKG_BUILDER_FAST = "1"
+    try {
+      & powershell -NoProfile -ExecutionPolicy Bypass -File $Builder -Symbol $Sym *>&1 |
+        Out-File -LiteralPath $Stdout -Encoding UTF8
+      exit 0
+    } catch {
+      ($_.Exception.ToString()) | Out-File -LiteralPath $Stderr -Encoding UTF8
+      exit 2
     }
+  } -ArgumentList $repoRoot,$builder,$Symbol,$stdout,$stderr
 
+  $ok = Wait-Job -Id $job.Id -Timeout $BlockGTimeoutSec
+  if(-not $ok){
+    try { Stop-Job -Id $job.Id -Force } catch {}
+    try { Remove-Job -Id $job.Id -Force } catch {}
     throw ("[BLOCK-G] FAIL-CLOSED: builder exceeded " + $BlockGTimeoutSec + "s (killed). See logs\blockg_build_stderr.txt")
   }
 
-  if($p.ExitCode -ne 0){
-    throw ("[BLOCK-G] FAIL-CLOSED: builder exit=" + $p.ExitCode + " (see logs\blockg_build_stderr.txt)")
+  Receive-Job -Id $job.Id -ErrorAction SilentlyContinue | Out-Null
+  try { Remove-Job -Id $job.Id -Force } catch {}
+
+  if(-not (Test-Path -LiteralPath $status)){
+    Write-Host "[BLOCK-G] builder finished but stub missing; stdout/stderr tail:" -ForegroundColor Yellow
+    if(Test-Path -LiteralPath $stdout){ Get-Content -LiteralPath $stdout -Tail 80 -Encoding UTF8 | Out-Host }
+    if(Test-Path -LiteralPath $stderr){ Get-Content -LiteralPath $stderr -Tail 120 -Encoding UTF8 | Out-Host }
+    throw "[BLOCK-G] FAIL-CLOSED: builder did not create logs\blockg_status_stub.json"
   }
 
-  Write-Host "[BLOCK-G] builder OK" -ForegroundColor Green
+  Write-Host "[BLOCK-G] builder OK (FAST)" -ForegroundColor Green
 }
 
 Step "Block-G readiness (FAIL-CLOSED)" { RunTool "tools\Check-BlockGReady.ps1" @("-Symbol",$Symbol) }
@@ -236,14 +252,31 @@ Step "Phase-6 Portfolio State"     { RunTool "tools\Build-Phase6PortfolioState.p
 Step "Phase-6 Portfolio Metrics"   { RunTool "tools\Build-Phase6PortfolioMetrics.ps1" }
 
 # IMPORTANT: Phase-7 FAIL-CLOSED unless -Enable is passed
-Step "Phase-7 Optimizer Daily"     { RunTool "tools\Run-Phase7OptimizerDaily.ps1" @("-Enable") }
+Step "Phase-7 Optimizer Daily (optional)" {
+  if($SkipPhase7){
+    Write-Host "[PHASE7] skipped (SkipPhase7=true)" -ForegroundColor Yellow
+    return
+  }
 
-if(-not $SkipPaperOps){
-  Step "PaperLive Ops (SAFE)" { RunTool "tools\Start-PaperLiveOps.ps1" @("-Symbol",$Symbol) }
-} else {
-  Write-Host "[MASTER-LAUNCH] PaperLive Ops skipped (SkipPaperOps=true)" -ForegroundColor Yellow
+  $abs = Join-Path $repoRoot "tools\Run-Phase7OptimizerDaily.ps1"
+  if(-not (Test-Path -LiteralPath $abs)){
+    Write-Host "[PHASE7] WARN: missing tool; skipped" -ForegroundColor Yellow
+    return
+  }
+
+  $argv = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$abs,"-Enable")
+  $out = & powershell @argv 2>&1
+  $rc  = $LASTEXITCODE
+  if($out){ $out | Out-Host }
+
+  if($rc -ne 0){
+    Write-Host ("[PHASE7] WARN: disabled/fail-closed (exit=" + $rc + "); master launch continues") -ForegroundColor Yellow
+    $global:LASTEXITCODE = 0
+    return
+  }
+
+  Write-Host "[PHASE7] OK" -ForegroundColor Green
 }
-
 @(
   "RESULT=OK"
   "END_TIME=" + (Get-Date).ToString("o")
@@ -257,4 +290,3 @@ if($Hold){
   Write-Host "`n[MASTER-LAUNCH] Hold=true. Press Enter to close..." -ForegroundColor Yellow
   [void](Read-Host)
 }
-
