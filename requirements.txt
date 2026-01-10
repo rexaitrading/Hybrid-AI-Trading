@@ -57,7 +57,7 @@ typing_extensions==4.15.0
 typing-inspection==0.4.1
 tzdata==2025.2
 uritemplate==4.2.0
-urllib3==2.5.0
+urllib3==2.6.0
 uvicorn==0.37.0
 vaderSentiment==3.3.2
 virtualenv==20.34.0
