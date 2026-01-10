@@ -3,6 +3,9 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
+  [ValidateSet("ALL_STRICT","SYMBOL_ONLY","BUILD_ONLY")]
+  [string]$Mode = "ALL_STRICT",
+
   [switch]$Build
 )
 function Resolve-FullPath([string]$p){
@@ -53,8 +56,6 @@ try {
 $s = ($Symbol + "").ToUpperInvariant()
 if($s -notin @("NVDA","SPY","QQQ","ALL")){ Fail-Script ("Invalid -Symbol=" + $Symbol) }
 # --- END normalize ---
-
-
 function Write-Utf8NoBom {
   param([string]$Path, [string]$Text)
   $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -76,6 +77,30 @@ function Dump-Reasons($st){
   try{
     if($st -and ($st.PSObject.Properties.Name -contains "reasons_not_ready")){
       $r = @($st.reasons_not_ready)
+
+      # SYMBOL_ONLY: filter out other-symbol contamination + strict-all reasons
+      if(($mode + "") -eq "SYMBOL_ONLY"){
+        $sym = ($s + "")
+        $r2 = @()
+        foreach($x in $r){
+          $t = ($x + "")
+          if($t -match 'metrics_source_missing_for_symbol='){ continue }
+          if($t -match '^strict_option_b_blocks_spy_qqq='){ continue }
+          # keep only reasons clearly about this symbol OR global daily fields
+          if($t -match '(^phase23_|^phase4_|^ev_hard_|^gatescore_|^intel_|^market_closed_|^nvda_blockg_ready=|^spy_blockg_ready=|^qqq_blockg_ready=)'){
+            # if a per-symbol ready flag appears, keep only if matches requested symbol
+            if($t -match '^(nvda|spy|qqq)_blockg_ready='){
+              if($sym -eq "NVDA" -and $t -match '^nvda_'){ $r2 += $t; continue }
+              if($sym -eq "SPY"  -and $t -match '^spy_'){  $r2 += $t; continue }
+              if($sym -eq "QQQ"  -and $t -match '^qqq_'){  $r2 += $t; continue }
+              continue
+            }
+            $r2 += $t
+          }
+        }
+        $r = $r2
+      }
+
       if($r -and $r.Count -gt 0){
         Write-Host "[BLOCKG] reasons_not_ready:" -ForegroundColor DarkYellow
         foreach($x in $r){
@@ -84,8 +109,7 @@ function Dump-Reasons($st){
       }
     }
   } catch { }
-}
-function Fail-Contract([string]$Msg) {
+}function Fail-Contract([string]$Msg) {
   Write-Host "[BLOCKG] NOT READY: $Msg" -ForegroundColor Red
   try { Dump-Reasons $st } catch { }
   exit 2
@@ -100,6 +124,13 @@ function Fail-Script([string]$Msg) {
   Write-Host "[BLOCKG] ERROR: $Msg" -ForegroundColor Yellow
   exit 1
 }
+
+# --- Mode normalization ---
+$mode = (($Mode + "")).Trim().ToUpperInvariant()
+if($mode -notin @("ALL_STRICT","SYMBOL_ONLY","BUILD_ONLY")){ Fail-Script ("Invalid -Mode=" + $Mode) }
+if($s -eq "ALL" -and $mode -eq "SYMBOL_ONLY"){ Fail-Script "Invalid combination: -Symbol ALL with -Mode SYMBOL_ONLY" }
+# --- END Mode normalization ---
+
 # 1) Optional build step (single semantic owner)
 if ($Build) {
   $builder = Join-Path $toolsDir "Build-BlockGStatusStub.ps1"
@@ -159,10 +190,10 @@ try {
   # INTEL_CHECK_BEGIN
   try{
     $intelOk = $false
-    if($bg.PSObject.Properties.Name -contains "intel_ok_today"){ $intelOk = [bool]$bg.intel_ok_today }
+    if($st.PSObject.Properties.Name -contains "intel_ok_today"){ $intelOk = [bool]$st.intel_ok_today }
     $symIntelOk = $intelOk
-    if($s -eq "NVDA" -and ($bg.PSObject.Properties.Name -contains "nvda_intel_ok_today")){
-      $symIntelOk = [bool]$bg.nvda_intel_ok_today
+    if($s -eq "NVDA" -and ($st.PSObject.Properties.Name -contains "nvda_intel_ok_today")){
+      $symIntelOk = [bool]$st.nvda_intel_ok_today
     }
 
     if(-not $symIntelOk){
@@ -212,6 +243,17 @@ try {
 } catch { }
 # MARKET_CLOSED_FAILCLOSED_CHECK_END
 if (-not $st) { Fail "Missing/invalid Block-G status JSON at: $statusPath" }
+
+# --- BUILD_ONLY: allow producers to run (do not require LIVE readiness) ---
+if(($mode + "") -eq "BUILD_ONLY"){
+  foreach($k in @("phase4_ok_today","phase23_health_ok_today")){
+    if(-not ($st.PSObject.Properties.Name -contains $k)){ Fail ("Missing field: " + $k) }
+  }
+  Write-Host ("[BLOCKG] BUILD_ONLY OK: contract loaded; LIVE readiness not enforced (Symbol=" + $Symbol + ")") -ForegroundColor Yellow
+  exit 0
+}
+# --- END BUILD_ONLY ---
+
 
 # --- GateScore session-age policy (contract-only; do not recompute) ---
 $MAX_GS_AGE_DAYS = 3
@@ -330,5 +372,9 @@ if ($s -eq "ALL") {
 }
 Write-Host ("[BLOCKG] READY: Symbol={0} StatusFile={1}" -f $Symbol,(Split-Path -Leaf $statusPath)) -ForegroundColor Green
 exit 0
+
+
+
+
 
 

@@ -1,49 +1,39 @@
 [CmdletBinding()]
 param()
 
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 # --- repo root bootstrap (env-first) ---
-$repoRoot = ($env:HAT_REPO_ROOT + "").Trim()
+$repoRoot = (($env:HAT_REPO_ROOT + "")).Trim()
 if(-not $repoRoot){
-  $repoRoot = & (Join-Path $PSScriptRoot "Go-RepoRoot.ps1")
+  $toolsDir = Split-Path -Parent $PSCommandPath
+  $repoRoot = Split-Path -Parent $toolsDir
 }
-if(-not $repoRoot){ throw "[REPOROOT] FAIL-CLOSED: repoRoot empty (env+Go-RepoRoot)" }
+if(-not $repoRoot){ throw "[REPOROOT] FAIL-CLOSED: repoRoot empty" }
+
 $repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
 Set-Location -LiteralPath $repoRoot
 [System.Environment]::CurrentDirectory = $repoRoot
 
-Set-StrictMode -Version Latest
-$ErrorActionPreference="Stop"
-# $root = (Resolve-Path ".").Path                 # disabled (use env HAT_REPO_ROOT)
-Set-Location $root
-
-$logDir = Join-Path $root "logs"
+$logDir = Join-Path $repoRoot "logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
-
+# Phase23 health is a TODAY heartbeat (do not inherit stale dates from other phases)
 $today = (Get-Date).ToString("yyyy-MM-dd")
-$p4 = Join-Path $logDir "phase4_validation_passed.json"
-if(Test-Path -LiteralPath $p4){
-  try {
-    $j = Get-Content -LiteralPath $p4 -Raw -Encoding utf8 | ConvertFrom-Json
-    $d = (($j.as_of_date) + "").Trim()
-    if($d){ $today = $d }
-  } catch {}
-}
-$logDir = Join-Path $root "logs"
-New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
 $outCsv = Join-Path $logDir "phase23_health_daily.csv"
 
 # FAIL-CLOSED default
 $ok = $false
 
-# Minimal Phase23 health = "repo compiles" (fast, deterministic, no IB)
-$py = Join-Path $root ".venv\Scripts\python.exe"
+# Minimal Phase23 health = "repo compiles" (fast, deterministic)
+$py = Join-Path $repoRoot ".venv\Scripts\python.exe"
 $env:PYTHONNOUSERSITE="1"
-$env:PYTHONPATH = (Join-Path $root "src")
+$env:PYTHONPATH = (Join-Path $repoRoot "src")
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"
 
-if (Test-Path $py) {
+if (Test-Path -LiteralPath $py) {
   $files = @(
     ".\src\hybrid_ai_trading\execution\smart_router.py",
     ".\src\hybrid_ai_trading\execution\blockg_contract.py",
@@ -57,7 +47,7 @@ import py_compile,sys
 bad=0
 for f in sys.argv[1:]:
   try: py_compile.compile(f, doraise=True)
-  except Exception as e:
+  except Exception:
     bad=1
 print('COMPILE_OK' if bad==0 else 'COMPILE_BAD')
 sys.exit(bad)
@@ -69,19 +59,26 @@ sys.exit(bad)
 
 function Safe-Bool([bool]$b){ if($b){ "true" } else { "false" } }
 
-# Ensure header exists (exact schema)
+# Ensure header exists
 $header = "date,phase23_ok"
-if (-not (Test-Path $outCsv)) { Set-Content -LiteralPath $outCsv -Encoding utf8 -Value $header }
-
-# Remove existing today rows (idempotent)
-$rows = @(Get-Content $outCsv -Encoding utf8)
-$kept = @($rows[0])
-for ($i=1; $i -lt $rows.Count; $i++){
-  if ($rows[$i] -notmatch "^$today,"){ $kept += $rows[$i] }
+if (-not (Test-Path -LiteralPath $outCsv)) {
+  [System.IO.File]::WriteAllText($outCsv, ($header + "`n"), (New-Object System.Text.UTF8Encoding($false)))
 }
 
-$kept += "$today,$(Safe-Bool $ok)"
-[System.IO.File]::WriteAllLines($outCsv, $kept, (New-Object System.Text.UTF8Encoding($false)))
+# Load + rewrite idempotently (remove today's row then append)
+$rows = @(Get-Content -LiteralPath $outCsv -Encoding utf8)
+$kept = New-Object System.Collections.Generic.List[string]
+$kept.Add($rows[0])
 
-Write-Host "[PHASE23] wrote $outCsv ok=$ok today=$today" -ForegroundColor Green
+for ($i=1; $i -lt $rows.Count; $i++){
+  if ($rows[$i] -and ($rows[$i] -notmatch ("^" + [regex]::Escape($today) + ","))) {
+    $kept.Add($rows[$i])
+  }
+}
+
+$kept.Add(("{0},{1}" -f $today,(Safe-Bool $ok)))
+
+[System.IO.File]::WriteAllLines($outCsv, $kept.ToArray(), (New-Object System.Text.UTF8Encoding($false)))
+
+Write-Host ("[PHASE23] wrote " + $outCsv + " ok=" + $ok + " today=" + $today) -ForegroundColor Green
 exit 0

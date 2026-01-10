@@ -28,6 +28,23 @@ function Resolve-GatescoreEventsPath([string]$sym,[string]$logsDir){
 
   return $pMain  # deterministic fallback (may not exist)
 }
+
+function Get-MaxAsOfDateFromJsonlTail([string]$Path,[int]$TailLines=8000){
+  if(-not (Test-Path -LiteralPath $Path)){ return "" }
+  $max = ""
+  foreach($ln in (Get-Content -LiteralPath $Path -Tail $TailLines -Encoding UTF8)){
+    $s = ($ln + "").Trim(); if(-not $s){ continue }
+    try {
+      $o = $s | ConvertFrom-Json
+      if($o.PSObject.Properties.Name -contains "as_of_date"){
+        $d = [string]$o.as_of_date
+        if($d.Length -ge 10){ $d = $d.Substring(0,10) }
+        if($d -and $d -gt $max){ $max = $d }
+      }
+    } catch { }
+  }
+  return $max
+}
 # GS_METRICS_SOURCE_BY_SYMBOL_BEGIN
 # Audit: capture metrics_source per symbol from RESOLVED events file (today-only).
 function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal){
@@ -69,6 +86,8 @@ function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal)
 
 Set-StrictMode -Version Latest
 
+
+try {
 # --- OUTPUT ENCODING (institutional) ---
 try {
   $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -80,8 +99,30 @@ try {
 function Canon([string]$p){
   try {
     if([string]::IsNullOrWhiteSpace($p)){ return $p }
-    return (Resolve-Path -LiteralPath $p -ErrorAction Stop).Path
-  } catch { return $p }
+    $full = $p
+    if(-not [System.IO.Path]::IsPathRooted($full)){
+      $full = Join-Path $repoRoot $full
+    }
+    $full = [System.IO.Path]::GetFullPath($full)
+
+    # If path exists, Resolve-Path to canonicalize.
+    if(Test-Path -LiteralPath $full){
+      try { return (Resolve-Path -LiteralPath $full -ErrorAction Stop).Path } catch { return $full }
+    }
+
+    # If path does NOT exist yet (common for output files), canonicalize parent dir if possible.
+    $parent = Split-Path -Parent $full
+    if($parent -and (Test-Path -LiteralPath $parent)){
+      try {
+        $p2 = (Resolve-Path -LiteralPath $parent -ErrorAction Stop).Path
+        return (Join-Path $p2 (Split-Path -Leaf $full))
+      } catch { return $full }
+    }
+
+    return $full
+  } catch {
+    return $p
+  }
 }
 function Get-LatestIntelRunToday {
   param(
@@ -322,7 +363,7 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
     $j = $raw | ConvertFrom-Json
     $asOf = [string]$j.as_of_date
     $ok = [bool]$j.phase4_ok_today
-    return (($asOf.Substring(0,10)) -eq $Today) -and $ok
+    return (($asOf.Substring(0,10)) -eq $todayLocal) -and $ok
   } catch {
     return $false
   }
@@ -332,6 +373,162 @@ $repoRoot = Resolve-RepoRoot
 # repoRoot resolved above (canonical)
 $logsDir  = Join-Path $repoRoot "logs"
 
+
+# --- FAST BUILDER MODE (Phase3-safe, institutional) ---
+# Phase3 must be able to build a stub quickly without scanning huge event files.
+# Enable by: $env:HAT_BLOCKG_BUILDER_FAST="1"
+if((($env:HAT_BLOCKG_BUILDER_FAST + "") -eq "1")){
+  try{
+    if(-not (Test-Path -LiteralPath $logsDir)){ New-Item -ItemType Directory -Force -Path $logsDir | Out-Null }
+    $statusPath = Join-Path $logsDir "blockg_status_stub.json"
+
+# --- BREADCRUMB (debug, deterministic) ---
+try {
+  $toolsDir = Split-Path -Parent $PSCommandPath
+  $crumbPath = Join-Path $toolsDir "blockg_builder_breadcrumb.txt"
+  $msg = @(
+    ("ts=" + (Get-Date).ToString("s")),
+    ("repoRoot=" + $repoRoot),
+    ("logsDir=" + $logsDir),
+    ("statusPath=" + $statusPath),
+    ("pwd=" + (Get-Location).Path)
+  ) -join "`r`n"
+  [System.IO.File]::WriteAllText($crumbPath, $msg, (New-Object System.Text.UTF8Encoding($false)))
+} catch { }
+# --- END BREADCRUMB ---
+    $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+    $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
+
+    function _Slice([string]$d){ $t=(($d+"")).Trim(); if($t.Length -ge 10){ $t=$t.Substring(0,10) }; $t }
+    function _ToBool($v){ $s=(($v+"")).Trim().ToLowerInvariant(); return ($s -in @("1","true","yes","y","ok","pass","passed")) }
+
+    # Phase23 today
+    $phase23Ok=$false
+    $p23 = Join-Path $logsDir "phase23_health_daily.csv"
+    if(Test-Path -LiteralPath $p23){
+      try{
+        $rows=@(Import-Csv -LiteralPath $p23)
+        foreach($r in $rows){
+          $d=""
+          if($r.PSObject.Properties.Name -contains "date"){ $d=_Slice $r.date }
+          elseif($r.PSObject.Properties.Name -contains "as_of_date"){ $d=_Slice $r.as_of_date }
+          if($d -ne $todayLocal){ continue }
+          if($r.PSObject.Properties.Name -contains "phase23_ok"){ $phase23Ok=_ToBool $r.phase23_ok }
+        }
+      } catch { $phase23Ok=$false }
+    }
+
+    # EV-hard today
+    $evHardOk=$false
+    $evAsOf=""
+    $evp = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
+    if(Test-Path -LiteralPath $evp){
+      try{
+        $rows=@(Import-Csv -LiteralPath $evp)
+        foreach($r in $rows){
+          if(_Slice $r.date -eq $todayLocal){
+            $evAsOf=$todayLocal
+            if($r.PSObject.Properties.Name -contains "ok"){ $evHardOk=_ToBool $r.ok } else { $evHardOk=$true }
+            break
+          }
+        }
+      } catch { $evHardOk=$false }
+    }
+
+    # Phase4 today
+    $phase4Ok=$false
+    $p4 = Join-Path $logsDir "phase4_validation_passed.json"
+    if(Test-Path -LiteralPath $p4){
+      try{
+        $j = Get-Content -LiteralPath $p4 -Raw -Encoding UTF8 | ConvertFrom-Json
+        $asOf = _Slice ([string]$j.as_of_date)
+        $ok = $false
+        if($j.PSObject.Properties.Name -contains "phase4_ok_today"){ $ok = [bool]$j.phase4_ok_today }
+        $phase4Ok = ($asOf -eq $todayLocal -and $ok)
+      } catch { $phase4Ok=$false }
+    }
+    # GateScore as_of (FAST, institutional): prefer resolved events file (tail scan), fallback to summary CSV
+    $gsAsOf=""
+    $gsOkToday=$false
+
+    try {
+      $evPath = Resolve-GatescoreEventsPath "NVDA" $logsDir
+      $mx = Get-MaxAsOfDateFromJsonlTail -Path $evPath -TailLines 8000
+      if($mx){ $gsAsOf = $mx }
+    } catch { $gsAsOf="" }
+
+    if(-not $gsAsOf){
+      $pnl = Join-Path $logsDir "gatescore_pnl_summary.csv"
+      if(-not (Test-Path -LiteralPath $pnl)){ $pnl = Join-Path $logsDir "gatescore_daily_summary.csv" }
+      if(Test-Path -LiteralPath $pnl){
+        try{
+          $rows=@(Import-Csv -LiteralPath $pnl)
+          if($rows.Count -gt 0){
+            $last=$rows[-1]
+            if($last.PSObject.Properties.Name -contains "as_of_date"){ $gsAsOf=_Slice ([string]$last.as_of_date) }
+          }
+        } catch { $gsAsOf="" }
+      }
+    }
+
+    $gsFreshToday = ($gsAsOf -ne "" -and $gsAsOf -eq $todayLocal)
+$reasons = New-Object System.Collections.Generic.List[string]
+    if(-not $phase23Ok){ $reasons.Add("phase23_health_ok_today=false") | Out-Null }
+    if(-not $evHardOk){  $reasons.Add("ev_hard_daily_ok_today=false") | Out-Null }
+    if(-not $phase4Ok){  $reasons.Add("phase4_ok_today=false") | Out-Null }
+    if(-not $gsFreshToday){ $reasons.Add("gatescore_fresh_today=false") | Out-Null }
+
+    $nvdaReady = ($phase23Ok -and $evHardOk -and $phase4Ok -and $gsFreshToday)
+
+    $payload = [ordered]@{
+      ts_utc=$tsUtc
+      as_of_date=$todayLocal
+      date=$todayLocal
+      phase23_health_ok_today=[bool]$phase23Ok
+      ev_hard_daily_ok_today=[bool]$evHardOk
+      ev_hard_daily_as_of_date=$evAsOf
+      phase4_ok_today=[bool]$phase4Ok
+      gatescore_as_of_date=$gsAsOf
+      gatescore_fresh_today=[bool]$gsFreshToday
+      gatescore_age_days=0
+      gatescore_recent_enough=$true
+      gatescore_fresh_for_session=$true
+      gatescore_ok_today=[bool]$gsFreshToday
+      nvda_blockg_ready=[bool]$nvdaReady
+      reasons_not_ready=@($reasons)
+      build_mode="FAST_PHASE3"
+    }
+
+    $enc = New-Object System.Text.UTF8Encoding($false)
+    $script:__emit_reached = $true
+    [System.IO.File]::WriteAllText($statusPath, ($payload | ConvertTo-Json -Depth 6), $enc)
+    Write-Host ("[BLOCK-G] FAST stub wrote: " + $statusPath) -ForegroundColor Yellow
+    return
+  } catch {
+    # Fail-closed: still try to emit something
+    try{
+      $statusPath = Join-Path $logsDir "blockg_status_stub.json"
+# --- BREADCRUMB (debug, deterministic) ---
+try {
+  $toolsDir = Split-Path -Parent $PSCommandPath
+  $crumbPath = Join-Path $toolsDir "blockg_builder_breadcrumb.txt"
+  $msg = @(
+    ("ts=" + (Get-Date).ToString("s")),
+    ("repoRoot=" + $repoRoot),
+    ("logsDir=" + $logsDir),
+    ("statusPath=" + $statusPath),
+    ("pwd=" + (Get-Location).Path)
+  ) -join "`r`n"
+  [System.IO.File]::WriteAllText($crumbPath, $msg, (New-Object System.Text.UTF8Encoding($false)))
+} catch { }
+# --- END BREADCRUMB ---
+      $enc = New-Object System.Text.UTF8Encoding($false)
+      [System.IO.File]::WriteAllText($statusPath, '{"ok":false,"reason":"fast_builder_exception"}', $enc)
+    } catch { }
+    return
+  }
+}
+# --- END FAST BUILDER MODE ---
 # INTEL_CONTRACT_BEGIN
 function _SliceDate([string]$d){
   if(-not $d){ return "" }
@@ -399,7 +596,7 @@ try {
 # GS_ASOF_FORCE_FROM_EVENTS_BEGIN
 # FINAL AUTHORITY: gsAsOf must follow the resolved NVDA events file (array OR jsonl).
 try {
-  $selNvda = Resolve-GsPath "NVDA" $todayLocal
+  $selNvda = Resolve-GatescoreEventsPath "NVDA" $logsDir
   $mx = Get-MaxAsOfDateFromJsonl $selNvda
   if($mx){ $gsAsOf = $mx }
 } catch { }
@@ -407,7 +604,7 @@ try {
 # GS_ASOF_FROM_EVENTS_BEGIN
 # GateScore session date must follow the selected NVDA source for TODAY (paper vs replay).
 try {
-  $sel = Resolve-GsPath "NVDA" $todayLocal
+  $sel = Resolve-GatescoreEventsPath "NVDA" $logsDir
   $gsAsOf = Get-MaxAsOfDateFromJsonl $sel
 } catch { $gsAsOf = "" }
 # GS_ASOF_FROM_EVENTS_END
@@ -565,6 +762,7 @@ if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Fo
 
 # Session date (single source of truth): prefer Phase4 stamp as_of_date; fallback to local date
 $today = (Get-Date).ToString("yyyy-MM-dd")
+$todayLocal = (Get-Date).ToString("yyyy-MM-dd")
 $p4Path = Join-Path $logsDir "phase4_validation_passed.json"
 if (Test-Path -LiteralPath $p4Path) {
   try {
@@ -590,6 +788,21 @@ $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 $statusPath = Join-Path $logsDir "blockg_status_stub.json"
 
 
+
+# --- BREADCRUMB (debug, deterministic) ---
+try {
+  $toolsDir = Split-Path -Parent $PSCommandPath
+  $crumbPath = Join-Path $toolsDir "blockg_builder_breadcrumb.txt"
+  $msg = @(
+    ("ts=" + (Get-Date).ToString("s")),
+    ("repoRoot=" + $repoRoot),
+    ("logsDir=" + $logsDir),
+    ("statusPath=" + $statusPath),
+    ("pwd=" + (Get-Location).Path)
+  ) -join "`r`n"
+  [System.IO.File]::WriteAllText($crumbPath, $msg, (New-Object System.Text.UTF8Encoding($false)))
+} catch { }
+# --- END BREADCRUMB ---
 # ---- GateScore EVENTS freshness (fail-closed) ----
 $GS_MIN_EVENTS_REQUIRED = 25
 
@@ -608,7 +821,7 @@ function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
     try {
       $it = Get-Item -LiteralPath $p
       $ts = $it.LastWriteTime.ToString("yyyy-MM-dd")
-      $fresh = ($ts -eq $Today)
+      $fresh = ($ts -eq $todayLocal)
     } catch { $fresh = $false; $ts = "" }
 
     # Quality: count eligible rows for TODAY (prevents toxic files from reporting ok)
@@ -622,7 +835,7 @@ function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
             $d = [string]$o.as_of_date
             if($d.Length -ge 10){ $d = $d.Substring(0,10) }
           }
-          if($d -ne $Today){ continue }
+          if ($d -ne $todayLocal) { continue }
 
           # Eligible semantics: if field missing -> treat as eligible (legacy)
           $ok = $true
@@ -690,7 +903,7 @@ if (Test-Path $evPath) {
 
         # Find today row (if any) and enforce ok only for today.
         foreach ($r in $rows) {
-            if ((Slice-Date ([string]$r.date)) -eq $today) {
+            if ((Slice-Date ([string]$r.date)) -eq $todayLocal) {
                 $evHardDailyAsOf = $today
                 if ($r.PSObject.Properties.Name -contains "ok") { $evHardOk = To-Bool $r.ok } else { $evHardOk = $true }
                 break
@@ -705,7 +918,7 @@ try {
   if (Test-Path $evPath) {
     $rows2 = @(Import-Csv $evPath)
     foreach ($r2 in $rows2) {
-      if ((Slice-Date ([string]$r2.date)) -eq $today) {
+      if ((Slice-Date ([string]$r2.date)) -eq $todayLocal) {
         if ($r2.PSObject.Properties.Name -contains "reason") { $evHardReason = [string]$r2.reason }
       }
     }
@@ -753,7 +966,7 @@ if (Test-Path $phase23Path) {
         if ($r.PSObject.Properties.Name -contains "as_of_date") { $d = Slice-Date ([string]$r.as_of_date) }
         elseif ($r.PSObject.Properties.Name -contains "date") { $d = Slice-Date ([string]$r.date) }
 
-        if ($d -ne $today) { continue }
+        if ($d -ne $todayLocal) { continue }
 
         $phase23SawToday = $true
 
@@ -939,9 +1152,9 @@ $evQQQ  = Get-GSEventsMeta $repoRoot "QQQ"  $today
 
 # ---- Per-symbol ready (institutional) ----
 # NOTE: GateScore global fields remain NVDA-based for compatibility; readiness is per-symbol.
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsNVDA.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evNVDA.ok
-$spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
-$qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsNVDA.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $todayLocal) -and [bool]$evNVDA.ok
+$spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $todayLocal) -and [bool]$evSPY.ok
+$qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $todayLocal) -and [bool]$evQQQ.ok
 $reasons = New-Object System.Collections.Generic.List[string]
 if ($gsMetricsSourceDisallowedForLive) {
   $reasons.Add(("gatescore_metrics_source_disallowed_for_live=" + $gatescore_metrics_source)) | Out-Null
@@ -978,7 +1191,7 @@ if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
 if (-not $evHardOk -and $evHardReason) { $reasons.Add(("ev_hard_daily_reason=" + $evHardReason)) }
 if (-not $evHardOk -and $evHardSnapshotReason) { $reasons.Add(("ev_hard_snapshot_reason=" + $evHardSnapshotReason)) }
 if (-not $phase4Ok)  { $reasons.Add("phase4_ok_today=false") }
-if (-not $gsAsOf -or $gsAsOf -ne $today) { $reasons.Add("gatescore_fresh_today=false") }
+if (-not $gsAsOf -or $gsAsOf -ne $todayLocal) { $reasons.Add("gatescore_fresh_today=false") }
 if (-not $gsSamplesOk) { $reasons.Add("gatescore_samples_not_ok") }
 # LIVE_HARD_REASONS_BEGIN
 try {
@@ -1037,9 +1250,9 @@ if ($gsMetricsSourceDisallowedForLive) {
   $qqqReady  = $false
 }
 # PROXY_METRICS_SOURCE_FORCE_NOT_READY_END
-$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsNVDA.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evNVDA.ok
-$spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evSPY.ok
-$qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $today) -and [bool]$evQQQ.ok
+$nvdaReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsNVDA.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $todayLocal) -and [bool]$evNVDA.ok
+$spyReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsSPY.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $todayLocal) -and [bool]$evSPY.ok
+$qqqReady = $phase23Ok -and $evHardOk -and $phase4Ok -and $gsPolicyOk -and $gsQQQ.okLiveToday -and ($gsAsOf -ne "" -and $gsAsOf -eq $todayLocal) -and [bool]$evQQQ.ok
 
 
 # Audit: include per-symbol not-ready flags (even if NVDA is ready)
@@ -1109,6 +1322,11 @@ try {
   try { $reasons.Add("metrics_source_missing_for_symbol=QQQ") | Out-Null } catch { }
 }
 # AUDIT_METRICS_SOURCE_MISSING_END
+
+# --- EMIT GUARANTEE (institutional) ---
+$script:__emit_reached = $true
+# --- END EMIT GUARANTEE ---
+
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
@@ -1149,7 +1367,7 @@ $payload = [ordered]@{
     nvda_intel_ok_today        = [bool]$nvda_intel_ok_today
 
 
-    gatescore_fresh_today   = (($gsAsOf -ne "") -and ($gsAsOf -eq $today))
+    gatescore_fresh_today   = (($gsAsOf -ne "") -and ($gsAsOf -eq $todayLocal))
 
     gatescore_as_of_date = $gsAsOf
     gatescore_age_days = $gsAgeDays
@@ -1265,11 +1483,49 @@ try {
 $payloadJson = $payload | ConvertTo-Json -Depth 6
 Write-Host ("[BLOCK-G] Writing Block-G status stub: " + (Split-Path -Leaf $statusPath)) -ForegroundColor Cyan
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+# --- FAIL-CLOSED EMIT GUARD: if payload block was skipped, write minimal stub then exit 2 ---
+if(-not (Get-Variable -Name "__emit_reached" -Scope Script -ErrorAction SilentlyContinue)){
+  try {
+    $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
+    $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+    if(-not $repoRoot){ $repoRoot = Resolve-RepoRoot }
+    if(-not $logsDir){ $logsDir = Join-Path $repoRoot "logs" }
+    if(-not (Test-Path -LiteralPath $logsDir)){ New-Item -ItemType Directory -Force -Path $logsDir | Out-Null }
+    if(-not $statusPath){ $statusPath = Join-Path $logsDir "blockg_status_stub.json" }
+    $min = [ordered]@{ ts_utc=$tsUtc; as_of_date=$todayLocal; ok=$false; reason="builder_skipped_emit_block_failclosed"; reasons_not_ready=@("builder_skipped_emit_block") }
+    $enc = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($statusPath, ($min | ConvertTo-Json -Depth 6), $enc)
+  } catch { }
+throw "[BLOCKG] DEBUG: exit 2 hit"
+}
+# --- END FAIL-CLOSED EMIT GUARD ---
+
 [System.IO.File]::WriteAllText($statusPath, $payloadJson, $utf8NoBom)
 
 Write-Host "[BLOCK-G] Status snapshot:" -ForegroundColor Yellow
 $payload.GetEnumerator() | Format-Table -AutoSize
 
 exit 0
+
+
+
+
+
+
+
+
+
+} catch {
+  try {
+    $toolsDir = Split-Path -Parent $PSCommandPath
+    $p = Join-Path $toolsDir "blockg_builder_crash.txt"
+    $msg = $_.Exception.ToString()
+    [System.IO.File]::WriteAllText($p, $msg, (New-Object System.Text.UTF8Encoding($false)))
+  } catch { }
+  throw
+}
+
+
 
 

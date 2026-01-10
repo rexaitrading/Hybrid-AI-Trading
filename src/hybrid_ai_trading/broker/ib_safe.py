@@ -64,18 +64,17 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
             sym = str(meta.get("symbol", "") or "").upper().strip()
         except Exception:
             sym = None
-
-    # Enforce Block-G (single gate)
+    # Enforce Block-G + live gates (fail-closed)
     if _is_live():
-        # LIVE 2-key: operator arm token required (fail-closed).
-        require_live_arm(sym)
         if sym in ("NVDA", "SPY", "QQQ"):
-            # Block-G contract JSON gate (fail-closed). Applies to NVDA/SPY/QQQ in LIVE mode.
+            # System readiness first (Block-G) so tests can assert correct chokepoint behavior
             require_blockg_ready_for_live(sym)
             require_nvda_live_stamp(sym)
             # Phase-7 portfolio guard (fail-closed). Applies to NVDA/SPY/QQQ in LIVE mode.
             require_portfolio_gate_for_live(sym)
-    # LIVE_2KEY_ARM_AND_BLOCKG_PS_BEGIN
+
+        # Operator intent last (2-key arm token)
+        require_live_arm(sym)# LIVE_2KEY_ARM_AND_BLOCKG_PS_BEGIN
     # Removed: PS checker is enforced inside require_blockg_ready_for_live()
     # LIVE_2KEY_ARM_AND_BLOCKG_PS_END
 
@@ -255,3 +254,4 @@ def map_ib_error(err: BaseException) -> str:
     if "unreachable" in msg:
         return "HOST_UNREACHABLE"
     return "UNKNOWN"
+

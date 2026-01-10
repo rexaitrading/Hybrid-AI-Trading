@@ -21,14 +21,13 @@ def _repo_root() -> Path:
 
 
 def _token_path(symbol: str) -> Path:
-    """Resolve live-arm token path. Tests can override via HAT_LIVE_READY_STAMP_PATH."""
-    envp = os.getenv("HAT_LIVE_READY_STAMP_PATH", "").strip()
+    """Resolve live-arm token path. Tests can override via HAT_LIVE_ARM_TOKEN_PATH."""
+    envp = os.getenv("HAT_LIVE_ARM_TOKEN_PATH", "").strip()
     if envp:
         return Path(envp)
-    # default per-symbol token file
-    sym = (symbol or "").upper().strip()
-    return Path("logs") / f"{sym.lower()}_live_ready_stamp.json"
 
+    sym = (symbol or "").upper().strip()
+    return Path("logs") / f"live_arm_{sym.lower()}.json"
 def require_live_arm(symbol: str) -> None:
     sym = (symbol or "").upper().strip()
     p = _token_path(sym)
@@ -51,7 +50,7 @@ def require_live_arm(symbol: str) -> None:
     if sym2 and (sym2 != sym):
         raise BlockGNotReady(f"LIVE ARM FAIL-CLOSED: symbol_mismatch token={sym2} expected={sym}")
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if as_of != today:
         raise BlockGNotReady(f"LIVE ARM FAIL-CLOSED: as_of_date={as_of} expected={today}")
 
