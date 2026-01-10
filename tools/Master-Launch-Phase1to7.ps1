@@ -175,7 +175,7 @@ Step "Preflight directories" {
 if(-not $SkipIntel){
   Step "Intel: News"    { RunTool "tools\Run-IntelNews.ps1" }
   Step "Intel: YouTube" { RunTool "tools\Run-IntelYouTube.ps1" }
-  Step "Intel: Full"    { RunTool "tools\Run-IntelPipeline-Full.ps1" }
+  Step "Intel: Full"    { RunTool "tools\Run-IntelPipeline-Full.ps1" @("-IntelMode","DEGRADED_OK") }
 } else {
   Write-Host "[MASTER-LAUNCH] Intel steps skipped (SkipIntel=true)" -ForegroundColor Yellow
 }
@@ -257,3 +257,4 @@ if($Hold){
   Write-Host "`n[MASTER-LAUNCH] Hold=true. Press Enter to close..." -ForegroundColor Yellow
   [void](Read-Host)
 }
+

@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param()
+param(
+  [ValidateSet("DEGRADED_OK","FULL_REQUIRED")]
+  [string]$IntelMode = "DEGRADED_OK"
+)
 
 Set-StrictMode -Version Latest
 # --- secrets (canonical) ---
@@ -34,10 +37,25 @@ $optional = @(
 )
 
 foreach($p in $optional){
+  $leaf = (Split-Path -Leaf $p)
+  $isEarnings = ($leaf -ieq "Run-IntelEarnings.ps1")
+
   if(Test-Path -LiteralPath $p){
     Write-Host "[INTEL-FULL] run => $p" -ForegroundColor Yellow
     & $p *>&1 | Out-Host
+    $rc = $LASTEXITCODE
+
+    if($isEarnings){
+      if($rc -ne 0){
+        if($IntelMode -eq "FULL_REQUIRED"){ exit 2 }
+        Write-Host "[INTEL-FULL] WARN: earnings failed (degraded allowed)" -ForegroundColor DarkYellow
+      }
+    } else {
+      if($rc -ne 0){ throw ("[INTEL-FULL] FAIL-CLOSED: provider failed leaf=" + $leaf + " rc=" + $rc) }
+    }
+
   } else {
+    if($isEarnings -and ($IntelMode -eq "FULL_REQUIRED")){ throw "[INTEL-FULL] FAIL-CLOSED: earnings required but missing" }
     Write-Host "[INTEL-FULL] SKIP missing => $p" -ForegroundColor DarkYellow
   }
 }
