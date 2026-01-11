@@ -2,9 +2,9 @@
 param(
   [ValidateSet("NVDA","SPY","QQQ")]
   [string]$Symbol = "NVDA",
+[switch]$All,
 
-  [switch]$All,
-
+  [switch]$AllowClosedDayDiagnostics,
   [int]$BuilderTimeoutSec = 120
 )
 
