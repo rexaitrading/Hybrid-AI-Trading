@@ -184,7 +184,7 @@ if(-not $SkipIntel){
 }
 
 Step "Verify Block-G readiness (one-shot gate)" {
-  powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\Verify-BlockG-Ready.ps1" -Symbol $Symbol *>&1 | Out-Host
+  powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\Verify-BlockG-Ready.ps1" -Symbol $Symbol $(if($Hold){ "-AllowClosedDayDiagnostics" } else { "" }) *>&1 | Out-Host
   if($LASTEXITCODE -ne 0){ Fail ("Verify-BlockG-Ready failed exit=" + $LASTEXITCODE) }
 }
 Step "Block-G build status stub (timeout/reuse)" {
