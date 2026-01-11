@@ -1,4 +1,18 @@
 ---
+## 2026-01-11 - Ops: Add Verify-BlockG-Ready one-shot premarket gate
+
+Commit: 9c50b406
+
+Adds tools/Verify-BlockG-Ready.ps1:
+- Builds Block-G status stub (FULL semantics; does NOT force FAST)
+- Runs Check-BlockGReady (default NVDA; optional -All)
+- Exits 0 only when READY; otherwise exits 2 (fail-closed)
+
+Validation (Sunday):
+- Expected fail-closed on market_closed_today => exit=2
+
+---
+---
 ## 2026-01-11 - Block-G: PS Semantic Owner End-to-End (squash)
 
 Commit: 9abdcc36
