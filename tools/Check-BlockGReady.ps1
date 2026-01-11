@@ -156,6 +156,21 @@ if(($statusPath + "") -match "\?\?"){
 # --- END CANONICALIZE + BAN statusPath ---
 $st = Read-Json $statusPath
 
+# --- CONTRACT SEMANTICS LEVEL (fail-closed) ---
+if ($st) {
+  try {
+    $sem = ""
+    if($st.PSObject.Properties.Name -contains "contract_semantics_level"){ $sem = [string]$st.contract_semantics_level }
+    if(-not $sem){ $sem = "UNKNOWN" }
+    if($sem -ne "FULL_LIVE_ELIGIBLE"){
+      Fail ("contract_semantics_level=" + $sem)
+    }
+  } catch {
+    Fail "contract_semantics_level check failed"
+  }
+}
+# --- END CONTRACT SEMANTICS LEVEL ---
+
 # --- EV-hard date clarity (audit-only; contract semantics unchanged) ---
 if($st){
   if($st.PSObject.Properties.Name -contains "ev_hard_daily_as_of_date"){
