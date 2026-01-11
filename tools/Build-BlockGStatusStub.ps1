@@ -1378,7 +1378,7 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_rolling_samples_ok = $gatescore_rolling_samples_ok
     min_samples_ok_today   = $gsSamplesOk
     gatescore_threshold_ok_today = $gsThreshOk
-    gatescore_ok_today      = $gsOkToday
+    gatescore_ok_today      = ([bool]$gsOkToday -and [bool]$gsRecentEnough -and ($gsAsOf -ne ""))
 
     # Per-symbol GateScore detail (audit/Notion-friendly)
     gatescore_by_symbol = [ordered]@{
@@ -1402,7 +1402,7 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_min_pnl_samples_live = $GS_LIVE_MIN_PNL_SAMPLES
     gatescore_min_edge_ratio_live   = $GS_LIVE_MIN_EDGE_RATIO
     gatescore_min_micro_score_live  = $GS_LIVE_MIN_MICRO_SCORE
-    gatescore_ok_live_today      = ([bool]$gsNVDA.okLiveToday)
+    gatescore_ok_live_today      = ([bool]$gsNVDA.okLiveToday -and [bool]$gsRecentEnough -and ($gsAsOf -eq $todayLocal) -and [bool]$evNVDA.ok)
 
     gatescore_events_min_required = $GS_MIN_EVENTS_REQUIRED
     gatescore_events_by_symbol = [ordered]@{
