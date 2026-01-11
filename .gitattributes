@@ -1,4 +1,4 @@
-﻿* text=auto eol=lf
+* text=auto eol=lf
 *.py   text eol=lf
 *.ps1  text eol=lf
 *.yml  text eol=lf
@@ -6,3 +6,5 @@
 *.json text eol=lf
 *.ini  text eol=lf
 *.csv  text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf

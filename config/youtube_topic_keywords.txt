@@ -1,0 +1,10 @@
+# One keyword per line (case-insensitive substring match on title)
+order flow
+tape
+scalping
+microstructure
+options
+futures
+SPY
+QQQ
+NVDA
