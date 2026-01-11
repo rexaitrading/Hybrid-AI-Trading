@@ -68,14 +68,14 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
     if _is_live():
         if sym in ("NVDA", "SPY", "QQQ"):
             # System readiness first (Block-G) so tests can assert correct chokepoint behavior
-            require_blockg_ready_for_live(sym)
+            require_blockg_ready_via_powershell(sym, build=False)
             require_nvda_live_stamp(sym)
             # Phase-7 portfolio guard (fail-closed). Applies to NVDA/SPY/QQQ in LIVE mode.
             require_portfolio_gate_for_live(sym)
 
         # Operator intent last (2-key arm token)
         require_live_arm(sym)# LIVE_2KEY_ARM_AND_BLOCKG_PS_BEGIN
-    # Removed: PS checker is enforced inside require_blockg_ready_for_live()
+    # PS checker is the single semantic owner for LIVE (fail-closed).
     # LIVE_2KEY_ARM_AND_BLOCKG_PS_END
 
     # Place order
