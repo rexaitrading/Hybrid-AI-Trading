@@ -254,3 +254,9 @@ tools/Disarm-NVDA-Live.ps1
 
 - [2026-01-03 22:01:57] BLOCK-G INSTITUTIONAL LOCK: single-authority PS checker + closed-day semantics + no-bypass + LockPack wired into DailyReadiness.
 - [2026-01-03 22:10:36] BLOCKG_LOCK OK: HEAD=67c29b46 TAG=CHECKPOINT_BLOCKG_LOCK_20260103_220202 LOCKPACK_EXIT=0 READY_EXECUTOR=Arm-NVDA-Live only.
+## 2026-01-11 15:30:24  Block-G enforcement hardening + test stabilization
+
+- FIX: Block-G tests stabilized (contract_semantics_level fixtures, live-arm token today-ness, strict-markers db marker).
+- FIX: OrderManager live submit removed IB-like bypass; Block-G enforced for NVDA/SPY/QQQ regardless of broker client type.
+- VALIDATION: pytest -k blockg (22 passed), pytest -k "order_manager and blockg" (3 passed).
+- CHECKPOINTS: CHECKPOINT_20260111_BLOCKG_GREEN, CHECKPOINT_20260111_BLOCKG_NO_BYPASS
