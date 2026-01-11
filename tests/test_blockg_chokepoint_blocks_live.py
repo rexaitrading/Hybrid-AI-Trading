@@ -48,7 +48,7 @@ def test_chokepoint_blocks_live_when_not_ready(tmp_path, monkeypatch):
     # Make Block-G always fail
     def _fail(sym: str, *a, **k):
         raise RuntimeError("BLOCKG_NOT_READY_TEST")
-    monkeypatch.setattr("hybrid_ai_trading.broker.ib_safe.require_blockg_ready_for_live", _fail)
+    monkeypatch.setattr("hybrid_ai_trading.broker.ib_safe.require_blockg_ready_via_powershell", _fail)
 
     ib = _IB()
     with pytest.raises(RuntimeError, match="BLOCKG_NOT_READY_TEST"):
