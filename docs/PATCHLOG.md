@@ -1,4 +1,23 @@
 ---
+## 2026-01-11 - Block-G: PS Semantic Owner End-to-End (squash)
+
+Commit: 9abdcc36
+
+What changed:
+- IB order chokepoint: LIVE gates use PowerShell Check-BlockGReady as single semantic owner.
+- Checker: fail-closed on contract_semantics_level != FULL_LIVE_ELIGIBLE.
+- Builder: FULL contract now emits build_mode=FULL and contract_semantics_level=FULL_LIVE_ELIGIBLE.
+- Master-Launch: no longer forces FAST builder (FULL semantics required for readiness).
+- Phase5 guard: LIVE uses PowerShell checker (no Python recompute).
+
+Validation (2026-01-11 Sunday):
+- Build-BlockGStatusStub OK (FULL contract emitted).
+- Check-BlockGReady denies on market_closed_today=true (expected).
+- Python compile OK.
+- Phase5 paper smoke OK.
+
+---
+---
 ## 2026-01-11 - Intel/Tools Re-entry (stash@{1}) - Split commits
 
 Goal: Re-apply stashed intel/tools work in a controlled way; keep scheduled/crypto task scripts isolated.
