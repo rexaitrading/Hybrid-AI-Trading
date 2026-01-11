@@ -12,7 +12,7 @@ distlib==0.4.0
 eventkit==1.0.3
 fastapi==0.120.2
 feedparser==6.0.12
-filelock==3.19.1
+filelock==3.20.1
 fsspec==2025.9.0
 git-filter-repo==2.47.0
 h11==0.16.0
@@ -57,7 +57,7 @@ typing_extensions==4.15.0
 typing-inspection==0.4.1
 tzdata==2025.2
 uritemplate==4.2.0
-urllib3==2.5.0
+urllib3==2.6.3
 uvicorn==0.37.0
 vaderSentiment==3.3.2
 virtualenv==20.34.0
@@ -69,7 +69,5 @@ wheel==0.45.1
 xlsxwriter==3.2.5
 yarl==1.20.1
 zipp==3.23.0
-requests>=2.31
-python-dotenv>=1.0
-numpy>=2.0
-pandas>=2.2
+
+aiohttp==3.13.3
