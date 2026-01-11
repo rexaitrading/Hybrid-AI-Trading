@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any, Dict
 from hybrid_ai_trading.runtime.run_context import RunContext
-from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
+from hybrid_ai_trading.execution.blockg_ps_checker import require_blockg_ready_via_powershell
 
 from hybrid_ai_trading.portfolio.halts import require_portfolio_halt_ok
 from hybrid_ai_trading.risk.risk_phase5_types import Phase5RiskDecision
@@ -26,7 +26,7 @@ def ensure_symbol_blockg_ready(symbol: str) -> None:
     Single Python entrypoint is hybrid_ai_trading.execution.blockg_enforce.require_blockg_ready_for_live.
     Tests may monkeypatch this function to simulate failures.
     """
-    require_blockg_ready_for_live(str(symbol).upper().strip())
+    require_blockg_ready_via_powershell(str(symbol).upper().strip(), build=False)
 
 
 def _infer_is_paper(engine: Any, regime: str, ctx: RunContext | None) -> bool:
