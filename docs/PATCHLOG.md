@@ -260,3 +260,10 @@ tools/Disarm-NVDA-Live.ps1
 - FIX: OrderManager live submit removed IB-like bypass; Block-G enforced for NVDA/SPY/QQQ regardless of broker client type.
 - VALIDATION: pytest -k blockg (22 passed), pytest -k "order_manager and blockg" (3 passed).
 - CHECKPOINTS: CHECKPOINT_20260111_BLOCKG_GREEN, CHECKPOINT_20260111_BLOCKG_NO_BYPASS
+## 2026-01-11 15:51:50  Block-G contract A(2) coherence: gsAsOf fallback + ok_today semantics
+
+- FIX: Builder derives gatescore_as_of_date from resolved events tail when summary CSV is blank (prevents empty gsAsOf).
+- FIX: gatescore_ok_today now strictly requires gsAsOf == todayLocal (no stale ok_today).
+- FIX: gatescore_ok_today / gatescore_ok_live_today coherent with freshness + age policy.
+- VALIDATION: Build-BlockGStatusStub FULL emits gsAsOf=2026-01-10 (age=1), ok_today=false on 2026-01-11; pytest -k blockg green.
+- CHECKPOINT: CHECKPOINT_20260111_BLOCKG_A2_COHERENCE
