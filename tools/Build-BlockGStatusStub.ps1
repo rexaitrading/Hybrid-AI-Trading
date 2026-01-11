@@ -1388,7 +1388,7 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_rolling_samples_ok = $gatescore_rolling_samples_ok
     min_samples_ok_today   = $gsSamplesOk
     gatescore_threshold_ok_today = $gsThreshOk
-    gatescore_ok_today      = ([bool]$gsOkToday -and [bool]$gsRecentEnough -and ($gsAsOf -ne ""))
+    gatescore_ok_today      = ([bool]$gsOkToday -and [bool]$gsRecentEnough -and ($gsAsOf -eq $todayLocal))
 
     # Per-symbol GateScore detail (audit/Notion-friendly)
     gatescore_by_symbol = [ordered]@{
