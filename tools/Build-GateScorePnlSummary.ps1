@@ -4,30 +4,91 @@ param(
     [string]$Symbol = "ALL",
     [switch]$StrictToday
 )
-
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $logsDir  = Join-Path $repoRoot "logs"
-
 $today = (Get-Date).ToString("yyyy-MM-dd")
 $outPath = Join-Path $logsDir "gatescore_pnl_summary.csv"
-
+# ------------------------------
+# FAST PATH: NVDA-only JSONL scan (PS5-safe; no ConvertFrom-Json)
+# ------------------------------
+function _TryMatchDate([string]$s){
+  if(-not $s){ return "" }
+  $m = [regex]::Match($s, '"as_of_date"\s*:\s*"(?<d>\d{4}-\d{2}-\d{2})"')
+  if($m.Success){ return $m.Groups["d"].Value }
+  $m = [regex]::Match($s, '"(ts_utc|ts|timestamp)"\s*:\s*"(?<d>\d{4}-\d{2}-\d{2})')
+  if($m.Success){ return $m.Groups["d"].Value }
+  return ""
+}
+function _HasEligibleTrue([string]$s){
+  if(-not $s){ return $true }
+  if($s -match '"eligible"\s*:\s*false'){ return $false }
+  if($s -match '"eligible"\s*:\s*true'){ return $true }
+  return $true
+}
+function _TryNum([string]$s,[string[]]$keys){
+  foreach($k in $keys){
+    $m = [regex]::Match($s, '"' + [regex]::Escape($k) + '"\s*:\s*(?<n>-?\d+(\.\d+)?)')
+    if($m.Success){ return [double]$m.Groups["n"].Value }
+  }
+  return $null
+}
+function _StageToLocal([string]$Path){
+  $dstDir = "C:\Trading\tmp"
+  if(-not (Test-Path -LiteralPath $dstDir)){ New-Item -ItemType Directory -Force -Path $dstDir | Out-Null }
+  $dst = Join-Path $dstDir ("nvda_gs_" + (Get-Date).ToString("yyyyMMdd_HHmmss") + ".jsonl")
+  Copy-Item -LiteralPath $Path -Destination $dst -Force
+  return $dst
+}
+function Fast-NvdaSummaryFromJsonl([string]$Path,[string]$TargetDate){
+  $cnt = 0
+  $edgeSum=0.0; $edgeN=0
+  $microSum=0.0; $microN=0
+  $pnlSum=0.0; $pnlN=0
+  if(-not (Test-Path -LiteralPath $Path)){ throw ("Missing file: " + $Path) }
+  foreach($ln0 in [System.IO.File]::ReadLines([System.IO.Path]::GetFullPath($Path))){
+  # (streamed)
+      $ln = ($ln0+"").Trim()
+      if(-not $ln){ continue }
+      $d = _TryMatchDate $ln
+      if($d -ne $TargetDate){ continue }
+      if(-not (_HasEligibleTrue $ln)){ continue }
+      $cnt++
+      $v = _TryNum $ln @("edge_ratio","mean_edge_ratio","edge","ev_edge_ratio")
+      if($null -ne $v){ $edgeSum += $v; $edgeN++ }
+      $v = _TryNum $ln @("micro_score","mean_micro_score","micro","micro_score_today")
+      if($null -ne $v){ $microSum += $v; $microN++ }
+      $v = _TryNum $ln @("realized_pnl","pnl","net_pnl","pnl_usd")
+      if($null -ne $v){ $pnlSum += $v; $pnlN++ }
+  }
+  $pnlSamples = $cnt
+  if($pnlN -gt 0){ $pnlSamples = $pnlN }
+  $meanEdge = 0.0
+  if($edgeN -gt 0){ $meanEdge = $edgeSum / [double]$edgeN }
+  $meanMicro = 0.0
+  if($microN -gt 0){ $meanMicro = $microSum / [double]$microN }
+  $meanPnl = 0.0
+  if($pnlN -gt 0){ $meanPnl = $pnlSum / [double]$pnlN }
+  return [pscustomobject]@{
+    count_signals    = [int]$cnt
+    pnl_samples      = [int]$pnlSamples
+    mean_edge_ratio  = [double]$meanEdge
+    mean_micro_score = [double]$meanMicro
+    mean_pnl         = [double]$meanPnl
+    has_eligible     = [bool]($cnt -gt 0)
+  }
+}
 function Resolve-EventFile([string]$logsDir,[string]$sym){
     $std  = Join-Path $logsDir ("{0}_gatescore_events.jsonl" -f $sym.ToLower())
     $real = Join-Path $logsDir ("{0}_gatescore_events_real.jsonl" -f $sym.ToLower())
-
     # Institutional: prefer canonical std file when it is non-trivial (avoid full-file scans).
     # Reason: std can be large (tens of MB). Scanning entire file to find max_date is slow and fragile.
     $STD_MIN_BYTES = 1048576  # 1MB
-
     $hasStd  = Test-Path -LiteralPath $std
     $hasReal = Test-Path -LiteralPath $real
-
     if((-not $hasStd) -and (-not $hasReal)){ return "" }
-
     if($hasStd){
         try {
             $len = (Get-Item -LiteralPath $std).Length
@@ -41,7 +102,6 @@ function Resolve-EventFile([string]$logsDir,[string]$sym){
         } catch { }
         return $std
     }
-
     return $real
 }
 function Resolve-StdOnlyFile([string]$logsDir,[string]$sym){
@@ -49,59 +109,52 @@ function Resolve-StdOnlyFile([string]$logsDir,[string]$sym){
     if (Test-Path -LiteralPath $std) { return $std }
     return ""
 }
-
-
-
 function _SliceDate([string]$d) {
     if (-not $d) { return "" }
     if ($d.Length -ge 10) { return $d.Substring(0,10) }
     return $d
 }
-
 function _TryDouble([object]$v) {
     $x = 0.0
     if ($null -eq $v) { return $null }
     if ([double]::TryParse([string]$v, [ref]$x)) { return $x }
     return $null
 }
-
 function _TryString([object]$v) {
     if ($null -eq $v) { return "" }
     return [string]$v
 }
-
 function Read-Jsonl([string]$Path) {
-    if (-not (Test-Path $Path)) { return @() }
-    $lines = Get-Content $Path -Encoding UTF8
-    $out = @()
-    foreach ($ln in $lines) {
+    if([string]::IsNullOrWhiteSpace($Path)){ return @() }
+    if (-not (Test-Path -LiteralPath $Path)) { return @() }
+# PERF: stream file in chunks (avoid huge arrays)
+    $chunks = Get-Content -LiteralPath $Path -Encoding UTF8 -ReadCount 2000
+$out = New-Object System.Collections.Generic.List[object]
+foreach ($blk in $chunks) {
+    foreach ($ln in $blk) {
         $s = $ln.Trim()
         if (-not $s) { continue }
-        try { $out += ($s | ConvertFrom-Json) } catch { }
+        try { $o = ($s | ConvertFrom-Json); if($null -ne $o){ $out.Add($o) | Out-Null } } catch { }
+    }
     }
     return @($out)
 }
-
 function Get-EventDate($e) {
     $props = $e.PSObject.Properties.Name
-
     foreach ($k in @("as_of_date","date","trading_day")) {
         if ($props -contains $k) {
             $v = _TryString ($e.$k)
             if ($v) { return _SliceDate $v }
         }
     }
-
     foreach ($k in @("ts_utc","ts","timestamp")) {
         if ($props -contains $k) {
             $t = _TryString ($e.$k)
             if ($t.Length -ge 10) { return $t.Substring(0,10) }
         }
     }
-
     return ""
 }
-
 function Get-Num($e, [string[]]$keys) {
     $props = $e.PSObject.Properties.Name
     foreach ($k in $keys) {
@@ -112,7 +165,6 @@ function Get-Num($e, [string[]]$keys) {
     }
     return $null
 }
-
 function Mean($arr) {
     if ($arr.Count -eq 0) { return 0.0 }
     $sum = 0.0
@@ -123,25 +175,30 @@ function Get-EventPnlSamples($events) {
     $sum = 0
     foreach ($e in $events) {
         try {
-            $v = $e.pnl_samples
-            if ($null -eq $v) { $v = $e.pnlSamples }
-            if ($null -eq $v) { $v = $e.sample_count }
-            if ($null -eq $v) { $v = $e.samples }
+            $v = $null
+            if ($e -and ($e.PSObject.Properties.Name -contains "pnl_samples")) { $v = $e.pnl_samples }
+            elseif ($e -and ($e.PSObject.Properties.Name -contains "pnlSamples")) { $v = $e.pnlSamples }
+            elseif ($e -and ($e.PSObject.Properties.Name -contains "sample_count")) { $v = $e.sample_count }
+            elseif ($e -and ($e.PSObject.Properties.Name -contains "samples")) { $v = $e.samples }
+
+            if ($null -eq $v) { continue }
+            $s = ([string]$v)
+            if ([string]::IsNullOrWhiteSpace($s)) { continue }
+
             $n = 0
-            if ([int]::TryParse([string]$v, [ref]$n)) { $sum += $n }
-            elseif ([double]::TryParse([string]$v, [ref]([double]$d = 0.0))) { $sum += [int]$d }
+            if ([int]::TryParse($s, [ref]$n)) { $sum += $n; continue }
+
+            $d = 0.0
+            if ([double]::TryParse($s, [ref]$d)) { $sum += [int]$d; continue }
         } catch { }
     }
     return [int]$sum
 }
-
 $eventFiles = @(
     @{ sym="NVDA"; path=(Resolve-StdOnlyFile $logsDir "NVDA"); std=(Resolve-StdOnlyFile $logsDir "NVDA") },
     @{ sym="SPY";  path=(Resolve-EventFile $logsDir "SPY");  std=(Resolve-StdOnlyFile $logsDir "SPY") },
     @{ sym="QQQ";  path=(Resolve-EventFile $logsDir "QQQ");  std=(Resolve-StdOnlyFile $logsDir "QQQ") }
 )
-
-
 $wanted = @()
 switch ($Symbol.ToUpperInvariant()) {
     "NVDA" { $wanted = @("NVDA") }
@@ -149,15 +206,31 @@ switch ($Symbol.ToUpperInvariant()) {
     "QQQ"  { $wanted = @("QQQ") }
     "ALL"  { $wanted = @("NVDA","SPY","QQQ") }
 }
-
 $rowsOut = New-Object System.Collections.Generic.List[object]
-
 foreach ($it in $eventFiles) {
     $sym = [string]$it.sym
     if ($wanted -notcontains $sym) { continue }
     $path = [string]$it.path
     if (-not (Test-Path $path)) { continue }
-
+    if($sym -eq "NVDA" -and ($wanted -contains "NVDA")){
+      $targetDate = $today
+      if(-not $StrictToday){ $targetDate = $today }
+$local = _StageToLocal $path; $m = Fast-NvdaSummaryFromJsonl -Path $local -TargetDate $targetDate
+      if(-not $m.has_eligible){ continue }
+      $row = [pscustomobject]@{
+        as_of_date       = $targetDate
+        symbol           = $sym
+        count_signals    = [int]$m.count_signals
+        pnl_samples      = [int]$m.pnl_samples
+        mean_edge_ratio  = [double]$m.mean_edge_ratio
+        mean_micro_score = [double]$m.mean_micro_score
+        mean_pnl         = [double]$m.mean_pnl
+        eligible_count   = [int]$m.count_signals
+        has_eligible     = [bool]$true
+      }
+      $rowsOut.Add($row) | Out-Null
+      continue
+    }
     $events = @(Read-Jsonl $path)
     # GS_SUMMARY_DEBUG_NVDA_BEGIN
     if($sym -eq "NVDA"){
@@ -174,9 +247,7 @@ foreach ($it in $eventFiles) {
     $stdPath = [string]$it.std
     $stdEvents = @()
     if ($stdPath -and (Test-Path -LiteralPath $stdPath)) { $stdEvents = @(Read-Jsonl $stdPath) }
-
     if ($events.Count -eq 0) { continue }
-
     
     # Determine latest event date in this file (fail-closed if none)
     $latest = ""
@@ -187,43 +258,36 @@ foreach ($it in $eventFiles) {
         }
     }
     if ($latest -eq "") { continue }
-
     $targetDate = if($StrictToday){ $today } else { $latest }
-
     if (-not $StrictToday -and $targetDate -ne $today) {
         Write-Host ("GateScore PnL summary: WARN {0} events are stale (latest={1}, today={2})" -f $sym,$targetDate,$today) -ForegroundColor Yellow
     }
     if ($StrictToday -and $latest -ne $today) {
         Write-Host ("GateScore PnL summary: STRICT-TODAY no events for today={0} (latest={1})" -f $today,$latest) -ForegroundColor Yellow
     }
-
-    $todayEvents = @()
+$todayEvents = New-Object System.Collections.Generic.List[object]
     foreach ($e in $events) {
-        if ((Get-EventDate $e) -eq $targetDate) { $todayEvents += $e }
+        if ((Get-EventDate $e) -eq $targetDate) { $todayEvents.Add($e) | Out-Null }
     }
-    $stdTodayEvents = @()
+$stdTodayEvents = New-Object System.Collections.Generic.List[object]
     if ($stdEvents.Count -gt 0) {
         foreach ($se in $stdEvents) {
-            if ((Get-EventDate $se) -eq $targetDate) { $stdTodayEvents += $se }
+            if ((Get-EventDate $se) -eq $targetDate) { $stdTodayEvents.Add($se) | Out-Null }
         }
         $stdTodayEvents = @($stdTodayEvents | Where-Object {
             -not ($_.PSObject.Properties.Name -contains "eligible") -or [bool]$_.eligible
         })
     }
-
     if ($todayEvents.Count -eq 0) { continue }
-
     # Drop ineligible events (fail-closed against zero-metric pollution)
     $todayEvents = @($todayEvents | Where-Object {
         -not ($_.PSObject.Properties.Name -contains "eligible") -or [bool]$_.eligible
     })
-
     # If no eligible events exist for targetDate:
     # - StrictToday => fail-closed (skip)
     # - Non-strict  => write sentinel freshness row (zeros) so Block-G can see latest date
     if ($todayEvents.Count -eq 0) {
         if ($StrictToday) { continue }
-
         $row = [pscustomobject]@{
             as_of_date       = $targetDate
             symbol           = $sym
@@ -237,31 +301,24 @@ foreach ($it in $eventFiles) {
         $rowsOut.Add($row) | Out-Null
         continue
     }
-
-
     $edgeSourceEvents = if ($stdTodayEvents.Count -gt 0) { $stdTodayEvents } else { $todayEvents }
     $microSourceEvents = $edgeSourceEvents
     $pnlSourceEvents = $todayEvents
-
-    $edgeVals = @()
-    $microVals = @()
-    $pnlVals = @()
-
+$edgeVals = New-Object System.Collections.Generic.List[double]
+$microVals = New-Object System.Collections.Generic.List[double]
+$pnlVals = New-Object System.Collections.Generic.List[double]
     foreach ($e in $pnlSourceEvents) {
         $pnl   = Get-Num $e @("realized_pnl","pnl","net_pnl","pnl_usd")
-        if ($null -ne $pnl)   { $pnlVals += $pnl }
+        if ($null -ne $pnl)   { $pnlVals.Add([double]$pnl) | Out-Null }
     }
-
-
     foreach ($e in $edgeSourceEvents) {
         $edge  = Get-Num $e @("edge_ratio","mean_edge_ratio","edge","ev_edge_ratio")
-        if ($null -ne $edge)  { $edgeVals += $edge }
+        if ($null -ne $edge)  { $edgeVals.Add([double]$edge) | Out-Null }
     }
     foreach ($e in $microSourceEvents) {
         $micro = Get-Num $e @("micro_score","mean_micro_score","micro","micro_score_today")
-        if ($null -ne $micro) { $microVals += $micro }
+        if ($null -ne $micro) { $microVals.Add([double]$micro) | Out-Null }
     }
-
     # pnl_samples semantics:
     # 1) Prefer numeric pnl samples (realized_pnl count)
     # 2) Else fallback to declared per-event pnl_samples
@@ -272,7 +329,6 @@ foreach ($it in $eventFiles) {
         if ($declSum -gt 0) { $rowPnlSamples = $declSum }
     }
     if ($rowPnlSamples -le 0) { $rowPnlSamples = [int]$todayEvents.Count }
-
     $row = [pscustomobject]@{
         as_of_date       = $targetDate
         symbol           = $sym
@@ -284,15 +340,12 @@ foreach ($it in $eventFiles) {
         eligible_count  = [int]$todayEvents.Count
         has_eligible    = [bool]($todayEvents.Count -gt 0)
     }
-
     $rowsOut.Add($row) | Out-Null
 }
-
 if ($rowsOut.Count -eq 0) {
     Write-Error "GateScore PnL summary: no usable 'today' events found. Refusing to write $outPath (fail-closed)."
     exit 2
 }
-
 $allZero = $true
 foreach ($r in $rowsOut) {
     if ($r.count_signals -gt 0 -or $r.pnl_samples -gt 0 -or $r.mean_edge_ratio -ne 0.0 -or $r.mean_micro_score -ne 0.0 -or $r.mean_pnl -ne 0.0) {
@@ -306,13 +359,10 @@ if ($allZero) {
     }
     Write-Host "GateScore PnL summary: rows are zeros (sentinel freshness). Writing anyway (non-strict)." -ForegroundColor Yellow
 }
-
 Write-Host "GateScore PnL summary: writing $outPath" -ForegroundColor Cyan
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $csv = $rowsOut | Sort-Object symbol | ConvertTo-Csv -NoTypeInformation
 [System.IO.File]::WriteAllLines($outPath, $csv, $utf8NoBom)
-
 Write-Host "GateScore PnL summary: sample rows:" -ForegroundColor Yellow
 $rowsOut | Format-Table -AutoSize
-
 exit 0

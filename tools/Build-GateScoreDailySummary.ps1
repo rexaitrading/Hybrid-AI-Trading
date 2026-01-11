@@ -49,7 +49,22 @@ if (-not (Test-Path -LiteralPath $src)) {
   exit 2
 }
 
-$rows = @(Import-Csv -LiteralPath $src)
+# BOUNDED LOAD: header + tail (fast)
+# BOUNDED LOAD (FAST): stream tail lines via .NET (no Get-Content)
+$first = $true
+$headerLine = ""
+$q = New-Object System.Collections.Generic.Queue[string]
+foreach($ln in [System.IO.File]::ReadLines([System.IO.Path]::GetFullPath($src))){
+  if($first){ $headerLine = $ln; $first = $false; continue }
+  if($q.Count -ge 5000){ [void]$q.Dequeue() }
+  $q.Enqueue($ln) | Out-Null
+}
+if(-not $headerLine){
+  Write-Utf8NoBomLf -Path $out -Text $header
+  Write-Host "[GS-DAILY] FAIL-CLOSED: empty csv file (header only)" -ForegroundColor Yellow
+  exit 2
+}
+$rows = @((@($headerLine) + @($q.ToArray())) | ConvertFrom-Csv)
 if (-not $rows -or $rows.Count -eq 0) {
   Write-Utf8NoBomLf -Path $out -Text $header
   Write-Host "[GS-DAILY] FAIL-CLOSED: zero rows in gatescore_pnl_summary.csv (header only)" -ForegroundColor Yellow

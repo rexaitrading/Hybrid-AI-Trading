@@ -1,6 +1,9 @@
 [CmdletBinding()]
 param(
-  [string]$AsOfDate = ""
+  [string]$AsOfDate = "",
+
+  [ValidateSet("DEGRADED_OK","FULL_REQUIRED")]
+  [string]$Mode = "FULL_REQUIRED"
 )
 
 Set-StrictMode -Version Latest
@@ -18,14 +21,12 @@ $today = if($AsOfDate){ $AsOfDate } else { (Get-Date).ToString("yyyy-MM-dd") }
 $feed  = Join-Path $repoRoot "logs\intel_feed.jsonl"
 if(-not (Test-Path -LiteralPath $feed)){ Fail ("Missing " + $feed) }
 
-# Required providers for "perfect coverage"
-$requiredKinds = @(
-  "intel_news_run",
-  "intel_youtube_run",
-  "intel_earnings_run"
-)
-
-# Read last ~5000 lines, pick latest per kind for TODAY
+# Required providers
+$modeU = (($Mode + "")).Trim().ToUpperInvariant()
+$requiredKinds = @("intel_news_run","intel_youtube_run")
+if($modeU -eq "FULL_REQUIRED"){
+  $requiredKinds += "intel_earnings_run"
+}# Read last ~5000 lines, pick latest per kind for TODAY
 $latest = @{}
 $lines = @(Get-Content -LiteralPath $feed -Encoding utf8)
 $tail  = $lines | Select-Object -Last ([Math]::Min(5000, $lines.Count))

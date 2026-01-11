@@ -21,7 +21,7 @@ $wasAlive = $false
 
 while ($true) {
   $ts = Get-Date -Format o
-  $p = Get-Process -Name ibgateway1 -ErrorAction SilentlyContinue
+  $p = Get-Process -Name ibgateway -ErrorAction SilentlyContinue
   $alive = [bool]($null -ne $p)
 
   ("$ts alive=$alive") | Add-Content -LiteralPath $log -Encoding utf8

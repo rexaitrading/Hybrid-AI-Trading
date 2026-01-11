@@ -22,16 +22,16 @@ $sys = Join-Path $outDir "system_$ts.txt"
 $tsk = Join-Path $outDir "taskscheduler_$ts.txt"
 $app = Join-Path $outDir "application_$ts.txt"
 
-Get-WinEvent -FilterHashtable @{LogName='System'; StartTime=$since} |
+Get-WinEvent -ErrorAction SilentlyContinue -FilterHashtable @{LogName='System'; StartTime=$since} |
   Select-Object TimeCreated,Id,ProviderName,Message |
   Out-File -LiteralPath $sys -Encoding utf8
 
-Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TaskScheduler/Operational'; StartTime=$since} |
+Get-WinEvent -ErrorAction SilentlyContinue -FilterHashtable @{LogName='Microsoft-Windows-TaskScheduler/Operational'; StartTime=$since} |
   Select-Object TimeCreated,Id,Message |
   Out-File -LiteralPath $tsk -Encoding utf8
 
 try {
-  Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=$since; Id=1000,1001} |
+  Get-WinEvent -ErrorAction SilentlyContinue -FilterHashtable @{LogName='Application'; StartTime=$since; Id=1000,1001} |
     Select-Object TimeCreated,Id,ProviderName,Message |
     Out-File -LiteralPath $app -Encoding utf8
 } catch {

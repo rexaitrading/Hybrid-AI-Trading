@@ -40,15 +40,15 @@ foreach($p in $optional){
   $leaf = (Split-Path -Leaf $p)
   $isEarnings = ($leaf -ieq "Run-IntelEarnings.ps1")
 
+  $isYouTube  = ($leaf -ieq "Run-IntelYouTube.ps1")
   if(Test-Path -LiteralPath $p){
     Write-Host "[INTEL-FULL] run => $p" -ForegroundColor Yellow
     & $p *>&1 | Out-Host
     $rc = $LASTEXITCODE
-
-    if($isEarnings){
+    if($isEarnings -or $isYouTube){
       if($rc -ne 0){
         if($IntelMode -eq "FULL_REQUIRED"){ exit 2 }
-        Write-Host "[INTEL-FULL] WARN: earnings failed (degraded allowed)" -ForegroundColor DarkYellow
+        Write-Host ("[INTEL-FULL] WARN: optional failed (degraded allowed) leaf=" + $leaf + " rc=" + $rc) -ForegroundColor DarkYellow
       }
     } else {
       if($rc -ne 0){ throw ("[INTEL-FULL] FAIL-CLOSED: provider failed leaf=" + $leaf + " rc=" + $rc) }

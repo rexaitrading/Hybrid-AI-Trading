@@ -3,23 +3,20 @@ param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-chcp 65001 | Out-Null
 
-function Fail([string]$m){ throw "[REPOROOT] FAIL-CLOSED: $m" }
-
-# Find .git by walking up from THIS tools directory (no git calls, no encoding surprises)
-$toolsDir = $PSScriptRoot
-if(-not $toolsDir){ Fail "PSScriptRoot empty" }
-
-$cur = [System.IO.Path]::GetFullPath((Split-Path -Parent $toolsDir))
-for($i=0; $i -lt 20; $i++){
-  if(Test-Path -LiteralPath (Join-Path $cur ".git")){
-    Write-Output $cur
-    return
+function Find-GitRoot([string]$start){
+  $p = (Resolve-Path -LiteralPath $start -ErrorAction Stop).Path
+  while($true){
+    if(Test-Path -LiteralPath (Join-Path $p ".git")){ return $p }
+    $parent = Split-Path -Parent $p
+    if(-not $parent -or $parent -eq $p){ break }
+    $p = $parent
   }
-  $parent = Split-Path -Parent $cur
-  if(-not $parent -or $parent -eq $cur){ break }
-  $cur = $parent
+  throw "[REPOROOT] FAIL-CLOSED: could not find .git from start=$start"
 }
 
-Fail "Unable to locate repo root (no .git found walking up)"
+# Prefer current working directory (most reliable under OneDrive localized paths)
+$root = Find-GitRoot (Get-Location).Path
+$root = [System.IO.Path]::GetFullPath($root)
+
+Write-Output $root

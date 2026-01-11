@@ -29,9 +29,29 @@ New-Item -ItemType Directory -Force -Path $logsIntel | Out-Null
 
 $feed = Join-Path $srcIntel "youtube_feed.jsonl"
 
+
+# --- YT FEEDS FILE: enforce UTF-8 NO-BOM (institutional) ---
+try {
+  $feedsPath = Join-Path $repoRoot "src\.intel\youtube_feeds.txt"
+  if(Test-Path -LiteralPath $feedsPath){
+    $raw = Get-Content -LiteralPath $feedsPath -Raw -Encoding utf8
+    $raw = $raw -replace "`r`n","`n"
+    $raw = $raw.TrimEnd() + "`n"
+    [System.IO.File]::WriteAllText($feedsPath, $raw, (New-Object System.Text.UTF8Encoding($false)))
+  }
+} catch { }
+# --- END YT FEEDS FILE ---
 $env:HAT_INTEL_HOURS_BACK = "$HoursBack"
 $env:HAT_INTEL_LIMIT      = "$LimitPerFeed"
 
+
+$feedsPath = Join-Path $repoRoot "src\.intel\youtube_feeds.txt"
+if(Test-Path -LiteralPath $feedsPath){
+  # Provide multiple aliases in case Python expects one of them
+  $env:HAT_YOUTUBE_FEEDS_PATH = $feedsPath
+  $env:HAT_INTEL_YOUTUBE_FEEDS_PATH = $feedsPath
+  $env:YOUTUBE_FEEDS_PATH = $feedsPath
+}
 $ok=$false; $reason=""; $count=0
 try{
   $out = & $py -m hybrid_ai_trading.intel.collectors.collect_cli youtube 2>&1
