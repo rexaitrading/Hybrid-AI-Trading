@@ -1,4 +1,21 @@
 ---
+## 2026-01-11 - Intel/Tools Re-entry (stash@{1}) - Split commits
+
+Goal: Re-apply stashed intel/tools work in a controlled way; keep scheduled/crypto task scripts isolated.
+
+Commit 1: fix(intel): collectors harden + provider audit wiring (f0db591c)
+- collectors: collect_cli / collect_news_multi / collect_youtube_rss
+- ops: quiet provider spam; separate YouTube hours-back env
+
+Commit 2: chore(tools): intel pipeline + gatescore summary scripts harden (626f33d2)
+- tools scripts updated for scheduled intel pipeline + GateScore summaries
+
+Validation:
+- git status clean after commits
+- UTF-8 no-BOM + LF enforced on touched files (fixed missing newline in collect_cli.py)
+
+---
+---
 ## 2026-01-11 06:35 UTC - Crypto Asia Paper Ops: Calm Validation Mode (Institutional)
 
 Goal: Deterministic, low-whipsaw crypto paper-sim aligned with Phase-1->Phase-7 standards (fail-closed, anti-churn, reproducible).
