@@ -1,7 +1,4 @@
 from __future__ import annotations
-    assert ib.called is True
-        "contract_semantics_level": "FULL_LIVE_ELIGIBLE",
-from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
