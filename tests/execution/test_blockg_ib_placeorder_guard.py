@@ -90,7 +90,9 @@ def test_ib_placeorder_allows_live_nvda_when_ready(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("HAT_IS_PAPER", "0")
     stamp = _write_nvda_stamp_ready(tmp_path)
     monkeypatch.setenv("HAT_LIVE_READY_STAMP_PATH", str(stamp))
-    token = tmp_path / "live_arm_nvda.json"     token.write_text(json.dumps({"symbol":"NVDA","as_of_date":"2099-01-01","armed": True}) + "\n", encoding="utf-8")     monkeypatch.setenv("HAT_LIVE_ARM_TOKEN_PATH", str(token))
+    token = tmp_path / "live_arm_nvda.json"
+    token.write_text(json.dumps({"symbol":"NVDA","as_of_date":"2099-01-01","armed": True}) + "\n", encoding="utf-8")
+    monkeypatch.setenv("HAT_LIVE_ARM_TOKEN_PATH", str(token))
     status_path = tmp_path / "blockg_status_stub.json"
     _write_blockg(status_path, nvda_ready=True)
     monkeypatch.setenv("HAT_BLOCKG_STATUS_PATH", str(status_path))
