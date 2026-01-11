@@ -81,7 +81,15 @@ foreach($sym in $syms){
     & powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym *>&1 | Out-Host
     $ec = $LASTEXITCODE
     Write-Host ("[VERIFY-BLOCKG] " + $sym + " checker exit=" + $ec) -ForegroundColor DarkGray
-    if($ec -ne 0){ Fail ("Not ready: " + $sym + " (exit=" + $ec + ")") }
+    if($ec -ne 0){
+      # Closed-day diagnostic allowance:
+      # - exit=10 means "pipeline healthy; LIVE disallowed" in Check-BlockGReady.
+      if($AllowClosedDayDiagnostics -and ($ec -eq 10)){
+        Write-Host ("[VERIFY-BLOCKG] CLOSED DAY DIAGNOSTIC OK (exit=10 accepted)") -ForegroundColor Yellow
+      } else {
+        Fail ("Not ready: " + $sym + " (exit=" + $ec + ")")
+      }
+    }
   }
 }
 
