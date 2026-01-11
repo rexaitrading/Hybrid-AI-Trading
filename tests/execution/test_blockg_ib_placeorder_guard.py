@@ -68,7 +68,7 @@ def test_ib_placeorder_blocks_live_nvda_when_not_ready(tmp_path: Path, monkeypat
     stamp = _write_nvda_stamp_ready(tmp_path)
     monkeypatch.setenv("HAT_LIVE_READY_STAMP_PATH", str(stamp))
     token = tmp_path / "live_arm_nvda.json"
-    token.write_text(json.dumps({"symbol":"NVDA","as_of_date": today, "armed": True}) + "\n", encoding="utf-8")
+    token.write_text(json.dumps({"symbol":"NVDA","as_of_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"), "armed": True}) + "\n", encoding="utf-8")
     monkeypatch.setenv("HAT_LIVE_ARM_TOKEN_PATH", str(token))
 
     # Point contract reader to our temp JSON
@@ -91,7 +91,7 @@ def test_ib_placeorder_allows_live_nvda_when_ready(tmp_path: Path, monkeypatch):
     stamp = _write_nvda_stamp_ready(tmp_path)
     monkeypatch.setenv("HAT_LIVE_READY_STAMP_PATH", str(stamp))
     token = tmp_path / "live_arm_nvda.json"
-    token.write_text(json.dumps({"symbol":"NVDA","as_of_date": today, "armed": True}) + "\n", encoding="utf-8")
+    token.write_text(json.dumps({"symbol":"NVDA","as_of_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"), "armed": True}) + "\n", encoding="utf-8")
     monkeypatch.setenv("HAT_LIVE_ARM_TOKEN_PATH", str(token))
     status_path = tmp_path / "blockg_status_stub.json"
     _write_blockg(status_path, nvda_ready=True)
