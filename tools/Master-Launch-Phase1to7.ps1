@@ -208,7 +208,9 @@ Step "Block-G build status stub (timeout/reuse)" {
     $ErrorActionPreference="Stop"; Set-StrictMode -Version Latest
     Set-Location -LiteralPath $RepoRoot
     [System.Environment]::CurrentDirectory = $RepoRoot
-    $env:HAT_BLOCKG_BUILDER_FAST = "1"
+    # Do NOT force FAST here. LIVE readiness requires full semantics.
+# If operator explicitly set it, keep it; otherwise leave unset.
+if(($env:HAT_BLOCKG_BUILDER_FAST + "") -ne "1"){ $env:HAT_BLOCKG_BUILDER_FAST = "" }
     try {
       & powershell -NoProfile -ExecutionPolicy Bypass -File $Builder -Symbol $Sym *>&1 |
         Out-File -LiteralPath $Stdout -Encoding UTF8
