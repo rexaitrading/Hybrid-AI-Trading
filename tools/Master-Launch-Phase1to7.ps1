@@ -183,6 +183,10 @@ if(-not $SkipIntel){
   Write-Host "[MASTER-LAUNCH] Intel steps skipped (SkipIntel=true)" -ForegroundColor Yellow
 }
 
+Step "Verify Block-G readiness (one-shot gate)" {
+  powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\Verify-BlockG-Ready.ps1" -Symbol $Symbol *>&1 | Out-Host
+  if($LASTEXITCODE -ne 0){ Fail ("Verify-BlockG-Ready failed exit=" + $LASTEXITCODE) }
+}
 Step "Block-G build status stub (timeout/reuse)" {
   $status = Join-Path $logsDir "blockg_status_stub.json"
   $stdout = Join-Path $logsDir "blockg_build_stdout.txt"
