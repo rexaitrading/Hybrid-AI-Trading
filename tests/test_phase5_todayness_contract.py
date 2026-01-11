@@ -38,6 +38,7 @@ def test_phase5_todayness_trusts_blockg_checker(nvda_ready: bool, expected: int)
     today = date.today().isoformat()
 
     payload = {
+        "contract_semantics_level": "FULL_LIVE_ELIGIBLE",
         "ts_utc": f"{today}T00:00:00Z",
         "as_of_date": today,
 

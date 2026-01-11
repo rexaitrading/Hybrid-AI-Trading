@@ -20,6 +20,7 @@ class _DummyEngine:
 def _base_status(as_of_date: str) -> dict:
     # Minimal full contract fields required by blockg_contract.py daily gates
     return {
+        "contract_semantics_level": "FULL_LIVE_ELIGIBLE",
         "as_of_date": as_of_date,
         "phase4_ok_today": True,
         "ev_hard_daily_ok_today": True,
