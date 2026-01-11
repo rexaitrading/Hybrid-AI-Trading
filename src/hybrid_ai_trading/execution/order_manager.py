@@ -526,15 +526,13 @@ class OrderManager:
         # LIVE PATH
         if not self.dry_run and self.live_client is not None:
             try:
-                # Block-G lowest-layer enforcement (IB-only live path)
-                # For non-IB brokers (Alpaca/Binance/Polygon mocks), do NOT require Block-G contract file.
+                # Block-G lowest-layer enforcement (live path)
                 sym_u = str(symbol).upper()
                 require_nvda_live_stamp(sym_u)
                 client = self.live_client
                 client_name = (client.__class__.__name__ if client is not None else "")
                 client_mod  = (getattr(client.__class__, "__module__", "") if client is not None else "")
-                is_ib_like = (hasattr(client, "placeOrder") or ("ib" in (client_name + " " + client_mod).lower()))
-                if is_ib_like and sym_u in ("NVDA","SPY","QQQ"):
+                if sym_u in ("NVDA","SPY","QQQ"):
                     ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=_get_ctx_cached(self))
                 # BLOCKG_PS_CHECK_BEFORE_LIVE_SUBMIT (authoritative, fail-closed)
                 if not _running_under_pytest():
