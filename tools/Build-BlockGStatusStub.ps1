@@ -886,19 +886,7 @@ if (-not $gsAsOf) {
   # No reliable GateScore session available (holiday/off-session). Keep blank to avoid false "today".
   $gsAsOf = ""
 }
-sig = strat.on_price_with_hist(sym, px, st.hist)
-
-        # Anti-churn guards:
-        pos_qty = _get_pos(st, sym).qty
-        # No pyramiding: ignore BUY if already long
-        if sig.action == "BUY" and pos_qty > 0:
-            jwrite(ev_path, {"ts_utc": utc_now_iso(), "kind": "skip", "symbol": sym, "reason": "already_long_no_add"})
-            sig = Signal("HOLD", 0.0, "already_long_no_add")
-
-        # Minimum hold time before allowing SELL
-        if sig.action == "SELL" and pos_qty > 0 and st.last_trade_ts > 0 and (time.time() - st.last_trade_ts) < int(getattr(args, "min_hold_sec", 15)):
-            jwrite(ev_path, {"ts_utc": utc_now_iso(), "kind": "skip", "symbol": sym, "reason": "min_hold_sec_block"})
-            sig = Signal("HOLD", 0.0, "min_hold_sec_block")# ---- Phase4 ----
+# ---- Phase4 ----
 $phase4Ok = Get-Phase4OkToday $repoRoot $today
 
 # ---- EV hard veto daily ----
