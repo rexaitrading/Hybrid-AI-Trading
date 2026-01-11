@@ -886,6 +886,16 @@ if (-not $gsAsOf) {
   # No reliable GateScore session available (holiday/off-session). Keep blank to avoid false "today".
   $gsAsOf = ""
 }
+# GS_ASOF_FALLBACK_FROM_EVENTS_TAIL_BEGIN
+# If summary CSV is missing/blank, fall back to resolved events tail max as_of_date (single truth).
+if (-not $gsAsOf) {
+  try {
+    $evPath2 = Resolve-GatescoreEventsPath "NVDA" $logsDir
+    $mx2 = Get-MaxAsOfDateFromJsonlTail -Path $evPath2 -TailLines 8000
+    if ($mx2) { $gsAsOf = $mx2 }
+  } catch { }
+}
+# GS_ASOF_FALLBACK_FROM_EVENTS_TAIL_END
 # ---- Phase4 ----
 $phase4Ok = Get-Phase4OkToday $repoRoot $today
 
