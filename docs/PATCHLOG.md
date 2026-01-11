@@ -1,3 +1,39 @@
+---
+## 2026-01-11 06:35 UTC - Crypto Asia Paper Ops: Calm Validation Mode (Institutional)
+
+Goal: Deterministic, low-whipsaw crypto paper-sim aligned with Phase-1->Phase-7 standards (fail-closed, anti-churn, reproducible).
+
+What was hardened
+- Warmup isolation (dry-run only)
+  - Warmup computes prices -> signals -> gates -> risk but never fills.
+  - dry_run_no_trade events logged for audit clarity.
+  - dry-run executes before allow gate (no side effects).
+- Main tick integrity (fills allowed)
+  - Main tick is not dry-run; fills only occur when gates pass.
+- Anti-churn and risk realism
+  - Per-symbol cooldown
+  - min_hold_sec enforced (min_hold_sec_block)
+  - no pyramiding (already_long_no_add)
+  - per-symbol max trades per hour
+- Calm price dynamics (demo feed)
+  - Smooth mean-reverting walk
+  - BtcStepMax=10, EthStepMax=0.8, MeanRevert=0.15
+- Signal stability
+  - lookback=6, thr=0.00030
+
+Files touched
+- tools/Run-CryptoPaperOps-Asia.ps1
+- tools/Write-CryptoPriceSnapshot-Demo.ps1
+- src/hybrid_ai_trading/runners/crypto_paper_sim.py
+
+Validation gates
+- PowerShell parse: OK
+- Python compile: OK
+- Scheduled task: HAT_Crypto_PaperOps_Asia runs clean (exit=0)
+- Logs: warmup shows dry_run_no_trade; main tick can produce fills
+
+Status: LIVE (paper) in calm validation mode. No further wiring required.
+---
 
 # PATCHLOG  2025-11-07 00:20:44 -08:00
 
