@@ -6,6 +6,11 @@ from typing import Any, Dict, List, Tuple
 
 from ._writer import normalize_record, load_existing_ids, dedupe_new, filter_fresh, write_jsonl_atomic_append
 
+def _is_unauthorized(exc: Exception) -> bool:
+    msg = str(exc)
+    # common forms: "401 Client Error", "403 Client Error", "Unauthorized", "Forbidden"
+    return ("401" in msg or "403" in msg or "Unauthorized" in msg or "Forbidden" in msg)
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[4]
 
@@ -144,21 +149,31 @@ def collect(hours_back: int = 24, limit_total: int = 80) -> Tuple[bool, str, int
     rows: List[Dict[str, Any]] = []
     per = max(5, int(limit_total // max(1, len(providers))))
 
-    try:
-        for p in providers:
-            try:
-                if p == "polygon":
-                    rows.extend(_collect_polygon(watch, per))
-                elif p == "benzinga":
-                    rows.extend(_collect_benzinga(watch, per))
-                elif p == "alpaca":
-                    rows.extend(_collect_alpaca(watch, per))
-                elif p == "rss":
-                    rows.extend(_collect_rss(watch, per))
-            except Exception as e:
-                return (False, f"provider_fail:{p}:{type(e).__name__}:{e}", 0)
-    except Exception as e:
-        return (False, f"news_multi_error:{type(e).__name__}:{e}", 0)
+    skipped = []
+    failed = []
+
+    for p in providers:
+        try:
+            if p == "polygon":
+                rows.extend(_collect_polygon(watch, per))
+            elif p == "benzinga":
+                rows.extend(_collect_benzinga(watch, per))
+            elif p == "alpaca":
+                rows.extend(_collect_alpaca(watch, per))
+            elif p == "rss":
+                rows.extend(_collect_rss(watch, per))
+        except Exception as e:
+            # OPS degrade mode: skip unauthorized providers (missing keys)
+            if p == "polygon" and _is_unauthorized(e):
+                skipped.append("polygon:unauthorized")
+                continue
+            # Any other provider failure: record and continue
+            failed.append(f"{p}:{type(e).__name__}")
+            continue
+
+    # If everything failed/skipped and we got no rows, fail-closed
+    if (not rows) and (len(skipped) + len(failed) >= len(providers)):
+        return (False, f"all_providers_failed skipped={','.join(skipped)} failed={','.join(failed)}", 0)
 
     rows = filter_fresh(rows, hours_back=hours_back)
     rows = dedupe_new(rows, existing)
@@ -166,4 +181,4 @@ def collect(hours_back: int = 24, limit_total: int = 80) -> Tuple[bool, str, int
     if rows:
         write_jsonl_atomic_append(out_path, rows)
 
-    return (True, "ok", len(rows))
+    return (True, f"ok(written={len(rows)} skipped={len(skipped)} failed={len(failed)})", len(rows))
