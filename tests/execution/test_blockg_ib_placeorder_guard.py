@@ -53,6 +53,7 @@ def _write_blockg(path: Path, *, nvda_ready: bool) -> None:
         "min_samples_ok_today": True,
         "gatescore_threshold_ok_today": True,
         "gatescore_ok_today": True,
+        "contract_semantics_level": "FULL_LIVE_ELIGIBLE",
         "nvda_blockg_ready": bool(nvda_ready),
         "spy_blockg_ready": False,
         "qqq_blockg_ready": False,

@@ -45,6 +45,7 @@ def _write_status(tmp_path: Path, *, nvda_ready: bool) -> Path:
                 "gatescore_recent_enough": True,
                 "gatescore_age_days": 0,
                 "min_samples_ok_today": True,
+                "contract_semantics_level": "FULL_LIVE_ELIGIBLE",
                 "nvda_blockg_ready": nvda_ready,
                 "spy_blockg_ready": False,
                 "qqq_blockg_ready": False,

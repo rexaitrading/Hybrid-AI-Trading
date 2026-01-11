@@ -58,6 +58,7 @@ def test_phase5_todayness_trusts_blockg_checker(nvda_ready: bool, expected: int)
         "gatescore_threshold_ok_today": True,
         "gatescore_ok_today": True,
 
+        "contract_semantics_level": "FULL_LIVE_ELIGIBLE",
         "nvda_blockg_ready": nvda_ready,
         "spy_blockg_ready": False,
         "qqq_blockg_ready": False,
