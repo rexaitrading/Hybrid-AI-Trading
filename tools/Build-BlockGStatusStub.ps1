@@ -1428,6 +1428,8 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_min_edge_ratio   = $minEdge
     gatescore_min_micro_score  = $minMicro
     nvda_blockg_ready = ([bool]$nvdaReady -and [bool]$nvda_intel_ok_today)
+    build_mode = "FULL"
+    contract_semantics_level = "FULL_LIVE_ELIGIBLE"
     spy_blockg_ready  = $spyReady
     qqq_blockg_ready  = $qqqReady
 
