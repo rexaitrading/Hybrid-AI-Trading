@@ -20,13 +20,18 @@ def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
     return decision
 
 
-def ensure_symbol_blockg_ready(symbol: str) -> None:
+def ensure_symbol_blockg_ready(symbol: str, ctx: RunContext | None = None) -> None:
     """
     Backward-compatible shim.
     Single Python entrypoint is hybrid_ai_trading.execution.blockg_enforce.require_blockg_ready_for_live.
     Tests may monkeypatch this function to simulate failures.
     """
-    require_blockg_ready_via_powershell(str(symbol).upper().strip(), build=False)
+    mk = None
+    try:
+        mk = str(getattr(ctx, "market", "")).upper().strip() if ctx is not None else None
+    except Exception:
+        mk = None
+    require_blockg_ready_via_powershell(str(symbol).upper().strip(), market=mk, build=False)
 
 
 def _infer_is_paper(engine: Any, regime: str, ctx: RunContext | None) -> bool:
@@ -132,7 +137,11 @@ def place_order_phase5_with_guard(
     # (Paper allowed to proceed; closed-day exit=10 remains LIVE-disallowed.)
     if (sym_u in ("NVDA", "SPY", "QQQ")) and (not is_paper):
         # Unified Block-G gate (JSON + PS checker; fail-closed)
-        ensure_symbol_blockg_ready(sym_u)
+        # Backward-compatible: tests may monkeypatch ensure_symbol_blockg_ready(symbol) only.
+        try:
+            ensure_symbol_blockg_ready(sym_u, ctx=ctx)
+        except TypeError:
+            ensure_symbol_blockg_ready(sym_u)
 
     trade = {
         "symbol": symbol,
