@@ -72,12 +72,9 @@ if(-not $crisis){
 
 Write-Host ("[CRASHMODE] crisis_regime=true => PORTFOLIO_HALT + RISK_FLATTEN + cooldown_until_utc=" + $untilUtc.ToString("o")) -ForegroundColor Red
 
-# 3) Auto-detect flatten tool if not provided
+# 3) Flatten tool (deterministic)
 if(-not $FlattenTool){
-  $candidates = Get-ChildItem -LiteralPath $toolsDir -File |
-    Where-Object { $_.Name -match '(?i)flatten|close.*position|liquidat|panic' } |
-    Select-Object -First 1
-  if($candidates){ $FlattenTool = $candidates.Name }
+  $FlattenTool = "tools\Flatten-Portfolio.ps1"
 }
 
 if($FlattenTool){
