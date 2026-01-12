@@ -65,7 +65,7 @@ Step "PH23->PH4->PH5->PH3 summary->BlockG (ContractPack)" {
 
 # Final hard requirement: NVDA must be explicitly ready (never infer from ALL)
 Step "PH5 BlockG final NVDA readiness" {
-  powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Check-BlockGReady.ps1 -Symbol NVDA *>&1 | Out-Host
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-BlockGCheck.ps1 -Symbol NVDA *>&1 | Out-Host
   if($LASTEXITCODE -ne 0){ throw "BLOCKG FAIL-CLOSED: NVDA not ready exit=$LASTEXITCODE" }
 }
 

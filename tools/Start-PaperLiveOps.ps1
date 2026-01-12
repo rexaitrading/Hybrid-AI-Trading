@@ -81,7 +81,7 @@ exit 0
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Run-Premarket-ContractPack.ps1") -Symbol $Symbol *>&1 | Out-Host
 if($LASTEXITCODE -ne 0){ Fail ("Run-Premarket-ContractPack failed exit=" + $LASTEXITCODE) }
 
-powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Check-BlockGReady.ps1") -Symbol $Symbol *>&1 | Out-Host
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Invoke-BlockGCheck.ps1") -Symbol $Symbol *>&1 | Out-Host
 Write-Host ("[PAPERLIVE-OPS] EXIT_BLOCKG=" + $LASTEXITCODE) -ForegroundColor Yellow
 
 exit $LASTEXITCODE

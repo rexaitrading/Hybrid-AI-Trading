@@ -42,7 +42,7 @@ if($LASTEXITCODE -ne 0){ throw "[OPS] evhard daily failed rc=$LASTEXITCODE" }
 
 Write-Host "[OPS] 5) BlockG rebuild + check (NVDA)" -ForegroundColor Cyan
 & .\tools\Build-BlockGStatusStub.ps1 -Symbol NVDA
-& .\tools\Check-BlockGReady.ps1 -Symbol NVDA
+& .\tools\Invoke-BlockGCheck.ps1 -Symbol NVDA
 if($LASTEXITCODE -ne 0){ throw "[OPS] BlockG not ready rc=$LASTEXITCODE" }
 
 Write-Host "[OPS] OK: NVDA paper ops green" -ForegroundColor Green

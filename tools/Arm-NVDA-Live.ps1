@@ -59,7 +59,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Build-
 if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub failed exit=$LASTEXITCODE" }
 
 Write-Host "[ARM] Step 4/4 Check BlockG readiness (NVDA)" -ForegroundColor Cyan
-powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Check-BlockGReady.ps1") -Symbol NVDA | Out-Host
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Invoke-BlockGCheck.ps1") -Symbol NVDA | Out-Host
 if ($LASTEXITCODE -ne 0) { Fail "Check-BlockGReady NVDA failed exit=$LASTEXITCODE" }
 
 # Best-effort: attach BlockG snapshot info

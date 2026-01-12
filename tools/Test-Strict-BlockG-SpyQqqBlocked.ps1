@@ -27,10 +27,10 @@ if($rnText -notmatch 'gatescore_metrics_source=paperlive_real_v1'){
 }
 
 # Also prove checker FAILs for SPY/QQQ (deterministic)
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Check-BlockGReady.ps1 -Symbol SPY *>$null
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-BlockGCheck.ps1 -Symbol SPY *>$null
 if($LASTEXITCODE -eq 0){ Fail "Check-BlockGReady unexpectedly returned 0 for SPY" }
 
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Check-BlockGReady.ps1 -Symbol QQQ *>$null
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-BlockGCheck.ps1 -Symbol QQQ *>$null
 if($LASTEXITCODE -eq 0){ Fail "Check-BlockGReady unexpectedly returned 0 for QQQ" }
 
 Write-Host "[STRICT-BLOCKG] OK: SPY/QQQ remain blocked (strict mode enforced)" -ForegroundColor Green
