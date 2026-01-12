@@ -705,7 +705,9 @@ class OrderManager:
     def sync_portfolio(self):
         """Minimal stub; tests may monkeypatch this."""
         logger.info("sync_portfolio: stub invoked")
-        return {"status": "ok", "synced": True}    def flatten_all(self):
+        return {"status": "ok", "synced": True}
+
+    def flatten_all(self):
         """Flatten all positions / cancel all active orders. Live uses IBClient primitives; never raises."""
         cancelled = len(getattr(self, "active_orders", []))
         try:

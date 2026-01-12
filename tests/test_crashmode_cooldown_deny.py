@@ -5,8 +5,7 @@ from pathlib import Path
 import pytest
 
 from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
-
-
+from hybrid_ai_trading.execution.blockg_errors import BlockGNotReady
 class DummyIB:
     def __init__(self):
         self.calls = []
@@ -75,7 +74,8 @@ def test_crashmode_allows_risk_action_bypass_flag(tmp_path: Path, mode: str) -> 
     c = DummyContract("NVDA")
     o = DummyOrder()
 
-    # allow_risk_action=True should bypass cooldown deny so flatten tools can place orders
-    res = ib_place_order_chokepoint(ib, c, o, ctx=ctx, meta={"symbol": "NVDA", "allow_risk_action": True})
-    assert res["ok"] is True
-    assert len(ib.calls) == 1
+    # allow_risk_action=True bypasses ONLY cooldown deny; Block-G (and other LIVE gates) must still fail-closed.
+    with pytest.raises(BlockGNotReady) as e:
+        ib_place_order_chokepoint(ib, c, o, ctx=ctx, meta={"symbol": "NVDA", "allow_risk_action": True})
+    assert "BLOCK-G FAIL-CLOSED" in str(e.value)
+    assert len(ib.calls) == 0
