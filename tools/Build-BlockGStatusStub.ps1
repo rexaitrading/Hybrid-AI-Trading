@@ -1521,7 +1521,28 @@ $payload = [ordered]@{
     gatescore_metrics_source = $gatescore_metrics_source
 
     # Audit: per-symbol metrics_source (do NOT use for gating in strict Option-B)
-    gatescore_metrics_source_by_symbol = [ordered]@{
+    gatescore_metrics_source_by_symbol = [ordered]# REGIME_READER_BEGIN
+# Regime fields (producer: regime_status.json). Per-market log root.
+$regime = "NORMAL"
+$regimeOkToday = $false
+$regimeReason = "missing_regime_status_json"
+$regimePath = Join-Path $logsDirOut "regime_status.json"
+try {
+  if(Test-Path -LiteralPath $regimePath){
+    $rj = Get-Content -LiteralPath $regimePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if($rj){
+      if($rj.PSObject.Properties.Name -contains "regime"){ $regime = [string]$rj.regime }
+      if($rj.PSObject.Properties.Name -contains "regime_ok_today"){ $regimeOkToday = [bool]$rj.regime_ok_today }
+      if($rj.PSObject.Properties.Name -contains "regime_reason"){ $regimeReason = [string]$rj.regime_reason }
+    }
+  }
+} catch {
+  $regimeOkToday = $false
+  $regimeReason = "regime_status_parse_failed"
+}
+$crisisAlphaEnabled = $false
+# REGIME_READER_END
+@{
       NVDA = (Get-MetricsSourceTop "NVDA" $logsDir $todayLocal).top
       SPY  = (Get-MetricsSourceTop "SPY"  $logsDir $todayLocal).top
       QQQ  = (Get-MetricsSourceTop "QQQ"  $logsDir $todayLocal).top
@@ -1551,29 +1572,6 @@ $payload = [ordered]@{
     ev_hard_session_ok = $evSessionOk
     phase4_ok_today         = $phase4Ok
     intel_ok_today           = [bool]$intel_ok_today
-
-    # REGIME_FIELDS_BEGIN
-# Regime fields (producer: regime_status.json). Per-market log root.
-$regime = "NORMAL"
-$regimeOkToday = $false
-$regimeReason = "missing_regime_status_json"
-$regimePath = Join-Path $logsDirOut "regime_status.json"
-try {
-  if(Test-Path -LiteralPath $regimePath){
-    $rj = Get-Content -LiteralPath $regimePath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if($rj){
-      if($rj.PSObject.Properties.Name -contains "regime"){ $regime = [string]$rj.regime }
-      if($rj.PSObject.Properties.Name -contains "regime_ok_today"){ $regimeOkToday = [bool]$rj.regime_ok_today }
-      if($rj.PSObject.Properties.Name -contains "regime_reason"){ $regimeReason = [string]$rj.regime_reason }
-    }
-  }
-} catch {
-  $regimeOkToday = $false
-  $regimeReason = "regime_status_parse_failed"
-}
-# Crisis alpha opt-in only; default false
-$crisisAlphaEnabled = $false
-# REGIME_FIELDS_END
 # Crash-mode contract fields (producer: crisis_regime_status.json)
     regime               = $regime
     regime_ok_today      = [bool]$regimeOkToday

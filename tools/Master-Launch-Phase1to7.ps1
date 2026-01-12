@@ -3,6 +3,9 @@ param(
   [ValidateSet("NVDA","SPY","QQQ")]
   [string]$Symbol = "NVDA",
 
+
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [string]$Market = "US",
   [int]$BlockGReuseMinutes = 5,
   [int]$BlockGTimeoutSec   = 90,
 
