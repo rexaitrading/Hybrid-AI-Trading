@@ -909,7 +909,12 @@ if (Test-Path $evPath) {
     if ($rows -and $rows.Count -gt 0) {
         # As-of date is last row date (audit). Today-ness enforced separately.
         $last = $rows[-1]
-        $evHardDailyAsOf = Slice-Date ([string]$last.date)
+        # A2: prefer explicit as_of_date if present; fallback to legacy date column
+if($last.PSObject.Properties.Name -contains "as_of_date"){
+  $evHardDailyAsOf = Slice-Date ([string]$last.as_of_date)
+} else {
+  $evHardDailyAsOf = Slice-Date ([string]$last.date)
+}
 
         # Find today row (if any) and enforce ok only for today.
         foreach ($r in $rows) {

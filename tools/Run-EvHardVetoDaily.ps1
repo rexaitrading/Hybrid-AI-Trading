@@ -33,6 +33,9 @@ if (-not (Test-Path $snap)) {
   $snap = Join-Path $logDir "phase5_ev_hard_veto_snapshot.json"
 }
 # PREFER_EV_HARD_SNAPSHOT_END
+# A2 evidence path for deterministic contract reasons
+$snapshotPathUsed = $snap
+
 if (Test-Path $snap) {
   try {
     $j = Get-Content $snap -Raw -Encoding utf8 | ConvertFrom-Json
@@ -59,7 +62,7 @@ if (Test-Path $snap) {
 }
 
 # Ensure header exists (exact schema expected by builder)
-$header = "date,ok,reason"
+$header = "date,ok,reason,as_of_date,snapshot_path"
 if (-not (Test-Path $outCsv)) { Set-Content -LiteralPath $outCsv -Encoding utf8 -Value $header }
 
 # Remove existing today rows (idempotent)
@@ -69,7 +72,7 @@ for ($i=1; $i -lt $rows.Count; $i++){
   if ($rows[$i] -notmatch "^$today,"){ $kept += $rows[$i] }
 }
 
-$line = "$today,$(Safe-Bool $ok),$reason"
+$line = "$today,$(Safe-Bool $ok),$reason,$today,$snapshotPathUsed"
 $kept += $line
 
 [System.IO.File]::WriteAllLines($outCsv, $kept, (New-Object System.Text.UTF8Encoding($false)))
