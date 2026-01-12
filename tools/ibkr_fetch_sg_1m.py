@@ -24,7 +24,7 @@ def time_to_yyyymmdd(t: str) -> str:
         pass
     return ""
 
-def bar_date_to_tokyo_yyyymmdd(s: str) -> str:
+def bar_date_to_sg_yyyymmdd(s: str) -> str:
     """Convert IB bar.date string to Tokyo trading date yyyymmdd."""
     import datetime as _dt
     raw = (s or "").strip()
@@ -223,10 +223,10 @@ def main():
             allbars.extend(bars)
 
         merged = dedupe_sort(allbars)
-        tokyo_ymd_seen = bar_date_to_tokyo_yyyymmdd(str(merged[0].get("time",""))) if merged else ""
+        tokyo_ymd_seen = bar_date_to_sg_yyyymmdd(str(merged[0].get("time",""))) if merged else ""
         ymd_target = (merged[0].get("yyyymmdd","") if merged else "") or tokyo_ymd_seen or ymd_compact
         if tokyo_ymd_seen and tokyo_ymd_seen != ymd_compact:
-            print(f"[JP][FAIL] requested_as_of={ymd_compact} but got_tokyo_ymd={tokyo_ymd_seen} (session mismatch; writing ymd_target={ymd_target})")
+            print(f"[SG][FAIL] requested_as_of={ymd_compact} but got_market_ymd={tokyo_ymd_seen} (session mismatch; writing ymd_target={ymd_target})")
             any_mismatch = True
         filtered = [b for b in merged if b.get("yyyymmdd","") == ymd_target]
 
