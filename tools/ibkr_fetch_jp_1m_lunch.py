@@ -9,13 +9,26 @@ HOST = os.environ.get("IB_GATEWAY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("IB_GATEWAY_PORT", "4002"))
 CLIENT_ID = int(os.environ.get("IB_CLIENT_ID", "78"))
 
+def time_to_yyyymmdd(t: str) -> str:
+    s = (t or "").strip()
+    if len(s) >= 8 and s[:8].isdigit():
+        return s[:8]
+    if len(s) >= 10 and s[4] == "-" and s[7] == "-":
+        return s[:10].replace("-", "")
+    try:
+        if s.isdigit():
+            import datetime as _dt
+            return _dt.datetime.utcfromtimestamp(int(s)).strftime("%Y%m%d")
+    except Exception:
+        pass
+    return ""
+
 REQ_TIMEOUT_SEC = float(os.environ.get("IBKR_REQ_TIMEOUT_SEC", "15"))
 CONNECT_TIMEOUT_SEC = float(os.environ.get("IBKR_CONNECT_TIMEOUT_SEC", "6"))
 
 def ymd_to_ib_end(ymd: str, hhmm: str) -> str:
     d = ymd.replace("-", "")
-    return f"{d} {hhmm}:00"
-
+    return f"{d} {hhmm}:00 Asia/Tokyo"
 class App(EWrapper, EClient):
     def __init__(self):
         EClient.__init__(self, self)
@@ -26,7 +39,15 @@ class App(EWrapper, EClient):
         self._next_id = 1
         self._bars: List[Dict[str, Any]] = []
 
+        self._req_err_code: Dict[int,int] = {}
+        self._req_err_msg: Dict[int,str] = {}
     def error(self, reqId, errorCode, errorString, advancedOrderRejectJson=""):
+        # Fail-fast: HMDS "no data" => mark request done (IB may not send historicalDataEnd)
+        if int(errorCode) == 162 and int(reqId) > 0:
+            with self._lock:
+                self._req_err_code[int(reqId)] = int(errorCode)
+                self._req_err_msg[int(reqId)] = str(errorString)
+            self._done.set()
         # print all errors (diagnostic)
         if errorCode != 0:
             print(f"[IBKR][ERR] reqId={reqId} code={errorCode} msg={errorString}")
@@ -98,9 +119,17 @@ def fetch_one_window(app: App, c: Contract, endDateTime: str) -> List[Dict[str, 
     with app._lock:
         bars = list(app._bars)
 
+        err162 = app._req_err_code.get(reqId, 0) == 162
+        errMsg = app._req_err_msg.get(reqId, "")
     if not ok:
         print(f"[FETCH] TIMEOUT reqId={reqId} conId={c.conId} end={endDateTime} bars_seen={len(bars)}")
         return []
+    
+
+    if err162:
+        print(f"[FETCH] NO_DATA reqId={reqId} conId={c.conId} end={endDateTime} msg={errMsg}")
+        return []
+
     print(f"[FETCH] OK reqId={reqId} conId={c.conId} bars={len(bars)}")
     return bars
 
@@ -150,7 +179,7 @@ def main():
             allbars.extend(bars)
 
         merged = dedupe_sort(allbars)
-        filtered = [b for b in merged if str(b["time"]).startswith(ymd_compact)]
+        filtered = [b for b in merged if time_to_yyyymmdd(str(b.get("time",""))) == ymd_compact]
 
         out_path = os.path.join(out_dir, f"{sym_local}_1m_{as_of}.csv")
         with open(out_path, "w", encoding="utf-8", newline="\n") as f:
@@ -160,6 +189,8 @@ def main():
 
         print(f"[WROTE] {out_path} rows={len(filtered)} conId={c.conId}")
 
+        if len(filtered) == 0:
+            any_fail = True
     try: app.disconnect()
     except: pass
 
