@@ -45,7 +45,14 @@ if(-not (Test-Path -LiteralPath $gsCsv)){
 # --- end repo root ---
 $today = (Get-Date).ToString("yyyy-MM-dd")
 
-Write-Host "[ONETAP] Daily readiness start today=$today symbol=$Symbol" -ForegroundColor Cyan
+# Market enabled guard (fail-closed)
+$mg = Join-Path $repoRoot "tools\Test-MarketEnabled.ps1"
+if(Test-Path -LiteralPath $mg){
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $mg -Market $Market | Out-Host
+  if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+}
+
+Write-Host ("[ONETAP] Daily readiness start today=" + $today + " symbol=" + $Symbol + " market=" + $Market) -ForegroundColor Cyan
 
 # 1) Phase-4 validation (existing artifact builder may be different; adjust later if needed)
 $phase4 = Join-Path $repoRoot "tools\Run-Phase4Validation.ps1"
