@@ -223,12 +223,13 @@ def main():
 
         merged = dedupe_sort(allbars)
         tokyo_ymd_seen = bar_date_to_tokyo_yyyymmdd(str(merged[0].get("time",""))) if merged else ""
+        ymd_target = tokyo_ymd_seen if tokyo_ymd_seen else ymd_compact
         if tokyo_ymd_seen and tokyo_ymd_seen != ymd_compact:
-            print(f"[JP][FAIL] requested_as_of={ymd_compact} but got_tokyo_ymd={tokyo_ymd_seen} (closed day / mismatch)")
+            print(f"[JP][FAIL] requested_as_of={ymd_compact} but got_tokyo_ymd={tokyo_ymd_seen} (session mismatch; writing ymd_target={ymd_target})")
             any_fail = True
-        filtered = [b for b in merged if b.get("yyyymmdd","") == ymd_compact]
+        filtered = [b for b in merged if b.get("yyyymmdd","") == ymd_target]
 
-        out_path = os.path.join(out_dir, f"{sym_local}_1m_{as_of}.csv")
+        out_path = os.path.join(out_dir, f"{sym_local}_1m_{ymd_target}.csv")
         with open(out_path, "w", encoding="utf-8", newline="\n") as f:
             f.write("time,open,high,low,close,volume\n")
             for b in filtered:
