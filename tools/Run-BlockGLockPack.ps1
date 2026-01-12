@@ -16,14 +16,28 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-BlockGNoBypass.
 if($LASTEXITCODE -ne 0){ throw "[BLOCKG-LOCKPACK] No-bypass failed" }
 
 Write-Host "`n[BLOCKG-LOCKPACK] 3) READY executor list (must be Arm-NVDA-Live only)..." -ForegroundColor Cyan
-$hits = @(Select-String -Path .\tools\*.ps1 -Pattern 'powershell\s+-NoProfile.*Check-BlockGReady\.ps1|&\s*"\.\\tools\\Check-BlockGReady\.ps1"|&\s*\.\\tools\\Check-BlockGReady\.ps1' -ErrorAction SilentlyContinue)
+# --- A4 Step3 (v2): READY executor list is defined as Invoke-BlockGCheck.ps1 in ALL_STRICT mode ---
+# 0) Direct Check-BlockGReady executions must be ZERO.
+$patDirect = 'powershell\s+-NoProfile.*-File\s+.*Check-BlockGReady\.ps1|powershell\s+-NoProfile.*Check-BlockGReady\.ps1|&\s*"\.\\tools\\Check-BlockGReady\.ps1"|&\s*\.\\tools\\Check-BlockGReady\.ps1'
+$hitsDirect = @(Select-String -Path .\tools\*.ps1 -Pattern $patDirect -ErrorAction SilentlyContinue)
+if($hitsDirect -and $hitsDirect.Count -gt 0){
+  $p2 = @($hitsDirect | ForEach-Object { [string]$_.Path } | Sort-Object -Unique)
+  throw ("[BLOCKG-LOCKPACK] FAIL: direct Check-BlockGReady execution detected:`n" + ($p2 -join "`n"))
+}
+
+# 1) READY-grade executors are ONLY those invoking Invoke-BlockGCheck.ps1 with -Mode ALL_STRICT.
+$patReadyInvoke = 'Invoke-BlockGCheck\.ps1.*-Mode\s+ALL_STRICT'
+$hits = @(Select-String -Path .\tools\*.ps1 -Pattern $patReadyInvoke -ErrorAction SilentlyContinue)
+# A4 Step3 hardening: ignore comment hits + ignore this LockPack file itself
+$hits = @($hits | Where-Object { -not ($_.Line -match '^\s*#') })
+$hits = @($hits | Where-Object { ([string]$_.Path) -notmatch '\\tools\\Run-BlockGLockPack\.ps1$' })
 $paths = @($hits | ForEach-Object { [string]$_.Path } | Sort-Object -Unique)
+
 if($paths.Count -ne 1 -or ($paths[0] -notmatch '\\tools\\Arm-NVDA-Live\.ps1$')){
   throw ("[BLOCKG-LOCKPACK] READY executor list violation:`n" + ($paths -join "`n"))
 }
 Write-Host ("[BLOCKG-LOCKPACK] READY executor OK: " + $paths[0]) -ForegroundColor Green
-
-Write-Host "`n[BLOCKG-LOCKPACK] 4) Python import sanity (no runtime orders)..." -ForegroundColor Cyan
+# --- END A4 Step3 (v2) ---Write-Host "`n[BLOCKG-LOCKPACK] 4) Python import sanity (no runtime orders)..." -ForegroundColor Cyan
 
 # Fail-closed: ensure repo src/ is on sys.path for this probe.
 $env:PYTHONPATH = (Join-Path $repoRoot "src")

@@ -2,6 +2,9 @@
 param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA"
+),
+  [ValidateSet("ALL_STRICT","SYMBOL_ONLY","BUILD_ONLY")]
+  [string]$Mode = "BUILD_ONLY"
 )
 
 Set-StrictMode -Version Latest
@@ -25,7 +28,7 @@ if(-not (Test-Path -LiteralPath $checker)){ throw "Missing: $checker" }
 if ($Symbol -eq "ALL") {
   $codes = @{}
   foreach ($sym in @("NVDA","SPY","QQQ")) {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym -Mode $Mode
     $codes[$sym] = $LASTEXITCODE
   }
 
@@ -41,7 +44,7 @@ if ($Symbol -eq "ALL") {
   return 0
 }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol
+& powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym -Mode $Modebol -Mode $Mode
 $code = $LASTEXITCODE
 $global:LASTEXITCODE = $code
 return $code
