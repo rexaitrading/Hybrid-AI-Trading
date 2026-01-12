@@ -1,0 +1,8 @@
+{
+  "market": "KR",
+  "enabled": false,
+  "daily_loss_cap_usd": 100,
+  "max_notional_usd": 1500,
+  "max_orders_per_day": 15,
+  "cooldown_minutes_after_loss_hit": 30
+}

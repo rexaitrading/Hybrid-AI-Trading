@@ -151,3 +151,6 @@ tools/blockg_builder_breadcrumb.txt
 # --- Market profiles must be tracked (Phase 5) ---
 !configs/markets/
 !configs/markets/*.json
+# --- Risk caps configs must be tracked (Phase 6) ---
+!configs/risk_caps/
+!configs/risk_caps/*.json

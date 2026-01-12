@@ -1,0 +1,8 @@
+{
+  "market": "HK",
+  "enabled": true,
+  "daily_loss_cap_usd": 150,
+  "max_notional_usd": 2000,
+  "max_orders_per_day": 20,
+  "cooldown_minutes_after_loss_hit": 30
+}

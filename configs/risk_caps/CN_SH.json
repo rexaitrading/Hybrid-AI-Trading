@@ -1,0 +1,8 @@
+{
+  "market": "CN_SH",
+  "enabled": false,
+  "daily_loss_cap_usd": 80,
+  "max_notional_usd": 1200,
+  "max_orders_per_day": 10,
+  "cooldown_minutes_after_loss_hit": 45
+}

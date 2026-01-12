@@ -1,0 +1,8 @@
+{
+  "market": "US",
+  "enabled": true,
+  "daily_loss_cap_usd": 300,
+  "max_notional_usd": 5000,
+  "max_orders_per_day": 40,
+  "cooldown_minutes_after_loss_hit": 20
+}
