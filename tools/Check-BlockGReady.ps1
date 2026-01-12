@@ -3,6 +3,10 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
+  
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [string]$Market = "US",
+
   [ValidateSet("ALL_STRICT","SYMBOL_ONLY","BUILD_ONLY")]
   [string]$Mode = "ALL_STRICT",
 
@@ -143,7 +147,13 @@ if ($Build) {
 }
 
 # 2) Load contract JSON (contract-only validation)
-$defaultPath = Join-Path $repoRoot "logs\blockg_status_stub.json"
+# Phase-5: per-market logs root (default US). Env override always wins.
+$defaultPath = $null
+try {
+  $mr = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
+  if($mr){ $defaultPath = Join-Path $mr "blockg_status_stub.json" }
+} catch { }
+if(-not $defaultPath){ $defaultPath = Join-Path $repoRoot "logs\blockg_status_stub.json" }
 $statusPath = $env:HAT_BLOCKG_STATUS_PATH
 if (-not $statusPath) { $statusPath = $defaultPath }
 
@@ -388,8 +398,3 @@ if ($s -eq "ALL") {
 }
 Write-Host ("[BLOCKG] READY: Symbol={0} StatusFile={1}" -f $Symbol,(Split-Path -Leaf $statusPath)) -ForegroundColor Green
 exit 0
-
-
-
-
-
