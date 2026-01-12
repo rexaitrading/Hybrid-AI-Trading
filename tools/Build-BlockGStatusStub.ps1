@@ -1557,12 +1557,37 @@ try {
 }
 $crisisAlphaEnabled = $false
 # REGIME_READER_END
-# CRASHMODE_FLATTEN_DEFAULTS_BEGIN
-# StrictMode-safe fail-closed defaults for crashmode flatten evidence.
-$crashFlattenOk = $false
-$crashFlattenExit = 0
-$crashFlattenPath = Join-Path $logsDirOut "crashmode_flatten_status.json"
-# CRASHMODE_FLATTEN_DEFAULTS_END
+# CRASHMODE_FLATTEN_READER_BEGIN
+# CrashMode flatten evidence (producer: logs/<Market>/crashmode_flatten_status.json).
+# StrictMode-safe, fail-closed defaults; reader overrides if JSON exists and parses.
+function Read-CrashModeFlattenEvidence([string]$LogsDirOut){
+  $res = [ordered]@{
+    ok = $false
+    exit_code = 0
+    path = (Join-Path $LogsDirOut "crashmode_flatten_status.json")
+  }
+  try{
+    if(Test-Path -LiteralPath $res.path){
+      $j = Get-Content -LiteralPath $res.path -Raw -Encoding UTF8 | ConvertFrom-Json
+      if($j){
+        if($j.PSObject.Properties.Name -contains "ok"){ $res.ok = [bool]$j.ok }
+        if($j.PSObject.Properties.Name -contains "exit_code"){
+          try { $res.exit_code = [int]$j.exit_code } catch { $res.exit_code = 2 }
+        }
+      }
+    }
+  } catch {
+    $res.ok = $false
+    $res.exit_code = 2
+  }
+  return $res
+}
+
+$cm = Read-CrashModeFlattenEvidence $logsDirOut
+$crashFlattenOk   = [bool]$cm.ok
+$crashFlattenExit = [int]$cm.exit_code
+$crashFlattenPath = [string]$cm.path
+# CRASHMODE_FLATTEN_READER_END
 
 $payload = [ordered]@{
     ts_utc = $tsUtc
