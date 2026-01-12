@@ -17,6 +17,18 @@ $ErrorActionPreference="Stop"
 
 # --- repo root: walk up from this script until .git is found (fail-closed) ---
 $repoRoot = $PSScriptRoot
+
+# --- A2: Ensure GateScore daily summary exists (fail-closed) ---
+$gsCsv = Join-Path $repoRoot "logs\gatescore_daily_summary.csv"
+$gsSummary = Join-Path $repoRoot "tools\Run-GateScoreDailySummary.ps1"
+if(Test-Path -LiteralPath $gsSummary){
+  powershell -NoProfile -ExecutionPolicy Bypass -File $gsSummary *>&1 | Out-Host
+}
+if(-not (Test-Path -LiteralPath $gsCsv)){
+  throw ("[A2] FAIL-CLOSED: missing GateScore daily summary csv: " + $gsCsv)
+}
+# --- A2 END ---
+
 while($repoRoot -and -not (Test-Path (Join-Path $repoRoot ".git"))){
   $parent = Split-Path -Parent $repoRoot
   if($parent -eq $repoRoot){ break }
