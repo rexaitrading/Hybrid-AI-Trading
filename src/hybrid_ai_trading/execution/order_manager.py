@@ -705,11 +705,34 @@ class OrderManager:
     def sync_portfolio(self):
         """Minimal stub; tests may monkeypatch this."""
         logger.info("sync_portfolio: stub invoked")
-        return {"status": "ok", "synced": True}
+        return {"status": "ok", "synced": True}    def flatten_all(self):
+        """Flatten all positions / cancel all active orders. Live uses IBClient primitives; never raises."""
+        cancelled = len(getattr(self, "active_orders", []))
+        try:
+            self.active_orders.clear()
+        except Exception:
+            pass
+        try:
+            self._open_ids.clear()
+        except Exception:
+            pass
 
-    def flatten_all(self):
-        """Flatten all positions / cancel all active orders (dry-run semantics)."""
-        cancelled = len(self.active_orders)
-        self.active_orders.clear()
-        self._open_ids.clear()
-        return {"status": "flattened", "flattened": True, "cancelled": cancelled}
+        lc = getattr(self, "live_client", None)
+        if lc is None:
+            return {"status": "flattened", "flattened": True, "cancelled": cancelled, "mode": "dry_run"}
+
+        # CrashMode risk-action meta: bypass cooldown deny ONLY (Block-G is still authoritative elsewhere)
+        meta = {"allow_risk_action": True}
+
+        out = {"status": "flattened", "flattened": True, "cancelled": cancelled, "mode": "live_attempted"}
+        try:
+            out["cancel_open_orders"] = lc.cancel_all_open_orders()
+        except Exception as e:
+            out["cancel_open_orders"] = {"status": "error", "reason": f"{e!r}"}
+
+        try:
+            out["close_positions"] = lc.close_all_positions(meta=meta)
+        except Exception as e:
+            out["close_positions"] = {"status": "error", "reason": f"{e!r}"}
+
+        return out

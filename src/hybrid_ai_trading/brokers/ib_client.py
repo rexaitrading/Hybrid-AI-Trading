@@ -17,6 +17,8 @@ from typing import Dict, List, Optional, Tuple
 from ib_insync import IB, MarketOrder, Stock
 
 
+from ib_insync import Position
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 # ---------------------------
 # Config
 # ---------------------------
@@ -116,6 +118,82 @@ class IBClient:
             "initAfter": str(st.initMarginAfter),
             "commission": str(st.commission),
         }
+    # CRASHMODE_FLATTEN_BEGIN
+    def cancel_all_open_orders(self) -> dict:
+        """
+        Best-effort cancel of all active open orders/trades.
+        Never raises; returns {"status": "...", "cancelled": N, "errors": [...]}.
+        """
+        cancelled = 0
+        errors: List[str] = []
+        try:
+            trades = list(getattr(self.ib, "openTrades", lambda: [])())
+        except Exception as e:
+            trades = []
+            errors.append(f"openTrades_error:{e!r}")
+
+        for tr in trades:
+            try:
+                is_active = True
+                if hasattr(tr, "isActive") and callable(getattr(tr, "isActive")):
+                    is_active = bool(tr.isActive())
+                if not is_active:
+                    continue
+                # cancelOrder expects an Order object
+                o = getattr(tr, "order", None)
+                if o is None:
+                    continue
+                self.ib.cancelOrder(o)
+                cancelled += 1
+            except Exception as e:
+                errors.append(f"cancel_error:{e!r}")
+                continue
+
+        return {"status": "ok", "cancelled": int(cancelled), "errors": errors}
+
+    def close_all_positions(self, *, meta: Optional[dict] = None) -> dict:
+        """
+        Best-effort close for ALL positions using MarketOrder + ib_safe chokepoint.
+        Uses meta.allow_risk_action=True so CrashMode cooldown deny won't block closes.
+        Never raises; returns {"status": "...", "closed": N, "errors": [...]}.
+        """
+        closed = 0
+        errors: List[str] = []
+        m = dict(meta or {})
+        m.setdefault("allow_risk_action", True)
+
+        try:
+            positions = list(getattr(self.ib, "positions", lambda: [])())
+        except Exception as e:
+            positions = []
+            errors.append(f"positions_error:{e!r}")
+
+        for p in positions:
+            try:
+                # ib_insync Position has .contract and .position (qty)
+                c = getattr(p, "contract", None)
+                qty = getattr(p, "position", 0)
+                if c is None:
+                    continue
+                try:
+                    q = float(qty)
+                except Exception:
+                    continue
+                if abs(q) < 1e-9:
+                    continue
+
+                side = "SELL" if q > 0 else "BUY"
+                o = MarketOrder(side, abs(int(q)))
+                # A1: call through chokepoint
+                ib_place_order_chokepoint(self.ib, c, o, ctx=None, meta=m)
+                closed += 1
+            except Exception as e:
+                errors.append(f"close_error:{e!r}")
+                continue
+
+        return {"status": "ok", "closed": int(closed), "errors": errors}
+    # CRASHMODE_FLATTEN_END
+
 
 def get_last_prices(symbols, client_id=3021):
     """
