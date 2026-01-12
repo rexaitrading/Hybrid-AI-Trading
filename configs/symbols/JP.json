@@ -1,0 +1,19 @@
+{
+  "market": "JP",
+  "timezone": "Asia/Tokyo",
+  "calendar_id": "XTKS",
+  "currency": "JPY",
+  "symbols": [
+    { "local": "7974", "name": "Nintendo", "secType": "STK" },
+    { "local": "6758", "name": "Sony Group", "secType": "STK" },
+    { "local": "8058", "name": "Mitsubishi Corp", "secType": "STK" },
+    { "local": "6861", "name": "Keyence", "secType": "STK" },
+    { "local": "6098", "name": "Recruit Holdings", "secType": "STK" }
+  ],
+
+  "ibkr_resolution_candidates": {
+    "exchanges": ["SMART","TSEJ","TSE","XTKS"],
+    "primaryExchanges": ["TSEJ","TSE","XTKS",""],
+    "symbol_formats": ["{local}", "{local}.T", "{local}"]
+  }
+}

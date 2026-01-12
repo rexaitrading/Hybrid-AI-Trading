@@ -154,3 +154,8 @@ tools/blockg_builder_breadcrumb.txt
 # --- Risk caps configs must be tracked (Phase 6) ---
 !configs/risk_caps/
 !configs/risk_caps/*.json
+# --- Symbols configs must be tracked (Phase 5) ---
+!configs/symbols/
+!configs/symbols/*.json
+!configs/symbols/resolved/
+!configs/symbols/resolved/*.json
