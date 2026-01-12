@@ -1,0 +1,44 @@
+[
+  {
+    "conId": 152791428,
+    "symbol": "700",
+    "secType": "STK",
+    "exchange": "SEHK",
+    "primaryExchange": "SEHK",
+    "currency": "HKD",
+    "localSymbol": "700",
+    "tradingClass": "700",
+    "longName": "TENCENT HOLDINGS LTD",
+    "minTick": 0.001,
+    "timeZoneId": "Hongkong",
+    "input_local": "0700"
+  },
+  {
+    "conId": 46636715,
+    "symbol": "998",
+    "secType": "STK",
+    "exchange": "SEHK",
+    "primaryExchange": "SEHK",
+    "currency": "HKD",
+    "localSymbol": "998",
+    "tradingClass": "998",
+    "longName": "CHINA CITIC BANK CORP LTD-H",
+    "minTick": 0.001,
+    "timeZoneId": "Hongkong",
+    "input_local": "0998"
+  },
+  {
+    "conId": 80423421,
+    "symbol": "1299",
+    "secType": "STK",
+    "exchange": "SEHK",
+    "primaryExchange": "SEHK",
+    "currency": "HKD",
+    "localSymbol": "1299",
+    "tradingClass": "1299",
+    "longName": "AIA GROUP LTD",
+    "minTick": 0.001,
+    "timeZoneId": "Hongkong",
+    "input_local": "1299"
+  }
+]
