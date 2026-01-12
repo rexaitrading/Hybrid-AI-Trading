@@ -78,4 +78,11 @@ def _ctx_from_dict(d: Dict[str, Any]) -> RunContext:
         regime=regime,
         mode=mode,
         as_of_date=as_of_date,
+        market=str(d.get("market", "") or "") or None,
+        market_tz=str(d.get("market_tz", "") or "") or None,
+        session=str(d.get("session", "") or "") or None,
+        calendar_id=str(d.get("calendar_id", "") or "") or None,
+        broker_profile=str(d.get("broker_profile", "") or "") or None,
+        logs_dir=(Path(str(d.get("logs_dir"))).expanduser() if d.get("logs_dir") else None),
+        blockg_status_path=(Path(str(d.get("blockg_status_path"))).expanduser() if d.get("blockg_status_path") else None),
     )
