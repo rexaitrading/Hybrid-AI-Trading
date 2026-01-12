@@ -18,6 +18,16 @@ $ErrorActionPreference="Stop"
 # --- repo root: walk up from this script until .git is found (fail-closed) ---
 $repoRoot = $PSScriptRoot
 
+
+while($repoRoot -and -not (Test-Path (Join-Path $repoRoot ".git"))){
+  $parent = Split-Path -Parent $repoRoot
+  if($parent -eq $repoRoot){ break }
+  $repoRoot = $parent
+}
+if(-not (Test-Path (Join-Path $repoRoot ".git"))){
+  throw "NOT IN REPO ROOT (could not find .git from $PSScriptRoot)"
+}
+
 # --- A2: Ensure GateScore daily summary exists (fail-closed) ---
 $gsCsv = Join-Path $repoRoot "logs\gatescore_daily_summary.csv"
 $gsSummary = Join-Path $repoRoot "tools\Run-GateScoreDailySummary.ps1"
@@ -29,14 +39,6 @@ if(-not (Test-Path -LiteralPath $gsCsv)){
 }
 # --- A2 END ---
 
-while($repoRoot -and -not (Test-Path (Join-Path $repoRoot ".git"))){
-  $parent = Split-Path -Parent $repoRoot
-  if($parent -eq $repoRoot){ break }
-  $repoRoot = $parent
-}
-if(-not (Test-Path (Join-Path $repoRoot ".git"))){
-  throw "NOT IN REPO ROOT (could not find .git from $PSScriptRoot)"
-}
 # --- end repo root ---
 $today = (Get-Date).ToString("yyyy-MM-dd")
 

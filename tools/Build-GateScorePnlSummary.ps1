@@ -216,7 +216,25 @@ foreach ($it in $eventFiles) {
       $targetDate = $today
       if(-not $StrictToday){ $targetDate = $today }
 $local = _StageToLocal $path; $m = Fast-NvdaSummaryFromJsonl -Path $local -TargetDate $targetDate
-      if(-not $m.has_eligible){ continue }
+      if(-not $m.has_eligible){
+  if($StrictToday){
+    continue
+  }
+  # Non-strict: write sentinel freshness row (zeros) so downstream ops wiring can proceed
+  $row = [pscustomobject]@{
+    as_of_date       = $targetDate
+    symbol           = $sym
+    count_signals    = 0
+    pnl_samples      = 0
+    mean_edge_ratio  = 0.0
+    mean_micro_score = 0.0
+    mean_pnl         = 0.0
+    eligible_count   = 0
+    has_eligible     = $false
+  }
+  $rowsOut.Add($row) | Out-Null
+  continue
+}
       $row = [pscustomobject]@{
         as_of_date       = $targetDate
         symbol           = $sym
