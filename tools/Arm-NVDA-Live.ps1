@@ -26,6 +26,10 @@ $logsDir = Join-Path $repoRoot "logs"
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 $stampPath = Join-Path $logsDir "nvda_live_ready_stamp.json"
 
+# A4/Policy: NVDA LIVE READY must only be asserted when BlockG returns rc==0
+$nvdaLiveReady = $false
+
+
 Write-Host "[ARM] Step 1/4 Phase4 stamp" -ForegroundColor Cyan
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Run-Phase4Stamp.ps1") | Out-Host
 if ($LASTEXITCODE -ne 0) { Fail "Phase4 failed exit=$LASTEXITCODE" }
@@ -61,9 +65,14 @@ if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub failed exit=$LASTEXITCOD
 Write-Host "[ARM] Step 4/4 Check BlockG readiness (NVDA)" -ForegroundColor Cyan
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Invoke-BlockGCheck.ps1") -Symbol NVDA -Mode ALL_STRICT | Out-Host
 $rc = $LASTEXITCODE
-if ($rc -eq 10) { Fail "BlockG CLOSED DAY diagnostic (exit=10): LIVE arming disallowed" }
-if ($rc -ne 0)  { Fail ("BlockG readiness failed exit=" + $rc) }
-if ($LASTEXITCODE -ne 0) { Fail "Check-BlockGReady NVDA failed exit=$LASTEXITCODE" }
+if ($rc -eq 0) {
+  $nvdaLiveReady = $true
+} elseif ($rc -eq 10) {
+  Fail "BlockG CLOSED DAY diagnostic (exit=10): LIVE arming disallowed"
+} else {
+  Fail ("BlockG readiness failed exit=" + $rc)
+}
+
 
 # Best-effort: attach BlockG snapshot info
 $blockgPath = Join-Path $logsDir "blockg_status_stub.json"
@@ -81,10 +90,15 @@ try {
   }
 } catch { $blockgAsOf = ""; $blockgReasons = @() }
 
+# STAMP_GUARD_BEGIN
+if(-not $nvdaLiveReady){
+  Fail "Refusing to write NVDA LIVE READY stamp: nvdaLiveReady=false"
+}
+# STAMP_GUARD_END
 $payload = [ordered]@{
   ts_utc = (Get-Date).ToUniversalTime().ToString("o")
   as_of_date = $today
-  nvda_live_ready = $true
+  nvda_live_ready = $nvdaLiveReady
   blockg_as_of_date = $blockgAsOf
   phase4_ok_today = $true
   ev_hard_daily_ok_today = $true
