@@ -379,6 +379,30 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
     return $false
   }
 }
+# A2_STATUS_JSON_HELPERS_BEGIN
+function Read-JsonSafe([string]$Path){
+  try{
+    if(-not (Test-Path -LiteralPath $Path)){ return $null }
+    $raw = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+    if(-not $raw){ return $null }
+    return ($raw | ConvertFrom-Json -ErrorAction Stop)
+  } catch { return $null }
+}
+
+function Read-StatusOkToday([string]$StatusPath,[string]$TodayLocal){
+  # expects status json schema: { as_of_date, ok_today, ... }
+  $j = Read-JsonSafe $StatusPath
+  if(-not $j){ return $null }
+  try{
+    $asOf = ""
+    if($j.PSObject.Properties.Name -contains "as_of_date"){ $asOf = [string]$j.as_of_date }
+    if($asOf.Length -ge 10){ $asOf = $asOf.Substring(0,10) }
+    if($asOf -ne $TodayLocal){ return $false }
+    if($j.PSObject.Properties.Name -contains "ok_today"){ return [bool]$j.ok_today }
+  } catch { }
+  return $false
+}
+# A2_STATUS_JSON_HELPERS_END
 
 $repoRoot = Resolve-RepoRoot
 
@@ -423,6 +447,11 @@ try {
 
     # Phase23 today
     $phase23Ok=$false
+    # A2: prefer producer status json (fallback to CSV below)
+    $p23s = Join-Path $logsDir "phase23_status.json"
+    $p23ok = Read-StatusOkToday $p23s $todayLocal
+    if($null -ne $p23ok){ $phase23Ok = [bool]$p23ok }
+
     $p23 = Join-Path $logsDir "phase23_health_daily.csv"
     if(Test-Path -LiteralPath $p23){
       try{
@@ -439,6 +468,11 @@ try {
 
     # EV-hard today
     $evHardOk=$false
+    # A2: prefer producer status json (fallback to CSV below)
+    $evs = Join-Path $logsDir "ev_hard_status.json"
+    $evok = Read-StatusOkToday $evs $todayLocal
+    if($null -ne $evok){ $evHardOk = [bool]$evok; $evAsOf=$todayLocal }
+
     $evAsOf=""
     $evp = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
     if(Test-Path -LiteralPath $evp){
@@ -456,6 +490,11 @@ try {
 
     # Phase4 today
     $phase4Ok=$false
+    # A2: prefer producer status json (fallback to legacy JSON below)
+    $p4s = Join-Path $logsDir "phase4_status.json"
+    $p4ok = Read-StatusOkToday $p4s $todayLocal
+    if($null -ne $p4ok){ $phase4Ok = [bool]$p4ok }
+
     $p4 = Join-Path $logsDir "phase4_validation_passed.json"
     if(Test-Path -LiteralPath $p4){
       try{
