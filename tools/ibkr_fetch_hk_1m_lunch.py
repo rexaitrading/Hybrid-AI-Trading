@@ -42,7 +42,7 @@ def bar_date_to_hk_yyyymmdd(s: str) -> str:
     # "YYYYMMDD HH:MM:SS" (treat as UTC, convert to Tokyo)
     try:
         if len(raw) >= 17 and raw[:8].isdigit() and raw[8] == " ":
-            dt = _dt.datetime.strptime(raw[:17], "%Y%m%d %H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
+            dt = _dt.datetime.strptime(raw[:17], "%Y%m%d %H:%M:%S").replace(tzinfo=ZoneInfo("Asia/Hong_Kong"))
             return dt.astimezone(ZoneInfo("Asia/Hong_Kong")).strftime("%Y%m%d")
     except Exception:
         pass
@@ -226,7 +226,7 @@ def main():
         tokyo_ymd_seen = bar_date_to_hk_yyyymmdd(str(merged[0].get("time",""))) if merged else ""
         ymd_target = (merged[0].get("yyyymmdd","") if merged else "") or tokyo_ymd_seen or ymd_compact
         if tokyo_ymd_seen and tokyo_ymd_seen != ymd_compact:
-            print(f"[HK][FAIL] requested_as_of={ymd_compact} but got_tokyo_ymd={tokyo_ymd_seen} (session mismatch; writing ymd_target={ymd_target})")
+            print(f"[HK][FAIL] requested_as_of={ymd_compact} but got_market_ymd={tokyo_ymd_seen} (session mismatch; writing ymd_target={ymd_target})")
             any_mismatch = True
         filtered = [b for b in merged if b.get("yyyymmdd","") == ymd_target]
 
