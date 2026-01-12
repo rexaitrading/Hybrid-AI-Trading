@@ -306,7 +306,7 @@ Step "Phase-7 Optimizer Daily (optional)" {
   "LAST_STEP=" + $global:__LAST_STEP
 ) | Add-Content -LiteralPath $global:__SUMMARY_PATH -Encoding utf8
 
-Write-Host "`n[MASTER-LAUNCH] GREEN: Phase1â†’Phase7 + Intel + BlockG + SAFE PaperLiveOps complete." -ForegroundColor Green
+Write-Host "`n[MASTER-LAUNCH] GREEN: Phase1->Phase7 + Intel + BlockG + SAFE PaperLiveOps complete." -ForegroundColor Green
 Write-Host ("[SUMMARY] " + $global:__SUMMARY_PATH) -ForegroundColor DarkGray
 
 if($Hold){
