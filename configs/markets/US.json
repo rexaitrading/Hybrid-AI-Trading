@@ -1,0 +1,13 @@
+{
+  "market": "US",
+  "enabled": true,
+  "tz": "America/New_York",
+  "calendar_id": "XNYS",
+  "log_namespace": "US",
+  "rth_open_local": "09:30",
+  "rth_close_local": "16:00",
+  "lunch_break": null,
+  "sessions": ["RTH"],
+  "symbols_default": ["NVDA","SPY","QQQ"],
+  "broker_profile": "IBKR_US"
+}

@@ -1,0 +1,13 @@
+{
+  "market": "JP",
+  "enabled": true,
+  "tz": "Asia/Tokyo",
+  "calendar_id": "XTKS",
+  "log_namespace": "JP",
+  "rth_open_local": "09:00",
+  "rth_close_local": "15:00",
+  "lunch_break": {"start":"11:30","end":"12:30"},
+  "sessions": ["RTH"],
+  "symbols_default": [],
+  "broker_profile": "IBKR_JP"
+}

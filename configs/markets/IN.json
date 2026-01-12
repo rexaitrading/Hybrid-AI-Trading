@@ -1,0 +1,13 @@
+{
+  "market": "IN",
+  "enabled": false,
+  "tz": "Asia/Kolkata",
+  "calendar_id": "XNSE",
+  "log_namespace": "IN",
+  "rth_open_local": "09:15",
+  "rth_close_local": "15:30",
+  "lunch_break": null,
+  "sessions": ["RTH"],
+  "symbols_default": [],
+  "broker_profile": "IBKR_IN"
+}

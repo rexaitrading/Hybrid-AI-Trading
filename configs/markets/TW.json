@@ -1,0 +1,13 @@
+{
+  "market": "TW",
+  "enabled": false,
+  "tz": "Asia/Taipei",
+  "calendar_id": "XTAI",
+  "log_namespace": "TW",
+  "rth_open_local": "09:00",
+  "rth_close_local": "13:30",
+  "lunch_break": null,
+  "sessions": ["RTH"],
+  "symbols_default": [],
+  "broker_profile": "IBKR_TW"
+}

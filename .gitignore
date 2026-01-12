@@ -148,3 +148,6 @@ data/feature_store/
 
 # debug crumbs
 tools/blockg_builder_breadcrumb.txt
+# --- Market profiles must be tracked (Phase 5) ---
+!configs/markets/
+!configs/markets/*.json

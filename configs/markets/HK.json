@@ -1,0 +1,13 @@
+{
+  "market": "HK",
+  "enabled": true,
+  "tz": "Asia/Hong_Kong",
+  "calendar_id": "XHKG",
+  "log_namespace": "HK",
+  "rth_open_local": "09:30",
+  "rth_close_local": "16:00",
+  "lunch_break": {"start":"12:00","end":"13:00"},
+  "sessions": ["RTH"],
+  "symbols_default": [],
+  "broker_profile": "IBKR_HK"
+}

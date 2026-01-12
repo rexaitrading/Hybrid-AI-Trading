@@ -1,0 +1,13 @@
+{
+  "market": "CN_SH",
+  "enabled": false,
+  "tz": "Asia/Shanghai",
+  "calendar_id": "XSHG",
+  "log_namespace": "CN_SH",
+  "rth_open_local": "09:30",
+  "rth_close_local": "15:00",
+  "lunch_break": {"start":"11:30","end":"13:00"},
+  "sessions": ["RTH"],
+  "symbols_default": [],
+  "broker_profile": "IBKR_CN"
+}
