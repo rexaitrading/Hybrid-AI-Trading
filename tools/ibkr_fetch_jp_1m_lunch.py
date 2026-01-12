@@ -223,7 +223,7 @@ def main():
 
         merged = dedupe_sort(allbars)
         tokyo_ymd_seen = bar_date_to_tokyo_yyyymmdd(str(merged[0].get("time",""))) if merged else ""
-        ymd_target = tokyo_ymd_seen if tokyo_ymd_seen else ymd_compact
+        ymd_target = (merged[0].get("yyyymmdd","") if merged else "") or tokyo_ymd_seen or ymd_compact
         if tokyo_ymd_seen and tokyo_ymd_seen != ymd_compact:
             print(f"[JP][FAIL] requested_as_of={ymd_compact} but got_tokyo_ymd={tokyo_ymd_seen} (session mismatch; writing ymd_target={ymd_target})")
             any_fail = True
