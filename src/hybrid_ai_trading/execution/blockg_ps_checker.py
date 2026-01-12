@@ -46,6 +46,7 @@ def _audit_log(sym: str, *, stdout: str, stderr: str, returncode: int | None, no
 def require_blockg_ready_via_powershell(
     symbol: str,
     *,
+    market: str | None = None,
     build: bool = False,
     timeout_s: int = 30,
 ) -> None:
@@ -69,6 +70,12 @@ def require_blockg_ready_via_powershell(
         "Bypass",
         "-File",
         str(script),
+    ]
+    # Market routing (A3): default US if not provided.
+    mk = (market or "").upper().strip()
+    if mk:
+        args += ["-Market", mk]
+    args += [
         "-Symbol",
         sym,
     ]

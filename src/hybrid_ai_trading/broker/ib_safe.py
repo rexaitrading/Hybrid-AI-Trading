@@ -17,7 +17,13 @@ from hybrid_ai_trading.execution.live_arm import require_live_arm
 # -----------------------------
 # Live/paper detection + symbol
 # -----------------------------
-def _is_live() -> bool:
+def _is_live(ctx: RunContext | None = None) -> bool:
+    # A3: ctx is authoritative; env is fallback.
+    try:
+        if ctx is not None and hasattr(ctx, "is_paper"):
+            return (not bool(getattr(ctx, "is_paper")))
+    except Exception:
+        pass
     return str(os.environ.get("HAT_IS_PAPER", "")).strip() == "0"
 
 
@@ -65,10 +71,15 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
         except Exception:
             sym = None
     # Enforce Block-G + live gates (fail-closed)
-    if _is_live():
+    if _is_live(ctx):
         if sym in ("NVDA", "SPY", "QQQ"):
             # System readiness first (Block-G) so tests can assert correct chokepoint behavior
-            require_blockg_ready_via_powershell(sym, build=False)
+            mk = None
+            try:
+                mk = str(getattr(ctx, "market", "")).upper().strip() if ctx is not None else None
+            except Exception:
+                mk = None
+            require_blockg_ready_via_powershell(sym, market=mk, build=False)
             require_nvda_live_stamp(sym)
             # Phase-7 portfolio guard (fail-closed). Applies to NVDA/SPY/QQQ in LIVE mode.
             require_portfolio_gate_for_live(sym)

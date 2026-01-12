@@ -14,7 +14,7 @@ def _blockg_guard_live(symbol: str, ctx: RunContext | None = None) -> None:
     # Determine LIVE intent from ctx.mode (authoritative) or ctx.is_paper.
     mode = str(getattr(ctx, "mode", "") or "").lower() if ctx is not None else ""
     ctx_is_paper = getattr(ctx, "is_paper", None) if ctx is not None else None
-    env_live = (__import__("os").environ.get("HAT_IS_PAPER", "1").strip() == "0")
+    env_live = (str(__import__("os").environ.get("HAT_IS_PAPER","")).strip() == "0") if (ctx is None) else False
     live = (mode == "live") or (ctx_is_paper is False) or ((ctx is None) and env_live)
 
     if live:
