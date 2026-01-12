@@ -207,6 +207,7 @@ def main():
 
     windows = [("11:30", "AM"), ("15:00", "PM")]  # JP RTH windows; lunch gap handled by merging
     any_fail = False
+    any_mismatch = False
 
     ymd_compact = as_of.replace("-", "")
 
@@ -226,7 +227,7 @@ def main():
         ymd_target = (merged[0].get("yyyymmdd","") if merged else "") or tokyo_ymd_seen or ymd_compact
         if tokyo_ymd_seen and tokyo_ymd_seen != ymd_compact:
             print(f"[JP][FAIL] requested_as_of={ymd_compact} but got_tokyo_ymd={tokyo_ymd_seen} (session mismatch; writing ymd_target={ymd_target})")
-            any_fail = True
+            any_mismatch = True
         filtered = [b for b in merged if b.get("yyyymmdd","") == ymd_target]
 
         out_path = os.path.join(out_dir, f"{sym_local}_1m_{ymd_target}.csv")
@@ -242,7 +243,13 @@ def main():
     try: app.disconnect()
     except: pass
 
-    # NOTE: daemon thread will die when process exits; we return regardless.
+    mode = os.environ.get("HAT_MODE", "PAPER").upper()
+    is_live = (mode == "LIVE")
+    if any_fail:
+        return 2
+    if any_mismatch and is_live:
+        return 2
+    return 0
     return 2 if any_fail else 0
 
 if __name__ == "__main__":
