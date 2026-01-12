@@ -76,6 +76,7 @@ class App(EWrapper, EClient):
         with self._lock:
             self._bars.append({
                 "time": str(bar.date),
+                "yyyymmdd": time_to_yyyymmdd(str(bar.date)),
                 "open": float(bar.open),
                 "high": float(bar.high),
                 "low": float(bar.low),
@@ -189,7 +190,7 @@ def main():
             allbars.extend(bars)
 
         merged = dedupe_sort(allbars)
-        filtered = [b for b in merged if time_to_yyyymmdd(str(b.get("time",""))) == ymd_compact]
+        filtered = [b for b in merged if b.get("yyyymmdd","") == ymd_compact]
 
         out_path = os.path.join(out_dir, f"{sym_local}_1m_{as_of}.csv")
         with open(out_path, "w", encoding="utf-8", newline="\n") as f:
