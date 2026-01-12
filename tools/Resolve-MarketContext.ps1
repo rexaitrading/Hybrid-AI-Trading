@@ -35,6 +35,30 @@ if(-not $AsOfDate){
 $dt = [DateTime]::ParseExact($AsOfDate,"yyyy-MM-dd",$null)
 $closed = ($dt.DayOfWeek -eq "Saturday" -or $dt.DayOfWeek -eq "Sunday")
 
+# Per-market holiday override (configs\market_holidays.json)
+try {
+  $holPath = Join-Path $repoRoot "configs\market_holidays.json"
+  if(Test-Path -LiteralPath $holPath){
+    $hj = Get-Content -LiteralPath $holPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $m = ($Market + "").ToUpperInvariant()
+
+    $dates = @()
+    if($hj.PSObject.Properties.Name -contains "closed_dates"){
+      # Back-compat: old schema treated as US
+      if($m -eq "US"){ $dates = @($hj.closed_dates) }
+    } elseif($hj.PSObject.Properties.Name -contains $m) {
+      $obj = $hj.$m
+      if($obj -and ($obj.PSObject.Properties.Name -contains "closed_dates")){
+        $dates = @($obj.closed_dates)
+      }
+    }
+
+    if($dates -contains $AsOfDate){
+      $closed = $true
+    }
+  }
+} catch { }
+
 [pscustomobject]@{
   market = $Market
   tz = $tz
@@ -42,4 +66,3 @@ $closed = ($dt.DayOfWeek -eq "Saturday" -or $dt.DayOfWeek -eq "Sunday")
   as_of_date = $AsOfDate
   market_closed_today = [bool]$closed
 } | ConvertTo-Json -Depth 5
-

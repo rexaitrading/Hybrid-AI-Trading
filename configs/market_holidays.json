@@ -1,1 +1,47 @@
-{ "closed_dates": [] }
+{
+    "US":  {
+               "closed_dates":  [
+
+                                ]
+           },
+    "JP":  {
+               "closed_dates":  [
+                                    "2026-01-12"
+                                ]
+           },
+    "HK":  {
+               "closed_dates":  [
+
+                                ]
+           },
+    "SG":  {
+               "closed_dates":  [
+
+                                ]
+           },
+    "IN":  {
+               "closed_dates":  [
+
+                                ]
+           },
+    "KR":  {
+               "closed_dates":  [
+
+                                ]
+           },
+    "TW":  {
+               "closed_dates":  [
+
+                                ]
+           },
+    "CN_SH":  {
+                  "closed_dates":  [
+
+                                   ]
+              },
+    "CN_SZ":  {
+                  "closed_dates":  [
+
+                                   ]
+              }
+}
