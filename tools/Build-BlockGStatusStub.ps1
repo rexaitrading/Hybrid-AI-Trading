@@ -383,6 +383,13 @@ $repoRoot = Resolve-RepoRoot
 # repoRoot resolved above (canonical)
 $logsDir  = Join-Path $repoRoot "logs"
 
+# Phase-5: per-market logs dir (default US).
+try {
+  $mr = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
+  if($mr){ $logsDir = $mr }
+} catch { }
+
+
 
 # --- FAST BUILDER MODE (Phase3-safe, institutional) ---
 # Phase3 must be able to build a stub quickly without scanning huge event files.
@@ -818,6 +825,13 @@ $GS_MIN_EVENTS_REQUIRED = 25
 
 function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
   $logsDir = Join-Path $RepoRoot "logs"
+
+# Phase-5: per-market logs dir (default US).
+try {
+  $mr = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
+  if($mr){ $logsDir = $mr }
+} catch { }
+
   $p = Resolve-GatescoreEventsPath $Sym $logsDir
 
   $rowsTotal = 0
