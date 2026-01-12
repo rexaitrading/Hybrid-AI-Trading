@@ -43,19 +43,19 @@ Step "Build Block-G status stub (FULL semantics)" {
   try { Remove-Item -LiteralPath $stdout,$stderr -Force -ErrorAction SilentlyContinue } catch {}
 
   $job = Start-Job -ScriptBlock {
-    param($RepoRoot,$Builder,$Stdout,$Stderr)
+    param($RepoRoot,$Builder,$Sym,$Stdout,$Stderr)
     $ErrorActionPreference="Stop"; Set-StrictMode -Version Latest
     Set-Location -LiteralPath $RepoRoot
     [System.Environment]::CurrentDirectory = $RepoRoot
     try {
-      & powershell -NoProfile -ExecutionPolicy Bypass -File $Builder -Symbol NVDA *>&1 |
+      & powershell -NoProfile -ExecutionPolicy Bypass -File $Builder -Symbol $Sym *>&1 |
         Out-File -LiteralPath $Stdout -Encoding UTF8
       exit 0
     } catch {
       ($_.Exception.ToString()) | Out-File -LiteralPath $Stderr -Encoding UTF8
       exit 2
     }
-  } -ArgumentList $repoRoot,$builder,$stdout,$stderr
+  } -ArgumentList $repoRoot,$builder,$Symbol,$stdout,$stderr
 
   $ok = Wait-Job -Id $job.Id -Timeout $BuilderTimeoutSec
   if(-not $ok){
@@ -78,7 +78,11 @@ if($All){ $syms = @("NVDA","SPY","QQQ") } else { $syms = @($Symbol.ToUpperInvari
 
 foreach($sym in $syms){
   Step ("Check-BlockGReady (Symbol=" + $sym + ")") {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym *>&1 | Out-Host
+    if($AllowClosedDayDiagnostics){
+      & powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym -Mode BUILD_ONLY *>&1 | Out-Host
+    } else {
+      & powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym *>&1 | Out-Host
+    }
     $ec = $LASTEXITCODE
     Write-Host ("[VERIFY-BLOCKG] " + $sym + " checker exit=" + $ec) -ForegroundColor DarkGray
     if($ec -ne 0){

@@ -247,11 +247,27 @@ if(($env:HAT_BLOCKG_BUILDER_FAST + "") -ne "1"){ $env:HAT_BLOCKG_BUILDER_FAST = 
   Write-Host "[BLOCK-G] builder OK (FAST)" -ForegroundColor Green
 }
 
-Step "Block-G readiness (FAIL-CLOSED)" { RunTool "tools\Check-BlockGReady.ps1" @("-Symbol",$Symbol) }
+Step "Block-G readiness (FAIL-CLOSED)" {
+  # HOLD policy: closed-day paper ops must be allowed to finish, but LIVE remains disallowed.
+  # Verify-BlockG-Ready.ps1 already ran above and supports -AllowClosedDayDiagnostics when -Hold.
+  if($Hold){
+    Write-Host "[MASTER-LAUNCH] HOLD: skipping Check-BlockGReady ALL_STRICT gate (closed-day allowed; no LIVE stamp)" -ForegroundColor Yellow
+    $global:LASTEXITCODE = 0
+    return
+  }
+  RunTool "tools\Check-BlockGReady.ps1" @("-Market",$Market,"-Symbol",$Symbol)
+}
 
 Step "Phase-5 risk tests (risk-first)" { RunTool "tools\Run-Phase5Tests.ps1" }
 
 Step "Phase-1 Replay Suite"        { RunTool "tools\Run-Phase1ReplaySuite.ps1" }
+# HOLD policy: allow closed-day diagnostics for downstream tools (Phase-3 GateScore daily) without granting LIVE readiness.
+if($Hold){
+  $env:HAT_ALLOW_CLOSED_DAY_DIAGNOSTICS = "1"
+  Write-Host "[MASTER-LAUNCH] HOLD: enabled HAT_ALLOW_CLOSED_DAY_DIAGNOSTICS=1" -ForegroundColor Yellow
+} else {
+  Remove-Item Env:\HAT_ALLOW_CLOSED_DAY_DIAGNOSTICS -ErrorAction SilentlyContinue
+}
 Step "Phase-2/3 Quick"             { RunTool "tools\Run-Phase23Quick.ps1" }
 Step "Phase-4 Validation"          { RunTool "tools\Run-Phase4Validation.ps1" }
 Step "Phase-5 Safety Suite"        { RunTool "tools\Run-Phase5SafetySuite.ps1" }

@@ -108,7 +108,13 @@ function Invoke-BlockGCheckSafe([string]$Symbol){
   }
 
   # Validate contract
-  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol *>&1 | Out-Host
+  # Validate contract
+  if(($env:HAT_ALLOW_CLOSED_DAY_DIAGNOSTICS + "") -eq "1"){
+    Write-Host "[PHASE3] HOLD/closed-day diagnostics: BlockG BUILD_ONLY (no LIVE readiness required)" -ForegroundColor Yellow
+    powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol -Mode BUILD_ONLY *>&1 | Out-Host
+  } else {
+    powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol *>&1 | Out-Host
+  }
   if($LASTEXITCODE -ne 0){
     throw ("[PHASE3] FAIL-CLOSED: BlockG check failed exit=" + $LASTEXITCODE)
   }
