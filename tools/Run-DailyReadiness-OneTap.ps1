@@ -67,7 +67,7 @@ if(Test-Path $gs){
 
 # 4) Block-G status stub (handled by Check-BlockGReady -Build)
 # 5) Check readiness
-$chk = Join-Path $repoRoot "tools\Check-BlockGReady.ps1"
+$chk = Join-Path $repoRoot "tools\Invoke-BlockGCheck.ps1"
 if(Test-Path -LiteralPath $chk){
   $chkArgs = @("-Symbol", $Symbol)
   if($Build){ $chkArgs += "-Build" }
