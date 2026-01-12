@@ -60,6 +60,9 @@ if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub failed exit=$LASTEXITCOD
 
 Write-Host "[ARM] Step 4/4 Check BlockG readiness (NVDA)" -ForegroundColor Cyan
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Invoke-BlockGCheck.ps1") -Symbol NVDA -Mode ALL_STRICT | Out-Host
+$rc = $LASTEXITCODE
+if ($rc -eq 10) { Fail "BlockG CLOSED DAY diagnostic (exit=10): LIVE arming disallowed" }
+if ($rc -ne 0)  { Fail ("BlockG readiness failed exit=" + $rc) }
 if ($LASTEXITCODE -ne 0) { Fail "Check-BlockGReady NVDA failed exit=$LASTEXITCODE" }
 
 # Best-effort: attach BlockG snapshot info
