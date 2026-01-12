@@ -31,6 +31,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Run-Ph
 if ($LASTEXITCODE -ne 0) { Fail "Phase4 failed exit=$LASTEXITCODE" }
 
 Write-Host "[ARM] Step 2/4 GateScore daily build (today-only)" -ForegroundColor Cyan
+# --- A2: GateScore summary BEFORE build (fail-closed) ---
+$gsCsv = Join-Path $repoRoot "logs\gatescore_daily_summary.csv"
+$gsSummary = Join-Path $toolsDir "Run-GateScoreDailySummary.ps1"
+if(Test-Path -LiteralPath $gsSummary){
+  powershell -NoProfile -ExecutionPolicy Bypass -File $gsSummary *>&1 | Out-Host
+}
+if(-not (Test-Path -LiteralPath $gsCsv)){
+  Fail ("GateScore daily summary missing BEFORE build: " + $gsCsv)
+}
+# --- A2 END ---
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Run-GateScoreDailyBuild.ps1") | Out-Host
 if ($LASTEXITCODE -ne 0) { Fail "GateScore daily build failed exit=$LASTEXITCODE" }
 # --- A2: Ensure GateScore daily summary CSV exists (fail-closed) ---

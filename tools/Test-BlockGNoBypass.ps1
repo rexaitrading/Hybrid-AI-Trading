@@ -9,6 +9,8 @@ $ErrorActionPreference="Stop"
 # - Check-BlockGDiagnosticOk.ps1 (ops wrapper; converts exit=10 -> 0)
 # - Test-BlockGWeekendSemantics.ps1 (regression test; proves ready=10 diag=0)
 $allow = @(
+  (Resolve-Path ".\tools\Invoke-BlockGCheck.ps1" -ErrorAction SilentlyContinue).Path,
+
   (Resolve-Path ".\tools\Arm-NVDA-Live.ps1" -ErrorAction SilentlyContinue).Path,
   (Resolve-Path ".\tools\Check-BlockGDiagnosticOk.ps1" -ErrorAction SilentlyContinue).Path,
   (Resolve-Path ".\tools\Test-BlockGWeekendSemantics.ps1" -ErrorAction SilentlyContinue).Path
