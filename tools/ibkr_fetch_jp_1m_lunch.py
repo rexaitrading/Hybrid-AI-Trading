@@ -149,7 +149,7 @@ def fetch_one_window(app: App, c: Contract, endDateTime: str) -> List[Dict[str, 
     app.reqHistoricalData(
         reqId, c,
         endDateTime=endDateTime,
-        durationStr="1 D",
+        durationStr="14400 S",
         barSizeSetting="1 min",
         whatToShow="TRADES",
         useRTH=1,
