@@ -1416,6 +1416,16 @@ try {
 $script:__emit_reached = $true
 # --- END EMIT GUARANTEE ---
 
+# --- CANONICALIZE OUTPUT PATHS (institutional; MUST be outside payload hashtable) ---
+try { $statusPath = Canon $statusPath } catch { }
+try { $intel_source_path = Canon $intel_source_path } catch { }
+try { $gsMsPath = Canon $gsMsPath } catch { }
+
+# Explicit resolved events path (NVDA) for payload key
+$gatescore_events_path = ""
+try { $gatescore_events_path = (Resolve-GatescoreEventsPath "NVDA" $logsDir) } catch { $gatescore_events_path = "" }
+try { if($gatescore_events_path){ $gatescore_events_path = Canon $gatescore_events_path } } catch { }
+# --- END CANONICALIZE OUTPUT PATHS ---
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
@@ -1430,13 +1440,15 @@ $payload = [ordered]@{
     gatescore_metrics_source_debug_seen_count = $gsMsSeenCount
     gatescore_metrics_source_debug_top        = $gsMsTop
     gatescore_metrics_source_debug_today      = $gsMsToday
-    # --- CANONICALIZE OUTPUT PATHS (institutional) ---
-    $statusPath = Canon $statusPath
-    $intel_source_path = Canon $intel_source_path
-    $gsMsPath = Canon $gsMsPath
-    # --- END CANONICALIZE OUTPUT PATHS ---
+
     gatescore_metrics_source_debug_path       = $gsMsPath
     gatescore_metrics_source_debug_exists     = $gsMsExists
+
+    # Explicit paths (schema-stable; prevents path-as-key pollution)
+    status_path           = $statusPath
+    gatescore_events_path = $gatescore_events_path
+
+
     market_closed_today = $marketClosedToday
     ev_hard_not_evaluated_market_closed = $ev_hard_not_evaluated_market_closed
     gatescore_nvda_eligible_zero = $gsNvdaEligibleZero
