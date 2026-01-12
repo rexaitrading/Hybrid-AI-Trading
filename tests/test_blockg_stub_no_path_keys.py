@@ -17,3 +17,15 @@ def test_blockg_stub_has_no_path_like_keys_hk():
     if not p.exists():
         pytest.skip("missing logs/HK/blockg_status_stub.json; run Build-BlockGStatusStub -Market HK first")
     _assert_no_path_like_keys(p)
+
+def test_blockg_stub_has_no_path_like_keys_jp():
+    p = Path("logs/JP/blockg_status_stub.json")
+    if not p.exists():
+        pytest.skip("missing logs/JP/blockg_status_stub.json; run Build-BlockGStatusStub -Market JP first")
+    _assert_no_path_like_keys(p)
+
+def test_blockg_stub_has_no_path_like_keys_sg():
+    p = Path("logs/SG/blockg_status_stub.json")
+    if not p.exists():
+        pytest.skip("missing logs/SG/blockg_status_stub.json; run Build-BlockGStatusStub -Market SG first")
+    _assert_no_path_like_keys(p)
