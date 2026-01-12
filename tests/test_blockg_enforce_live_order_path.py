@@ -59,6 +59,11 @@ def test_live_path_blocks_when_blockg_not_ready(tmp_path: Path, monkeypatch):
 
 
 def test_live_path_allows_when_blockg_ready_today(tmp_path: Path, monkeypatch):
+    # Deterministic unit test: avoid time-dependent PowerShell ALL_STRICT session gate.
+    # Patch the exact imported symbol used by execution_engine_phase5_guard.
+    import hybrid_ai_trading.execution.execution_engine_phase5_guard as guard
+    monkeypatch.setattr(guard, "require_blockg_ready_via_powershell", lambda *a, **k: None)
+
     monkeypatch.setenv("HAT_IS_PAPER", "0")
     monkeypatch.setenv("HAT_BLOCKG_STATUS_PATH", str(tmp_path / "blockg_status_stub.json"))
 
