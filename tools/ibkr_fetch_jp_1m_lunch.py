@@ -14,8 +14,29 @@ CONNECT_TIMEOUT_SEC = float(os.environ.get("IBKR_CONNECT_TIMEOUT_SEC", "6"))
 
 def ymd_to_ib_end(ymd: str, hhmm: str) -> str:
     d = ymd.replace("-", "")
-    return f"{d} {hhmm}:00"
+    return f"{d} {hhmm}:00 Asia/Tokyo"
 
+
+def time_to_yyyymmdd(t: str) -> str:
+    s = (t or "").strip()
+    # Possible formats:
+    #  - "20260112  09:00:00"
+    #  - "2026-01-12 09:00:00"
+    #  - "20260112"
+    if len(s) >= 8 and s[:8].isdigit():
+        return s[:8]
+    if len(s) >= 10 and s[4] == "-" and s[7] == "-":
+        return s[:10].replace("-", "")
+    # epoch seconds fallback
+    try:
+        if s.isdigit():
+            # If epoch seconds, convert to UTC date (best effort)
+            import datetime as _dt
+            dt = _dt.datetime.utcfromtimestamp(int(s))
+            return dt.strftime("%Y%m%d")
+    except:
+        pass
+    return ""
 class App(EWrapper, EClient):
     def __init__(self):
         EClient.__init__(self, self)
@@ -26,15 +47,25 @@ class App(EWrapper, EClient):
         self._next_id = 1
         self._bars: List[Dict[str, Any]] = []
 
+    
+        self._req_err_code: Dict[int,int] = {}
+        self._req_err_msg: Dict[int,str] = {}
     def error(self, reqId, errorCode, errorString, advancedOrderRejectJson=""):
-        # print all errors (diagnostic)
-        if errorCode != 0:
-            print(f"[IBKR][ERR] reqId={reqId} code={errorCode} msg={errorString}")
-        # connection-level issues -> fail fast
-        if errorCode in (502, 504, 1100, 1101, 1102):
-            self._err = f"IBKR connection error {errorCode}: {errorString}"
-            self._connected.set()
-            self._done.set()
+
+            # Fail-fast: HMDS "no data" for this request => mark done
+            if int(errorCode) == 162 and int(reqId) > 0:
+                with self._lock:
+                    self._req_err_code[int(reqId)] = int(errorCode)
+                    self._req_err_msg[int(reqId)] = str(errorString)
+                self._done.set()
+            # print all errors (diagnostic)
+            if errorCode != 0:
+                print(f"[IBKR][ERR] reqId={reqId} code={errorCode} msg={errorString}")
+            # connection-level issues -> fail fast
+            if errorCode in (502, 504, 1100, 1101, 1102):
+                self._err = f"IBKR connection error {errorCode}: {errorString}"
+                self._connected.set()
+                self._done.set()
 
     def nextValidId(self, orderId: int):
         with self._lock:
@@ -98,10 +129,17 @@ def fetch_one_window(app: App, c: Contract, endDateTime: str) -> List[Dict[str, 
     with app._lock:
         bars = list(app._bars)
 
-    if not ok:
+    
+        err162 = app._req_err_code.get(reqId, 0) == 162
+        errMsg = app._req_err_msg.get(reqId, "")
+if not ok:
         print(f"[FETCH] TIMEOUT reqId={reqId} conId={c.conId} end={endDateTime} bars_seen={len(bars)}")
         return []
-    print(f"[FETCH] OK reqId={reqId} conId={c.conId} bars={len(bars)}")
+    
+    if err162:
+        print(f"[FETCH] NO_DATA reqId={reqId} conId={c.conId} end={endDateTime} msg={errMsg}")
+        return []
+print(f"[FETCH] OK reqId={reqId} conId={c.conId} bars={len(bars)}")
     return bars
 
 def main():
@@ -150,7 +188,7 @@ def main():
             allbars.extend(bars)
 
         merged = dedupe_sort(allbars)
-        filtered = [b for b in merged if str(b["time"]).startswith(ymd_compact)]
+        filtered = [b for b in merged if time_to_yyyymmdd(str(b.get("time",""))) == ymd_compact]
 
         out_path = os.path.join(out_dir, f"{sym_local}_1m_{as_of}.csv")
         with open(out_path, "w", encoding="utf-8", newline="\n") as f:
@@ -168,3 +206,4 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
+# __HAT_WRITE_TEST__ 2026-01-11T20:43:12.6915794-08:00
