@@ -957,6 +957,16 @@ if (-not $gsAsOf) {
 # GS_ASOF_FALLBACK_FROM_EVENTS_TAIL_END
 # ---- Phase4 ----
 $phase4Ok = Get-Phase4OkToday $repoRoot $today
+# A2: prefer producer status json (FULL builder) before legacy fallback logic
+$p4s = Join-Path $logsDir "phase4_status.json"
+$p4ok = Read-StatusOkToday $p4s $todayLocal
+# A2: prefer producer status json (FULL builder) before CSV parsing
+$evs = Join-Path $logsDir "ev_hard_status.json"
+$evok = Read-StatusOkToday $evs $todayLocal
+if($null -ne $evok){ $evHardOk = [bool]$evok; $evHardDailyAsOf=$todayLocal }
+
+if($null -ne $p4ok){ $phase4Ok = [bool]$p4ok }
+
 
 # ---- EV hard veto daily ----
 $evHardOk = $false
@@ -1020,6 +1030,11 @@ if (Test-Path $evRaw) {
     $j = Get-Content $evRaw -Raw -Encoding UTF8 | ConvertFrom-Json
     $evSessionAsOf = Slice-Date ([string]$j.as_of_date)
     $evSessionOk = To-Bool $j.ok
+# A2: prefer producer status json (FULL builder) before CSV parsing
+$p23s = Join-Path $logsDir "phase23_status.json"
+$p23ok = Read-StatusOkToday $p23s $todayLocal
+if($null -ne $p23ok){ $phase23Ok = [bool]$p23ok; $phase23SawToday = $true }
+
   } catch { $evSessionAsOf=""; $evSessionOk=$false }
 }# ---- Phase23 health (must match today row; fail-closed) ----
 
