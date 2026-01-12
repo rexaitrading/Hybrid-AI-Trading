@@ -1573,11 +1573,14 @@ try {
 
 $payloadJson = $payload | ConvertTo-Json -Depth 6
 Write-Host ("[BLOCK-G] Writing Block-G status stub: " + (Split-Path -Leaf $statusPath)) -ForegroundColor Cyan
-# Phase-5 transition: keep legacy stub path for backward compatibility
+# Phase-5 transition: keep legacy stub path ONLY for US (prevents cross-market contamination)
 try {
-  $legacy = Join-Path $repoRoot "logs\blockg_status_stub.json"
-  if($statusPath -and (Test-Path -LiteralPath $statusPath)){
-    Copy-Item -LiteralPath $statusPath -Destination $legacy -Force
+  $m = (($Market + "")).Trim().ToUpperInvariant()
+  if($m -eq "US"){
+    $legacy = Join-Path $repoRoot "logs\blockg_status_stub.json"
+    if($statusPath -and (Test-Path -LiteralPath $statusPath)){
+      Copy-Item -LiteralPath $statusPath -Destination $legacy -Force
+    }
   }
 } catch { }
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
