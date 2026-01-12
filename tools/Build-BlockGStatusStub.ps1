@@ -750,6 +750,27 @@ try {
 # MICRO_SOURCE_LIVE_VETO_END
 
 # GS_ELIGIBLE_ZERO_BEGIN
+# MARKET_CONTEXT_AUTHORITY_BEGIN
+# Phase-5: market truth authority for closed/open (per-market holidays + session windows).
+# Fail-closed on any error => market_closed_today=true, is_open_now=false
+$marketIsOpenNow = $false
+$marketContext = $null
+try {
+  $mcPath = Join-Path $repoRoot "tools\Resolve-MarketContext.ps1"
+  if(Test-Path -LiteralPath $mcPath){
+    $marketContext = & powershell -NoProfile -ExecutionPolicy Bypass -File $mcPath -Market $Market -AsOfDate $todayLocal | ConvertFrom-Json
+    if($marketContext -and ($marketContext.PSObject.Properties.Name -contains "is_open_now")){
+      $marketIsOpenNow = [bool]$marketContext.is_open_now
+    }
+  } else {
+    $marketClosedToday = $true
+    $marketIsOpenNow = $false
+  }
+} catch {
+  $marketClosedToday = $true
+  $marketIsOpenNow = $false
+}
+# MARKET_CONTEXT_AUTHORITY_END
 # Weekend-aware clarity (no holiday calendar): market_closed_today is true on Sat/Sun.
 $marketClosedToday = $false
 try {
@@ -758,6 +779,17 @@ try {
 } catch { $marketClosedToday = $false }
 
 
+# MARKET_CONTEXT_OVERRIDE_BEGIN
+# After local weekend/holiday heuristics, apply Resolve-MarketContext market_closed_today if available (authoritative).
+try {
+  if($marketContext -and ($marketContext.PSObject.Properties.Name -contains "market_closed_today")){
+    $marketClosedToday = [bool]$marketContext.market_closed_today
+  }
+} catch {
+  $marketClosedToday = $true
+  $marketIsOpenNow = $false
+}
+# MARKET_CONTEXT_OVERRIDE_END
 # EVH_MARKET_CLOSED_AUDIT_BEGIN
 # Audit-only clarity: when market is closed we do not treat EV-hard as "passed".
 $ev_hard_not_evaluated_market_closed = $false
@@ -1450,6 +1482,7 @@ $payload = [ordered]@{
 
 
     market_closed_today = $marketClosedToday
+    market_is_open_now  = [bool]$marketIsOpenNow
     ev_hard_not_evaluated_market_closed = $ev_hard_not_evaluated_market_closed
     gatescore_nvda_eligible_zero = $gsNvdaEligibleZero
     date = $today

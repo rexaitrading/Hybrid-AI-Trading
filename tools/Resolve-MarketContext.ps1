@@ -15,8 +15,33 @@ $cfg = Join-Path $repoRoot ("configs\markets\" + $Market + ".json")
 if(-not (Test-Path -LiteralPath $cfg)){ throw "Missing market config: $cfg" }
 
 $j = Get-Content -LiteralPath $cfg -Raw -Encoding UTF8 | ConvertFrom-Json
-$tz = [string]$j.tz
+$tzRaw = [string]$j.tz
 $cal = [string]$j.calendar_id
+
+function Resolve-TimeZoneInfo([string]$tzId){
+  # Accept Windows tz ids; if config stores IANA ids, map a minimal subset.
+  $map = @{
+    "America/New_York" = "Eastern Standard Time"
+    "America/Chicago"  = "Central Standard Time"
+    "America/Los_Angeles" = "Pacific Standard Time"
+    "Asia/Tokyo" = "Tokyo Standard Time"
+    "Asia/Hong_Kong" = "China Standard Time"
+    "Asia/Singapore" = "Singapore Standard Time"
+    "UTC" = "UTC"
+  }
+
+  $candidate = ($tzId + "").Trim()
+  if(-not $candidate){ $candidate = "UTC" }
+
+  try { return [System.TimeZoneInfo]::FindSystemTimeZoneById($candidate) } catch { }
+
+  if($map.ContainsKey($candidate)){
+    try { return [System.TimeZoneInfo]::FindSystemTimeZoneById($map[$candidate]) } catch { }
+  }
+
+  # Last resort: fail-closed to UTC
+  return [System.TimeZoneInfo]::Utc
+}
 
 function Parse-HHMM([string]$hhmm){
   if(-not $hhmm){ return $null }
@@ -27,22 +52,27 @@ function LocalDateTime([string]$ymd, [TimeSpan]$ts){
   return [datetime]::ParseExact($ymd, "yyyy-MM-dd", $null).Add($ts)
 }
 
+$tzi = Resolve-TimeZoneInfo $tzRaw
+$tzResolvedId = $tzi.Id
+
 # AsOfDate default: today in market tz (best-effort; fallback to local date)
+$asOfSource = "param"
 if(-not $AsOfDate){
+  $asOfSource = "market_tz_now"
   try {
     $nowUtc = [DateTimeOffset]::UtcNow
-    $tzi = [System.TimeZoneInfo]::FindSystemTimeZoneById($tz)
     $local = [System.TimeZoneInfo]::ConvertTime($nowUtc.UtcDateTime, $tzi)
     $AsOfDate = $local.ToString("yyyy-MM-dd")
   } catch {
     $AsOfDate = (Get-Date).ToString("yyyy-MM-dd")
+    $asOfSource = "local_fallback"
   }
 }
 
-# Placeholder closed-day logic (Phase 5 Step1): weekend-only rule
-# Later: replace with true exchange calendar per Market/calendar_id
+# Base closed-day logic: weekend
 $dt = [DateTime]::ParseExact($AsOfDate,"yyyy-MM-dd",$null)
 $closed = ($dt.DayOfWeek -eq "Saturday" -or $dt.DayOfWeek -eq "Sunday")
+$closed_reason = if($closed){"weekend"}else{""}
 
 # Per-market holiday override (configs\market_holidays.json)
 try {
@@ -64,6 +94,7 @@ try {
 
     if($dates -contains $AsOfDate){
       $closed = $true
+      $closed_reason = "holiday"
     }
   }
 } catch { }
@@ -82,14 +113,19 @@ try {
   }
 } catch { }
 
-# Intraday open/closed (best-effort): requires not closed day AND within RTH and not in lunch
+# Intraday open/closed
+$nowUtcIso = [DateTimeOffset]::UtcNow.UtcDateTime.ToString("o")
+$nowLocalIso = ""
+$inRth = $false
+$inLunch = $false
 $isOpenNow = $false
-try {
-  if(-not $closed){
-    $nowUtc = [DateTimeOffset]::UtcNow
-    $tzi = [System.TimeZoneInfo]::FindSystemTimeZoneById($tz)
-    $nowLocal = [System.TimeZoneInfo]::ConvertTime($nowUtc.UtcDateTime, $tzi)
 
+try {
+  $nowUtc = [DateTimeOffset]::UtcNow
+  $nowLocal = [System.TimeZoneInfo]::ConvertTime($nowUtc.UtcDateTime, $tzi)
+  $nowLocalIso = $nowLocal.ToString("o")
+
+  if(-not $closed){
     $o = Parse-HHMM $rthOpen
     $c = Parse-HHMM $rthClose
     if($o -and $c){
@@ -97,7 +133,6 @@ try {
       $endDt   = LocalDateTime $AsOfDate $c
       $inRth = ($nowLocal -ge $startDt -and $nowLocal -lt $endDt)
 
-      $inLunch = $false
       $ls = Parse-HHMM $lunchStart
       $le = Parse-HHMM $lunchEnd
       if($ls -and $le){
@@ -105,19 +140,34 @@ try {
         $leDt = LocalDateTime $AsOfDate $le
         if($nowLocal -ge $lsDt -and $nowLocal -lt $leDt){ $inLunch = $true }
       }
+
       $isOpenNow = ($inRth -and -not $inLunch)
     }
   }
-} catch { $isOpenNow = $false }
+} catch {
+  # fail-closed: keep isOpenNow=false
+  $isOpenNow = $false
+}
+
 [pscustomobject]@{
   market = $Market
-  tz = $tz
+  tz = $tzRaw
+  tz_resolved_id = $tzResolvedId
   calendar_id = $cal
   as_of_date = $AsOfDate
+  as_of_date_source = $asOfSource
+
   market_closed_today = [bool]$closed
+  market_closed_reason = $closed_reason
+
   rth_open_local = $rthOpen
   rth_close_local = $rthClose
   lunch_start_local = $lunchStart
   lunch_end_local = $lunchEnd
+
+  now_utc = $nowUtcIso
+  now_local = $nowLocalIso
+  in_rth = [bool]$inRth
+  in_lunch = [bool]$inLunch
   is_open_now = [bool]$isOpenNow
-} | ConvertTo-Json -Depth 5
+} | ConvertTo-Json -Depth 6
