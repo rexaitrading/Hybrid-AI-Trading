@@ -201,6 +201,34 @@ if(($mode + "") -eq "BUILD_ONLY"){
 }
 # --- END BUILD_ONLY ---
 
+# MARKET_SESSION_GATE_BEGIN
+# Phase-5: market session gate (LIVE semantics only; BUILD_ONLY already returned above)
+# Policy:
+# - If market_closed_today=true => closed-day branch handles diagnostic exit=10 (existing behavior).
+# - If open day but currently outside RTH or in lunch => deny live readiness (exit 2).
+try {
+  $asOf = ""
+  if($st -and ($st.PSObject.Properties.Name -contains "as_of_date")){
+    $asOf = [string]$st.as_of_date
+    if($asOf.Length -ge 10){ $asOf = $asOf.Substring(0,10) }
+  }
+  if($asOf){
+    $mcPath = Join-Path $repoRoot "tools\Resolve-MarketContext.ps1"
+    if(Test-Path -LiteralPath $mcPath){
+      $mc = & powershell -NoProfile -ExecutionPolicy Bypass -File $mcPath -Market $Market -AsOfDate $asOf | ConvertFrom-Json
+      if($mc -and ($mc.PSObject.Properties.Name -contains "market_closed_today") -and (-not [bool]$mc.market_closed_today)){
+        if(($mode + "") -eq "ALL_STRICT"){
+          if(($mc.PSObject.Properties.Name -contains "is_open_now") -and (-not [bool]$mc.is_open_now)){
+            Fail-Contract "market_session_closed_now=true"
+          }
+        }
+      }
+    }
+  }
+} catch { }
+# MARKET_SESSION_GATE_END
+
+
 # MARKET_CLOSED_FAILCLOSED_CHECK_BEGIN
 # Institutional clarity: when market is closed we fail-closed with an explicit operator message.
 try {
