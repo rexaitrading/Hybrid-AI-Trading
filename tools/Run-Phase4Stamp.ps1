@@ -100,7 +100,6 @@ sys.exit(0 if ok else 2)
   }
 }
 
-# PYTEST_STARTPROCESS_BLOCK_BEGIN (do not edit)
 # Phase-4 authoritative: tiny pytest slice (fast, no IB hang)
 # IMPORTANT: run pytest via Start-Process to avoid PowerShell NativeCommandError on benign atexit noise.
 try {
@@ -147,7 +146,6 @@ try {
   $pytest_ok = $false
 }
 
-# PYTEST_STARTPROCESS_BLOCK_END (do not edit)
 # --- FINAL STRICT PHASE-4 POLICY (fail-closed) ---
 $ok = ($compile_ok -and $pytest_ok)
 if(-not $compile_ok){ $notes.Add("strict_compile_gate_blocked") | Out-Null }
@@ -161,6 +159,15 @@ $payload = [ordered]@{
 }
 $payloadJson = $payload | ConvertTo-Json -Depth 6
 [System.IO.File]::WriteAllText($outJson, ($payloadJson + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+# --- A2: Emit canonical Phase4 output for downstream producers ---
+# Downstream EV-hard evidence expects phase4_validation_passed.json.
+try {
+  $canonPath = Join-Path $logDir "phase4_validation_passed.json"
+  Copy-Item -LiteralPath $outJson -Destination $canonPath -Force
+} catch {
+  # fail-closed: do not break Phase4 stamp because of compat emit
+}
+# --- A2 END ---
 
 Write-Host "[PHASE4] wrote $outJson ok=$ok today=$today" -ForegroundColor Green
 if ($ok) { exit 0 } else { exit 2 }

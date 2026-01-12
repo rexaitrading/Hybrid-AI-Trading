@@ -19,6 +19,11 @@ function Write-Utf8NoBom([string]$Path, [string]$Text) {
 }
 
 $phase4Path = ".\logs\phase4_validation_passed.json"
+# A2: fallback to Phase4 stamp if canonical file not present
+if(-not (Test-Path -LiteralPath $phase4Path)){
+  $alt = ".\logs\phase4_stamp_last.json"
+  if(Test-Path -LiteralPath $alt){ $phase4Path = $alt }
+}
 $today = (Get-Date).ToString("yyyy-MM-dd")
 # Canonical as-of: follow Phase4 stamp if present (prevents midnight boundary mismatch)
 if(Test-Path $phase4Path){
