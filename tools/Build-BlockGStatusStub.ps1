@@ -594,7 +594,28 @@ $reasons = New-Object System.Collections.Generic.List[string]
 
     $nvdaReady = ($phase23Ok -and $evHardOk -and $phase4Ok -and $gsFreshToday)
 
-    $payload = [ordered]@{
+    # REGIME_READER_BEGIN
+# Regime fields (producer: regime_status.json). Per-market log root.
+$regime = "NORMAL"
+$regimeOkToday = $false
+$regimeReason = "missing_regime_status_json"
+$regimePath = Join-Path $logsDirOut "regime_status.json"
+try {
+  if(Test-Path -LiteralPath $regimePath){
+    $rj = Get-Content -LiteralPath $regimePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if($rj){
+      if($rj.PSObject.Properties.Name -contains "regime"){ $regime = [string]$rj.regime }
+      if($rj.PSObject.Properties.Name -contains "regime_ok_today"){ $regimeOkToday = [bool]$rj.regime_ok_today }
+      if($rj.PSObject.Properties.Name -contains "regime_reason"){ $regimeReason = [string]$rj.regime_reason }
+    }
+  }
+} catch {
+  $regimeOkToday = $false
+  $regimeReason = "regime_status_parse_failed"
+}
+$crisisAlphaEnabled = $false
+# REGIME_READER_END
+$payload = [ordered]@{
       ts_utc=$tsUtc
       as_of_date=$todayLocal
       date=$todayLocal
@@ -1515,13 +1536,7 @@ $gatescore_events_path = ""
 try { $gatescore_events_path = (Resolve-GatescoreEventsPath "NVDA" $logsDir) } catch { $gatescore_events_path = "" }
 try { if($gatescore_events_path){ $gatescore_events_path = Canon $gatescore_events_path } } catch { }
 # --- END CANONICALIZE OUTPUT PATHS ---
-$payload = [ordered]@{
-    ts_utc = $tsUtc
-    as_of_date = $today
-    gatescore_metrics_source = $gatescore_metrics_source
-
-    # Audit: per-symbol metrics_source (do NOT use for gating in strict Option-B)
-    gatescore_metrics_source_by_symbol = [ordered]# REGIME_READER_BEGIN
+# REGIME_READER_BEGIN
 # Regime fields (producer: regime_status.json). Per-market log root.
 $regime = "NORMAL"
 $regimeOkToday = $false
@@ -1542,7 +1557,13 @@ try {
 }
 $crisisAlphaEnabled = $false
 # REGIME_READER_END
-@{
+$payload = [ordered]@{
+    ts_utc = $tsUtc
+    as_of_date = $today
+    gatescore_metrics_source = $gatescore_metrics_source
+
+    # Audit: per-symbol metrics_source (do NOT use for gating in strict Option-B)
+    gatescore_metrics_source_by_symbol = [ordered]@{
       NVDA = (Get-MetricsSourceTop "NVDA" $logsDir $todayLocal).top
       SPY  = (Get-MetricsSourceTop "SPY"  $logsDir $todayLocal).top
       QQQ  = (Get-MetricsSourceTop "QQQ"  $logsDir $todayLocal).top
