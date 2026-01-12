@@ -250,7 +250,6 @@ def main():
     if any_mismatch and is_live:
         return 2
     return 0
-    return 2 if any_fail else 0
 
 if __name__ == "__main__":
     raise SystemExit(main())
