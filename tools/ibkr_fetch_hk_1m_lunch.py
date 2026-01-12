@@ -1,0 +1,256 @@
+import os, sys, time, json, threading
+from typing import Optional, List, Dict, Any
+
+from zoneinfo import ZoneInfo
+from ibapi.client import EClient
+from ibapi.wrapper import EWrapper
+from ibapi.contract import Contract
+
+HOST = os.environ.get("IB_GATEWAY_HOST", "127.0.0.1")
+PORT = int(os.environ.get("IB_GATEWAY_PORT", "4002"))
+CLIENT_ID = int(os.environ.get("IB_CLIENT_ID", "78"))
+
+def time_to_yyyymmdd(t: str) -> str:
+    s = (t or "").strip()
+    if len(s) >= 8 and s[:8].isdigit():
+        return s[:8]
+    if len(s) >= 10 and s[4] == "-" and s[7] == "-":
+        return s[:10].replace("-", "")
+    try:
+        if s.isdigit():
+            import datetime as _dt
+            return _dt.datetime.utcfromtimestamp(int(s)).strftime("%Y%m%d")
+    except Exception:
+        pass
+    return ""
+
+def bar_date_to_tokyo_yyyymmdd(s: str) -> str:
+    """Convert IB bar.date string to Tokyo trading date yyyymmdd."""
+    import datetime as _dt
+    raw = (s or "").strip()
+    # epoch seconds
+    if raw.isdigit():
+        dt = _dt.datetime.utcfromtimestamp(int(raw)).replace(tzinfo=ZoneInfo("UTC"))
+        return dt.astimezone(ZoneInfo("Asia/Hong_Kong")).strftime("%Y%m%d")
+    # UTC dashed: YYYYMMDD-HH:MM:SS
+    try:
+        if len(raw) >= 17 and raw[8] == "-" and raw[:8].isdigit():
+            dt = _dt.datetime.strptime(raw[:17], "%Y%m%d-%H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
+            return dt.astimezone(ZoneInfo("Asia/Hong_Kong")).strftime("%Y%m%d")
+    except Exception:
+        pass
+    # "YYYYMMDD HH:MM:SS" (treat as UTC, convert to Tokyo)
+    try:
+        if len(raw) >= 17 and raw[:8].isdigit() and raw[8] == " ":
+            dt = _dt.datetime.strptime(raw[:17], "%Y%m%d %H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
+            return dt.astimezone(ZoneInfo("Asia/Hong_Kong")).strftime("%Y%m%d")
+    except Exception:
+        pass
+    # "YYYY-MM-DD HH:MM:SS" (treat as UTC, convert to Tokyo)
+    try:
+        if len(raw) >= 19 and raw[4] == "-" and raw[7] == "-":
+            dt = _dt.datetime.strptime(raw[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
+            return dt.astimezone(ZoneInfo("Asia/Hong_Kong")).strftime("%Y%m%d")
+    except Exception:
+        pass
+    # fallback to simple extractor
+    return time_to_yyyymmdd(raw)
+
+REQ_TIMEOUT_SEC = float(os.environ.get("IBKR_REQ_TIMEOUT_SEC", "15"))
+CONNECT_TIMEOUT_SEC = float(os.environ.get("IBKR_CONNECT_TIMEOUT_SEC", "6"))
+
+def ymd_to_ib_end(ymd: str, hhmm: str) -> str:
+    """
+    IBKR safest accepted format: yyyymmdd-hh:mm:ss (UTC).
+    Interpret ymd+hhmm as Asia/Tokyo local time then convert to UTC.
+    """
+    import datetime as _dt
+    d = ymd.replace("-", "")
+    y = int(d[0:4]); m = int(d[4:6]); dd = int(d[6:8])
+    hh = int(hhmm[0:2]); mm = int(hhmm[3:5])
+    dt_tokyo = _dt.datetime(y, m, dd, hh, mm, 0, tzinfo=ZoneInfo("Asia/Hong_Kong"))
+    dt_utc = dt_tokyo.astimezone(ZoneInfo("UTC"))
+    return dt_utc.strftime("%Y%m%d-%H:%M:%S")
+class App(EWrapper, EClient):
+    def __init__(self):
+        EClient.__init__(self, self)
+        self._err: Optional[str] = None
+        self._connected = threading.Event()
+        self._done = threading.Event()
+        self._lock = threading.Lock()
+        self._next_id = 1
+        self._bars: List[Dict[str, Any]] = []
+
+        self._req_err_code: Dict[int,int] = {}
+        self._req_err_msg: Dict[int,str] = {}
+    def error(self, reqId, errorCode, errorString, advancedOrderRejectJson=""):
+        # Fail-fast: HMDS "no data" => mark request done (IB may not send historicalDataEnd)
+        if int(errorCode) == 162 and int(reqId) > 0:
+            with self._lock:
+                self._req_err_code[int(reqId)] = int(errorCode)
+                self._req_err_msg[int(reqId)] = str(errorString)
+            self._done.set()
+        # print all errors (diagnostic)
+        if errorCode != 0:
+            print(f"[IBKR][ERR] reqId={reqId} code={errorCode} msg={errorString}")
+        # connection-level issues -> fail fast
+        if errorCode in (502, 504, 1100, 1101, 1102):
+            self._err = f"IBKR connection error {errorCode}: {errorString}"
+            self._connected.set()
+            self._done.set()
+
+    def nextValidId(self, orderId: int):
+        with self._lock:
+            self._next_id = max(self._next_id, int(orderId))
+        self._connected.set()
+
+    def historicalData(self, reqId, bar):
+        with self._lock:
+            self._bars.append({
+                "time": str(bar.date),
+                "yyyymmdd": time_to_yyyymmdd(str(bar.date)),
+                "open": float(bar.open),
+                "high": float(bar.high),
+                "low": float(bar.low),
+                "close": float(bar.close),
+                "volume": float(bar.volume),
+            })
+
+    def historicalDataEnd(self, reqId: int, start: str, end: str):
+        self._done.set()
+
+def mk_contract_from_resolved(rec: Dict[str, Any]) -> Contract:
+    c = Contract()
+    c.conId = int(rec["conId"])
+    c.secType = rec.get("secType", "STK")
+    c.exchange = rec.get("exchange", "SMART")
+    pe = rec.get("primaryExchange", "")
+    if pe:
+        c.primaryExchange = pe
+    c.currency = rec.get("currency", "JPY")
+    # optional symbol; conId is the identity
+    c.symbol = rec.get("symbol", rec.get("input_local", ""))
+    return c
+
+def dedupe_sort(bars: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    seen = {}
+    for b in bars:
+        seen[b["time"]] = b
+    return [seen[k] for k in sorted(seen.keys())]
+
+def fetch_one_window(app: App, c: Contract, endDateTime: str) -> List[Dict[str, Any]]:
+    with app._lock:
+        app._bars = []
+        reqId = app._next_id + 1
+        app._next_id = reqId
+    app._done.clear()
+
+    print(f"[FETCH] conId={c.conId} end={endDateTime} useRTH=1 ...")
+    app.reqHistoricalData(
+        reqId, c,
+        endDateTime=endDateTime,
+        durationStr="14400 S",
+        barSizeSetting="1 min",
+        whatToShow="TRADES",
+        useRTH=1,
+        formatDate=1,
+        keepUpToDate=False,
+        chartOptions=[]
+    )
+
+    ok = app._done.wait(timeout=REQ_TIMEOUT_SEC)
+    with app._lock:
+        bars = list(app._bars)
+
+        err162 = app._req_err_code.get(reqId, 0) == 162
+        errMsg = app._req_err_msg.get(reqId, "")
+    if not ok:
+        print(f"[FETCH] TIMEOUT reqId={reqId} conId={c.conId} end={endDateTime} bars_seen={len(bars)}")
+        return []
+    
+
+    if err162:
+        print(f"[FETCH] NO_DATA reqId={reqId} conId={c.conId} end={endDateTime} msg={errMsg}")
+        return []
+
+    print(f"[FETCH] OK reqId={reqId} conId={c.conId} bars={len(bars)}")
+    return bars
+
+def main():
+    if len(sys.argv) < 4:
+        print("usage: python tools/ibkr_fetch_jp_1m_lunch.py <resolved_json> <YYYY-MM-DD> <out_dir>")
+        return 2
+
+    resolved_path, as_of, out_dir = sys.argv[1], sys.argv[2], sys.argv[3]
+    os.makedirs(out_dir, exist_ok=True)
+
+    recs = json.load(open(resolved_path, "r", encoding="utf-8"))
+    if not isinstance(recs, list) or not recs:
+        print("Resolved file empty/invalid")
+        return 2
+
+    app = App()
+    app.connect(HOST, PORT, CLIENT_ID)
+    t = threading.Thread(target=app.run, daemon=True)
+    t.start()
+
+    if not app._connected.wait(timeout=CONNECT_TIMEOUT_SEC):
+        print("[IBKR] CONNECT TIMEOUT: no nextValidId. Is IB Gateway running and API enabled?")
+        try: app.disconnect()
+        except: pass
+        return 2
+    if app._err:
+        print(app._err)
+        try: app.disconnect()
+        except: pass
+        return 2
+
+    windows = [("12:00", "AM"), ("16:00", "PM")]  # HK RTH windows; lunch gap handled by merging
+    any_fail = False
+    any_mismatch = False
+
+    ymd_compact = as_of.replace("-", "")
+
+    for rec in recs:
+        sym_local = rec.get("input_local", rec.get("symbol", "UNK"))
+        c = mk_contract_from_resolved(rec)
+
+        allbars: List[Dict[str, Any]] = []
+        for hhmm, tag in windows:
+            bars = fetch_one_window(app, c, ymd_to_ib_end(as_of, hhmm))
+            if not bars:
+                any_fail = True
+            allbars.extend(bars)
+
+        merged = dedupe_sort(allbars)
+        tokyo_ymd_seen = bar_date_to_tokyo_yyyymmdd(str(merged[0].get("time",""))) if merged else ""
+        ymd_target = (merged[0].get("yyyymmdd","") if merged else "") or tokyo_ymd_seen or ymd_compact
+        if tokyo_ymd_seen and tokyo_ymd_seen != ymd_compact:
+            print(f"[JP][FAIL] requested_as_of={ymd_compact} but got_tokyo_ymd={tokyo_ymd_seen} (session mismatch; writing ymd_target={ymd_target})")
+            any_mismatch = True
+        filtered = [b for b in merged if b.get("yyyymmdd","") == ymd_target]
+
+        out_path = os.path.join(out_dir, f"{sym_local}_1m_{ymd_target}.csv")
+        with open(out_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write("time,open,high,low,close,volume\n")
+            for b in filtered:
+                f.write(f"{b['time']},{b['open']},{b['high']},{b['low']},{b['close']},{b['volume']}\n")
+
+        print(f"[WROTE] {out_path} rows={len(filtered)} conId={c.conId}")
+
+        if len(filtered) == 0:
+            any_fail = True
+    try: app.disconnect()
+    except: pass
+
+    mode = os.environ.get("HAT_MODE", "PAPER").upper()
+    is_live = (mode == "LIVE")
+    if any_fail:
+        return 2
+    if any_mismatch and is_live:
+        return 2
+    return 0
+    return 2 if any_fail else 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
