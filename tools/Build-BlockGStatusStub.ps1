@@ -1557,6 +1557,13 @@ try {
 }
 $crisisAlphaEnabled = $false
 # REGIME_READER_END
+# CRASHMODE_FLATTEN_DEFAULTS_BEGIN
+# StrictMode-safe fail-closed defaults for crashmode flatten evidence.
+$crashFlattenOk = $false
+$crashFlattenExit = 0
+$crashFlattenPath = Join-Path $logsDirOut "crashmode_flatten_status.json"
+# CRASHMODE_FLATTEN_DEFAULTS_END
+
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
@@ -1599,7 +1606,10 @@ $payload = [ordered]@{
     regime_reason        = $regimeReason
     regime_status_path   = (Canon $regimePath)
     crisis_alpha_enabled = [bool]$crisisAlphaEnabled
-    crisis_ok_today      = [bool]$crisisOkToday
+    crashmode_flatten_ok        = [bool]$crashFlattenOk
+    crashmode_flatten_exit_code = [int]$crashFlattenExit
+    crashmode_flatten_status_path = (Canon $crashFlattenPath)
+    crisis_ok_today = [bool]$crisisOkToday
     crisis_regime        = [bool]$crisisRegime
     portfolio_halt       = [bool]$crisisPortfolioHalt
     risk_flatten         = [bool]$crisisRiskFlatten
@@ -1782,7 +1792,6 @@ exit 0
   } catch { }
   throw
 }
-
 
 
 
