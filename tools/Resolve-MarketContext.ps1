@@ -18,6 +18,15 @@ $j = Get-Content -LiteralPath $cfg -Raw -Encoding UTF8 | ConvertFrom-Json
 $tz = [string]$j.tz
 $cal = [string]$j.calendar_id
 
+function Parse-HHMM([string]$hhmm){
+  if(-not $hhmm){ return $null }
+  $t = $hhmm.Trim()
+  return [TimeSpan]::ParseExact($t, "hh\:mm", $null)
+}
+function LocalDateTime([string]$ymd, [TimeSpan]$ts){
+  return [datetime]::ParseExact($ymd, "yyyy-MM-dd", $null).Add($ts)
+}
+
 # AsOfDate default: today in market tz (best-effort; fallback to local date)
 if(-not $AsOfDate){
   try {
@@ -59,10 +68,56 @@ try {
   }
 } catch { }
 
+# Session windows (from market profile json)
+$rthOpen = ""
+$rthClose = ""
+$lunchStart = ""
+$lunchEnd = ""
+try {
+  if($j.PSObject.Properties.Name -contains "rth_open_local"){ $rthOpen = [string]$j.rth_open_local }
+  if($j.PSObject.Properties.Name -contains "rth_close_local"){ $rthClose = [string]$j.rth_close_local }
+  if($j.PSObject.Properties.Name -contains "lunch_break" -and $null -ne $j.lunch_break){
+    if($j.lunch_break.PSObject.Properties.Name -contains "start"){ $lunchStart = [string]$j.lunch_break.start }
+    if($j.lunch_break.PSObject.Properties.Name -contains "end"){ $lunchEnd = [string]$j.lunch_break.end }
+  }
+} catch { }
+
+# Intraday open/closed (best-effort): requires not closed day AND within RTH and not in lunch
+$isOpenNow = $false
+try {
+  if(-not $closed){
+    $nowUtc = [DateTimeOffset]::UtcNow
+    $tzi = [System.TimeZoneInfo]::FindSystemTimeZoneById($tz)
+    $nowLocal = [System.TimeZoneInfo]::ConvertTime($nowUtc.UtcDateTime, $tzi)
+
+    $o = Parse-HHMM $rthOpen
+    $c = Parse-HHMM $rthClose
+    if($o -and $c){
+      $startDt = LocalDateTime $AsOfDate $o
+      $endDt   = LocalDateTime $AsOfDate $c
+      $inRth = ($nowLocal -ge $startDt -and $nowLocal -lt $endDt)
+
+      $inLunch = $false
+      $ls = Parse-HHMM $lunchStart
+      $le = Parse-HHMM $lunchEnd
+      if($ls -and $le){
+        $lsDt = LocalDateTime $AsOfDate $ls
+        $leDt = LocalDateTime $AsOfDate $le
+        if($nowLocal -ge $lsDt -and $nowLocal -lt $leDt){ $inLunch = $true }
+      }
+      $isOpenNow = ($inRth -and -not $inLunch)
+    }
+  }
+} catch { $isOpenNow = $false }
 [pscustomobject]@{
   market = $Market
   tz = $tz
   calendar_id = $cal
   as_of_date = $AsOfDate
   market_closed_today = [bool]$closed
+  rth_open_local = $rthOpen
+  rth_close_local = $rthClose
+  lunch_start_local = $lunchStart
+  lunch_end_local = $lunchEnd
+  is_open_now = [bool]$isOpenNow
 } | ConvertTo-Json -Depth 5
