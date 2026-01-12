@@ -159,3 +159,5 @@ tools/blockg_builder_breadcrumb.txt
 !configs/symbols/*.json
 !configs/symbols/resolved/
 !configs/symbols/resolved/*.json
+tools/blockg_builder_crash.txt
+
