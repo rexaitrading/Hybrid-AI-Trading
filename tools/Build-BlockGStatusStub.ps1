@@ -1,7 +1,10 @@
 [CmdletBinding()]
 param(
     [ValidateSet("NVDA","SPY","QQQ","ALL")]
-    [string]$Symbol = "ALL"
+    [string]$Symbol = "ALL",
+
+    [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+    [string]$Market = "US"
 )
 function Resolve-RepoRoot(){
   # Canonical filesystem path; never trust invocation-string representation
@@ -307,6 +310,13 @@ function Get-GSFromEvents([string]$sym, [string]$asOf, [string]$todayLocal){
   # Compute GateScore metrics for a single as_of_date from resolved events source.
   $repoRoot = Resolve-RepoRoot
   $logsDir  = Join-Path $repoRoot "logs"
+
+# Phase-5: per-market logs dir (default US).
+try {
+  $mr = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
+  if($mr){ $logsDir = $mr }
+} catch { }
+
 
   $path = Resolve-GatescoreEventsPath $sym $logsDir
   $evs = @(Read-JsonlLines $path)
@@ -1499,6 +1509,13 @@ try {
 
 $payloadJson = $payload | ConvertTo-Json -Depth 6
 Write-Host ("[BLOCK-G] Writing Block-G status stub: " + (Split-Path -Leaf $statusPath)) -ForegroundColor Cyan
+# Phase-5 transition: keep legacy stub path for backward compatibility
+try {
+  $legacy = Join-Path $repoRoot "logs\blockg_status_stub.json"
+  if($statusPath -and (Test-Path -LiteralPath $statusPath)){
+    Copy-Item -LiteralPath $statusPath -Destination $legacy -Force
+  }
+} catch { }
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 # --- FAIL-CLOSED EMIT GUARD: if payload block was skipped, write minimal stub then exit 2 ---
@@ -1542,6 +1559,7 @@ exit 0
   } catch { }
   throw
 }
+
 
 
 
