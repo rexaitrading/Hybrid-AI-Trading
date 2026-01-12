@@ -309,13 +309,14 @@ try {
 function Get-GSFromEvents([string]$sym, [string]$asOf, [string]$todayLocal){
   # Compute GateScore metrics for a single as_of_date from resolved events source.
   $repoRoot = Resolve-RepoRoot
-  $logsDir  = Join-Path $repoRoot "logs"
 
-# Phase-5: per-market logs dir (default US).
+# Phase-5 Policy A: GLOBAL inputs, per-market outputs
+$logsDirOut = $null
 try {
-  $mr = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
-  if($mr){ $logsDir = $mr }
-} catch { }
+  $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
+} catch { $logsDirOut = $null }
+if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
+  $logsDir  = Join-Path $repoRoot "logs"
 
 
   $path = Resolve-GatescoreEventsPath $sym $logsDir
@@ -380,14 +381,15 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
 }
 
 $repoRoot = Resolve-RepoRoot
+
+# Phase-5 Policy A: GLOBAL inputs, per-market outputs
+$logsDirOut = $null
+try {
+  $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
+} catch { $logsDirOut = $null }
+if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
 # repoRoot resolved above (canonical)
 $logsDir  = Join-Path $repoRoot "logs"
-
-# Phase-5: per-market logs dir (default US).
-try {
-  $mr = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
-  if($mr){ $logsDir = $mr }
-} catch { }
 
 
 
@@ -397,7 +399,7 @@ try {
 if((($env:HAT_BLOCKG_BUILDER_FAST + "") -eq "1")){
   try{
     if(-not (Test-Path -LiteralPath $logsDir)){ New-Item -ItemType Directory -Force -Path $logsDir | Out-Null }
-    $statusPath = Join-Path $logsDir "blockg_status_stub.json"
+    $statusPath = Join-Path $logsDirOut "blockg_status_stub.json"
 
 # --- BREADCRUMB (debug, deterministic) ---
 try {
@@ -524,7 +526,7 @@ $reasons = New-Object System.Collections.Generic.List[string]
   } catch {
     # Fail-closed: still try to emit something
     try{
-      $statusPath = Join-Path $logsDir "blockg_status_stub.json"
+      $statusPath = Join-Path $logsDirOut "blockg_status_stub.json"
 # --- BREADCRUMB (debug, deterministic) ---
 try {
   $toolsDir = Split-Path -Parent $PSCommandPath
@@ -802,7 +804,7 @@ if (Test-Path -LiteralPath $p4Path) {
 
 # ---- GateScore session date (weekend-safe): derive from pnl summary ----
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
-$statusPath = Join-Path $logsDir "blockg_status_stub.json"
+$statusPath = Join-Path $logsDirOut "blockg_status_stub.json"
 
 
 
@@ -825,12 +827,6 @@ $GS_MIN_EVENTS_REQUIRED = 25
 
 function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
   $logsDir = Join-Path $RepoRoot "logs"
-
-# Phase-5: per-market logs dir (default US).
-try {
-  $mr = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
-  if($mr){ $logsDir = $mr }
-} catch { }
 
   $p = Resolve-GatescoreEventsPath $Sym $logsDir
 
@@ -1540,7 +1536,7 @@ if(-not (Get-Variable -Name "__emit_reached" -Scope Script -ErrorAction Silently
     if(-not $repoRoot){ $repoRoot = Resolve-RepoRoot }
     if(-not $logsDir){ $logsDir = Join-Path $repoRoot "logs" }
     if(-not (Test-Path -LiteralPath $logsDir)){ New-Item -ItemType Directory -Force -Path $logsDir | Out-Null }
-    if(-not $statusPath){ $statusPath = Join-Path $logsDir "blockg_status_stub.json" }
+    if(-not $statusPath){ $statusPath = Join-Path $logsDirOut "blockg_status_stub.json" }
     $min = [ordered]@{ ts_utc=$tsUtc; as_of_date=$todayLocal; ok=$false; reason="builder_skipped_emit_block_failclosed"; reasons_not_ready=@("builder_skipped_emit_block") }
     $enc = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($statusPath, ($min | ConvertTo-Json -Depth 6), $enc)
@@ -1573,6 +1569,7 @@ exit 0
   } catch { }
   throw
 }
+
 
 
 
