@@ -24,6 +24,38 @@ def time_to_yyyymmdd(t: str) -> str:
         pass
     return ""
 
+def bar_date_to_tokyo_yyyymmdd(s: str) -> str:
+    """Convert IB bar.date string to Tokyo trading date yyyymmdd."""
+    import datetime as _dt
+    raw = (s or "").strip()
+    # epoch seconds
+    if raw.isdigit():
+        dt = _dt.datetime.utcfromtimestamp(int(raw)).replace(tzinfo=ZoneInfo("UTC"))
+        return dt.astimezone(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
+    # UTC dashed: YYYYMMDD-HH:MM:SS
+    try:
+        if len(raw) >= 17 and raw[8] == "-" and raw[:8].isdigit():
+            dt = _dt.datetime.strptime(raw[:17], "%Y%m%d-%H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
+            return dt.astimezone(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
+    except Exception:
+        pass
+    # "YYYYMMDD HH:MM:SS" (treat as UTC, convert to Tokyo)
+    try:
+        if len(raw) >= 17 and raw[:8].isdigit() and raw[8] == " ":
+            dt = _dt.datetime.strptime(raw[:17], "%Y%m%d %H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
+            return dt.astimezone(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
+    except Exception:
+        pass
+    # "YYYY-MM-DD HH:MM:SS" (treat as UTC, convert to Tokyo)
+    try:
+        if len(raw) >= 19 and raw[4] == "-" and raw[7] == "-":
+            dt = _dt.datetime.strptime(raw[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
+            return dt.astimezone(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
+    except Exception:
+        pass
+    # fallback to simple extractor
+    return time_to_yyyymmdd(raw)
+
 REQ_TIMEOUT_SEC = float(os.environ.get("IBKR_REQ_TIMEOUT_SEC", "15"))
 CONNECT_TIMEOUT_SEC = float(os.environ.get("IBKR_CONNECT_TIMEOUT_SEC", "6"))
 
@@ -190,6 +222,10 @@ def main():
             allbars.extend(bars)
 
         merged = dedupe_sort(allbars)
+        tokyo_ymd_seen = bar_date_to_tokyo_yyyymmdd(str(merged[0].get("time",""))) if merged else ""
+        if tokyo_ymd_seen and tokyo_ymd_seen != ymd_compact:
+            print(f"[JP][FAIL] requested_as_of={ymd_compact} but got_tokyo_ymd={tokyo_ymd_seen} (closed day / mismatch)")
+            any_fail = True
         filtered = [b for b in merged if b.get("yyyymmdd","") == ymd_compact]
 
         out_path = os.path.join(out_dir, f"{sym_local}_1m_{as_of}.csv")
