@@ -1,0 +1,44 @@
+[
+  {
+    "conId": 15785538,
+    "symbol": "D05",
+    "secType": "STK",
+    "exchange": "SGX",
+    "primaryExchange": "SGX",
+    "currency": "SGD",
+    "localSymbol": "D05",
+    "tradingClass": "D05",
+    "longName": "DBS GROUP HOLDINGS LTD",
+    "minTick": 0.001,
+    "timeZoneId": "Hongkong",
+    "input_local": "D05"
+  },
+  {
+    "conId": 15785520,
+    "symbol": "O39",
+    "secType": "STK",
+    "exchange": "SGX",
+    "primaryExchange": "SGX",
+    "currency": "SGD",
+    "localSymbol": "O39",
+    "tradingClass": "O39",
+    "longName": "OVERSEA-CHINESE BANKING CORP",
+    "minTick": 0.001,
+    "timeZoneId": "Hongkong",
+    "input_local": "O39"
+  },
+  {
+    "conId": 15785555,
+    "symbol": "U11",
+    "secType": "STK",
+    "exchange": "SGX",
+    "primaryExchange": "SGX",
+    "currency": "SGD",
+    "localSymbol": "U11",
+    "tradingClass": "U11",
+    "longName": "UNITED OVERSEAS BANK LTD",
+    "minTick": 0.001,
+    "timeZoneId": "Hongkong",
+    "input_local": "U11"
+  }
+]
