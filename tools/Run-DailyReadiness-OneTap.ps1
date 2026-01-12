@@ -50,6 +50,17 @@ $mg = Join-Path $repoRoot "tools\Test-MarketEnabled.ps1"
 if(Test-Path -LiteralPath $mg){
   & powershell -NoProfile -ExecutionPolicy Bypass -File $mg -Market $Market | Out-Host
   if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+
+# Risk cap guard (fail-closed)
+$rc = Join-Path $repoRoot "tools\Test-MarketRiskCaps.ps1"
+if(Test-Path -LiteralPath $rc){
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $rc -Market $Market -Mode REQUIRE_ENABLED | Out-Host
+  if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+} else {
+  Write-Host ("[RISKCAP] FAIL-CLOSED: missing validator => " + $rc) -ForegroundColor Red
+  exit 2
+}
+
 }
 
 Write-Host ("[ONETAP] Daily readiness start today=" + $today + " symbol=" + $Symbol + " market=" + $Market) -ForegroundColor Cyan
