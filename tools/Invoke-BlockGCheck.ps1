@@ -3,7 +3,10 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
-  [ValidateSet("ALL_STRICT","SYMBOL_ONLY","BUILD_ONLY")]
+  
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [string]$Market = "US",
+[ValidateSet("ALL_STRICT","SYMBOL_ONLY","BUILD_ONLY")]
   [string]$Mode = "BUILD_ONLY"
 )
 
@@ -18,7 +21,7 @@ $repoRoot = Split-Path -Parent $toolsDir
 $builder = Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1"
 if(-not (Test-Path -LiteralPath $builder)){ throw "Missing builder: $builder" }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File $builder -Symbol $Symbol *>&1 | Out-Host
+& powershell -NoProfile -ExecutionPolicy Bypass -File $builder -Symbol $Symbol -Market $Market *>&1 | Out-Host
 if ($LASTEXITCODE -ne 0) {
   $code = $LASTEXITCODE
   $global:LASTEXITCODE = $code
@@ -32,7 +35,7 @@ if(-not (Test-Path -LiteralPath $checker)){ throw "Missing checker: $checker" }
 if ($Symbol -eq "ALL") {
   $codes = @{}
   foreach ($sym in @("NVDA","SPY","QQQ")) {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym -Mode $Mode *>&1 | Out-Host
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym -Mode $Mode -Market $Market *>&1 | Out-Host
     $codes[$sym] = $LASTEXITCODE
   }
 
@@ -48,7 +51,7 @@ if ($Symbol -eq "ALL") {
   exit 0
 }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol -Mode $Mode *>&1 | Out-Host
+& powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol -Mode $Mode -Market $Market *>&1 | Out-Host
 $code = $LASTEXITCODE
 $global:LASTEXITCODE = $code
 exit $code
