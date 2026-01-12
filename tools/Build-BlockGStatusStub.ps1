@@ -318,6 +318,34 @@ try {
 if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
   $logsDir  = Join-Path $repoRoot "logs"
 
+# CRISIS_REGIME_STATUS_BEGIN
+# A2: Crisis regime producer status (fail-closed for LIVE when missing/stale)
+$crisisOkToday = $false
+$crisisRegime = $false
+$crisisPortfolioHalt = $false
+$crisisRiskFlatten = $false
+$crisisCooldownMinutes = 0
+$crisisStatusPath = Join-Path $logsDir "crisis_regime_status.json"
+try {
+  $cj = Read-JsonSafe $crisisStatusPath
+  if($cj){
+    $asOf = ""
+    if($cj.PSObject.Properties.Name -contains "as_of_date"){ $asOf = [string]$cj.as_of_date }
+    if($asOf.Length -ge 10){ $asOf = $asOf.Substring(0,10) }
+    if($asOf -eq $todayLocal){
+      if($cj.PSObject.Properties.Name -contains "ok_today"){ $crisisOkToday = [bool]$cj.ok_today }
+      if($cj.PSObject.Properties.Name -contains "crisis_regime"){ $crisisRegime = [bool]$cj.crisis_regime }
+      if($cj.PSObject.Properties.Name -contains "portfolio_halt"){ $crisisPortfolioHalt = [bool]$cj.portfolio_halt }
+      if($cj.PSObject.Properties.Name -contains "risk_flatten"){ $crisisRiskFlatten = [bool]$cj.risk_flatten }
+      if($cj.PSObject.Properties.Name -contains "cooldown_minutes"){
+        try { $crisisCooldownMinutes = [int]$cj.cooldown_minutes } catch { $crisisCooldownMinutes = 0 }
+      }
+    }
+  }
+} catch { }
+# CRISIS_REGIME_STATUS_END
+
+
 
   $path = Resolve-GatescoreEventsPath $sym $logsDir
   $evs = @(Read-JsonlLines $path)
@@ -414,6 +442,34 @@ try {
 if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
 # repoRoot resolved above (canonical)
 $logsDir  = Join-Path $repoRoot "logs"
+
+# CRISIS_REGIME_STATUS_BEGIN
+# A2: Crisis regime producer status (fail-closed for LIVE when missing/stale)
+$crisisOkToday = $false
+$crisisRegime = $false
+$crisisPortfolioHalt = $false
+$crisisRiskFlatten = $false
+$crisisCooldownMinutes = 0
+$crisisStatusPath = Join-Path $logsDir "crisis_regime_status.json"
+try {
+  $cj = Read-JsonSafe $crisisStatusPath
+  if($cj){
+    $asOf = ""
+    if($cj.PSObject.Properties.Name -contains "as_of_date"){ $asOf = [string]$cj.as_of_date }
+    if($asOf.Length -ge 10){ $asOf = $asOf.Substring(0,10) }
+    if($asOf -eq $todayLocal){
+      if($cj.PSObject.Properties.Name -contains "ok_today"){ $crisisOkToday = [bool]$cj.ok_today }
+      if($cj.PSObject.Properties.Name -contains "crisis_regime"){ $crisisRegime = [bool]$cj.crisis_regime }
+      if($cj.PSObject.Properties.Name -contains "portfolio_halt"){ $crisisPortfolioHalt = [bool]$cj.portfolio_halt }
+      if($cj.PSObject.Properties.Name -contains "risk_flatten"){ $crisisRiskFlatten = [bool]$cj.risk_flatten }
+      if($cj.PSObject.Properties.Name -contains "cooldown_minutes"){
+        try { $crisisCooldownMinutes = [int]$cj.cooldown_minutes } catch { $crisisCooldownMinutes = 0 }
+      }
+    }
+  }
+} catch { }
+# CRISIS_REGIME_STATUS_END
+
 
 
 
@@ -1307,6 +1363,7 @@ if (-not $gsRecentEnough) {
   $reasons.Add(("gatescore_too_old age_days=" + $gsAgeDays + " max=" + $MAX_GS_AGE_DAYS + " session=" + $gsAsOf + " today=" + $today)) | Out-Null
 }
 # QQQ_GS_OK_TODAY omitted for NVDA-only readiness
+if($crisisRegime){ $reasons.Add("crisis_regime=true") | Out-Null }
 if (-not $phase23Ok) { $reasons.Add("phase23_health_ok_today=false") }
 if (-not $evHardOk)  { $reasons.Add("ev_hard_daily_ok_today=false") }
 if (-not $evHardOk -and $evHardReason) { $reasons.Add(("ev_hard_daily_reason=" + $evHardReason)) }
@@ -1494,6 +1551,14 @@ $payload = [ordered]@{
     ev_hard_session_ok = $evSessionOk
     phase4_ok_today         = $phase4Ok
     intel_ok_today           = [bool]$intel_ok_today
+
+    # Crash-mode contract fields (producer: crisis_regime_status.json)
+    crisis_ok_today      = [bool]$crisisOkToday
+    crisis_regime        = [bool]$crisisRegime
+    portfolio_halt       = [bool]$crisisPortfolioHalt
+    risk_flatten         = [bool]$crisisRiskFlatten
+    cooldown_minutes     = [int]$crisisCooldownMinutes
+    crisis_status_path   = (Canon $crisisStatusPath)
     intel_as_of_date          = $intel_as_of_date
     intel_age_minutes         = [int]$intel_age_minutes
     intel_kind                = $intel_kind

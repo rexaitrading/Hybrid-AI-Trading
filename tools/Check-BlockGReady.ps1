@@ -165,6 +165,16 @@ if(($statusPath + "") -match "\?\?"){
 }
 # --- END CANONICALIZE + BAN statusPath ---
 $st = Read-Json $statusPath
+# CRISIS_VETO_BEGIN
+# Institutional: crisis regime veto is highest priority. Deny before any other gates.
+try{
+  if($st -and ($st.PSObject.Properties.Name -contains "crisis_regime") -and [bool]$st.crisis_regime){
+    Fail-Contract "crisis_regime=true"
+  }
+} catch {
+  Fail-Contract "crisis_regime check failed"
+}
+# CRISIS_VETO_END
 
 # --- CONTRACT SEMANTICS LEVEL (fail-closed) ---
 if ($st) {
@@ -324,6 +334,7 @@ function Get-GS([string]$sym){
 # 3) Validate required daily quality fields (fail-closed)
 # NOTE: contract defines these booleans (default false if absent)
 $reqFields = @(
+  "crisis_ok_today",
   "phase4_ok_today",
   "ev_hard_daily_ok_today",
   "gatescore_fresh_today"
