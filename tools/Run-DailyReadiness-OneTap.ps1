@@ -3,7 +3,10 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol="NVDA",
 
-  [switch]$Build
+  
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [string]$Market = "US",
+[switch]$Build
 )
 
 Set-StrictMode -Version Latest
@@ -83,7 +86,7 @@ if(Test-Path $gs){
 # 5) Check readiness
 $chk = Join-Path $repoRoot "tools\Invoke-BlockGCheck.ps1"
 if(Test-Path -LiteralPath $chk){
-  $chkArgs = @("-Symbol", $Symbol)
+  $chkArgs = @("-Symbol", $Symbol, "-Market", $Market)
   if($Build){ $chkArgs += "-Build" }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $chk @chkArgs | Out-Host
   $finalExit = $LASTEXITCODE
@@ -97,7 +100,13 @@ if(Test-Path -LiteralPath $chk){
 # --- OneTap summary JSON (for Notion ingest) ---
 try {
   $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-  $p = Join-Path $repo "logs\blockg_status_stub.json"
+  $logRoot = $null
+try {
+  $logRoot = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "tools\Get-MarketLogRoot.ps1") -Market $Market
+} catch { $logRoot = $null }
+if(-not $logRoot){ $logRoot = Join-Path $repo "logs" }
+
+$p = Join-Path $logRoot "blockg_status_stub.json"
   if(Test-Path $p){
     $st = Get-Content $p -Raw -Encoding utf8 | ConvertFrom-Json
     $out = [ordered]@{
@@ -113,9 +122,17 @@ try {
       reasons_not_ready = $st.reasons_not_ready
     }
     $json = ($out | ConvertTo-Json -Depth 6)
-    $dst = Join-Path $repo "logs\onetap_summary.json"
-    [System.IO.File]::WriteAllText($dst, ($json -replace "`r`n","`n"), (New-Object System.Text.UTF8Encoding($false)))
-    Write-Host "[ONETAP] wrote logs\onetap_summary.json"
+    $dst = Join-Path $logRoot "onetap_summary.json"
+        [System.IO.File]::WriteAllText($dst,  ($json -replace "`r`n","`n"), (New-Object System.Text.UTF8Encoding($false)))
+        # legacy_onetap_summary (backward compat)
+    try {
+      $legacyDst = Join-Path $repo "logs\onetap_summary.json"
+      if($legacyDst -ne $dst){
+        [System.IO.File]::WriteAllText($legacyDst, ($json -replace "`r`n","`n"), (New-Object System.Text.UTF8Encoding($false)))
+      }
+    } catch { }
+
+    Write-Host ("[ONETAP] wrote " + $dst)
   }
 } catch {
   Write-Host "[ONETAP] summary json skipped: $($_.Exception.Message)" -ForegroundColor Yellow
