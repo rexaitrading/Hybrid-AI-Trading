@@ -22,7 +22,7 @@ if(-not (Test-Path -LiteralPath $builder)){ throw "Missing builder: $builder" }
 if ($LASTEXITCODE -ne 0) {
   $code = $LASTEXITCODE
   $global:LASTEXITCODE = $code
-  return $code
+  exit $code
 }
 
 # 1) Contract-only checker
@@ -36,19 +36,19 @@ if ($Symbol -eq "ALL") {
     $codes[$sym] = $LASTEXITCODE
   }
 
-  # Fail-closed: if any symbol is non-zero, return 2
+  # Fail-closed: if any symbol is non-zero, exit 2
   if (@($codes.Values | Where-Object { $_ -ne 0 }).Count -gt 0) {
     Write-Host ("[BLOCKG] NOT READY some symbols => " + ($codes.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" } -join ", ")) -ForegroundColor Yellow
     $global:LASTEXITCODE = 2
-    return 2
+    exit 2
   }
 
   Write-Host "[BLOCKG] READY for ALL symbols (NVDA, SPY, QQQ)." -ForegroundColor Green
   $global:LASTEXITCODE = 0
-  return 0
+  exit 0
 }
 
 & powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol -Mode $Mode *>&1 | Out-Host
 $code = $LASTEXITCODE
 $global:LASTEXITCODE = $code
-return $code
+exit $code
