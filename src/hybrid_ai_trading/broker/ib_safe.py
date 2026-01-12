@@ -3,9 +3,12 @@ from __future__ import annotations
 
 from hybrid_ai_trading.runtime.run_context import RunContext
 import os
+import json
 import random
+from datetime import datetime, timezone
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from pathlib import Path
 
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from hybrid_ai_trading.execution.blockg_ps_checker import require_blockg_ready_via_powershell
@@ -38,6 +41,34 @@ def _infer_symbol(contract: Any) -> Optional[str]:
             pass
     return None
 
+
+def _infer_mode(ctx: RunContext | None = None) -> str:
+    try:
+        if ctx is not None and hasattr(ctx, "mode"):
+            m = str(getattr(ctx, "mode") or "").upper().strip()
+            if m:
+                return m
+    except Exception:
+        pass
+    return str(os.environ.get("HAT_MODE", "")).upper().strip() or ("LIVE" if _is_live(ctx) else "PAPER")
+
+
+def _parse_utc_dt(s: str) -> datetime:
+    s = (s or "").strip()
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    dt = datetime.fromisoformat(s)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _cooldown_active(repo_root: str) -> bool:
+    p = Path(repo_root) / "logs" / "crisis_cooldown.json"
+    obj = json.loads(p.read_text(encoding="utf-8"))
+    until = _parse_utc_dt(str(obj.get("cooldown_until_utc", "")))
+    now = datetime.now(timezone.utc)
+    return now < until
 
 def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None, meta: Dict[str, Any] | None = None) -> Any:
     """
@@ -72,6 +103,30 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
             sym = None
     # Enforce Block-G + live gates (fail-closed)
     if _is_live(ctx):
+        # CrashMode cooldown deny (defense-in-depth). Fail-closed for LIVE/PAPERLIVE.
+        # Allow risk-action callers (flatten/close) to pass a meta flag.
+        allow_risk_action = False
+        try:
+            allow_risk_action = bool(meta.get("allow_risk_action")) if isinstance(meta, dict) else False
+        except Exception:
+            allow_risk_action = False
+
+        if not allow_risk_action:
+            mode = _infer_mode(ctx)
+            if mode in ("LIVE", "PAPERLIVE"):
+                rr = ""
+                try:
+                    rr = str(getattr(ctx, "repo_root", "") or "").strip() if ctx is not None else ""
+                except Exception:
+                    rr = ""
+                if not rr:
+                    rr = str(os.environ.get("HAT_REPO_ROOT", "")).strip() or os.getcwd()
+
+                try:
+                    if _cooldown_active(rr):
+                        raise RuntimeError("CRASHMODE_DENY: cooldown active (crisis_cooldown.json)")
+                except Exception as e:
+                    raise RuntimeError(f"CRASHMODE_DENY: cooldown state unreadable -> fail-closed: {e!r}")
         if sym in ("NVDA", "SPY", "QQQ"):
             # System readiness first (Block-G) so tests can assert correct chokepoint behavior
             mk = None
