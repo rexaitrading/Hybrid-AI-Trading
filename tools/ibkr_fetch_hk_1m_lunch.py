@@ -106,6 +106,10 @@ class App(EWrapper, EClient):
 
     def historicalData(self, reqId, bar):
         with self._lock:
+            if not hasattr(self, "_dbg_once_hk"):
+                self._dbg_once_hk = True
+                raw = str(bar.date)
+                print(f"[HK][DBG] raw={raw} ymd8={time_to_yyyymmdd(raw)} hk_ymd={bar_date_to_hk_yyyymmdd(raw)}")
             self._bars.append({
                 "time": str(bar.date),
                 "yyyymmdd": time_to_yyyymmdd(str(bar.date)),
@@ -250,7 +254,6 @@ def main():
     if any_mismatch and is_live:
         return 2
     return 0
-    return 2 if any_fail else 0
 
 if __name__ == "__main__":
     raise SystemExit(main())
