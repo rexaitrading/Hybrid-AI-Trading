@@ -175,6 +175,40 @@ try{
   Fail-Contract "crisis_regime check failed"
 }
 # CRISIS_VETO_END
+# REGIME_VETO_BEGIN
+# Institutional: explicit regime gating (fail-closed). CRISIS defaults to protect capital.
+try{
+  $rg = ""
+  if($st -and ($st.PSObject.Properties.Name -contains "regime")){ $rg = [string]$st.regime }
+  if(-not $rg){ Fail-Contract "regime missing" }
+  $rg = $rg.ToUpper().Trim()
+  if($rg -notin @("NORMAL","HIGH_VOL","CRISIS")){ Fail-Contract ("invalid regime=" + $rg) }
+
+  if($rg -eq "CRISIS"){
+    $allowAlpha = $false
+    try { if($st.PSObject.Properties.Name -contains "crisis_alpha_enabled"){ $allowAlpha = [bool]$st.crisis_alpha_enabled } } catch { $allowAlpha = $false }
+    if(-not $allowAlpha){ Fail-Contract "regime=CRISIS (alpha disabled)" }
+
+    $need = @(
+      "crisis_alpha_replay_evidence.json",
+      "slippage_stress_status.json",
+      "regime_risk_caps.json",
+      "kill_switch_status.json"
+    )
+    foreach($fn in $need){
+      $p = Join-Path $logsDir $fn
+      if(-not (Test-Path -LiteralPath $p)){ Fail-Contract ("crisis alpha missing " + $fn) }
+      $j = Read-Json $p
+      if(-not $j){ Fail-Contract ("crisis alpha unreadable " + $fn) }
+      if(-not ($j.PSObject.Properties.Name -contains "ok")){ Fail-Contract ("crisis alpha missing ok in " + $fn) }
+      if(-not [bool]$j.ok){ Fail-Contract ("crisis alpha ok=false in " + $fn) }
+    }
+  }
+} catch {
+  Fail-Contract "regime gate failed"
+}
+# REGIME_VETO_END
+
 
 # --- CONTRACT SEMANTICS LEVEL (fail-closed) ---
 if ($st) {
@@ -334,6 +368,8 @@ function Get-GS([string]$sym){
 # 3) Validate required daily quality fields (fail-closed)
 # NOTE: contract defines these booleans (default false if absent)
 $reqFields = @(
+  "regime_ok_today",
+  "regime",
   "crisis_ok_today",
   "phase4_ok_today",
   "ev_hard_daily_ok_today",

@@ -182,6 +182,17 @@ if(-not $SkipIntel){
 } else {
   Write-Host "[MASTER-LAUNCH] Intel steps skipped (SkipIntel=true)" -ForegroundColor Yellow
 }
+# REGIME_HOOK_BEGIN
+Step "Regime: Determine NORMAL/HIGH_VOL/CRISIS" {
+  RunTool "tools\Build-RegimeStatus.ps1" @("-Symbol",$Symbol,"-Market",$Market)
+}
+# REGIME_HOOK_END
+# CRASHMODE_HOOK_BEGIN
+Step "CrashMode: Enforce crisis regime (halt/flatten/cooldown)" {
+  # HOLD-safe. Writes logs\crisis_cooldown.json. Does NOT grant live readiness.
+  RunTool "tools\Enforce-CrisisCrashMode.ps1" @("-Symbol",$Symbol)
+}
+# CRASHMODE_HOOK_END
 
 Step "Verify Block-G readiness (one-shot gate)" {
   $vbArgs = @("-Symbol",$Symbol)

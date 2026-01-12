@@ -1552,7 +1552,34 @@ $payload = [ordered]@{
     phase4_ok_today         = $phase4Ok
     intel_ok_today           = [bool]$intel_ok_today
 
-    # Crash-mode contract fields (producer: crisis_regime_status.json)
+    # REGIME_FIELDS_BEGIN
+# Regime fields (producer: regime_status.json). Per-market log root.
+$regime = "NORMAL"
+$regimeOkToday = $false
+$regimeReason = "missing_regime_status_json"
+$regimePath = Join-Path $logsDirOut "regime_status.json"
+try {
+  if(Test-Path -LiteralPath $regimePath){
+    $rj = Get-Content -LiteralPath $regimePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if($rj){
+      if($rj.PSObject.Properties.Name -contains "regime"){ $regime = [string]$rj.regime }
+      if($rj.PSObject.Properties.Name -contains "regime_ok_today"){ $regimeOkToday = [bool]$rj.regime_ok_today }
+      if($rj.PSObject.Properties.Name -contains "regime_reason"){ $regimeReason = [string]$rj.regime_reason }
+    }
+  }
+} catch {
+  $regimeOkToday = $false
+  $regimeReason = "regime_status_parse_failed"
+}
+# Crisis alpha opt-in only; default false
+$crisisAlphaEnabled = $false
+# REGIME_FIELDS_END
+# Crash-mode contract fields (producer: crisis_regime_status.json)
+    regime               = $regime
+    regime_ok_today      = [bool]$regimeOkToday
+    regime_reason        = $regimeReason
+    regime_status_path   = (Canon $regimePath)
+    crisis_alpha_enabled = [bool]$crisisAlphaEnabled
     crisis_ok_today      = [bool]$crisisOkToday
     crisis_regime        = [bool]$crisisRegime
     portfolio_halt       = [bool]$crisisPortfolioHalt
