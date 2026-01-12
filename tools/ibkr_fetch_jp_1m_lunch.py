@@ -1,6 +1,7 @@
 import os, sys, time, json, threading
 from typing import Optional, List, Dict, Any
 
+from zoneinfo import ZoneInfo
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract
@@ -27,8 +28,17 @@ REQ_TIMEOUT_SEC = float(os.environ.get("IBKR_REQ_TIMEOUT_SEC", "15"))
 CONNECT_TIMEOUT_SEC = float(os.environ.get("IBKR_CONNECT_TIMEOUT_SEC", "6"))
 
 def ymd_to_ib_end(ymd: str, hhmm: str) -> str:
+    """
+    IBKR safest accepted format: yyyymmdd-hh:mm:ss (UTC).
+    Interpret ymd+hhmm as Asia/Tokyo local time then convert to UTC.
+    """
+    import datetime as _dt
     d = ymd.replace("-", "")
-    return f"{d} {hhmm}:00 Asia/Tokyo"
+    y = int(d[0:4]); m = int(d[4:6]); dd = int(d[6:8])
+    hh = int(hhmm[0:2]); mm = int(hhmm[3:5])
+    dt_tokyo = _dt.datetime(y, m, dd, hh, mm, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
+    dt_utc = dt_tokyo.astimezone(ZoneInfo("UTC"))
+    return dt_utc.strftime("%Y%m%d-%H:%M:%S")
 class App(EWrapper, EClient):
     def __init__(self):
         EClient.__init__(self, self)
