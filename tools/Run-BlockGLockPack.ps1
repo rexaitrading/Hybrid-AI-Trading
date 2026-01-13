@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param([ValidateSet("NVDA","SPY","QQQ")] [string]$Symbol="NVDA")
+param(
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")] [string]$Market="US",
+  [ValidateSet("NVDA","SPY","QQQ")] [string]$Symbol="NVDA"
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
@@ -8,7 +11,7 @@ $repoRoot = Split-Path -Parent $toolsDir
 
 
 Write-Host "`n[BLOCKG-LOCKPACK] 1) closed-day semantics (ready=10 diag=0)..." -ForegroundColor Cyan
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-BlockGWeekendSemantics.ps1 -Symbol $Symbol | Out-Host
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-BlockGWeekendSemantics.ps1 -Market $Market -Symbol $Symbol | Out-Host
 if($LASTEXITCODE -ne 0){ throw "[BLOCKG-LOCKPACK] Weekend semantics failed" }
 
 Write-Host "`n[BLOCKG-LOCKPACK] 2) no-bypass (READY execution allowlist)..." -ForegroundColor Cyan

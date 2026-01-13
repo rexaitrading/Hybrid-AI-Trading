@@ -75,6 +75,16 @@ try {
 # --- A3 END ---
 if(-not $today){ $today = (Get-Date).ToString("yyyy-MM-dd") }
 
+
+# --- Phase-3 producer: per-market GateScore events (fail-closed; proxy US allowed for plumbing in PAPER only) ---
+$gsPm = Join-Path $repoRoot "tools\Write-GateScoreEvents-PerMarket.ps1"
+if(Test-Path -LiteralPath $gsPm){
+  & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $gsPm -Market $Market -Symbol $Symbol -Mode rewrite -MinEvents 10 *>&1 | Out-Host
+} else {
+  Write-Host ("[ONETAP] WARN missing per-market GateScore producer: " + $gsPm) -ForegroundColor Yellow
+}
+# --- Phase-3 producer END ---
+
 # Market enabled guard (fail-closed)
 $mg = Join-Path $repoRoot "tools\Test-MarketEnabled.ps1"
 if(Test-Path -LiteralPath $mg){

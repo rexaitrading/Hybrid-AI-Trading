@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")] [string]$Market="US",
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")] [string]$Market="US",
   [ValidateSet("NVDA","SPY","QQQ")] [string]$Symbol="NVDA"
 )
 $ErrorActionPreference="Stop"
@@ -33,8 +33,8 @@ if($rcRaw){
   } catch { }
 }
 
+if(-not $todayLocal){ $todayLocal = (Get-Date).ToString("yyyy-MM-dd") }
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
-$todayLocal = (Get-Date).ToString("yyyy-MM-dd")
 $ok = $false
 $asOf = ""
 $evidence = @()
