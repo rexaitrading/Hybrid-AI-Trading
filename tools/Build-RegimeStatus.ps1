@@ -1,3 +1,7 @@
+# --- Canonical repo root (deterministic; caller/CWD independent) ---
+
+
+
 [CmdletBinding()]
 param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
@@ -69,18 +73,35 @@ function Read-RunContextSafe([string]$RepoRoot,[string]$Market,[string]$Symbol,[
   $rcPath = Join-Path $RepoRoot "tools\Resolve-RunContext.ps1"
   if(-not (Test-Path -LiteralPath $rcPath)){ return $null }
 
-  $args = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$rcPath,"-Market",$Market,"-Symbol",$Symbol)
-  if((($AsOfDate + "")).Trim()){ $args += @("-AsOfDate",$AsOfDate) }
+  $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 
-  $raw = & powershell @args 2>$null | Out-String
-  $raw = ($raw + "").Trim()
-  if(-not $raw){ return $null }
+  $tmpDir = Join-Path $env:TEMP ("hat_rc_" + (Get-Date).ToString("yyyyMMdd_HHmmssfff"))
+  try { New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null } catch { return $null }
+  $outFile = Join-Path $tmpDir "out.txt"
+  $errFile = Join-Path $tmpDir "err.txt"
 
-  $i0 = $raw.IndexOf('{')
-  $i1 = $raw.LastIndexOf('}')
+  $argList = @("-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-File",$rcPath,"-Market",$Market,"-Symbol",$Symbol)
+  if((($AsOfDate + "")).Trim()){ $argList += @("-AsOfDate",$AsOfDate) }
+
+  try {
+    $p = Start-Process -FilePath $psExe -ArgumentList $argList -NoNewWindow -Wait -PassThru 
+         -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+  } catch { return $null }
+
+  $out = ""
+  $err = ""
+  try { if(Test-Path -LiteralPath $outFile){ $out = Get-Content -LiteralPath $outFile -Raw -Encoding UTF8 } } catch { }
+  try { if(Test-Path -LiteralPath $errFile){ $err = Get-Content -LiteralPath $errFile -Raw -Encoding UTF8 } } catch { }
+
+  $rawAll = (($out + "
+" + $err) + "").Trim()
+  if(-not $rawAll){ return $null }
+
+  $i0 = $rawAll.IndexOf('{')
+  $i1 = $rawAll.LastIndexOf('}')
   if($i0 -lt 0 -or $i1 -le $i0){ return $null }
 
-  $json = $raw.Substring($i0, ($i1 - $i0 + 1))
+  $json = $rawAll.Substring($i0, ($i1 - $i0 + 1))
   try { return ($json | ConvertFrom-Json -ErrorAction Stop) } catch { return $null }
 }
 # RUNCONTEXT_REGIME_END
