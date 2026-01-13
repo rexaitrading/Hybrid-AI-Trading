@@ -162,6 +162,10 @@ function Get-LatestOkTodayFromCsv([string]$csvPath, [string]$todayStr){
   elseif($last.PSObject.Properties.Name -contains "ok"){ $ok = [bool]$last.ok }
   elseif($last.PSObject.Properties.Name -contains "okToday"){ $ok = [bool]$last.okToday }
 
+elseif($last.PSObject.Properties.Name -contains "phase23_ok"){
+  $s = (($last.phase23_ok + "")).Trim().ToLowerInvariant()
+  $ok = ($s -eq "true" -or $s -eq "1" -or $s -eq "yes" -or $s -eq "y")
+}
   return ($d -eq $todayStr -and $ok)
 }
 
