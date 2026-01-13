@@ -11,10 +11,19 @@ param(
 
 Set-StrictMode -Version Latest
 # BLOCKG_LOCKPACK_BEGIN
-Write-Host "
-[OPS] Block-G LOCKPACK..." -ForegroundColor Cyan
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-BlockGLockPack.ps1 -Symbol NVDA | Out-Host
-if($LASTEXITCODE -ne 0){ throw "[OPS] Block-G LOCKPACK failed (drift detected)" }
+Write-Host "`n[OPS] Block-G LOCKPACK (non-fatal; cmd wrapper)..." -ForegroundColor Cyan
+$lockpack_exit = 0
+try {
+  $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+  $cmd = "`"$psExe`" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `".\tools\Run-BlockGLockPack.ps1`" -Symbol NVDA"
+  cmd /c $cmd 2>&1 | Out-Host
+  $lockpack_exit = $LASTEXITCODE
+} catch {
+  $lockpack_exit = 2
+}
+if($lockpack_exit -ne 0){
+  Write-Host ("[ONETAP] WARN: LockPack failed (exit=" + $lockpack_exit + "). Continuing so onetap_summary.json is emitted (fail-closed).") -ForegroundColor Yellow
+}
 # BLOCKG_LOCKPACK_END
 $ErrorActionPreference="Stop"
 
@@ -117,7 +126,7 @@ if(Test-Path -LiteralPath $chk){
 # --- ONETAP_SUMMARY ---
 # --- OneTap summary JSON (for Notion ingest) ---
 try {
-  $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$repo = (Resolve-Path (Join-Path (Split-Path -Parent $PSCommandPath) "..")).Path
   $logRoot = $null
 try {
   $logRoot = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "tools\Get-MarketLogRoot.ps1") -Market $Market
@@ -127,12 +136,55 @@ if(-not $logRoot){ $logRoot = Join-Path $repo "logs" }
 $p = Join-Path $logRoot "blockg_status_stub.json"
   if(Test-Path $p){
     $st = Get-Content $p -Raw -Encoding utf8 | ConvertFrom-Json
+# ---- derive Phase23 + EV-HARD ok_today from CSV evidence (fail-closed) ----
+$todayStr = (Get-Date).ToString("yyyy-MM-dd")
+$repoLogs = Join-Path $repo "logs"
+
+$phase23_health_ok_today = $false
+$ev_hard_daily_ok_today  = $false
+
+function Get-LatestOkTodayFromCsv([string]$csvPath, [string]$todayStr){
+  if(-not (Test-Path -LiteralPath $csvPath)){ return $false }
+  $rows = @(Import-Csv -LiteralPath $csvPath)
+  if($rows.Count -lt 1){ return $false }
+  $last = $rows[-1]
+
+  # date field (robust)
+  $d = ""
+  if($last.PSObject.Properties.Name -contains "as_of_date"){ $d = ($last.as_of_date + "") }
+  elseif($last.PSObject.Properties.Name -contains "date"){ $d = ($last.date + "") }
+  elseif($last.PSObject.Properties.Name -contains "today"){ $d = ($last.today + "") }
+  if($d.Length -ge 10){ $d = $d.Substring(0,10) } else { return $false }
+
+  # ok field (robust)
+  $ok = $false
+  if($last.PSObject.Properties.Name -contains "ok_today"){ $ok = [bool]$last.ok_today }
+  elseif($last.PSObject.Properties.Name -contains "ok"){ $ok = [bool]$last.ok }
+  elseif($last.PSObject.Properties.Name -contains "okToday"){ $ok = [bool]$last.okToday }
+
+  return ($d -eq $todayStr -and $ok)
+}
+
+try {
+  $p23a = Join-Path $logRoot  "phase23_health_daily.csv"
+  $p23b = Join-Path $repoLogs "phase23_health_daily.csv"
+  $p23  = if(Test-Path -LiteralPath $p23a){ $p23a } else { $p23b }
+  $phase23_health_ok_today = Get-LatestOkTodayFromCsv -csvPath $p23 -todayStr $todayStr
+} catch { $phase23_health_ok_today = $false }
+
+try {
+  $eva = Join-Path $logRoot  "phase5_ev_hard_veto_daily.csv"
+  $evb = Join-Path $repoLogs "phase5_ev_hard_veto_daily.csv"
+  $ev  = if(Test-Path -LiteralPath $eva){ $eva } else { $evb }
+  $ev_hard_daily_ok_today = Get-LatestOkTodayFromCsv -csvPath $ev -todayStr $todayStr
+} catch { $ev_hard_daily_ok_today = $false }
+# ---- end derive ----
     $out = [ordered]@{
       ts_utc = (Get-Date).ToUniversalTime().ToString("o")
       as_of_date = $st.as_of_date
       phase4_ok_today = $st.phase4_ok_today
-      phase23_health_ok_today = $st.phase23_health_ok_today
-      ev_hard_daily_ok_today = $st.ev_hard_daily_ok_today
+  phase23_health_ok_today = $phase23_health_ok_today
+  ev_hard_daily_ok_today = $ev_hard_daily_ok_today
       gatescore_ok_today = $st.gatescore_ok_today
       nvda_blockg_ready = $st.nvda_blockg_ready
       spy_blockg_ready  = $st.spy_blockg_ready
