@@ -215,7 +215,11 @@ $out = [ordered]@{
 # RUNCONTEXT_OK_TODAY_BEGIN
 if(-not $rc){
   $out["regime_ok_today"] = $false
+if(-not $rc){
   $out["regime_reason"] = "runcontext_unreadable"
+} else {
+  $out["regime_reason"] = $reason
+}
 }
 # RUNCONTEXT_OK_TODAY_END
 
