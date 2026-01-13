@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import os
 
 from ib_insync import IB, LimitOrder, Stock
@@ -18,7 +19,7 @@ ib.sleep(1.5)
 px = t.ask if (t.ask and t.ask > 0) else (t.bid if (t.bid and t.bid > 0) else 150.00)
 o = LimitOrder("BUY", 1, round(px, 2), whatIf=True)
 o.account = acct
-trade = ib.placeOrder(c, o)
+trade = ib_place_order_chokepoint(ib, c, o)
 for _ in range(20):  # wait up to ~10s
     ib.sleep(0.5)
     logstate = next(

@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import csv
 import math
 import os
@@ -252,7 +253,7 @@ def main():
         print(
             f"[PLAN] {side} {qty} {symbol} @ ~{limit} (TIF={tif}) notionalÃ¢â€°Ë†${notional:,.2f}"
         )
-        tr = ib.placeOrder(
+        tr = ib_place_order_chokepoint(ib, 
             c, LimitOrder(side, qty, limit, tif=tif, outsideRth=outside_rth)
         )
         print("[SUBMIT] sent, waiting...")

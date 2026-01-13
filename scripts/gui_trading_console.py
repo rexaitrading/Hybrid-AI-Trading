@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import math
 import os
 import tkinter as tk
@@ -165,7 +166,7 @@ def send(side):
         tif=tif,
         outsideRth=os.getenv("OUTSIDE_RTH", "true").lower() in ("1", "true", "yes"),
     )
-    tr = ib.placeOrder(c, order)
+    tr = ib_place_order_chokepoint(ib, c, order)
     log(
         f"[PLAN] {side} {qty} {sym} @ ~{limit} (TIF={tif}) notionalÃ¢â€°Ë†${notional:,.2f} [eff_bps={eff_bps}]"
     )

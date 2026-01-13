@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import math
 import os
 import time
@@ -175,14 +176,14 @@ def main():
     )
     parent.transmit = False
 
-    tradeParent = ib.placeOrder(contract, parent)
+    tradeParent = ib_place_order_chokepoint(ib, contract, parent)
     pstat = wait_status(tradeParent, ib, timeout=5.0)
 
     # If we tried LMT and got 163 band cancel, retry as MKT
     if mode == "LMT" and pstat == "Cancelled" and logs_contain(tradeParent, 163):
         parent2 = MarketOrder("BUY", QTY, tif=TIF)
         parent2.transmit = False
-        tradeParent = ib.placeOrder(contract, parent2)
+        tradeParent = ib_place_order_chokepoint(ib, contract, parent2)
         pstat = wait_status(tradeParent, ib, timeout=5.0)
         mode = "MKT"
 
@@ -203,8 +204,8 @@ def main():
     slChild = StopOrder("SELL", QTY, sl, tif=TIF)
     slChild.parentId = poid
     slChild.transmit = True
-    tradeTP = ib.placeOrder(contract, tpChild)
-    tradeSL = ib.placeOrder(contract, slChild)
+    tradeTP = ib_place_order_chokepoint(ib, contract, tpChild)
+    tradeSL = ib_place_order_chokepoint(ib, contract, slChild)
 
     print(f"PRICE_SRC: {src}  MODE: {mode}")
     print(

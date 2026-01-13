@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import math
 import os
 
@@ -103,7 +104,7 @@ def main():
             tif=os.getenv("TIF", "IOC"),
             outsideRth=os.getenv("OUTSIDE_RTH", "true").lower() in ("1", "true", "yes"),
         )
-        tr = ib.placeOrder(c, o)
+        tr = ib_place_order_chokepoint(ib, c, o)
         print(f"[PLAN] {side} {qty} {sym} @ ~{limit} (IOC) notionalÃ¢â€°Ë†${notional}")
         print("[SUBMIT] sent, waiting...")
         for _ in range(40):

@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import os
 from datetime import datetime
 from datetime import time as dtime
@@ -76,7 +77,7 @@ def place(symbol: str, side: str, qty: int, kind: str, limit: float = None):
             print(f"[ABORT] unknown kind={kind}")
             return
 
-        tr = ib.placeOrder(c, o)
+        tr = ib_place_order_chokepoint(ib, c, o)
         print(
             f"[SUBMIT] {kind} {side} {qty} {symbol} "
             f"{'@'+str(limit) if limit else ''}  Ã¢â€ â€™ waitingÃ¢â‚¬Â¦"

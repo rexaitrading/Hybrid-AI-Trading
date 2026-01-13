@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import os
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -52,7 +53,7 @@ def quote_market(
         )
 
     order = LimitOrder(side, qty, limit, tif="IOC", outsideRth=outside_rth)
-    trade = ib.placeOrder(contract, order)
+    trade = ib_place_order_chokepoint(ib, contract, order)
     print("[SUBMIT] sent, waiting for status...")
 
     for _ in range(30):

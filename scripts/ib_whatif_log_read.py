@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import os
 
 from ib_insync import IB, LimitOrder, Stock
@@ -13,7 +14,7 @@ ib.connect(
 c = Stock("AAPL", "SMART", "USD")
 ib.qualifyContracts(c)
 
-t = ib.placeOrder(c, LimitOrder("BUY", 1, 100.00, whatIf=True))
+t = ib_place_order_chokepoint(ib, c, LimitOrder("BUY", 1, 100.00, whatIf=True))
 ib.sleep(1.0)
 
 state = next(

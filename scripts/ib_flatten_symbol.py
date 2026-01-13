@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import os
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -76,7 +77,7 @@ def main():
             raw = dround(base * (1 - bps), 2)
             limit = dround(clamp(raw, bid, tick_cap, tk, side), 2)
         print(f"[PLAN] {side} {qty} {symbol} @ ~{limit} (IOC) to FLAT")
-        tr = ib.placeOrder(c, LimitOrder(side, qty, limit, tif="IOC", outsideRth=True))
+        tr = ib_place_order_chokepoint(ib, c, LimitOrder(side, qty, limit, tif="IOC", outsideRth=True))
         print("[SUBMIT] sent, waiting...")
         for _ in range(30):
             ib.sleep(0.2)

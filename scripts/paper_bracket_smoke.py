@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import os
 
 from ib_insync import *
@@ -32,9 +33,9 @@ take.ocaGroup = stop.ocaGroup = oca
 take.ocaType = stop.ocaType = 1  # CancelRemaining
 
 # Place and remember the orderIds we created this run
-ib.placeOrder(contract, parent)
-ib.placeOrder(contract, take)
-ib.placeOrder(contract, stop)
+ib_place_order_chokepoint(ib, contract, parent)
+ib_place_order_chokepoint(ib, contract, take)
+ib_place_order_chokepoint(ib, contract, stop)
 created_ids = {parent.orderId, take.orderId, stop.orderId}
 
 ib.sleep(3)

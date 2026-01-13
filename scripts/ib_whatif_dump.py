@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import json
 import os
 import time
@@ -55,7 +56,7 @@ print(json.dumps(as_plain(st2), indent=2))
 o2 = LimitOrder("BUY", 1, base_px, whatIf=True)
 o2.account = acct
 o2.tif = "DAY"
-trade = ib.placeOrder(c, o2)
+trade = ib_place_order_chokepoint(ib, c, o2)
 seen = set()
 print("\n[B] whatIf=True event log stream (up to 20s):")
 deadline = time.time() + 20

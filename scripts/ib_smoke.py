@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import sys
 import time
 
@@ -34,7 +35,7 @@ else:
     px = round(max(0.01, max(bid, 0) + off / 100.0), 2)
 
 o = LimitOrder(side.upper(), qty, px)
-tr = ib.placeOrder(c, o)
+tr = ib_place_order_chokepoint(ib, c, o)
 print("placed", tr.orderStatus.status, side.upper(), qty, sym, "at", px)
 
 deadline = time.time() + secs

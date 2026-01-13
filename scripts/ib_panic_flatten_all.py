@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import math
 import os
 
@@ -42,7 +43,7 @@ for p in ib.positions():
         continue
     bps = slip_bps / 10_000.0
     limit = round(base * (1 + bps), 2) if side == "BUY" else round(base * (1 - bps), 2)
-    ib.placeOrder(c, LimitOrder(side, abs(qty), limit, tif="IOC", outsideRth=True))
+    ib_place_order_chokepoint(ib, c, LimitOrder(side, abs(qty), limit, tif="IOC", outsideRth=True))
     sent += 1
 print(f"[PANIC] Flatten sent for {sent} positions.")
 ib.disconnect()

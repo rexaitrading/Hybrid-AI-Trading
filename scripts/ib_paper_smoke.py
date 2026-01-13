@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import asyncio
 import os
 import time
@@ -23,7 +24,7 @@ def main():
 
     o = LimitOrder("BUY", QTY, LMT)
     print(f"Placing BUY {QTY} {SYMBOL} @ {LMT} (paper)")
-    trade = ib.placeOrder(a, o)
+    trade = ib_place_order_chokepoint(ib, a, o)
 
     # Let it reach a known state
     ib.sleep(2.0)

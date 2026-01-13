@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import os
 import time
 
@@ -34,7 +35,7 @@ o = LimitOrder("BUY", 1, px, whatIf=True)
 o.account = acct
 o.tif = "DAY"
 
-trade = ib.placeOrder(c, o)
+trade = ib_place_order_chokepoint(ib, c, o)
 
 final_state = None
 saw_placeholder = False

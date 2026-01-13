@@ -1,4 +1,5 @@
 from __future__ import annotations
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 
 import os
 from dataclasses import dataclass
@@ -32,7 +33,7 @@ def place_entry(ib, symbol, side, last_px, rc):
     if os.environ.get("DRY_RUN", "0") == "1":
         print(f"[dry-run] {symbol} {side} (px~{last_px})", flush=True)
         return None
-    # ... existing order build + ib.placeOrder(...) logic ...
+    # ... existing order build + ib_place_order_chokepoint(ib, ...) logic ...
 
 
 def place_entry(
@@ -58,4 +59,4 @@ def place_entry(
         return None
 
     contract = Stock(symbol, "SMART", "USD")
-    return ib.placeOrder(contract, order)
+    return ib_place_order_chokepoint(ib, contract, order)

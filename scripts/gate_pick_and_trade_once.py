@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 import csv
 import logging
 import math
@@ -244,12 +245,12 @@ parent = (
     else MarketOrder("BUY", QTY, tif=TIF)
 )
 parent.transmit = False
-tradeParent = ib.placeOrder(contract, parent)
+tradeParent = ib_place_order_chokepoint(ib, contract, parent)
 pstat = wait_status(tradeParent, ib, timeout=4.0)
 if mode == "LMT" and pstat == "Cancelled" and logs_contain(tradeParent, 163):
     parent2 = MarketOrder("BUY", QTY, tif=TIF)
     parent2.transmit = False
-    tradeParent = ib.placeOrder(contract, parent2)
+    tradeParent = ib_place_order_chokepoint(ib, contract, parent2)
     pstat = wait_status(tradeParent, ib, timeout=4.0)
     mode = "MKT"
 if pstat not in ("Submitted", "PreSubmitted", "PendingSubmit", "Filled"):
@@ -264,8 +265,8 @@ tpChild.transmit = False
 slChild = StopOrder("SELL", QTY, sl, tif=TIF)
 slChild.parentId = poid
 slChild.transmit = True
-ib.placeOrder(contract, tpChild)
-ib.placeOrder(contract, slChild)
+ib_place_order_chokepoint(ib, contract, tpChild)
+ib_place_order_chokepoint(ib, contract, slChild)
 
 print(f"SESSION: {'LIVE' if live_now else 'PAPER'} on port {port}")
 print(f"PRICE_SRC: {src}  MODE: {mode}")

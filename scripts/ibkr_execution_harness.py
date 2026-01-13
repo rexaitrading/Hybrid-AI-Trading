@@ -1,3 +1,4 @@
+from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
 """
 IBKR Execution Harness (Quant Pro v7.0 Ã¢â‚¬â€œ Hedge Fund Level)
 ----------------------------------------------------------
@@ -147,7 +148,7 @@ def main(
             return
 
         # Place entry order
-        trade: Trade = ib.placeOrder(contract, order)
+        trade: Trade = ib_place_order_chokepoint(ib, contract, order)
         logger.info("Ã°Å¸Å¡â‚¬ Entry submitted: %s %d %s", side, qty, symbol)
 
         # Attach stop-loss + target if given
@@ -156,7 +157,7 @@ def main(
                 side, qty, entry_price or last_price, target_price, stop_price
             )
             for o in bracket:
-                ib.placeOrder(contract, o)
+                ib_place_order_chokepoint(ib, contract, o)
             logger.info(
                 "Ã°Å¸â€œÅ  Bracket placed: stop=%.2f target=%.2f",
                 stop_price,
