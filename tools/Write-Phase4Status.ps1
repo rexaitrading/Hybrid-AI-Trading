@@ -14,7 +14,12 @@ function Write-Utf8NoBomLf([string]$Path,[string]$Text){
   [System.IO.File]::WriteAllText($Path, $Text, $utf8)
 }
 
-$repoRoot = (Resolve-Path ".").Path
+function Resolve-RepoRoot(){
+  $toolsDir = Split-Path -Parent $PSCommandPath
+  $rr = Split-Path -Parent $toolsDir
+  try { return (Resolve-Path -LiteralPath $rr -ErrorAction Stop).Path } catch { return $rr }
+}
+$repoRoot = Resolve-RepoRoot
 
 # Prefer RunContext logs_dir_out (per-market). Fall back to legacy root logs.
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
@@ -24,8 +29,8 @@ $logsDir = Join-Path $repoRoot "logs"
 if($rcRaw){
   try {
     $rc = $rcRaw | ConvertFrom-Json
-    if($rc -and ($rc.PSObject.Properties.Name -contains "logs_dir_out") -and $rc.logs_dir_out){
-      $logsDir = [string]$rc.logs_dir_out
+    if($rc -and ($rc.PSObject.Properties.Name -contains "logs_dir") -and $rc.logs_dir){
+      $logsDir = [string]$rc.logs_dir
     }
     if($rc -and ($rc.PSObject.Properties.Name -contains "as_of_date") -and $rc.as_of_date){
       $todayLocal = [string]$rc.as_of_date

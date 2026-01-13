@@ -1,5 +1,10 @@
 [CmdletBinding()]
-param()
+param(
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+  [string]$Market="US",
+  [ValidateSet("NVDA","SPY","QQQ")]
+  [string]$Symbol="NVDA"
+)
 
 $ErrorActionPreference="Stop"
 Set-StrictMode -Version Latest
@@ -12,17 +17,60 @@ function Write-Utf8NoBomLf([string]$Path,[string]$Text){
   [System.IO.File]::WriteAllText($Path, $Text, $utf8)
 }
 
-$repoRoot = (Resolve-Path ".").Path
-$logsDir  = Join-Path $repoRoot "logs"
+function Resolve-RepoRoot(){
+  $toolsDir = Split-Path -Parent $PSCommandPath
+  $rr = Split-Path -Parent $toolsDir
+  try { return (Resolve-Path -LiteralPath $rr -ErrorAction Stop).Path } catch { return $rr }
+}
+
+$repoRoot = Resolve-RepoRoot
+
+# Prefer RunContext logs_dir (per-market). Fall back to legacy root logs.
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol $Symbol | Out-String
+$rcRaw = ($rcRaw + "").Trim()
+
+$logsDir = Join-Path $repoRoot "logs"
+$todayLocal = $null
+
+if($rcRaw){
+  try{
+    $rc = $rcRaw | ConvertFrom-Json
+    if($rc){
+      if(($rc.PSObject.Properties.Name -contains "logs_dir") -and $rc.logs_dir){
+        $logsDir = [string]$rc.logs_dir
+      } elseif(($rc.PSObject.Properties.Name -contains "logs_dir_out") -and $rc.logs_dir_out){
+        $logsDir = [string]$rc.logs_dir_out
+      }
+      if(($rc.PSObject.Properties.Name -contains "as_of_date") -and $rc.as_of_date){
+        $todayLocal = [string]$rc.as_of_date
+      }
+    }
+  } catch { }
+}
+
+if(-not $todayLocal){ $todayLocal = (Get-Date).ToString("yyyy-MM-dd") }
+
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 
-$todayLocal = (Get-Date).ToString("yyyy-MM-dd")
 $okToday = $false
 $asOf = $todayLocal
 $evidence=@()
 
-$p = Join-Path $logsDir "phase23_health.csv"
-if(Test-Path -LiteralPath $p){
+# Evidence candidates (per-market first, then root logs)
+$cands = @(
+  (Join-Path $logsDir "phase23_health_daily.csv"),
+  (Join-Path $logsDir "phase23_health.csv"),
+  (Join-Path (Join-Path $repoRoot "logs") "phase23_health_daily.csv"),
+  (Join-Path (Join-Path $repoRoot "logs") "phase23_health.csv")
+)
+
+$p = $null
+foreach($cand in $cands){
+  if(Test-Path -LiteralPath $cand){ $p = $cand; break }
+}
+
+if($p){
   $evidence += $p
   try{
     $rows = @(Import-Csv -LiteralPath $p)
@@ -33,8 +81,15 @@ if(Test-Path -LiteralPath $p){
       if($d){ $d = $d.Substring(0,[Math]::Min(10,$d.Length)) }
       if($d -eq $todayLocal){
         $asOf = $d
-        if($r.PSObject.Properties.Name -contains "phase23_ok"){ $okToday = ([string]$r.phase23_ok).ToLower() -in @("1","true","yes") }
-        elseif($r.PSObject.Properties.Name -contains "phase23_health_ok_today"){ $okToday = ([string]$r.phase23_health_ok_today).ToLower() -in @("1","true","yes") }
+        if($r.PSObject.Properties.Name -contains "phase23_ok"){
+          $okToday = ([string]$r.phase23_ok).ToLower() -in @("1","true","yes")
+        } elseif($r.PSObject.Properties.Name -contains "phase23_health_ok_today"){
+          $okToday = ([string]$r.phase23_health_ok_today).ToLower() -in @("1","true","yes")
+        } elseif($r.PSObject.Properties.Name -contains "phase23_health_ok"){
+          $okToday = ([string]$r.phase23_health_ok).ToLower() -in @("1","true","yes")
+        } else {
+          $okToday = $false
+        }
         break
       }
     }
