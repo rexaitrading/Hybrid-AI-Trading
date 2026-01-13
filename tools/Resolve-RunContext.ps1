@@ -10,6 +10,12 @@ param(
 )
 
 Set-StrictMode -Version Latest
+  # Defaults (StrictMode-safe)
+  $sessionName = "UNKNOWN"
+  $session = "UNKNOWN"
+  $tradeMode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  if(-not $tradeMode){ $tradeMode = "PAPER" }
+  $brokerProfile = (($env:HAT_BROKER_PROFILE + "")).Trim()
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
 
@@ -51,10 +57,12 @@ if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
 [pscustomobject]@{
   repo_root = $repoRoot
   trade_mode = $TradeMode
+    mode = $TradeMode
   is_paper = [bool]$isPaper
   symbol = $Symbol
 
   market = $Market
+    broker_profile = (($env:HAT_BROKER_PROFILE + "")).Trim()
   calendar_id = $mc.calendar_id
   market_tz = $mc.tz
   market_tz_resolved_id = $mc.tz_resolved_id
@@ -68,6 +76,7 @@ if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
   market_closed_reason = $mc.market_closed_reason
   is_open_now = [bool]$mc.is_open_now
   session_name = $mc.session_name
+  session = $mc.session_name
   is_trading_day = [bool]$mc.is_trading_day
 
   logs_dir_out = $logsDirOut
