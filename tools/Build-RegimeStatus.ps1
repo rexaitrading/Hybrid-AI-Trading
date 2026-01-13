@@ -26,6 +26,64 @@ $repoRoot = (Resolve-Path -LiteralPath (Split-Path -Parent $toolsDir)).Path
 Set-Location -LiteralPath $repoRoot
 [System.Environment]::CurrentDirectory = $repoRoot
 
+# RUNCONTEXT_READ_BEGIN
+$asOfParam = ""
+try { $asOfParam = "" } catch { $asOfParam = "" }
+try { if(($env:HAT_ASOF_DATE + "") -ne ""){ $asOfParam = ($env:HAT_ASOF_DATE + "") } } catch { }
+
+$rcSym = ($Symbol -replace '^ALL$','NVDA')
+$rc = $null
+try { $rc = Read-RunContextSafe $repoRoot $Market $rcSym $asOfParam } catch { $rc = $null }
+
+# Fail-closed defaults
+$rc_as_of_date = (Get-Date).ToString("yyyy-MM-dd")
+$rc_as_of_date_source = "local_fallback"
+$rc_market_closed_today = $true
+$rc_market_closed_reason = "unknown"
+$rc_is_open_now = $false
+$rc_session_name = "CLOSED"
+$rc_is_trading_day = $false
+
+if($rc){
+  try {
+    if($rc.PSObject.Properties.Name -contains "as_of_date"){ $rc_as_of_date = [string]$rc.as_of_date }
+    if($rc.PSObject.Properties.Name -contains "as_of_date_source"){ $rc_as_of_date_source = [string]$rc.as_of_date_source }
+    if($rc.PSObject.Properties.Name -contains "market_closed_today"){ $rc_market_closed_today = [bool]$rc.market_closed_today }
+    if($rc.PSObject.Properties.Name -contains "market_closed_reason"){ $rc_market_closed_reason = [string]$rc.market_closed_reason }
+    if($rc.PSObject.Properties.Name -contains "is_open_now"){ $rc_is_open_now = [bool]$rc.is_open_now }
+    if($rc.PSObject.Properties.Name -contains "session_name"){ $rc_session_name = [string]$rc.session_name }
+    if($rc.PSObject.Properties.Name -contains "is_trading_day"){ $rc_is_trading_day = [bool]$rc.is_trading_day }
+  } catch { }
+} else {
+  # If RunContext is unreadable, regime_ok_today should fail-closed later.
+  $rc_market_closed_today = $true
+  $rc_is_open_now = $false
+  $rc_session_name = "CLOSED"
+  $rc_is_trading_day = $false
+}
+# RUNCONTEXT_READ_END
+
+
+# RUNCONTEXT_REGIME_BEGIN
+function Read-RunContextSafe([string]$RepoRoot,[string]$Market,[string]$Symbol,[string]$AsOfDate){
+  $rcPath = Join-Path $RepoRoot "tools\Resolve-RunContext.ps1"
+  if(-not (Test-Path -LiteralPath $rcPath)){ return $null }
+
+  $args = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$rcPath,"-Market",$Market,"-Symbol",$Symbol)
+  if((($AsOfDate + "")).Trim()){ $args += @("-AsOfDate",$AsOfDate) }
+
+  $raw = & powershell @args 2>$null | Out-String
+  $raw = ($raw + "").Trim()
+  if(-not $raw){ return $null }
+
+  $i0 = $raw.IndexOf('{')
+  $i1 = $raw.LastIndexOf('}')
+  if($i0 -lt 0 -or $i1 -le $i0){ return $null }
+
+  $json = $raw.Substring($i0, ($i1 - $i0 + 1))
+  try { return ($json | ConvertFrom-Json -ErrorAction Stop) } catch { return $null }
+}
+# RUNCONTEXT_REGIME_END
 # Per-market log root
 $logsDirOut = $null
 try {
@@ -97,12 +155,25 @@ $out = [ordered]@{
   ts_utc = $nowUtc.ToString("o")
   symbol = $Symbol
   market = $Market
+  as_of_date = $rc_as_of_date
+  as_of_date_source = $rc_as_of_date_source
+  market_closed_today = [bool]$rc_market_closed_today
+  market_closed_reason = $rc_market_closed_reason
+  is_open_now = [bool]$rc_is_open_now
+  session_name = $rc_session_name
+  is_trading_day = [bool]$rc_is_trading_day
   regime = $regime
   regime_ok_today = $true
   regime_reason = $reason
   realized_std_1m = $rvStd
   crisis_regime = [bool]$crisis
 }
+# RUNCONTEXT_OK_TODAY_BEGIN
+if(-not $rc){
+  $out["regime_ok_today"] = $false
+  $out["regime_reason"] = "runcontext_unreadable"
+}
+# RUNCONTEXT_OK_TODAY_END
 
 $outPath = Join-Path $logsDirOut "regime_status.json"
 Write-Utf8NoBomLf $outPath ($out | ConvertTo-Json -Depth 6)
