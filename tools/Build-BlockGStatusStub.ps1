@@ -525,7 +525,37 @@ try {
     # EV-hard today
     $evHardOk=$false
     # A2: prefer producer status json (fallback to CSV below)
-    $evs = Join-Path $logsDir "ev_hard_status.json"
+$evs = Join-Path $logsDir "ev_hard_status.json"
+
+# ---- C5 Global-Ready gates (fail-closed) ----
+$gdnaPath  = Join-Path $logsDir "market_dna.json"
+$gedgePath = Join-Path $logsDir "edge_validity.json"
+$gdepPath  = Join-Path $logsDir "dependency_risk.json"
+$griskPath = Join-Path $logsDir "risk_guard_status.json"
+
+$gdnaOk  = $false
+$gedgeOk = $false
+$gdepOk  = $false
+$griskOk = $false
+
+try { $gdnaOk  = Read-StatusOkToday $gdnaPath  $todayLocal } catch { $gdnaOk  = $false }
+try { $gedgeOk = Read-StatusOkToday $gedgePath $todayLocal } catch { $gedgeOk = $false }
+try { $gdepOk  = Read-StatusOkToday $gdepPath  $todayLocal } catch { $gdepOk  = $false }
+try { $griskOk = Read-StatusOkToday $griskPath $todayLocal } catch { $griskOk = $false }
+
+$globalReadyOk = ([bool]$gdnaOk -and [bool]$gedgeOk -and [bool]$gdepOk -and [bool]$griskOk)
+# Ensure reasons list exists before C5 adds (StrictMode-safe)
+if(-not (Get-Variable -Name "reasons" -Scope Local -ErrorAction SilentlyContinue)){
+  $reasons = New-Object System.Collections.Generic.List[string]
+}
+# Ensure reasons list exists before C5 adds (StrictMode-safe)
+if(-not (Get-Variable -Name "reasons" -Scope Local -ErrorAction SilentlyContinue)){
+  $reasons = New-Object System.Collections.Generic.List[string]
+}if(-not $gdnaOk){  $reasons.Add("market_dna_ok_today=false") | Out-Null }
+if(-not $gedgeOk){ $reasons.Add("edge_validity_ok_today=false") | Out-Null }
+if(-not $gdepOk){  $reasons.Add("dependency_risk_ok_today=false") | Out-Null }
+if(-not $griskOk){ $reasons.Add("risk_guard_ok_today=false") | Out-Null }
+# ---- end C5 ----
     $evok = Read-StatusOkToday $evs $todayLocal
     if($null -ne $evok){ $evHardOk = [bool]$evok; $evAsOf=$todayLocal }
 
@@ -1064,6 +1094,36 @@ $p4s = Join-Path $logsDir "phase4_status.json"
 $p4ok = Read-StatusOkToday $p4s $todayLocal
 # A2: prefer producer status json (FULL builder) before CSV parsing
 $evs = Join-Path $logsDir "ev_hard_status.json"
+
+# ---- C5 Global-Ready gates (fail-closed) ----
+$gdnaPath  = Join-Path $logsDir "market_dna.json"
+$gedgePath = Join-Path $logsDir "edge_validity.json"
+$gdepPath  = Join-Path $logsDir "dependency_risk.json"
+$griskPath = Join-Path $logsDir "risk_guard_status.json"
+
+$gdnaOk  = $false
+$gedgeOk = $false
+$gdepOk  = $false
+$griskOk = $false
+
+try { $gdnaOk  = Read-StatusOkToday $gdnaPath  $todayLocal } catch { $gdnaOk  = $false }
+try { $gedgeOk = Read-StatusOkToday $gedgePath $todayLocal } catch { $gedgeOk = $false }
+try { $gdepOk  = Read-StatusOkToday $gdepPath  $todayLocal } catch { $gdepOk  = $false }
+try { $griskOk = Read-StatusOkToday $griskPath $todayLocal } catch { $griskOk = $false }
+
+$globalReadyOk = ([bool]$gdnaOk -and [bool]$gedgeOk -and [bool]$gdepOk -and [bool]$griskOk)
+# Ensure reasons list exists before C5 adds (StrictMode-safe)
+if(-not (Get-Variable -Name "reasons" -Scope Local -ErrorAction SilentlyContinue)){
+  $reasons = New-Object System.Collections.Generic.List[string]
+}
+# Ensure reasons list exists before C5 adds (StrictMode-safe)
+if(-not (Get-Variable -Name "reasons" -Scope Local -ErrorAction SilentlyContinue)){
+  $reasons = New-Object System.Collections.Generic.List[string]
+}if(-not $gdnaOk){  $reasons.Add("market_dna_ok_today=false") | Out-Null }
+if(-not $gedgeOk){ $reasons.Add("edge_validity_ok_today=false") | Out-Null }
+if(-not $gdepOk){  $reasons.Add("dependency_risk_ok_today=false") | Out-Null }
+if(-not $griskOk){ $reasons.Add("risk_guard_ok_today=false") | Out-Null }
+# ---- end C5 ----
 $evok = Read-StatusOkToday $evs $todayLocal
 if($null -ne $evok){ $evHardOk = [bool]$evok; $evHardDailyAsOf=$todayLocal }
 
@@ -1618,7 +1678,14 @@ $payload = [ordered]@{
     ev_hard_as_of_date = $evSessionAsOf
     ev_hard_session_ok = $evSessionOk
     phase4_ok_today         = $phase4Ok
-    intel_ok_today           = [bool]$intel_ok_today
+intel_ok_today           = [bool]$intel_ok_today
+
+# C5 Global-Ready fields
+market_dna_ok_today      = [bool]$gdnaOk
+edge_validity_ok_today   = [bool]$gedgeOk
+dependency_risk_ok_today = [bool]$gdepOk
+risk_guard_ok_today      = [bool]$griskOk
+global_ready_ok_today    = [bool]$globalReadyOk
 # Crash-mode contract fields (producer: crisis_regime_status.json)
     regime               = $regime
     regime_ok_today      = [bool]$regimeOkToday
