@@ -30,8 +30,9 @@ $todayLocal = Slice-Date ([string]$rc.as_of_date)
 $logsDir = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
 if(-not $logsDir){ $logsDir = Join-Path $repoRoot "logs" }
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
-
-$outPath = Join-Path $logsDir "phase23_status.json"
+$outDir = $logsDir
+New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+$outPath = Join-Path $outDir "phase23_status.json"
 $oneTap  = Join-Path $logsDir "onetap_summary.json"
 
 # Fail-closed defaults
