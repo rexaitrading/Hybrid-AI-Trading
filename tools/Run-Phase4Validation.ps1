@@ -1,9 +1,29 @@
 [CmdletBinding()]
-param()
-
-
+param(
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")] [string]$Market="US"
+)
 # --- repo root bootstrap (env-first) ---
 $repoRoot = ($env:HAT_REPO_ROOT + "").Trim()
+# PHASE4_MARKETWIRE_BEGIN
+try {
+  $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+  $rcFile = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+  if(Test-Path -LiteralPath $rcFile){
+    $rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $rcFile -Market $Market -Symbol NVDA 2>$null | Out-String
+    $rcRaw = ($rcRaw + "").Trim()
+    if($rcRaw){
+      $rc = $rcRaw | ConvertFrom-Json
+      if($rc -and ($rc.PSObject.Properties.Name -contains "as_of_date") -and (($rc.as_of_date + "") -ne "")){
+        $env:HAT_ASOF_DATE = [string]$rc.as_of_date
+      }
+      if($rc -and ($rc.PSObject.Properties.Name -contains "logs_dir_out") -and (($rc.logs_dir_out + "") -ne "")){
+        $env:HAT_LOGS_DIR_OUT = [string]$rc.logs_dir_out
+      }
+    }
+  }
+} catch { }
+# PHASE4_MARKETWIRE_END
+
 if(-not $repoRoot){
   $repoRoot = & (Join-Path $PSScriptRoot "Go-RepoRoot.ps1")
 }
@@ -37,15 +57,24 @@ function Write-Phase4Stamp {
     [Parameter(Mandatory)][int]$ExitCode
   )
   $tsUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-  $today = (Get-Date).ToString("yyyy-MM-dd")
+  $asof = (($env:HAT_ASOF_DATE + "")).Trim()
+  if(-not $asof){ $asof = (Get-Date).ToString("yyyy-MM-dd") }
   $payload = [ordered]@{
     ts_utc = $tsUtc
-    as_of_date = $today
+    as_of_date = $asof
     phase4_ok_today = $Ok
     reason = $Reason
     exit_code = $ExitCode
   }
-  [System.IO.File]::WriteAllText($stampPath, ($payload | ConvertTo-Json -Depth 5), $utf8NoBom)
+  $json = ($payload | ConvertTo-Json -Depth 5)
+  [System.IO.File]::WriteAllText($stampPath, $json, $utf8NoBom)
+
+  $ld = (($env:HAT_LOGS_DIR_OUT + "")).Trim()
+  if($ld){
+    New-Item -ItemType Directory -Force -Path $ld | Out-Null
+    $stampPathMarket = Join-Path $ld "phase4_validation_passed.json"
+    [System.IO.File]::WriteAllText($stampPathMarket, $json, $utf8NoBom)
+  }
 }
 
 function Invoke-Phase4PyTest {
