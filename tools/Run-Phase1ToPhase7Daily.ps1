@@ -67,7 +67,7 @@ Run-Step "Phase3: GateScore PnL summary" { Run-PS ".\tools\Build-GateScorePnlSum
 Run-Step "BlockG: Build contract" { Run-PS ".\tools\Build-BlockGStatusStub.ps1" @("-Symbol",$Symbol) }
 
 Run-Step "BlockG: Contract-only checker (deterministic)" {
-  $code = Run-PSAllowExit ".\tools\Check-BlockGReady.ps1" @(0,2) @("-Symbol",$Symbol)
+  $code = Run-PSAllowExit ".\tools\Invoke-BlockGCheck.ps1" @(0,2) @("-Symbol",$Symbol,"-Mode","ALL_STRICT")
   if($code -eq 0){
     Write-Host "[BLOCKG] READY (exit=0)" -ForegroundColor Green
   } else {

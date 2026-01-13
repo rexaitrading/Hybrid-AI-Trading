@@ -269,7 +269,7 @@ Step "Block-G readiness (FAIL-CLOSED)" {
     $global:LASTEXITCODE = 0
     return
   }
-  RunTool "tools\Check-BlockGReady.ps1" @("-Market",$Market,"-Symbol",$Symbol)
+  RunTool "tools\Invoke-BlockGCheck.ps1" @("-Market",$Market,"-Symbol",$Symbol,"-Mode","ALL_STRICT")
 }
 
 Step "Phase-5 risk tests (risk-first)" { RunTool "tools\Run-Phase5Tests.ps1" }

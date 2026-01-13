@@ -69,8 +69,8 @@ try {
   }
 
   Write-Host "`n[PRE] Block-G Build+Check (single authority)" -ForegroundColor Cyan
-  $bg = Require-Tool "tools\Check-BlockGReady.ps1"
-  powershell -NoProfile -ExecutionPolicy Bypass -File $bg -Symbol $Symbol -Build | Out-Host
+  $bg = Require-Tool "tools\Invoke-BlockGCheck.ps1"
+  powershell -NoProfile -ExecutionPolicy Bypass -File $bg -Symbol $Symbol -Market $Market -Mode ALL_STRICT | Out-Host
   $result.blockg_exit = $LASTEXITCODE
 
   if($result.blockg_exit -eq 0){

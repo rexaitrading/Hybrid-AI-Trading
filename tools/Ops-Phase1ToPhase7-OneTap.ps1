@@ -47,7 +47,7 @@ Require $py
 # 3) Core tools
 $intelTool      = Join-Path $repo "tools\Run-IntelPipeline.ps1"
 $contractPack   = Join-Path $repo "tools\Run-Premarket-ContractPack.ps1"
-$blockGCheck    = Join-Path $repo "tools\Check-BlockGReady.ps1"
+$blockGCheck    = Join-Path $repo "tools\Invoke-BlockGCheck.ps1"
 $nvdaPaperOps   = Join-Path $repo "tools\Run-NvdaPaperOps.ps1"
 
 function Invoke-Tool([string]$label,[string]$file,[string[]]$args=@()){
@@ -59,7 +59,7 @@ function Invoke-Tool([string]$label,[string]$file,[string[]]$args=@()){
 }
 
 function Assert-BlockGReadyNVDA(){
-  Invoke-Tool "BLOCKG" $blockGCheck @("-Symbol","NVDA")
+  Invoke-Tool "BLOCKG" $blockGCheck @("-Symbol","NVDA","-Mode","ALL_STRICT")
 }
 
 function Sentiment-Smoke(){

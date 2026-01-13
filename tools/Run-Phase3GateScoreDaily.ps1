@@ -25,7 +25,7 @@ if(-not (Test-Path -LiteralPath $logsDir)){
 }
 
 function Invoke-BlockGCheckSafe([string]$Symbol){
-  $checker = Join-Path $repoRoot "tools\Check-BlockGReady.ps1"
+  $checker = Join-Path $repoRoot "tools\Invoke-BlockGCheck.ps1"
   if(-not (Test-Path -LiteralPath $checker)){
     throw "[PHASE3] FAIL-CLOSED: missing tools\Check-BlockGReady.ps1"
   }
@@ -111,9 +111,13 @@ function Invoke-BlockGCheckSafe([string]$Symbol){
   # Validate contract
   if(($env:HAT_ALLOW_CLOSED_DAY_DIAGNOSTICS + "") -eq "1"){
     Write-Host "[PHASE3] HOLD/closed-day diagnostics: BlockG BUILD_ONLY (no LIVE readiness required)" -ForegroundColor Yellow
+    $env:HAT_BLOCKG_SKIP_BUILD = "1"
     powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol -Mode BUILD_ONLY *>&1 | Out-Host
+    Remove-Item Env:\HAT_BLOCKG_SKIP_BUILD -ErrorAction SilentlyContinue
   } else {
-    powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol *>&1 | Out-Host
+    $env:HAT_BLOCKG_SKIP_BUILD = "1"
+    powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol -Mode ALL_STRICT *>&1 | Out-Host
+    Remove-Item Env:\HAT_BLOCKG_SKIP_BUILD -ErrorAction SilentlyContinue
   }
   if($LASTEXITCODE -ne 0){
     throw ("[PHASE3] FAIL-CLOSED: BlockG check failed exit=" + $LASTEXITCODE)
