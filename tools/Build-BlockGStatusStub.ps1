@@ -615,17 +615,6 @@ try {
 }
 $crisisAlphaEnabled = $false
 # REGIME_READER_END
-# FAST_SESSION_FIELDS_BEGIN
-$rcSessionNameFast = "CLOSED"
-$rcIsTradingDayFast = $false
-try {
-  $rcFast = Read-RunContextSafe $repoRoot $Market $Symbol $todayLocal
-  if($rcFast){
-    if($rcFast.PSObject.Properties.Name -contains "session_name"){ $rcSessionNameFast = [string]$rcFast.session_name }
-    if($rcFast.PSObject.Properties.Name -contains "is_trading_day"){ $rcIsTradingDayFast = [bool]$rcFast.is_trading_day }
-  }
-} catch { $rcSessionNameFast="CLOSED"; $rcIsTradingDayFast=$false }
-# FAST_SESSION_FIELDS_END
 $payload = [ordered]@{
       ts_utc=$tsUtc
       as_of_date=$todayLocal
@@ -906,18 +895,6 @@ try {
 } catch { $nvdaEligibleCount = 0 }
 
 $gsNvdaEligibleZero = ($nvdaEligibleCount -le 0)
-# MARKET_HOLIDAY_CAL_BEGIN
-# Extend market_closed_today with optional holiday calendar (configs\market_holidays.json).
-try {
-  $holPath = Join-Path $repoRoot "configs\market_holidays.json"
-  if(Test-Path -LiteralPath $holPath){
-    $hj = Get-Content -LiteralPath $holPath -Raw -Encoding utf8 | ConvertFrom-Json
-    $closed = @()
-    if($hj.PSObject.Properties.Name -contains "closed_dates"){ $closed = @($hj.closed_dates) }
-    if($closed -contains $today){ $marketClosedToday = $true }
-  }
-} catch { }
-# MARKET_HOLIDAY_CAL_END
 # GS_ELIGIBLE_ZERO_END
 # GS_NVDA_DIAG_BEGIN
 $nvdaLastEventDate = ""
@@ -1604,18 +1581,6 @@ $crashFlattenOk   = [bool]$cm.ok
 $crashFlattenExit = [int]$cm.exit_code
 $crashFlattenPath = [string]$cm.path
 # CRASHMODE_FLATTEN_READER_END
-# FAST_SESSION_FIELDS_BEGIN
-$rcSessionNameFast = "CLOSED"
-$rcIsTradingDayFast = $false
-try {
-  $rcFast = Read-RunContextSafe $repoRoot $Market $Symbol $todayLocal
-  if($rcFast){
-    if($rcFast.PSObject.Properties.Name -contains "session_name"){ $rcSessionNameFast = [string]$rcFast.session_name }
-    if($rcFast.PSObject.Properties.Name -contains "is_trading_day"){ $rcIsTradingDayFast = [bool]$rcFast.is_trading_day }
-  }
-} catch { $rcSessionNameFast="CLOSED"; $rcIsTradingDayFast=$false }
-# FAST_SESSION_FIELDS_END
-
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $today
