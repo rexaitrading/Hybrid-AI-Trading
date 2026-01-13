@@ -57,6 +57,22 @@ foreach($p in $localInputs){
 
 $proxy = $false
 if(-not $input){
+  # Global fallback: Phase-5 evidence may still be global-only in plumbing stage
+  $gDir = Join-Path $repoRoot "logs"
+  $gInputs = @(
+    (Join-Path $gDir "nvda_phase5_paperlive_results.jsonl"),
+    (Join-Path $gDir "nvda_phase5_paperlive_results_today.jsonl"),
+    (Join-Path $gDir "nvda_phase5_paperexec_results.jsonl")
+  )
+  foreach($p in $gInputs){
+    if(Test-Path -LiteralPath $p){
+      $input = $p
+      if($Market -ne "US"){ $proxy = $true }
+      break
+    }
+  }
+}
+if(-not $input){
   # Plumbing-only fallback: allow using US market paperlive inputs for non-US markets
   if($Market -ne "US"){
     $usDir = Join-Path (Join-Path $repoRoot "logs") "US"
@@ -67,6 +83,22 @@ if(-not $input){
     )
     foreach($p in $usInputs){
       if(Test-Path -LiteralPath $p){ $input = $p; $proxy = $true; break }
+    }
+  }
+}
+if(-not $input){
+  # Global fallback: Phase-5 evidence may still be global-only in plumbing stage
+  $gDir = Join-Path $repoRoot "logs"
+  $gInputs = @(
+    (Join-Path $gDir "nvda_phase5_paperlive_results.jsonl"),
+    (Join-Path $gDir "nvda_phase5_paperlive_results_today.jsonl"),
+    (Join-Path $gDir "nvda_phase5_paperexec_results.jsonl")
+  )
+  foreach($p in $gInputs){
+    if(Test-Path -LiteralPath $p){
+      $input = $p
+      if($Market -ne "US"){ $proxy = $true }
+      break
     }
   }
 }
