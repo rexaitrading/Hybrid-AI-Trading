@@ -1,6 +1,8 @@
 [CmdletBinding()]
-param()
-
+param(
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")] [string]$Market="US",
+  [ValidateSet("NVDA","SPY","QQQ")] [string]$Symbol="NVDA"
+)
 $ErrorActionPreference="Stop"
 Set-StrictMode -Version Latest
 chcp 65001 | Out-Null
@@ -13,15 +15,37 @@ function Write-Utf8NoBomLf([string]$Path,[string]$Text){
 }
 
 $repoRoot = (Resolve-Path ".").Path
-$logsDir  = Join-Path $repoRoot "logs"
-New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 
+# Prefer RunContext logs_dir_out (per-market). Fall back to legacy root logs.
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol $Symbol | Out-String
+$rcRaw = ($rcRaw + "").Trim()
+$logsDir = Join-Path $repoRoot "logs"
+if($rcRaw){
+  try {
+    $rc = $rcRaw | ConvertFrom-Json
+    if($rc -and ($rc.PSObject.Properties.Name -contains "logs_dir_out") -and $rc.logs_dir_out){
+      $logsDir = [string]$rc.logs_dir_out
+    }
+    if($rc -and ($rc.PSObject.Properties.Name -contains "as_of_date") -and $rc.as_of_date){
+      $todayLocal = [string]$rc.as_of_date
+    }
+  } catch { }
+}
+
+New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
 $ok = $false
 $asOf = ""
 $evidence = @()
 
-$p = Join-Path $logsDir "phase4_validation_passed.json"
+foreach($cand in @(
+  (Join-Path $logsDir "phase4_validation_passed.json"),
+  (Join-Path (Join-Path $repoRoot "logs") "phase4_validation_passed.json")
+)){
+  $p = $cand
+  if(Test-Path -LiteralPath $p){ break }
+}
 if(Test-Path -LiteralPath $p){
   $evidence += $p
   try {
