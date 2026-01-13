@@ -95,14 +95,37 @@ function Read-RunContextSafe([string]$RepoRoot,[string]$Market,[string]$Symbol,[
 
   $rawAll = (($out + "
 " + $err) + "").Trim()
-  if(-not $rawAll){ return $null }
+  if(-not $rawAll){
+    try {
+      $dbg = Join-Path $RepoRoot "logs\US\_runcontext_capture_last.txt"
+      New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dbg) | Out-Null
+      [System.IO.File]::WriteAllText($dbg, ("EMPTY rawAll; exit=" + $p.ExitCode), (New-Object System.Text.UTF8Encoding($false)))
+    } catch { }
+    return $null
+  }
 
   $i0 = $rawAll.IndexOf('{')
   $i1 = $rawAll.LastIndexOf('}')
-  if($i0 -lt 0 -or $i1 -le $i0){ return $null }
+  if($i0 -lt 0 -or $i1 -le $i0){
+    try {
+      $dbg = Join-Path $RepoRoot "logs\US\_runcontext_capture_last.txt"
+      New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dbg) | Out-Null
+      [System.IO.File]::WriteAllText($dbg, ("NO JSON; exit=" + $p.ExitCode + "
+" + $rawAll), (New-Object System.Text.UTF8Encoding($false)))
+    } catch { }
+    return $null
+  }
 
   $json = $rawAll.Substring($i0, ($i1 - $i0 + 1))
-  try { return ($json | ConvertFrom-Json -ErrorAction Stop) } catch { return $null }
+  try { return ($json | ConvertFrom-Json -ErrorAction Stop) } catch {
+    try {
+      $dbg = Join-Path $RepoRoot "logs\US\_runcontext_capture_last.txt"
+      New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dbg) | Out-Null
+      [System.IO.File]::WriteAllText($dbg, ("JSON PARSE FAIL; exit=" + $p.ExitCode + "
+" + $rawAll), (New-Object System.Text.UTF8Encoding($false)))
+    } catch { }
+    return $null
+  }
 }
 # RUNCONTEXT_REGIME_END
 # Per-market log root
