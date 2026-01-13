@@ -506,13 +506,19 @@ try {
     function _Slice([string]$d){ $t=(($d+"")).Trim(); if($t.Length -ge 10){ $t=$t.Substring(0,10) }; $t }
     function _ToBool($v){ $s=(($v+"")).Trim().ToLowerInvariant(); return ($s -in @("1","true","yes","y","ok","pass","passed")) }
 
+    # Ensure logsRoot points to repo-root logs (not market logs) for fallback paths
+    if(-not (Get-Variable -Name "logsRoot" -Scope Local -ErrorAction SilentlyContinue)){
+      $logsRoot = Join-Path $repoRoot "logs"
+    } elseif(-not $logsRoot){
+      $logsRoot = Join-Path $repoRoot "logs"
+    }
     # Phase23 today
     $phase23Ok=$false
     # A2: prefer producer status json (fallback to CSV below)
 $p23s = Prefer-LogsPath (Join-Path $logsDir "phase23_status.json") (Join-Path $logsRoot "phase23_status.json")
     $p23ok = Read-StatusOkToday $p23s $todayLocal
     if($null -ne $p23ok){ $phase23Ok = [bool]$p23ok }
-$p23 = Prefer-LogsPath (Join-Path $logsDir "phase23_health_daily.csv") (Join-Path $logsRoot "phase23_health_daily.csv")
+$p23 = Prefer-LogsPath (Join-Path $logsDir "phase23_health_daily.csv") (Join-Path (Join-Path $repoRoot "logs") "phase23_health_daily.csv")
     if(Test-Path -LiteralPath $p23){
       try{
         $rows=@(Import-Csv -LiteralPath $p23)
@@ -562,7 +568,7 @@ if(-not $griskOk){ $reasons.Add("risk_guard_ok_today=false") | Out-Null }
     if($null -ne $evok){ $evHardOk = [bool]$evok; $evAsOf=$todayLocal }
 
     $evAsOf=""
-$evp = Prefer-LogsPath (Join-Path $logsDir "phase5_ev_hard_veto_daily.csv") (Join-Path $logsRoot "phase5_ev_hard_veto_daily.csv")
+$evp = Prefer-LogsPath (Join-Path $logsDir "phase5_ev_hard_veto_daily.csv") (Join-Path (Join-Path $repoRoot "logs") "phase5_ev_hard_veto_daily.csv")
     if(Test-Path -LiteralPath $evp){
       try{
         $rows=@(Import-Csv -LiteralPath $evp)
@@ -1130,7 +1136,7 @@ if($null -ne $p4ok){ $phase4Ok = [bool]$p4ok }
 
 # ---- EV hard veto daily ----
 $evHardOk = $false
-$evPath = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
+$evPath = Prefer-LogsPath (Join-Path $logsDir "phase5_ev_hard_veto_daily.csv") (Join-Path (Join-Path $repoRoot "logs") "phase5_ev_hard_veto_daily.csv")
 $evHardDailyAsOf = ""
 $evHardOk = $false
 if (Test-Path $evPath) {
@@ -1205,7 +1211,7 @@ if((-not (Test-Path -LiteralPath $evPath)) -and $evSessionOk){
 }
 
 $phase23Ok = $false
-$phase23Path = Join-Path $logsDir "phase23_health_daily.csv"
+$phase23Path = Prefer-LogsPath (Join-Path $logsDir "phase23_health_daily.csv") (Join-Path (Join-Path $repoRoot "logs") "phase23_health_daily.csv")
 $phase23SawToday = $false
 
 if (Test-Path $phase23Path) {
