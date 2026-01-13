@@ -37,8 +37,12 @@ try { if(($env:HAT_ASOF_DATE + "") -ne ""){ $asOfParam = ($env:HAT_ASOF_DATE + "
 
 $rcSym = ($Symbol -replace '^ALL$','NVDA')
 $rc = $null
-try { $rc = Read-RunContextSafe $repoRoot $Market $rcSym $asOfParam } catch { $rc = $null }
-
+try {
+  $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+  $rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol $rcSym 2>$null | Out-String
+  $rcRaw = ($rcRaw + "").Trim()
+  if($rcRaw){ $rc = $rcRaw | ConvertFrom-Json -ErrorAction Stop } else { $rc = $null }
+} catch { $rc = $null }
 # Fail-closed defaults
 $rc_as_of_date = (Get-Date).ToString("yyyy-MM-dd")
 $rc_as_of_date_source = "local_fallback"
@@ -84,8 +88,7 @@ function Read-RunContextSafe([string]$RepoRoot,[string]$Market,[string]$Symbol,[
   if((($AsOfDate + "")).Trim()){ $argList += @("-AsOfDate",$AsOfDate) }
 
   try {
-    $p = Start-Process -FilePath $psExe -ArgumentList $argList -NoNewWindow -Wait -PassThru 
-         -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+    $p = Start-Process -FilePath $psExe -ArgumentList $argList -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outFile -RedirectStandardError $errFile
   } catch { return $null }
 
   $out = ""
@@ -93,9 +96,20 @@ function Read-RunContextSafe([string]$RepoRoot,[string]$Market,[string]$Symbol,[
   try { if(Test-Path -LiteralPath $outFile){ $out = Get-Content -LiteralPath $outFile -Raw -Encoding UTF8 } } catch { }
   try { if(Test-Path -LiteralPath $errFile){ $err = Get-Content -LiteralPath $errFile -Raw -Encoding UTF8 } } catch { }
 
-  $rawAll = (($out + "
-" + $err) + "").Trim()
-  if(-not $rawAll){
+  $rawAll = (($out + "`n" + $err) + "").Trim()
+
+# breadcrumb always (proves rc path + rawAll length)
+try {
+  $dbg = Join-Path $RepoRoot "logs\US\_runcontext_seen_always.txt"
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dbg) | Out-Null
+  $msg = "ts_utc=" + (Get-Date).ToUniversalTime().ToString("o") + "`n" +
+         "rcPath=" + $rcPath + "`n" +
+         "exit=" + $p.ExitCode + "`n" +
+         "outLen=" + (($out + "").Length) + "`n" +
+         "errLen=" + (($err + "").Length) + "`n" +
+         "rawLen=" + (($rawAll + "").Length) + "`n"
+  [System.IO.File]::WriteAllText($dbg, $msg, (New-Object System.Text.UTF8Encoding($false)))
+} catch { }if(-not $rawAll){
     try {
       $dbg = Join-Path $RepoRoot "logs\US\_runcontext_capture_last.txt"
       New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dbg) | Out-Null
