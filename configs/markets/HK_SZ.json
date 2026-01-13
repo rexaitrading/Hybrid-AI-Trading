@@ -1,0 +1,23 @@
+{
+    "market":  "HK_SZ",
+    "enabled":  false,
+    "tz":  "Asia/Shanghai",
+    "calendar_id":  "XSHE",
+    "log_namespace":  "HK_SZ",
+    "rth_open_local":  "09:30",
+    "rth_close_local":  "15:00",
+    "lunch_break":  {
+                        "start":  "11:30",
+                        "end":  "13:00"
+                    },
+    "sessions":  [
+                     "RTH"
+                 ],
+    "symbols_default":  [
+
+                        ],
+    "broker_profile":  "IBKR_CN",
+    "access_route":  "STOCK_CONNECT",
+    "settlement_mechanics":  "BROKER_ENFORCED",
+    "notes":  "CN A-shares via Stock Connect; do NOT encode T+1/price limits/quotas in engine. Broker enforces."
+}
