@@ -56,6 +56,16 @@ try {
 }
 # --- END CANONICALIZE repoRoot ---
 
+# --- logs roots (StrictMode-safe) ---
+$logsDir = Join-Path $repoRoot "logs"
+$logsDirOut = $null
+try {
+  $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
+} catch { $logsDirOut = $null }
+if(-not $logsDirOut){ $logsDirOut = $logsDir }
+# --- end logs roots ---
+
+
 # --- Normalize symbol early (defensive, deterministic) ---
 $s = ($Symbol + "").ToUpperInvariant()
 if($s -notin @("NVDA","SPY","QQQ","ALL")){ Fail-Script ("Invalid -Symbol=" + $Symbol) }
@@ -175,6 +185,18 @@ try{
   Fail-Contract "crisis_regime check failed"
 }
 # CRISIS_VETO_END
+# CRASHMODE_FLATTEN_GATE_BEGIN
+# Institutional: if crisis_regime=true, require flatten evidence ok=true (defense-in-depth).
+try{
+  if($st -and ($st.PSObject.Properties.Name -contains "crisis_regime") -and [bool]$st.crisis_regime){
+    if(-not ($st.PSObject.Properties.Name -contains "crashmode_flatten_ok")){ Fail-Contract "missing crashmode_flatten_ok" }
+    if(-not [bool]$st.crashmode_flatten_ok){ Fail-Contract "crashmode_flatten_ok=false" }
+  }
+} catch {
+  Fail-Contract "crashmode flatten gate failed"
+}
+# CRASHMODE_FLATTEN_GATE_END
+
 # REGIME_VETO_BEGIN
 # Institutional: explicit regime gating (fail-closed). CRISIS defaults to protect capital.
 try{
@@ -246,24 +268,37 @@ if(($mode + "") -eq "BUILD_ONLY"){
 # --- END BUILD_ONLY ---
 
 # MARKET_SESSION_GATE_BEGIN
-# Phase-5: market session gate (LIVE semantics only; BUILD_ONLY already returned above)
+# Phase-5: market session gate via Resolve-RunContext (single truth).
 # Policy:
 # - If market_closed_today=true => closed-day branch handles diagnostic exit=10 (existing behavior).
-# - If open day but currently outside RTH or in lunch => deny live readiness (exit 2).
+# - If open day and Mode=ALL_STRICT => require session_name == "RTH" (deny pre/open/lunch/afterclose).
 try {
   $asOf = ""
   if($st -and ($st.PSObject.Properties.Name -contains "as_of_date")){
     $asOf = [string]$st.as_of_date
     if($asOf.Length -ge 10){ $asOf = $asOf.Substring(0,10) }
   }
-  if($asOf){
-    $mcPath = Join-Path $repoRoot "tools\Resolve-MarketContext.ps1"
-    if(Test-Path -LiteralPath $mcPath){
-      $mc = & powershell -NoProfile -ExecutionPolicy Bypass -File $mcPath -Market $Market -AsOfDate $asOf | ConvertFrom-Json
-      if($mc -and ($mc.PSObject.Properties.Name -contains "market_closed_today") -and (-not [bool]$mc.market_closed_today)){
-        if(($mode + "") -eq "ALL_STRICT"){
-          if(($mc.PSObject.Properties.Name -contains "is_open_now") -and (-not [bool]$mc.is_open_now)){
-            Fail-Contract "market_session_closed_now=true"
+
+  $rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+  if(Test-Path -LiteralPath $rcPath){
+    $rcArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$rcPath,"-Market",$Market,"-Symbol",$Symbol)
+    if(($asOf + "").Trim()){ $rcArgs += @("-AsOfDate",$asOf) }
+
+    $rcRaw = & powershell @rcArgs 2>$null | Out-String
+    $rcRaw = ($rcRaw + "").Trim()
+    if($rcRaw){
+      $ix0 = $rcRaw.IndexOf('{')
+      $ix1 = $rcRaw.LastIndexOf('}')
+      if($ix0 -ge 0 -and $ix1 -gt $ix0){
+        $rcJson = $rcRaw.Substring($ix0, ($ix1 - $ix0 + 1))
+        $rc = $rcJson | ConvertFrom-Json -ErrorAction Stop
+
+        if($rc -and (-not [bool]$rc.market_closed_today)){
+          if(($mode + "") -eq "ALL_STRICT"){
+            $sn = ([string]$rc.session_name).Trim().ToUpperInvariant()
+            if($sn -ne "RTH"){
+              Fail-Contract ("market_session_not_rth session_name=" + [string]$rc.session_name)
+            }
           }
         }
       }
