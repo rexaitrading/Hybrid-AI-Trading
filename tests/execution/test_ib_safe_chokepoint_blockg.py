@@ -8,6 +8,7 @@ import pytest
 
 from hybrid_ai_trading.execution.blockg_enforce import BlockGNotReady
 from hybrid_ai_trading.broker.ib_safe import ib_place_order_chokepoint
+import hybrid_ai_trading.broker.ib_safe as ibs
 
 
 class _C:
@@ -74,9 +75,7 @@ def test_ib_chokepoint_blocks_live_when_blockg_not_ready(tmp_path: Path, monkeyp
     token = tmp_path / "live_arm_nvda.json"
     token.write_text(json.dumps({"symbol":"NVDA","as_of_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"), "armed": True}) + "\n", encoding="utf-8")
     monkeypatch.setenv("HAT_LIVE_ARM_TOKEN_PATH", str(token))
-    p = _write_status(tmp_path, nvda_ready=False)
-    monkeypatch.setenv("HAT_BLOCKG_STATUS_PATH", str(p))
-
+    monkeypatch.setattr(ibs, "require_blockg_ready_via_powershell", lambda *a, **k: (_ for _ in ()).throw(BlockGNotReady("stub_not_ready")))
     ib = _IB()
     c = _C("NVDA")
     o = _O()
@@ -94,12 +93,9 @@ def test_ib_chokepoint_allows_live_when_blockg_ready(tmp_path: Path, monkeypatch
     token = tmp_path / "live_arm_nvda.json"
     token.write_text(json.dumps({"symbol":"NVDA","as_of_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"), "armed": True}) + "\n", encoding="utf-8")
     monkeypatch.setenv("HAT_LIVE_ARM_TOKEN_PATH", str(token))
-    p = _write_status(tmp_path, nvda_ready=True)
-    monkeypatch.setenv("HAT_BLOCKG_STATUS_PATH", str(p))
-
+    monkeypatch.setattr(ibs, "require_blockg_ready_via_powershell", lambda *a, **k: None)
     ib = _IB()
     c = _C("NVDA")
     o = _O()
-
     ib_place_order_chokepoint(ib, c, o)
     assert ib.called is True
