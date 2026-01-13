@@ -83,6 +83,16 @@ class IBAdapter(Broker):
 
         # Block-G: hard fail-closed for LIVE orders (single chokepoint)
         meta0 = meta or {}
+        # Ensure meta carries market/symbol for RunContext hydration (LIVE only; fail-closed)
+        try:
+            if isinstance(meta0, dict):
+                meta0.setdefault("symbol", symbol)
+                if ctx is not None and hasattr(ctx, "market"):
+                    meta0.setdefault("market", str(getattr(ctx, "market") or "US").upper().strip())
+                else:
+                    meta0.setdefault("market", "US")
+        except Exception:
+            pass
         is_paper = True
         try:
             if isinstance(meta0, dict) and ("is_paper" in meta0):

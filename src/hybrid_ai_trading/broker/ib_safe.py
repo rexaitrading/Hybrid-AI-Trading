@@ -4,6 +4,7 @@ from __future__ import annotations
 from hybrid_ai_trading.runtime.run_context import RunContext
 import os
 import json
+import subprocess
 import random
 from datetime import datetime, timezone
 import time
@@ -70,6 +71,105 @@ def _cooldown_active(repo_root: str) -> bool:
     now = datetime.now(timezone.utc)
     return now < until
 
+
+
+# RUNCONTEXT_LIVE_SESSION_GATE_BEGIN
+def _repo_root_from_ctx_or_env(ctx: RunContext | None) -> str:
+    try:
+        if ctx is not None and hasattr(ctx, "repo_root"):
+            rr = str(getattr(ctx, "repo_root") or "").strip()
+            if rr:
+                return rr
+    except Exception:
+        pass
+    rr = str(os.environ.get("HAT_REPO_ROOT", "")).strip()
+    return rr or os.getcwd()
+
+def _ps_exe() -> str:
+    w = os.environ.get("WINDIR", r"C:\Windows")
+    return str(Path(w) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe")
+
+def _runctx_from_ps(market: str, symbol: str, as_of_date: str | None = None) -> Dict[str, Any]:
+    repo_root = _repo_root_from_ctx_or_env(None)
+    rc = Path(repo_root) / "tools" / "Resolve-RunContext.ps1"
+    if not rc.exists():
+        raise RuntimeError(f"RUNCONTEXT FAIL-CLOSED: missing {rc}")
+
+    args = [
+        _ps_exe(),
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", str(rc),
+        "-Market", str(market).upper().strip(),
+        "-Symbol", str(symbol).upper().strip(),
+    ]
+    if as_of_date and str(as_of_date).strip():
+        args += ["-AsOfDate", str(as_of_date).strip()]
+
+    cp = subprocess.run(args, cwd=str(Path(repo_root)), capture_output=True, text=True)
+    out = (cp.stdout or "").strip()
+    if cp.returncode != 0:
+        raise RuntimeError(f"RUNCONTEXT FAIL-CLOSED: rc={cp.returncode} stderr={(cp.stderr or '').strip()[:300]}")
+
+    i0 = out.find("{")
+    i1 = out.rfind("}")
+    if i0 < 0 or i1 <= i0:
+        raise RuntimeError(f"RUNCONTEXT FAIL-CLOSED: non-json stdout head={out[:120]!r}")
+
+    return json.loads(out[i0 : i1 + 1])
+
+def _enforce_live_session_gate(ctx: RunContext | None, meta: Dict[str, Any] | None, sym: str | None) -> None:
+    # Enforce ONLY for LIVE (NOT for PAPER/PAPERLIVE).
+    mode = _infer_mode(ctx)
+    if mode != "LIVE":
+        return
+
+    # Prefer ctx truth if available
+    market_closed = None
+    session_name = None
+    try:
+        if ctx is not None:
+            if hasattr(ctx, "market_closed_today"):
+                market_closed = bool(getattr(ctx, "market_closed_today"))
+            if hasattr(ctx, "session_name"):
+                session_name = str(getattr(ctx, "session_name") or "").strip().upper()
+    except Exception:
+        market_closed = None
+        session_name = None
+
+    # Hydrate if missing
+    if market_closed is None or not session_name:
+        mkt = "US"
+        as_of = None
+        try:
+            if ctx is not None and hasattr(ctx, "market"):
+                mkt = str(getattr(ctx, "market") or mkt).strip().upper()
+        except Exception:
+            pass
+        try:
+            if meta and isinstance(meta, dict):
+                mkt = str(meta.get("market") or mkt).strip().upper()
+                as_of = meta.get("as_of_date") or meta.get("asOfDate") or None
+        except Exception:
+            pass
+        use_sym = (sym or "")
+        try:
+            if (not use_sym) and meta and isinstance(meta, dict):
+                use_sym = str(meta.get("symbol") or "").strip().upper()
+        except Exception:
+            pass
+        if not use_sym:
+            use_sym = "ALL"
+
+        rc = _runctx_from_ps(market=mkt, symbol=use_sym, as_of_date=str(as_of) if as_of else None)
+        market_closed = bool(rc.get("market_closed_today", True))
+        session_name = str(rc.get("session_name", "CLOSED")).strip().upper()
+
+    # Fail-closed
+    if bool(market_closed):
+        raise RuntimeError("LIVE BLOCKED: market_closed_today=true (RunContext)")
+    if str(session_name).upper() != "RTH":
+        raise RuntimeError(f"LIVE BLOCKED: session_name={session_name} (RunContext)")
+# RUNCONTEXT_LIVE_SESSION_GATE_END
 def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None, meta: Dict[str, Any] | None = None) -> Any:
     """
     Single chokepoint for raw IB placeOrder.
@@ -101,6 +201,7 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
             sym = str(meta.get("symbol", "") or "").upper().strip()
         except Exception:
             sym = None
+    _enforce_live_session_gate(ctx, meta, sym)
     # Enforce Block-G + live gates (fail-closed)
     if _is_live(ctx):
         # CrashMode cooldown deny (defense-in-depth). Fail-closed for LIVE/PAPERLIVE.
