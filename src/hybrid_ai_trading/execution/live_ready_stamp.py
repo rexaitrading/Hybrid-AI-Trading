@@ -4,6 +4,7 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from hybrid_ai_trading.runtime.run_context import RunContext
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -18,6 +19,24 @@ _ENV_KEY = "HAT_LIVE_READY_STAMP_PATH"
 
 def _today_utc_yyyy_mm_dd() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def _today_from_runcontext(symbol: str) -> str:
+    """
+    A3 single-truth: for LIVE gating, prefer RunContext as_of_date (market-aware).
+    Fail-open is NOT allowed; if RunContext is unavailable, fall back to UTC today.
+    """
+    try:
+        s = (symbol or "NVDA").upper().strip() or "NVDA"
+        mkt = str(os.environ.get("HAT_MARKET", "US")).strip().upper() or "US"
+        ctx = RunContext.from_env_and_args(symbol=s, regime="unknown", market=mkt)
+        d = str(getattr(ctx, "as_of_date", "") or "")[:10]
+        if d:
+            return d
+    except Exception:
+        pass
+    return _today_utc_yyyy_mm_dd()
+
 
 
 def _is_live() -> bool:
@@ -50,8 +69,7 @@ def require_nvda_live_stamp(symbol: str) -> None:
     d = load_live_ready_stamp()
     as_of = str(d.get("as_of_date") or "")[:10]
     ok = bool(d.get("nvda_live_ready", False))
-    today = _today_utc_yyyy_mm_dd()
-
+    today = _today_from_runcontext(s)
     if as_of != today:
         raise LiveStampNotReady(f"NVDA live stamp not for today: as_of_date={as_of} today={today}")
     if not ok:
