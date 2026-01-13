@@ -330,6 +330,19 @@ $crisisPortfolioHalt = $false
 $crisisRiskFlatten = $false
 $crisisCooldownMinutes = 0
 $crisisStatusPath = Join-Path $logsDir "crisis_regime_status.json"
+
+# If missing, default OK for NON-LIVE only; keep fail-closed for LIVE.
+# LIVE semantics preserved: missing => crisisOkToday stays false.
+try {
+  $mode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  if(-not (Test-Path -LiteralPath $crisisStatusPath)){
+    if($mode -ne "LIVE"){
+      $crisisOkToday = $true
+      $crisisRegime  = $false
+      $crisisReason  = "missing_crisis_status_default_ok_nonlive"
+    }
+  }
+} catch { }
 try {
   $cj = Read-JsonSafe $crisisStatusPath
   if($cj){
@@ -456,6 +469,19 @@ $crisisPortfolioHalt = $false
 $crisisRiskFlatten = $false
 $crisisCooldownMinutes = 0
 $crisisStatusPath = Join-Path $logsDir "crisis_regime_status.json"
+
+# If missing, default OK for NON-LIVE only; keep fail-closed for LIVE.
+# LIVE semantics preserved: missing => crisisOkToday stays false.
+try {
+  $mode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  if(-not (Test-Path -LiteralPath $crisisStatusPath)){
+    if($mode -ne "LIVE"){
+      $crisisOkToday = $true
+      $crisisRegime  = $false
+      $crisisReason  = "missing_crisis_status_default_ok_nonlive"
+    }
+  }
+} catch { }
 try {
   $cj = Read-JsonSafe $crisisStatusPath
   if($cj){
