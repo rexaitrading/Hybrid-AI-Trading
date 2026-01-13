@@ -13,6 +13,36 @@ function Resolve-RepoRoot(){
   try { return (Resolve-Path -LiteralPath $rr -ErrorAction Stop).Path } catch { return $rr }
 }
 
+function Ensure-GlobalReadyV0([string]$Market,[string]$LogsDir,[string]$TodayLocal){
+  $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+  $repoRoot = Resolve-RepoRoot
+  $prods = @(
+    @{ name="market_dna.json";        script=(Join-Path $repoRoot "tools\Build-MarketDNA.ps1") },
+    @{ name="edge_validity.json";     script=(Join-Path $repoRoot "tools\Build-EdgeValidity.ps1") },
+    @{ name="dependency_risk.json";   script=(Join-Path $repoRoot "tools\Build-DependencyRisk.ps1") },
+    @{ name="risk_guard_status.json"; script=(Join-Path $repoRoot "tools\Build-RiskGuardStatus.ps1") }
+  )
+
+  foreach($p in $prods){
+    $path = Join-Path $LogsDir $p.name
+    $need = $true
+    if(Test-Path -LiteralPath $path){
+      try{
+        $o = (Get-Content -LiteralPath $path -Raw -Encoding UTF8) | ConvertFrom-Json
+        if(([string]$o.as_of_date) -eq $TodayLocal -and ($null -ne $o.ok_today)){
+          $need = $false
+        }
+      } catch { $need = $true }
+    }
+    if($need){
+      if(Test-Path -LiteralPath $p.script){
+        & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $p.script -Market $Market | Out-Null
+      }
+    }
+  }
+}
+
+
 function WantSym([string]$sym){
   $s = $Symbol.ToUpperInvariant()
   return ($s -eq "ALL" -or $s -eq $sym.ToUpperInvariant())
@@ -563,6 +593,7 @@ $p23 = Prefer-LogsPath (Join-Path $logsDir "phase23_health_daily.csv") (Join-Pat
     # A2: prefer producer status json (fallback to CSV below)
 $evs = Prefer-LogsPath (Join-Path $logsDir "ev_hard_status.json") (Join-Path $logsRoot "ev_hard_status.json")
 # ---- C5 Global-Ready gates (fail-closed) ----
+Ensure-GlobalReadyV0 -Market $Market -LogsDir $logsDir -TodayLocal $todayLocal
 $gdnaPath  = Prefer-LogsPath (Join-Path $logsDir "market_dna.json") (Join-Path $logsRoot "market_dna.json")
 $gedgePath = Prefer-LogsPath (Join-Path $logsDir "edge_validity.json") (Join-Path $logsRoot "edge_validity.json")
 $gdepPath  = Prefer-LogsPath (Join-Path $logsDir "dependency_risk.json") (Join-Path $logsRoot "dependency_risk.json")
@@ -744,7 +775,9 @@ $intel_ok_today = $false
 $intel_as_of_date = ""
 $intel_age_minutes = 999999
 $intel_kind = ""
-$intel_source_path = (Join-Path $logsDir "risk_pulse.jsonl")
+# Intel pulse path: prefer per-market, then logs root, then logs\.intel
+$intel_source_path = Prefer-LogsPath (Join-Path $logsDir "risk_pulse.jsonl") (Join-Path $logsRoot "risk_pulse.jsonl")
+$intel_source_path = Prefer-LogsPath $intel_source_path (Join-Path $logsRoot ".intel\risk_pulse.jsonl")
 
 try{
   if(Test-Path -LiteralPath $intel_source_path){
@@ -1127,6 +1160,7 @@ $p4ok = Read-StatusOkToday $p4s $todayLocal
 # A2: prefer producer status json (FULL builder) before CSV parsing
 $evs = Prefer-LogsPath (Join-Path $logsDir "ev_hard_status.json") (Join-Path $logsRoot "ev_hard_status.json")
 # ---- C5 Global-Ready gates (fail-closed) ----
+Ensure-GlobalReadyV0 -Market $Market -LogsDir $logsDir -TodayLocal $todayLocal
 $gdnaPath  = Prefer-LogsPath (Join-Path $logsDir "market_dna.json") (Join-Path $logsRoot "market_dna.json")
 $gedgePath = Prefer-LogsPath (Join-Path $logsDir "edge_validity.json") (Join-Path $logsRoot "edge_validity.json")
 $gdepPath  = Prefer-LogsPath (Join-Path $logsDir "dependency_risk.json") (Join-Path $logsRoot "dependency_risk.json")

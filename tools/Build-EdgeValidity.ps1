@@ -20,6 +20,34 @@ function Slice-Date([string]$s){
   return $s
 }
 
+function Get-EvidenceTodayRows([string]$LogsDir,[string]$TodayLocal){
+  $ev = Join-Path $LogsDir "nvda_gatescore_events.jsonl"
+  if(-not (Test-Path -LiteralPath $ev)){ return 0 }
+  try{
+    $pat = '"as_of_date":"{0}"' -f $TodayLocal
+    $n = (Select-String -LiteralPath $ev -Pattern $pat -SimpleMatch -ErrorAction SilentlyContinue | Measure-Object).Count
+    return [int]$n
+  } catch { return 0 }
+}
+function Has-ProxyMetricsToday([string]$LogsDir,[string]$TodayLocal){
+  $ev = Join-Path $LogsDir "nvda_gatescore_events.jsonl"
+  if(-not (Test-Path -LiteralPath $ev)){ return $true } # fail-closed
+  try{
+    $patDay = '"as_of_date":"{0}"' -f $TodayLocal
+    $hits = Select-String -LiteralPath $ev -Pattern $patDay -SimpleMatch -ErrorAction SilentlyContinue
+    foreach($h in $hits){
+      if($h.Line -match '"metrics_source":"proxy_'){ return $true }
+    }
+    return $false
+  } catch { return $true } # fail-closed
+}
+function Allow-NonLiveUs([string]$Market){
+  $mode = ($env:HAT_MODE + "").Trim().ToUpperInvariant()
+  if($mode -eq "LIVE"){ return $false }
+  return ($Market.ToUpperInvariant() -eq "US")
+}
+
+
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $rc = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol NVDA | ConvertFrom-Json
@@ -30,12 +58,32 @@ if(-not $logsDir){ $logsDir = Join-Path $repoRoot "logs" }
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null;
 $outPath = Join-Path $logsDir "edge_validity.json"
 $obj = [ordered]@{
-  ts_utc   = (Get-Date).ToUniversalTime().ToString("o")
-  market   = $Market
+  ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
+  market     = $Market
   as_of_date = $todayLocal
-  ok_today = $false
+  ok_today   = $false
   edge_score = 0.0
-  reasons  = @("stub_not_implemented")
+  reasons    = @("stub_not_implemented")
 }
+
+$evidenceRows = Get-EvidenceTodayRows -LogsDir $logsDir -TodayLocal $todayLocal
+$allow = (Allow-NonLiveUs -Market $Market)
+$proxy = Has-ProxyMetricsToday -LogsDir $logsDir -TodayLocal $todayLocal
+
+if($allow -and $evidenceRows -gt 0 -and (-not $proxy)){
+  $obj.ok_today = $true
+  $obj.edge_score = 0.0
+  $obj.reasons = @("default_nonlive_us")
+} else {
+  $rs = @()
+  if(-not $allow){ $rs += "blocked_policy_nonlive_us_only" }
+  elseif($evidenceRows -le 0){ $rs += "missing_gatescore_evidence_today" }
+  if($proxy){ $rs += "deny_proxy_metrics_source" }
+  if($rs.Count -eq 0){ $rs = @("stub_not_implemented") }
+  $obj.reasons = $rs
+}
+$obj["evidence_path"] = (Join-Path $logsDir "nvda_gatescore_events.jsonl")
+$obj["evidence_rows_today"] = [int]$evidenceRows
+
 Write-Utf8NoBomLf $outPath ($obj | ConvertTo-Json -Depth 8)
 Write-Host ("[EDGE] wrote " + $outPath + " ok_today=false reason=stub_not_implemented") -ForegroundColor Yellow
