@@ -101,19 +101,19 @@ class IBKRClient(BrokerClient):
             else LimitOrder(side, abs(qty), limit_px)
         )
         # Ensure meta carries market/symbol for RunContext hydration (LIVE only; fail-closed)
-try:
-    meta0.setdefault("symbol", symbol)
-    meta0.setdefault("market", meta0.get("market", "US"))
-except Exception:
-    pass
-
-ctx0 = None
-try:
-    ctx0 = meta0.get("ctx", None) if isinstance(meta0, dict) else None
-except Exception:
-    ctx0 = None
-
-t = ib_place_order_chokepoint(self.ib, c, o, ctx=ctx0, meta=meta0)
+        try:
+            meta0.setdefault("symbol", symbol)
+            meta0.setdefault("market", meta0.get("market", "US"))
+        except Exception:
+            pass
+        
+        ctx0 = None
+        try:
+            ctx0 = meta0.get("ctx", None) if isinstance(meta0, dict) else None
+        except Exception:
+            ctx0 = None
+        
+        t = ib_place_order_chokepoint(self.ib, c, o, ctx=ctx0, meta=meta0)
         self.ib.sleep(0.5)
         order_id = str(t.order.orderId)
         fills = [
