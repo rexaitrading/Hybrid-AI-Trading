@@ -161,3 +161,6 @@ tools/blockg_builder_breadcrumb.txt
 !configs/symbols/resolved/*.json
 tools/blockg_builder_crash.txt
 
+# HAT quarantine / corrupted artifacts (never commit)
+tools/_quarantine_corrupted/
+tools/*.CORRUPTED_*
