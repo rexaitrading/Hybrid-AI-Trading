@@ -18,14 +18,20 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 
 # 0) Build contract first (single producer of blockg_status_stub.json)
-$builder = Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1"
-if(-not (Test-Path -LiteralPath $builder)){ throw "Missing builder: $builder" }
+# A4 wrapper: allow callers that already built (e.g., Phase3 timeout builder) to skip rebuild.
+$skipBuild = (([string]$env:HAT_BLOCKG_SKIP_BUILD) + "").Trim()
+if($skipBuild -eq "1"){
+  Write-Host "[BLOCKG] Invoke-BlockGCheck: SKIP build (env:HAT_BLOCKG_SKIP_BUILD=1)" -ForegroundColor Yellow
+} else {
+  $builder = Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1"
+  if(-not (Test-Path -LiteralPath $builder)){ throw "Missing builder: $builder" }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File $builder -Symbol $Symbol -Market $Market *>&1 | Out-Host
-if ($LASTEXITCODE -ne 0) {
-  $code = $LASTEXITCODE
-  $global:LASTEXITCODE = $code
-  exit $code
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $builder -Symbol $Symbol -Market $Market *>&1 | Out-Host
+  if ($LASTEXITCODE -ne 0) {
+    $code = $LASTEXITCODE
+    $global:LASTEXITCODE = $code
+    exit $code
+  }
 }
 
 # 1) Contract-only checker
