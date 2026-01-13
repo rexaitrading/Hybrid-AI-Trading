@@ -13,6 +13,14 @@ Set-StrictMode -Version Latest
 # BLOCKG_LOCKPACK_BEGIN
 Write-Host "`n[OPS] Block-G LOCKPACK (non-fatal; cmd wrapper)..." -ForegroundColor Cyan
 $lockpack_exit = 0
+  # ---- CRISIS PRODUCER (A2-adjacent; LIVE fail-closed) ----
+  try {
+    & .\tools\Write-CrisisRegimeStatus.ps1 -Market $Market -Symbol $Symbol *>&1 | Out-Host
+  } catch {
+    Write-Host ("[CRISIS] producer failed: " + $_.Exception.Message) -ForegroundColor Yellow
+  }
+  # ---- END CRISIS PRODUCER ----
+
 try {
   $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
   $cmd = "`"$psExe`" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `".\tools\Run-BlockGLockPack.ps1`" -Symbol NVDA"
