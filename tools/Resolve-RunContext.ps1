@@ -4,7 +4,7 @@ param(
   [string]$Market = "US",
   [ValidateSet("PAPER","PAPERLIVE","LIVE")]
   [string]$TradeMode = "PAPER",
-  [ValidateSet("NVDA","SPY","QQQ","ALL")]
+
   [string]$Symbol = "ALL",
   [string]$AsOfDate = ""
 )
