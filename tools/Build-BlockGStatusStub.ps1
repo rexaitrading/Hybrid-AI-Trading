@@ -615,10 +615,23 @@ try {
 }
 $crisisAlphaEnabled = $false
 # REGIME_READER_END
+# FAST_SESSION_FIELDS_BEGIN
+$rcSessionNameFast = "CLOSED"
+$rcIsTradingDayFast = $false
+try {
+  $rcFast = Read-RunContextSafe $repoRoot $Market $Symbol $todayLocal
+  if($rcFast){
+    if($rcFast.PSObject.Properties.Name -contains "session_name"){ $rcSessionNameFast = [string]$rcFast.session_name }
+    if($rcFast.PSObject.Properties.Name -contains "is_trading_day"){ $rcIsTradingDayFast = [bool]$rcFast.is_trading_day }
+  }
+} catch { $rcSessionNameFast="CLOSED"; $rcIsTradingDayFast=$false }
+# FAST_SESSION_FIELDS_END
 $payload = [ordered]@{
       ts_utc=$tsUtc
       as_of_date=$todayLocal
       date=$todayLocal
+      is_trading_day=[bool]$rcIsTradingDayFast
+      session_name=[string]$rcSessionNameFast
       phase23_health_ok_today=[bool]$phase23Ok
       ev_hard_daily_ok_today=[bool]$evHardOk
       ev_hard_daily_as_of_date=$evAsOf
@@ -827,46 +840,49 @@ try {
 # MICRO_SOURCE_LIVE_VETO_END
 
 # GS_ELIGIBLE_ZERO_BEGIN
+# RUNCONTEXT_HELPER_BEGIN
+function Read-RunContextSafe([string]$RepoRoot,[string]$Market,[string]$Symbol,[string]$AsOfDate){
+  $rcPath = Join-Path $RepoRoot "tools\Resolve-RunContext.ps1"
+  if(-not (Test-Path -LiteralPath $rcPath)){ return $null }
+
+  $args = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$rcPath,"-Market",$Market,"-Symbol",$Symbol)
+  if((($AsOfDate + "")).Trim()){ $args += @("-AsOfDate",$AsOfDate) }
+
+  $raw = & powershell @args 2>$null | Out-String
+  $raw = ($raw + "").Trim()
+  if(-not $raw){ return $null }
+
+  $i0 = $raw.IndexOf('{')
+  $i1 = $raw.LastIndexOf('}')
+  if($i0 -lt 0 -or $i1 -le $i0){ return $null }
+
+  $json = $raw.Substring($i0, ($i1 - $i0 + 1))
+  try { return ($json | ConvertFrom-Json -ErrorAction Stop) } catch { return $null }
+}
+# RUNCONTEXT_HELPER_END
+
 # MARKET_CONTEXT_AUTHORITY_BEGIN
-# Phase-5: market truth authority for closed/open (per-market holidays + session windows).
-# Fail-closed on any error => market_closed_today=true, is_open_now=false
+# Phase-5: market truth authority via RunContext (single truth).
+# Fail-closed on any error => market_closed_today=true, is_open_now=false, session_name="CLOSED"
+$rcSessionName = "CLOSED"
+$rcIsTradingDay = $false
 $marketIsOpenNow = $false
-$marketContext = $null
+$marketClosedToday = $true
 try {
-  $mcPath = Join-Path $repoRoot "tools\Resolve-MarketContext.ps1"
-  if(Test-Path -LiteralPath $mcPath){
-    $marketContext = & powershell -NoProfile -ExecutionPolicy Bypass -File $mcPath -Market $Market -AsOfDate $todayLocal | ConvertFrom-Json
-    if($marketContext -and ($marketContext.PSObject.Properties.Name -contains "is_open_now")){
-      $marketIsOpenNow = [bool]$marketContext.is_open_now
-    }
-  } else {
-    $marketClosedToday = $true
-    $marketIsOpenNow = $false
+  $rc = Read-RunContextSafe $repoRoot $Market $Symbol $todayLocal
+  if($rc){
+    if($rc.PSObject.Properties.Name -contains "market_closed_today"){ $marketClosedToday = [bool]$rc.market_closed_today }
+    if($rc.PSObject.Properties.Name -contains "is_open_now"){ $marketIsOpenNow = [bool]$rc.is_open_now }
+    if($rc.PSObject.Properties.Name -contains "session_name"){ $rcSessionName = [string]$rc.session_name }
+    if($rc.PSObject.Properties.Name -contains "is_trading_day"){ $rcIsTradingDay = [bool]$rc.is_trading_day }
   }
 } catch {
   $marketClosedToday = $true
   $marketIsOpenNow = $false
+  $rcSessionName = "CLOSED"
+  $rcIsTradingDay = $false
 }
 # MARKET_CONTEXT_AUTHORITY_END
-# Weekend-aware clarity (no holiday calendar): market_closed_today is true on Sat/Sun.
-$marketClosedToday = $false
-try {
-  $dow = [int](Get-Date).DayOfWeek
-  if($dow -eq 0 -or $dow -eq 6){ $marketClosedToday = $true }
-} catch { $marketClosedToday = $false }
-
-
-# MARKET_CONTEXT_OVERRIDE_BEGIN
-# After local weekend/holiday heuristics, apply Resolve-MarketContext market_closed_today if available (authoritative).
-try {
-  if($marketContext -and ($marketContext.PSObject.Properties.Name -contains "market_closed_today")){
-    $marketClosedToday = [bool]$marketContext.market_closed_today
-  }
-} catch {
-  $marketClosedToday = $true
-  $marketIsOpenNow = $false
-}
-# MARKET_CONTEXT_OVERRIDE_END
 # EVH_MARKET_CLOSED_AUDIT_BEGIN
 # Audit-only clarity: when market is closed we do not treat EV-hard as "passed".
 $ev_hard_not_evaluated_market_closed = $false
@@ -1588,6 +1604,17 @@ $crashFlattenOk   = [bool]$cm.ok
 $crashFlattenExit = [int]$cm.exit_code
 $crashFlattenPath = [string]$cm.path
 # CRASHMODE_FLATTEN_READER_END
+# FAST_SESSION_FIELDS_BEGIN
+$rcSessionNameFast = "CLOSED"
+$rcIsTradingDayFast = $false
+try {
+  $rcFast = Read-RunContextSafe $repoRoot $Market $Symbol $todayLocal
+  if($rcFast){
+    if($rcFast.PSObject.Properties.Name -contains "session_name"){ $rcSessionNameFast = [string]$rcFast.session_name }
+    if($rcFast.PSObject.Properties.Name -contains "is_trading_day"){ $rcIsTradingDayFast = [bool]$rcFast.is_trading_day }
+  }
+} catch { $rcSessionNameFast="CLOSED"; $rcIsTradingDayFast=$false }
+# FAST_SESSION_FIELDS_END
 
 $payload = [ordered]@{
     ts_utc = $tsUtc
@@ -1614,6 +1641,8 @@ $payload = [ordered]@{
 
     market_closed_today = $marketClosedToday
     market_is_open_now  = [bool]$marketIsOpenNow
+    is_trading_day   = [bool]$rcIsTradingDay
+    session_name     = [string]$rcSessionName
     ev_hard_not_evaluated_market_closed = $ev_hard_not_evaluated_market_closed
     gatescore_nvda_eligible_zero = $gsNvdaEligibleZero
     date = $today
