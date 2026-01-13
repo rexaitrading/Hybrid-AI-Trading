@@ -14,6 +14,20 @@ def _blockg_guard_if_live(symbol: str) -> None:
     if sym in ("NVDA", "SPY", "QQQ"):
         require_blockg_ready_for_live(sym)
 
+def _merge_meta_ctx(meta: Optional[Dict[str, Any]], ctx: RunContext | None, symbol: str) -> Dict[str, Any]:
+    m: Dict[str, Any] = dict(meta or {})
+    # ctx is authoritative for downstream (A3). Stored inside meta for older call sites.
+    if ctx is not None:
+        m["ctx"] = ctx
+        try:
+            if hasattr(ctx, "market") and getattr(ctx, "market"):
+                m.setdefault("market", str(getattr(ctx, "market")).upper().strip())
+        except Exception:
+            pass
+    m.setdefault("symbol", str(symbol or "").upper().strip())
+    return m
+
+
 class OrderManager:
     def __init__(self) -> None:
         self.broker = make_broker()
@@ -30,7 +44,7 @@ class OrderManager:
         self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None, ctx: RunContext | None = None
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
-        oid, info = self.broker.place_order(symbol, "BUY", qty, "MARKET", meta=meta)
+        oid, info = self.broker.place_order(symbol, "BUY", qty, "MARKET", meta=meta0, ctx=ctx)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
         return out
@@ -40,7 +54,7 @@ class OrderManager:
         self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None, ctx: RunContext | None = None
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
-        oid, info = self.broker.place_order(symbol, "SELL", qty, "MARKET", meta=meta)
+        oid, info = self.broker.place_order(symbol, "SELL", qty, "MARKET", meta=meta0, ctx=ctx)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
         return out
@@ -56,8 +70,7 @@ class OrderManager:
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
         oid, info = self.broker.place_order(
-            symbol, "BUY", qty, "LIMIT", limit_price=limit_price, meta=meta
-        )
+            symbol, "BUY", qty, "LIMIT", limit_price=limit_price, meta=meta0, ctx=ctx)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
         return out
@@ -73,8 +86,7 @@ class OrderManager:
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
         oid, info = self.broker.place_order(
-            symbol, "SELL", qty, "LIMIT", limit_price=limit_price, meta=meta
-        )
+            symbol, "SELL", qty, "LIMIT", limit_price=limit_price, meta=meta0, ctx=ctx)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
         return out
