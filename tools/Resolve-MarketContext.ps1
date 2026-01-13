@@ -27,6 +27,7 @@ function Resolve-TimeZoneInfo([string]$tzId){
     "Asia/Tokyo" = "Tokyo Standard Time"
     "Asia/Hong_Kong" = "China Standard Time"
     "Asia/Singapore" = "Singapore Standard Time"
+    "Asia/Shanghai"  = "China Standard Time"
     "UTC" = "UTC"
   }
 
@@ -48,6 +49,7 @@ function Parse-HHMM([string]$hhmm){
   $t = $hhmm.Trim()
   return [TimeSpan]::ParseExact($t, "hh\:mm", $null)
 }
+
 function LocalDateTime([string]$ymd, [TimeSpan]$ts){
   return [datetime]::ParseExact($ymd, "yyyy-MM-dd", $null).Add($ts)
 }
@@ -60,9 +62,9 @@ $asOfSource = "param"
 if(-not $AsOfDate){
   $asOfSource = "market_tz_now"
   try {
-    $nowUtc = [DateTimeOffset]::UtcNow
-    $local = [System.TimeZoneInfo]::ConvertTime($nowUtc.UtcDateTime, $tzi)
-    $AsOfDate = $local.ToString("yyyy-MM-dd")
+    $nowUtc0 = [DateTimeOffset]::UtcNow
+    $local0 = [System.TimeZoneInfo]::ConvertTime($nowUtc0.UtcDateTime, $tzi)
+    $AsOfDate = $local0.ToString("yyyy-MM-dd")
   } catch {
     $AsOfDate = (Get-Date).ToString("yyyy-MM-dd")
     $asOfSource = "local_fallback"
@@ -74,7 +76,7 @@ $dt = [DateTime]::ParseExact($AsOfDate,"yyyy-MM-dd",$null)
 $closed = ($dt.DayOfWeek -eq "Saturday" -or $dt.DayOfWeek -eq "Sunday")
 $closed_reason = if($closed){"weekend"}else{""}
 
-# Per-market holiday override (configs\market_holidays.json)
+# Per-market holiday override (configs\market_holidays.json) — authoritative
 try {
   $holPath = Join-Path $repoRoot "configs\market_holidays.json"
   if(Test-Path -LiteralPath $holPath){
@@ -82,14 +84,14 @@ try {
     $m = ($Market + "").ToUpperInvariant()
 
     $dates = @()
-    if($hj.PSObject.Properties.Name -contains "closed_dates"){
-      # Back-compat: old schema treated as US
-      if($m -eq "US"){ $dates = @($hj.closed_dates) }
-    } elseif($hj.PSObject.Properties.Name -contains $m) {
+    if($hj.PSObject.Properties.Name -contains $m){
       $obj = $hj.$m
       if($obj -and ($obj.PSObject.Properties.Name -contains "closed_dates")){
         $dates = @($obj.closed_dates)
       }
+    } elseif($hj.PSObject.Properties.Name -contains "closed_dates") {
+      # Back-compat: top-level applies to US only
+      if($m -eq "US"){ $dates = @($hj.closed_dates) }
     }
 
     if($dates -contains $AsOfDate){
@@ -120,6 +122,10 @@ $inRth = $false
 $inLunch = $false
 $isOpenNow = $false
 
+# NEW: trading day + session label (authoritative)
+$isTradingDay = (-not $closed)
+$sessionName = "CLOSED"
+
 try {
   $nowUtc = [DateTimeOffset]::UtcNow
   $nowLocal = [System.TimeZoneInfo]::ConvertTime($nowUtc.UtcDateTime, $tzi)
@@ -128,6 +134,7 @@ try {
   if(-not $closed){
     $o = Parse-HHMM $rthOpen
     $c = Parse-HHMM $rthClose
+
     if($o -and $c){
       $startDt = LocalDateTime $AsOfDate $o
       $endDt   = LocalDateTime $AsOfDate $c
@@ -142,11 +149,40 @@ try {
       }
 
       $isOpenNow = ($inRth -and -not $inLunch)
+
+      # Session label
+      if($nowLocal -lt $startDt){
+        $sessionName = "PRE_OPEN"
+      } elseif($nowLocal -ge $endDt){
+        $sessionName = "AFTER_CLOSE"
+      } else {
+        if($inLunch){
+          $sessionName = "LUNCH_BREAK"
+        } elseif($isOpenNow){
+          $sessionName = "RTH"
+        } else {
+          $sessionName = "RTH_CLOSED"
+        }
+      }
+    } else {
+      # No valid RTH window => fail-closed
+      $isTradingDay = $false
+      $isOpenNow = $false
+      $sessionName = "CLOSED"
     }
+  } else {
+    $isOpenNow = $false
+    $sessionName = "CLOSED"
   }
 } catch {
-  # fail-closed: keep isOpenNow=false
+  # fail-closed
+  $closed = $true
+  if(-not $closed_reason){ $closed_reason = "error" }
+  $isTradingDay = $false
+  $inRth = $false
+  $inLunch = $false
   $isOpenNow = $false
+  $sessionName = "CLOSED"
 }
 
 [pscustomobject]@{
@@ -159,6 +195,9 @@ try {
 
   market_closed_today = [bool]$closed
   market_closed_reason = $closed_reason
+
+  is_trading_day = [bool]$isTradingDay
+  session_name = $sessionName
 
   rth_open_local = $rthOpen
   rth_close_local = $rthClose
