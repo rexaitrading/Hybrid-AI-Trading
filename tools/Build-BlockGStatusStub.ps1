@@ -17,8 +17,11 @@ function WantSym([string]$sym){
   $s = $Symbol.ToUpperInvariant()
   return ($s -eq "ALL" -or $s -eq $sym.ToUpperInvariant())
 }
-
-
+function Prefer-LogsPath([string]$Primary,[string]$Fallback){
+  if($Primary -and (Test-Path -LiteralPath $Primary)){ return $Primary }
+  if($Fallback -and (Test-Path -LiteralPath $Fallback)){ return $Fallback }
+  return $Primary
+}
 function Resolve-GatescoreEventsPath([string]$sym,[string]$logsDir){
   $s = ($sym + "").ToLowerInvariant()
   # Prefer canonical STD file first (freshest truth).
@@ -312,12 +315,13 @@ function Get-GSFromEvents([string]$sym, [string]$asOf, [string]$todayLocal){
 
 # Phase-5 Policy A: GLOBAL inputs, per-market outputs
 $logsDirOut = $null
+$logsRoot = Join-Path $repoRoot "logs"
+
 try {
   $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
 } catch { $logsDirOut = $null }
 if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
-  $logsDir  = Join-Path $repoRoot "logs"
-
+$logsDir = $logsDirOut
 # CRISIS_REGIME_STATUS_BEGIN
 # A2: Crisis regime producer status (fail-closed for LIVE when missing/stale)
 $crisisOkToday = $false
@@ -436,13 +440,14 @@ $repoRoot = Resolve-RepoRoot
 
 # Phase-5 Policy A: GLOBAL inputs, per-market outputs
 $logsDirOut = $null
+$logsRoot = Join-Path $repoRoot "logs"
+
 try {
   $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
 } catch { $logsDirOut = $null }
 if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
 # repoRoot resolved above (canonical)
-$logsDir  = Join-Path $repoRoot "logs"
-
+$logsDir = $logsDirOut
 # CRISIS_REGIME_STATUS_BEGIN
 # A2: Crisis regime producer status (fail-closed for LIVE when missing/stale)
 $crisisOkToday = $false
@@ -504,11 +509,10 @@ try {
     # Phase23 today
     $phase23Ok=$false
     # A2: prefer producer status json (fallback to CSV below)
-    $p23s = Join-Path $logsDir "phase23_status.json"
+$p23s = Prefer-LogsPath (Join-Path $logsDir "phase23_status.json") (Join-Path $logsRoot "phase23_status.json")
     $p23ok = Read-StatusOkToday $p23s $todayLocal
     if($null -ne $p23ok){ $phase23Ok = [bool]$p23ok }
-
-    $p23 = Join-Path $logsDir "phase23_health_daily.csv"
+$p23 = Prefer-LogsPath (Join-Path $logsDir "phase23_health_daily.csv") (Join-Path $logsRoot "phase23_health_daily.csv")
     if(Test-Path -LiteralPath $p23){
       try{
         $rows=@(Import-Csv -LiteralPath $p23)
@@ -525,14 +529,12 @@ try {
     # EV-hard today
     $evHardOk=$false
     # A2: prefer producer status json (fallback to CSV below)
-$evs = Join-Path $logsDir "ev_hard_status.json"
-
+$evs = Prefer-LogsPath (Join-Path $logsDir "ev_hard_status.json") (Join-Path $logsRoot "ev_hard_status.json")
 # ---- C5 Global-Ready gates (fail-closed) ----
-$gdnaPath  = Join-Path $logsDir "market_dna.json"
-$gedgePath = Join-Path $logsDir "edge_validity.json"
-$gdepPath  = Join-Path $logsDir "dependency_risk.json"
-$griskPath = Join-Path $logsDir "risk_guard_status.json"
-
+$gdnaPath  = Prefer-LogsPath (Join-Path $logsDir "market_dna.json") (Join-Path $logsRoot "market_dna.json")
+$gedgePath = Prefer-LogsPath (Join-Path $logsDir "edge_validity.json") (Join-Path $logsRoot "edge_validity.json")
+$gdepPath  = Prefer-LogsPath (Join-Path $logsDir "dependency_risk.json") (Join-Path $logsRoot "dependency_risk.json")
+$griskPath = Prefer-LogsPath (Join-Path $logsDir "risk_guard_status.json") (Join-Path $logsRoot "risk_guard_status.json")
 $gdnaOk  = $false
 $gedgeOk = $false
 $gdepOk  = $false
@@ -560,7 +562,7 @@ if(-not $griskOk){ $reasons.Add("risk_guard_ok_today=false") | Out-Null }
     if($null -ne $evok){ $evHardOk = [bool]$evok; $evAsOf=$todayLocal }
 
     $evAsOf=""
-    $evp = Join-Path $logsDir "phase5_ev_hard_veto_daily.csv"
+$evp = Prefer-LogsPath (Join-Path $logsDir "phase5_ev_hard_veto_daily.csv") (Join-Path $logsRoot "phase5_ev_hard_veto_daily.csv")
     if(Test-Path -LiteralPath $evp){
       try{
         $rows=@(Import-Csv -LiteralPath $evp)
@@ -577,11 +579,10 @@ if(-not $griskOk){ $reasons.Add("risk_guard_ok_today=false") | Out-Null }
     # Phase4 today
     $phase4Ok=$false
     # A2: prefer producer status json (fallback to legacy JSON below)
-    $p4s = Join-Path $logsDir "phase4_status.json"
+$p4s = Prefer-LogsPath (Join-Path $logsDir "phase4_status.json") (Join-Path $logsRoot "phase4_status.json")
     $p4ok = Read-StatusOkToday $p4s $todayLocal
     if($null -ne $p4ok){ $phase4Ok = [bool]$p4ok }
-
-    $p4 = Join-Path $logsDir "phase4_validation_passed.json"
+$p4 = Prefer-LogsPath (Join-Path $logsDir "phase4_validation_passed.json") (Join-Path $logsRoot "phase4_validation_passed.json")
     if(Test-Path -LiteralPath $p4){
       try{
         $j = Get-Content -LiteralPath $p4 -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -997,8 +998,7 @@ try {
 $GS_MIN_EVENTS_REQUIRED = 25
 
 function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
-  $logsDir = Join-Path $RepoRoot "logs"
-
+$logsDir = $logsDirOut
   $p = Resolve-GatescoreEventsPath $Sym $logsDir
 
   $rowsTotal = 0
@@ -1060,10 +1060,10 @@ function Slice-Date([string]$d) {
 
 # ---- GateScore session date (weekend/holiday-safe): derive from pnl summary ----
 # ---- GateScore session date (weekend/holiday-safe): derive from pnl summary ----
-$pnlPath = Join-Path $logsDir "gatescore_pnl_summary.csv"
+$pnlPath = Prefer-LogsPath (Join-Path $logsDir "gatescore_pnl_summary.csv") (Join-Path $logsRoot "gatescore_pnl_summary.csv")
 if (-not (Test-Path -LiteralPath $pnlPath)) {
   # backward-compatible fallback (older name)
-  $pnlPath = Join-Path $logsDir "gatescore_daily_summary.csv"
+$pnlPath = Prefer-LogsPath (Join-Path $logsDir "gatescore_daily_summary.csv") (Join-Path $logsRoot "gatescore_daily_summary.csv")
 }
 $gsAsOf = ""
 if (Test-Path $pnlPath) {
@@ -1090,17 +1090,15 @@ if (-not $gsAsOf) {
 # ---- Phase4 ----
 $phase4Ok = Get-Phase4OkToday $repoRoot $today
 # A2: prefer producer status json (FULL builder) before legacy fallback logic
-$p4s = Join-Path $logsDir "phase4_status.json"
+$p4s = Prefer-LogsPath (Join-Path $logsDir "phase4_status.json") (Join-Path $logsRoot "phase4_status.json")
 $p4ok = Read-StatusOkToday $p4s $todayLocal
 # A2: prefer producer status json (FULL builder) before CSV parsing
-$evs = Join-Path $logsDir "ev_hard_status.json"
-
+$evs = Prefer-LogsPath (Join-Path $logsDir "ev_hard_status.json") (Join-Path $logsRoot "ev_hard_status.json")
 # ---- C5 Global-Ready gates (fail-closed) ----
-$gdnaPath  = Join-Path $logsDir "market_dna.json"
-$gedgePath = Join-Path $logsDir "edge_validity.json"
-$gdepPath  = Join-Path $logsDir "dependency_risk.json"
-$griskPath = Join-Path $logsDir "risk_guard_status.json"
-
+$gdnaPath  = Prefer-LogsPath (Join-Path $logsDir "market_dna.json") (Join-Path $logsRoot "market_dna.json")
+$gedgePath = Prefer-LogsPath (Join-Path $logsDir "edge_validity.json") (Join-Path $logsRoot "edge_validity.json")
+$gdepPath  = Prefer-LogsPath (Join-Path $logsDir "dependency_risk.json") (Join-Path $logsRoot "dependency_risk.json")
+$griskPath = Prefer-LogsPath (Join-Path $logsDir "risk_guard_status.json") (Join-Path $logsRoot "risk_guard_status.json")
 $gdnaOk  = $false
 $gedgeOk = $false
 $gdepOk  = $false
@@ -1193,7 +1191,7 @@ if (Test-Path $evRaw) {
     $evSessionAsOf = Slice-Date ([string]$j.as_of_date)
     $evSessionOk = To-Bool $j.ok
 # A2: prefer producer status json (FULL builder) before CSV parsing
-$p23s = Join-Path $logsDir "phase23_status.json"
+$p23s = Prefer-LogsPath (Join-Path $logsDir "phase23_status.json") (Join-Path $logsRoot "phase23_status.json")
 $p23ok = Read-StatusOkToday $p23s $todayLocal
 if($null -ne $p23ok){ $phase23Ok = [bool]$p23ok; $phase23SawToday = $true }
 
