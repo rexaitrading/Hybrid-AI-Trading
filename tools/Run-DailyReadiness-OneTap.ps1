@@ -4,7 +4,7 @@ param(
   [string]$Symbol="NVDA",
 
   
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
   [string]$Market = "US",
 [switch]$Build
 )
@@ -60,7 +60,20 @@ if(-not (Test-Path -LiteralPath $gsCsv)){
 # --- A2 END ---
 
 # --- end repo root ---
-$today = (Get-Date).ToString("yyyy-MM-dd")
+$today = ""
+# --- A3: today = RunContext.as_of_date (single truth; market-aware) ---
+try {
+  $rcRaw = powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol $Symbol 2>$null | Out-String
+  $rcRaw = ($rcRaw + "").Trim()
+  if($rcRaw){
+    $rcObj = $rcRaw | ConvertFrom-Json
+    if($rcObj.PSObject.Properties.Name -contains "as_of_date" -and (($rcObj.as_of_date + "") -ne "")){
+      $today = [string]$rcObj.as_of_date
+    }
+  }
+} catch { }
+# --- A3 END ---
+if(-not $today){ $today = (Get-Date).ToString("yyyy-MM-dd") }
 
 # Market enabled guard (fail-closed)
 $mg = Join-Path $repoRoot "tools\Test-MarketEnabled.ps1"
@@ -86,6 +99,16 @@ Write-Host ("[ONETAP] Daily readiness start today=" + $today + " symbol=" + $Sym
 $phase4 = Join-Path $repoRoot "tools\Run-Phase4Validation.ps1"
 if(Test-Path $phase4){
   & powershell -NoProfile -ExecutionPolicy Bypass -File $phase4 | Out-Host
+
+# --- A2: Phase4 status producer (market-scoped; fail-closed readers) ---
+$p4s = Join-Path $repoRoot "tools\Write-Phase4Status.ps1"
+if(Test-Path -LiteralPath $p4s){
+  & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $p4s -Market $Market -Symbol $Symbol *>&1 | Out-Host
+} else {
+  Write-Host ("[ONETAP] WARN missing Phase4 status producer: " + $p4s) -ForegroundColor Yellow
+}
+# --- A2 END ---
+
 } else {
   Write-Host "[ONETAP] WARN missing Phase4 builder: $phase4" -ForegroundColor Yellow
 }
