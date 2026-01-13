@@ -89,10 +89,10 @@ function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal)
   return [pscustomobject]@{ path=$p; exists=$exists; seen_count=[int]$seen.Count; top=$top }
 }
 # GS_METRICS_SOURCE_BY_SYMBOL_END
-
 Set-StrictMode -Version Latest
-
-
+# Mode truth (single semantic): LIVE must remain strict.
+$mode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+$isLiveMode = ($mode -eq "LIVE")
 try {
 # --- OUTPUT ENCODING (institutional) ---
 try {
@@ -1441,7 +1441,7 @@ if ($gsMetricsSourceDisallowedForLive) {
   $reasons.Add(("gatescore_metrics_source_disallowed_for_live=" + $gatescore_metrics_source)) | Out-Null
 }
 if ($marketClosedToday) { $reasons.Add("ev_hard_market_closed_today=true") | Out-Null }
-if ($gatescore_metrics_source) { $reasons.Add(("gatescore_metrics_source=" + $gatescore_metrics_source)) | Out-Null }
+if ($isLiveMode -and $gatescore_metrics_source) { $reasons.Add(("gatescore_metrics_source=" + $gatescore_metrics_source)) | Out-Null }
 # GateScore NVDA data-quality reason (audit-only; does not change gating)
 # GateScore NVDA data-quality reason (audit-only; does not change gating)
 if ($gsNvdaEligibleZero) { $reasons.Add("gatescore_nvda_eligible_zero=true") | Out-Null }
@@ -1798,7 +1798,7 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_mean_micro_score = $gsMicro
     gatescore_min_edge_ratio   = $minEdge
     gatescore_min_micro_score  = $minMicro
-    nvda_blockg_ready = ([bool]$nvdaReady -and [bool]$nvda_intel_ok_today)
+nvda_blockg_ready = ([bool]$nvdaReady -and ((-not $isLiveMode) -or [bool]$nvda_intel_ok_today))
     build_mode = "FULL"
     contract_semantics_level = "FULL_LIVE_ELIGIBLE"
     spy_blockg_ready  = $spyReady
