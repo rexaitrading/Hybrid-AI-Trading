@@ -1,4 +1,34 @@
 ---
+## 2026-01-13 - Phase-4 Todayness (per-market) Root-Cause Gate + Hygiene
+
+Goal:
+- Prove true root causes for Phase-4 per-market todayness before any execution changes.
+
+Hard proof (CHECK):
+- Missing per-market Phase-4 validation stamp files:
+  - logs/JP/phase4_validation_passed.json (missing)
+  - logs/HK/phase4_validation_passed.json (missing)
+  - logs/SG/phase4_validation_passed.json (missing)
+  - Global + US exist.
+- Run-Phase4Validation.ps1 (observed in line-anchored proof during CHECK) had:
+  - Copy-before-write ordering bug (copied logs/phase4_validation_passed.json before writing new stamp)
+  - Wrong date authority (as_of_date derived from Get-Date yyyy-MM-dd, not RunContext/HAT_ASOF_DATE)
+- Schema note: global stamp includes exit_code/reason; US stamp uses notes and omits exit_code/reason.
+
+Hygiene action (EXECUTE Step 0.1):
+- Captured WIP diff as UTF-8 no-BOM patch (forensics) and restored clean working tree:
+  - logs/_quarantine/phase4validation_wip_20260113_132932.patch
+
+Must NOT change:
+- Fail-closed semantics
+- Paper safety boundaries
+- Block-G semantic owner authority
+
+Next planned fix (SPEC only; not executed yet):
+- Update Phase-4 harness to write per-market validation_passed directly (no copy-before-write)
+- Source as_of_date from RunContext/HAT_ASOF_DATE (market authority), not local Get-Date.
+---
+---
 ## 2026-01-11 - Ops: Add Verify-BlockG-Ready one-shot premarket gate
 
 Commit: 9c50b406
