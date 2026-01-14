@@ -108,16 +108,16 @@ if(Test-Path -LiteralPath $gsPm){
 $mg = Join-Path $repoRoot "tools\Test-MarketEnabled.ps1"
 if(Test-Path -LiteralPath $mg){
   & powershell -NoProfile -ExecutionPolicy Bypass -File $mg -Market $Market | Out-Host
-  if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+  if($LASTEXITCODE -ne 0){ $finalExit = [int]$LASTEXITCODE; $continue = $false; Write-Host ("[RISKCAP] FAIL-CLOSED: exitcode=" + $finalExit + " (will still emit onetap_summary)") -ForegroundColor Red }
 
 # Risk cap guard (fail-closed)
 $rc = Join-Path $repoRoot "tools\Test-MarketRiskCaps.ps1"
 if(Test-Path -LiteralPath $rc){
   & powershell -NoProfile -ExecutionPolicy Bypass -File $rc -Market $Market -Mode REQUIRE_ENABLED | Out-Host
-  if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
+  if($LASTEXITCODE -ne 0){ $finalExit = [int]$LASTEXITCODE; $continue = $false; Write-Host ("[RISKCAP] FAIL-CLOSED: exitcode=" + $finalExit + " (will still emit onetap_summary)") -ForegroundColor Red }
 } else {
   Write-Host ("[RISKCAP] FAIL-CLOSED: missing validator => " + $rc) -ForegroundColor Red
-  exit 2
+  $finalExit = 2; $continue = $false; Write-Host ("[RISKCAP] FAIL-CLOSED: missing validator (will still emit onetap_summary)") -ForegroundColor Red
 }
 
 }
@@ -176,7 +176,7 @@ if(Test-Path -LiteralPath $chk){
   $chkArgs = @("-Symbol", $Symbol, "-Market", $Market)
   if($Build){ $chkArgs += "-Build" }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $chk @chkArgs | Out-Host
-  $finalExit = $LASTEXITCODE
+  if([int]$finalExit -eq 0){ $finalExit = [int]$LASTEXITCODE }
   $continue = $false
 } else {
   Write-Host "[ONETAP] FAIL-CLOSED: missing checker: $chk" -ForegroundColor Yellow
@@ -186,104 +186,95 @@ if(Test-Path -LiteralPath $chk){
 # --- ONETAP_SUMMARY ---
 # --- OneTap summary JSON (for Notion ingest) ---
 try {
-$repo = (Resolve-Path (Join-Path (Split-Path -Parent $PSCommandPath) "..")).Path
+  # Canonical repoRoot (filesystem truth)
+  $repo = $repoRoot
+
+  # RunContext day is single-truth; fall back to st.as_of_date only if needed
+  $todayStr = (([string]$asOfDate) + "").Trim()
+  if($todayStr.Length -ge 10){ $todayStr = $todayStr.Substring(0,10) }
+  if(-not $todayStr){ $todayStr = (Get-Date).ToString("yyyy-MM-dd") }
+
+  # Resolve per-market log root (prefer tool, fallback to logs\<Market>)
   $logRoot = $null
-try {
-  $logRoot = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "tools\Get-MarketLogRoot.ps1") -Market $Market
-} catch { $logRoot = $null }
-if(-not $logRoot){ $logRoot = Join-Path (Join-Path $repo "logs") $Market }
+  try {
+    $logRoot = & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repo "tools\Get-MarketLogRoot.ps1") -Market $Market
+  } catch { $logRoot = $null }
+  $logRoot = (([string]$logRoot) + "").Trim()
+  if(-not $logRoot){ $logRoot = Join-Path (Join-Path $repo "logs") $Market }
+  New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
 
-$p = Join-Path $logRoot "blockg_status_stub.json"
-  if(Test-Path $p){
-New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
-
-# [A2/A3] If blockg_status_stub.json is missing, synthesize a fail-closed stub so onetap_summary is ALWAYS emitted.
-if(-not (Test-Path -LiteralPath $p)){
-  $st = [pscustomobject]@{
-    as_of_date        = $todayStr
-    phase4_ok_today   = $false
-    gatescore_ok_today= $false
-    nvda_blockg_ready = $false
-    spy_blockg_ready  = $false
-    qqq_blockg_ready  = $false
-    reasons_not_ready = @("missing_blockg_status_stub")
-  }
-}
-    $st = Get-Content $p -Raw -Encoding utf8 | ConvertFrom-Json
-# ---- derive Phase23 + EV-HARD ok_today from CSV evidence (fail-closed) ----
-  $todayStr = (([string]$today) + "").Trim(); if($todayStr.Length -ge 10){ $todayStr = $todayStr.Substring(0,10) } else { $todayStr = (Get-Date).ToString("yyyy-MM-dd") }
-$repoLogs = Join-Path $repo "logs"
-
-$phase23_health_ok_today = $false
-$ev_hard_daily_ok_today  = $false
-
-function Get-LatestOkTodayFromCsv([string]$csvPath, [string]$todayStr){
-  if(-not (Test-Path -LiteralPath $csvPath)){ return $false }
-  $rows = @(Import-Csv -LiteralPath $csvPath)
-  if($rows.Count -lt 1){ return $false }
-  $last = $rows[-1]
-
-  # date field (robust)
-  $d = ""
-  if($last.PSObject.Properties.Name -contains "as_of_date"){ $d = ($last.as_of_date + "") }
-  elseif($last.PSObject.Properties.Name -contains "date"){ $d = ($last.date + "") }
-  elseif($last.PSObject.Properties.Name -contains "today"){ $d = ($last.today + "") }
-  if($d.Length -ge 10){ $d = $d.Substring(0,10) } else { return $false }
-
-  # ok field (robust)
-  $ok = $false
-  if($last.PSObject.Properties.Name -contains "ok_today"){ $ok = [bool]$last.ok_today }
-  elseif($last.PSObject.Properties.Name -contains "ok"){ $ok = [bool]$last.ok }
-  elseif($last.PSObject.Properties.Name -contains "okToday"){ $ok = [bool]$last.okToday }
-
-elseif($last.PSObject.Properties.Name -contains "phase23_ok"){
-  $s = (($last.phase23_ok + "")).Trim().ToLowerInvariant()
-  $ok = ($s -eq "true" -or $s -eq "1" -or $s -eq "yes" -or $s -eq "y")
-}
-  return ($d -eq $todayStr -and $ok)
-}
-
-try {
-  $p23a = Join-Path $logRoot  "phase23_health_daily.csv"
-  $p23b = Join-Path $repoLogs "phase23_health_daily.csv"
-  $p23  = if(Test-Path -LiteralPath $p23a){ $p23a } else { $p23b }
-  $phase23_health_ok_today = Get-LatestOkTodayFromCsv -csvPath $p23 -todayStr $todayStr
-} catch { $phase23_health_ok_today = $false }
-
-try {
-  $eva = Join-Path $logRoot  "phase5_ev_hard_veto_daily.csv"
-  $evb = Join-Path $repoLogs "phase5_ev_hard_veto_daily.csv"
-  $ev  = if(Test-Path -LiteralPath $eva){ $eva } else { $evb }
-  $ev_hard_daily_ok_today = Get-LatestOkTodayFromCsv -csvPath $ev -todayStr $todayStr
-} catch { $ev_hard_daily_ok_today = $false }
-# ---- end derive ----
-    $out = [ordered]@{
-      ts_utc = (Get-Date).ToUniversalTime().ToString("o")
-      as_of_date = $todayStr
-      phase4_ok_today = $st.phase4_ok_today
-  phase23_health_ok_today = $phase23_health_ok_today
-  ev_hard_daily_ok_today = $ev_hard_daily_ok_today
-      gatescore_ok_today = $st.gatescore_ok_today
-      nvda_blockg_ready = $st.nvda_blockg_ready
-      spy_blockg_ready  = $st.spy_blockg_ready
-      qqq_blockg_ready  = $st.qqq_blockg_ready
-      reasons_not_ready = $st.reasons_not_ready
+  # Load blockg status stub if present; else synthesize fail-closed stub
+  $p = Join-Path $logRoot "blockg_status_stub.json"
+  $st = $null
+  if(Test-Path -LiteralPath $p){
+    $st = Get-Content -LiteralPath $p -Raw -Encoding UTF8 | ConvertFrom-Json
+  } else {
+    $st = [pscustomobject]@{
+      as_of_date         = $todayStr
+      phase4_ok_today    = $false
+      gatescore_ok_today = $false
+      nvda_blockg_ready  = $false
+      spy_blockg_ready   = $false
+      qqq_blockg_ready   = $false
+      reasons_not_ready  = @("missing_blockg_status_stub")
     }
-    $json = ($out | ConvertTo-Json -Depth 6)
-    $dst = Join-Path $logRoot "onetap_summary.json"
-        [System.IO.File]::WriteAllText($dst,  ($json -replace "`r`n","`n"), (New-Object System.Text.UTF8Encoding($false)))
-        # legacy_onetap_summary (backward compat)
-    try {
-      $legacyDst = Join-Path $repo "logs\onetap_summary.json"
-      if($legacyDst -ne $dst){
-        [System.IO.File]::WriteAllText($legacyDst, ($json -replace "`r`n","`n"), (New-Object System.Text.UTF8Encoding($false)))
-      }
-    } catch { }
-
-    Write-Host ("[ONETAP] wrote " + $dst)
   }
+
+  # Derive Phase23 + EV-HARD from CSV evidence (fail-closed; match RunContext day)
+  $phase23_health_ok_today = $false
+  $ev_hard_daily_ok_today  = $false
+
+  function Get-LatestOkTodayFromCsv([string]$csvPath, [string]$todayStr){
+    if(-not (Test-Path -LiteralPath $csvPath)){ return $false }
+    $rows = @(Import-Csv -LiteralPath $csvPath)
+    if($rows.Count -lt 1){ return $false }
+    $last = $rows[-1]
+    $d = ""
+    if($last.PSObject.Properties.Name -contains "as_of_date"){ $d = ($last.as_of_date + "") }
+    elseif($last.PSObject.Properties.Name -contains "date"){ $d = ($last.date + "") }
+    elseif($last.PSObject.Properties.Name -contains "today"){ $d = ($last.today + "") }
+    if($d.Length -ge 10){ $d = $d.Substring(0,10) } else { return $false }
+
+    $ok = $false
+    if($last.PSObject.Properties.Name -contains "ok_today"){ $ok = [bool]$last.ok_today }
+    elseif($last.PSObject.Properties.Name -contains "ok"){ $ok = [bool]$last.ok }
+    elseif($last.PSObject.Properties.Name -contains "okToday"){ $ok = [bool]$last.okToday }
+    elseif($last.PSObject.Properties.Name -contains "phase23_ok"){
+      $s = (($last.phase23_ok + "")).Trim().ToLowerInvariant()
+      $ok = ($s -eq "true" -or $s -eq "1" -or $s -eq "yes" -or $s -eq "y")
+    }
+    return ($d -eq $todayStr -and $ok)
+  }
+
+  try {
+    $p23 = Join-Path $logRoot "phase23_health_daily.csv"
+    $phase23_health_ok_today = Get-LatestOkTodayFromCsv -csvPath $p23 -todayStr $todayStr
+  } catch { $phase23_health_ok_today = $false }
+
+  try {
+    $ev = Join-Path $logRoot "phase5_ev_hard_veto_daily.csv"
+    $ev_hard_daily_ok_today = Get-LatestOkTodayFromCsv -csvPath $ev -todayStr $todayStr
+  } catch { $ev_hard_daily_ok_today = $false }
+
+  # Emit summary (hard-proof print before write)
+  $out = [ordered]@{
+    ts_utc                 = (Get-Date).ToUniversalTime().ToString("o")
+    as_of_date             = $todayStr
+    phase4_ok_today        = [bool]$st.phase4_ok_today
+    phase23_health_ok_today= [bool]$phase23_health_ok_today
+    ev_hard_daily_ok_today = [bool]$ev_hard_daily_ok_today
+    gatescore_ok_today     = [bool]$st.gatescore_ok_today
+    nvda_blockg_ready      = [bool]$st.nvda_blockg_ready
+    spy_blockg_ready       = [bool]$st.spy_blockg_ready
+    qqq_blockg_ready       = [bool]$st.qqq_blockg_ready
+    reasons_not_ready      = $st.reasons_not_ready
+  }
+  $json = ($out | ConvertTo-Json -Depth 6)
+  $dst = Join-Path $logRoot "onetap_summary.json"
+  Write-Host ("[ONETAP] TARGET logRoot=" + $logRoot + " dst=" + $dst + " as_of=" + $todayStr + " Market=" + $Market) -ForegroundColor Cyan
+  [System.IO.File]::WriteAllText($dst, ($json -replace "`r`n","`n"), (New-Object System.Text.UTF8Encoding($false)))
+  Write-Host ("[ONETAP] wrote " + $dst) -ForegroundColor Cyan
 } catch {
   Write-Host "[ONETAP] summary json skipped: $($_.Exception.Message)" -ForegroundColor Yellow
 }
-
 exit $finalExit
