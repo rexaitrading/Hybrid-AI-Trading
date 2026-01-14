@@ -70,7 +70,8 @@ def require_nvda_live_stamp(symbol: str) -> None:
     as_of = str(d.get("as_of_date") or "")[:10]
     ok = bool(d.get("nvda_live_ready", False))
     today = _today_from_runcontext(s)
-    if as_of != today:
-        raise LiveStampNotReady(f"NVDA live stamp not for today: as_of_date={as_of} today={today}")
+    utc_today = _today_utc_yyyy_mm_dd()
+    if as_of != today and as_of != utc_today:
+        raise LiveStampNotReady(f"NVDA live stamp not for today: as_of_date={as_of} today={today} utc_today={utc_today}")
     if not ok:
         raise LiveStampNotReady("NVDA live stamp nvda_live_ready=false")
