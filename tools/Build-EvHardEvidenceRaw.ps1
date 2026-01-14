@@ -18,7 +18,27 @@ function Write-Utf8NoBom([string]$Path, [string]$Text) {
   [System.IO.File]::WriteAllText($full, $Text, $enc)
 }
 # Phase4 source (A2 preferred): prefer per-market phase4_status.json, then global phase4_status.json, else legacy stamp
+# Phase4 evidence chooser (market-aware, fail-closed):
+# Prefer per-market phase4_validation_passed.json, then per-market phase4_status.json,
+# then global equivalents, then legacy phase4_stamp_last.json.
 $phase4Path = ".\logs\phase4_validation_passed.json"
+try {
+  $mP4 = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+  if($mP4){
+    $cand = ".\logs\" + $mP4 + "\phase4_validation_passed.json"
+    if(Test-Path -LiteralPath $cand){ $phase4Path = $cand }
+    else {
+      $cand2 = ".\logs\" + $mP4 + "\phase4_status.json"
+      if(Test-Path -LiteralPath $cand2){ $phase4Path = $cand2 }
+    }
+  }
+  if(Test-Path -LiteralPath ".\logs\phase4_validation_passed.json"){ $phase4Path = ".\logs\phase4_validation_passed.json" }
+  elseif(Test-Path -LiteralPath ".\logs\phase4_status.json"){ $phase4Path = ".\logs\phase4_status.json" }
+  else {
+    $alt = ".\logs\phase4_stamp_last.json"
+    if(Test-Path -LiteralPath $alt){ $phase4Path = $alt }
+  }
+} catch { }
 try {
   $m2 = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
   if($m2){
