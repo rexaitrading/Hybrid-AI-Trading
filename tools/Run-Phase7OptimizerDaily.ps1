@@ -105,6 +105,11 @@ function Invoke-BlockGReady {
 $today = (Get-Date).ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
+# Env override (still fail-closed by default)
+if(-not $Enable){
+  $envOn = (([string]$env:HAT_PHASE7_ENABLE) + "").Trim()
+  if($envOn -eq "1"){ $Enable = $true }
+}
 if (-not $Enable) { Fail-Closed "optimizer_disabled_failclosed" @{ enable=$false } }
 if ($MaxWeight -le 0 -or $MaxWeight -gt 1) { Fail-Closed "invalid_max_weight" @{ MaxWeight=$MaxWeight } }
 
