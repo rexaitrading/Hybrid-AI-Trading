@@ -1,23 +1,28 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")] [string]$Market="US"
-)
-# --- repo root bootstrap (env-first) ---
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")] [string]$Market="US",
+  [ValidateSet("NVDA","SPY","QQQ")] [string]$Symbol="NVDA"
+)# --- repo root bootstrap (env-first) ---
 $repoRoot = ($env:HAT_REPO_ROOT + "").Trim()
 # PHASE4_MARKETWIRE_BEGIN
 try {
-  $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
   $rcFile = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
   if(Test-Path -LiteralPath $rcFile){
-    $rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $rcFile -Market $Market -Symbol NVDA 2>$null | Out-String
+    $rcRaw = & $rcFile -Market $Market -Symbol $Symbol | Out-String
     $rcRaw = ($rcRaw + "").Trim()
     if($rcRaw){
-      $rc = $rcRaw | ConvertFrom-Json
-      if($rc -and ($rc.PSObject.Properties.Name -contains "as_of_date") -and (($rc.as_of_date + "") -ne "")){
-        $env:HAT_ASOF_DATE = [string]$rc.as_of_date
-      }
-      if($rc -and ($rc.PSObject.Properties.Name -contains "logs_dir_out") -and (($rc.logs_dir_out + "") -ne "")){
-        $env:HAT_LOGS_DIR_OUT = [string]$rc.logs_dir_out
+      $ix0 = $rcRaw.IndexOf("{"); $ix1 = $rcRaw.LastIndexOf("}")
+      if($ix0 -ge 0 -and $ix1 -gt $ix0){
+        $rc = ($rcRaw.Substring($ix0, ($ix1-$ix0+1))) | ConvertFrom-Json
+        if($rc -and ($rc.PSObject.Properties.Name -contains "as_of_date") -and (($rc.as_of_date + "") -ne "")){
+          $env:HAT_ASOF_DATE = [string]$rc.as_of_date
+        }
+        # prefer logs_dir_out, else logs_dir
+        if($rc -and ($rc.PSObject.Properties.Name -contains "logs_dir_out") -and (($rc.logs_dir_out + "") -ne "")){
+          $env:HAT_LOGS_DIR_OUT = [string]$rc.logs_dir_out
+        } elseif($rc -and ($rc.PSObject.Properties.Name -contains "logs_dir") -and (($rc.logs_dir + "") -ne "")){
+          $env:HAT_LOGS_DIR_OUT = [string]$rc.logs_dir
+        }
       }
     }
   }
