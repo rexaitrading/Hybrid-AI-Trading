@@ -67,13 +67,12 @@ try {
 } catch {
   # keep fail-closed defaults; allow onetap fallback below
 }
-
-# Fail-closed defaults
-$ok = $false
-$reason = "missing_onetap_summary"
-$src_asof = ""
-$decided = $false
-
+if(-not $decided){
+  # Fail-closed defaults
+  $ok = $false
+  $reason = "missing_onetap_summary"
+  $src_asof = ""
+}
 if((-not $decided) -and (Test-Path -LiteralPath $oneTap)){
   try {
     $j = Get-Content -LiteralPath $oneTap -Raw -Encoding UTF8 | ConvertFrom-Json
