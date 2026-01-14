@@ -5,6 +5,43 @@ param(
 )
 $ErrorActionPreference="Stop"
 Set-StrictMode -Version Latest
+
+function Get-CanonicalRepoRoot {
+  # FAIL-CLOSED canonical repo root (prefer env:HAT_REPO_ROOT if valid)
+  $envRoot = ($env:HAT_REPO_ROOT + "").Trim()
+  if($envRoot){
+    try {
+      $r = (Resolve-Path -LiteralPath $envRoot -ErrorAction Stop).Path
+      if(Test-Path -LiteralPath (Join-Path $r ".git")){ return $r }
+    } catch { }
+  }
+  $p = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..") -ErrorAction Stop).Path
+  while($p -and -not (Test-Path -LiteralPath (Join-Path $p ".git"))){
+    $parent = Split-Path -Parent $p
+    if(-not $parent -or $parent -eq $p){ break }
+    $p = $parent
+  }
+  if(-not $p -or -not (Test-Path -LiteralPath (Join-Path $p ".git"))){
+    throw "[FAIL-CLOSED] repo root not found (.git missing). envRoot=$envRoot scriptRoot=$PSScriptRoot"
+  }
+  return $p
+}
+
+function Get-CanonicalLogRoot([string]$RepoRoot,[string]$Market){
+  $m = ([string]$Market).ToUpperInvariant().Trim()
+  if(-not $m){ $m = "US" }
+  $repoFull = (Resolve-Path -LiteralPath $RepoRoot -ErrorAction Stop).Path
+  if(-not (Test-Path -LiteralPath (Join-Path $repoFull ".git"))){
+    throw "[FAIL-CLOSED] repo root missing .git: $repoFull"
+  }
+  $logRoot = Join-Path (Join-Path $repoFull "logs") $m
+  if($logRoot -notlike ($repoFull + "*")){
+    throw "[FAIL-CLOSED] logRoot escaped repo: logRoot=$logRoot repo=$repoFull"
+  }
+  New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
+  return $logRoot
+}
+
 chcp 65001 | Out-Null
 
 function Write-Utf8NoBomLf([string]$Path,[string]$Text){
@@ -28,9 +65,21 @@ if(-not (Test-Path -LiteralPath $logsDir)){
   New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 }
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
-$rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol $Symbol | Out-String
+$rr = Get-CanonicalRepoRoot
+$rcRaw = & (Join-Path $rr "tools\Resolve-RunContext.ps1") -Market $Market -Symbol $Symbol | Out-String
 $rcRaw = ($rcRaw + "").Trim()
-$logsDir = Join-Path $repoRoot "logs"
+# Parse RunContext JSON safely (slice braces) — fail-closed: if parse fails, keep defaults
+if($rcRaw){
+  try {
+    $ix0 = $rcRaw.IndexOf("{"); $ix1 = $rcRaw.LastIndexOf("}")
+    if($ix0 -ge 0 -and $ix1 -gt $ix0){
+      $rc = ($rcRaw.Substring($ix0, ($ix1-$ix0+1))) | ConvertFrom-Json
+    }
+    if($rc -and ($rc.PSObject.Properties.Name -contains "logs_dir") -and $rc.logs_dir){ $logsDir = [string]$rc.logs_dir }
+    if($rc -and ($rc.PSObject.Properties.Name -contains "as_of_date") -and $rc.as_of_date){ $todayLocal = [string]$rc.as_of_date }
+  } catch { }
+}
+# [A2] DO NOT reset logsDir to root logs (per-market only)
 if($rcRaw){
   try {
     $rc = $rcRaw | ConvertFrom-Json
@@ -75,7 +124,8 @@ $okToday = ($ok -and ($asOf.Substring(0,[Math]::Min(10,$asOf.Length)) -eq $today
 
 $out = [ordered]@{
   kind="phase4_status"
-  as_of_date=$asOf
+  as_of_date=$todayLocal
+  evidence_as_of_date=$asOf
   ok_today=[bool]$okToday
   evidence_paths=$evidence
   ts_utc=(Get-Date).ToUniversalTime().ToString("o")
