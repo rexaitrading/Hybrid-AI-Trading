@@ -1,19 +1,42 @@
 [CmdletBinding()]
-param()
+param(
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+  [string]$Market = "",
 
-Set-StrictMode -Version Latest
+  [ValidateSet("NVDA","SPY","QQQ","ALL")]
+  [string]$Symbol = "NVDA"
+)Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
 $root = (Resolve-Path ".").Path
-Set-Location $root
+Set-Location -LiteralPath $root
 
+# Market/Symbol normalize (env-first) for per-market snapshot writes
+$m = (($Market + "")).Trim().ToUpperInvariant()
+if(-not $m){ $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant() }
+if(-not $m){ $m = "US" }
+$Market = $m
+
+$s = (($Symbol + "")).Trim().ToUpperInvariant()
+if(-not $s){ $s = (($env:HAT_SYMBOL + "")).Trim().ToUpperInvariant() }
+if(-not $s){ $s = "NVDA" }
+$Symbol = $s
+
+$logRoot = Join-Path (Join-Path $root "logs") $Market
+New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
 $build   = Join-Path $root "tools\Build-EvHardSnapshot.ps1"
 $compute = Join-Path $root "tools\Compute-Phase5EvHardSnapshotInput.ps1"
 $export  = Join-Path $root "tools\Export-Phase5EvHardVetoDailySnapshot.ps1"
 
+
+$rawBuild = Join-Path $root "tools\Build-EvHardEvidenceRaw.ps1"
+if(-not (Test-Path $rawBuild)) { throw "[EV-HARD-SNAP] missing $rawBuild" }
 if(-not (Test-Path $build))   { throw "[EV-HARD-SNAP] missing $build" }
 if(-not (Test-Path $compute)) { throw "[EV-HARD-SNAP] missing $compute" }
 if(-not (Test-Path $export))  { throw "[EV-HARD-SNAP] missing $export" }
+& $rawBuild
+if($LASTEXITCODE -ne 0){ throw "[EV-HARD-SNAP] Build-EvHardEvidenceRaw failed rc=$LASTEXITCODE" }
+
 
 & $build
 if($LASTEXITCODE -ne 0){ throw "[EV-HARD-SNAP] Build-EvHardSnapshot failed rc=$LASTEXITCODE" }
@@ -26,6 +49,26 @@ if($LASTEXITCODE -ne 0){ throw "[EV-HARD-SNAP] Export-Phase5EvHardVetoDailySnaps
 
 $out = Join-Path $root "logs\phase5_ev_hard_veto_snapshot.json"
 if(-not (Test-Path $out)){ throw "[EV-HARD-SNAP] snapshot not produced: $out" }
+# Dual-write: copy root snapshots into per-market logRoot for market-aware consumers (fail-closed)
+$rootEvidence = Join-Path $root "logs\ev_hard_snapshot.json"
+$rootSnapVeto = Join-Path $root "logs\phase5_ev_hard_veto_snapshot.json"
+
+if(-not (Test-Path -LiteralPath $rootEvidence)){ throw "[EV-HARD-SNAP] missing root evidence snapshot: $rootEvidence" }
+if(-not (Test-Path -LiteralPath $rootSnapVeto)){ throw "[EV-HARD-SNAP] missing root veto snapshot: $rootSnapVeto" }
+
+$dstEvidence = Join-Path $logRoot "ev_hard_snapshot.json"
+$dstVeto     = Join-Path $logRoot "phase5_ev_hard_veto_snapshot.json"
+
+Copy-Item -LiteralPath $rootEvidence -Destination $dstEvidence -Force
+Copy-Item -LiteralPath $rootSnapVeto -Destination $dstVeto -Force
+
+Write-Host ("[EV-HARD-SNAP] copied => " + $dstEvidence) -ForegroundColor Green
+Write-Host ("[EV-HARD-SNAP] copied => " + $dstVeto) -ForegroundColor Green
 
 Write-Host "[EV-HARD-SNAP] OK wrote $out" -ForegroundColor Green
+# [A2] refresh ev_hard_status.json (market-aware) after snapshots are in-place
+$st = Join-Path $root "tools\Build-EvHardStatus.ps1"
+if(-not (Test-Path -LiteralPath $st)){ throw "[EV-HARD-SNAP] missing status writer: $st" }
+& $st -Market $Market
+if($LASTEXITCODE -ne 0){ throw "[EV-HARD-SNAP] Build-EvHardStatus failed rc=$LASTEXITCODE" }
 exit 0

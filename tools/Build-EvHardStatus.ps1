@@ -35,6 +35,37 @@ New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 $outPath = Join-Path $outDir "ev_hard_status.json"
 $oneTap  = Join-Path $logsDir "onetap_summary.json"
 
+# Snapshot-first (A2 truth): prefer per-market veto snapshot or evidence snapshot; fallback to onetap_summary only if missing/stale.
+$snapVeto = Join-Path $logsDir "phase5_ev_hard_veto_snapshot.json"
+$snapEv   = Join-Path $logsDir "ev_hard_snapshot.json"
+
+# Fail-closed defaults (already set above): $ok=$false, $reason=..., $src_asof=""
+try {
+  if(Test-Path -LiteralPath $snapVeto){
+    $sj = Get-Content -LiteralPath $snapVeto -Raw -Encoding UTF8 | ConvertFrom-Json
+    $sa = ""
+    if($sj.PSObject.Properties.Name -contains "as_of_date"){ $sa = Slice-Date ([string]$sj.as_of_date) }
+    if($sa -eq $todayLocal){
+      if($sj.PSObject.Properties.Name -contains "ok_today"){ $ok = [bool]$sj.ok_today }
+      elseif($sj.PSObject.Properties.Name -contains "ok"){ $ok = [bool]$sj.ok }
+      $src_asof = $sa
+      $reason = "from_veto_snapshot"
+    }
+  } elseif(Test-Path -LiteralPath $snapEv){
+    $ej = Get-Content -LiteralPath $snapEv -Raw -Encoding UTF8 | ConvertFrom-Json
+    $ea = ""
+    if($ej.PSObject.Properties.Name -contains "as_of_date"){ $ea = Slice-Date ([string]$ej.as_of_date) }
+    if($ea -eq $todayLocal){
+      if($ej.PSObject.Properties.Name -contains "ok_today"){ $ok = [bool]$ej.ok_today }
+      elseif($ej.PSObject.Properties.Name -contains "ok"){ $ok = [bool]$ej.ok }
+      $src_asof = $ea
+      $reason = "from_evidence_snapshot"
+    }
+  }
+} catch {
+  # keep fail-closed defaults; allow onetap fallback below
+}
+
 # Fail-closed defaults
 $ok = $false
 $reason = "missing_onetap_summary"
