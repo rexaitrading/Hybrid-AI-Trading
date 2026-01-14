@@ -9,6 +9,22 @@ param(
 [switch]$Build
 )
 
+# [A3] RunContext single-truth as_of_date (fail-closed)
+$repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$mkt = ""
+if($PSBoundParameters.ContainsKey("Market")){ $mkt = ([string]$Market).ToUpperInvariant().Trim() }
+elseif($env:HAT_MARKET){ $mkt = ([string]$env:HAT_MARKET).ToUpperInvariant().Trim() }
+if(-not $mkt){ throw "[A3] Market unresolved for RunContext (pass -Market or set HAT_MARKET) (fail-closed)" }
+$rc = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $mkt -Symbol NVDA | ConvertFrom-Json
+
+# [A3] CRITICAL: bind downstream Market to resolved mkt (env:HAT_MARKET honored when -Market not passed)
+$Market = $mkt
+
+if(-not $rc -or -not $rc.as_of_date){ throw "[A3] Resolve-RunContext missing as_of_date (fail-closed)" }
+$asOfDate = ([string]$rc.as_of_date).Trim()
+
+
 Set-StrictMode -Version Latest
 # BLOCKG_LOCKPACK_BEGIN
 Write-Host "`n[OPS] Block-G LOCKPACK (non-fatal; cmd wrapper)..." -ForegroundColor Cyan
@@ -47,6 +63,9 @@ while($repoRoot -and -not (Test-Path (Join-Path $repoRoot ".git"))){
 if(-not (Test-Path (Join-Path $repoRoot ".git"))){
   throw "NOT IN REPO ROOT (could not find .git from $PSScriptRoot)"
 }
+
+# [A3] Compatibility: scripts below use $repo; bind it to $repoRoot
+$repo = $repoRoot
 
 # --- A2: Ensure GateScore daily summary exists (fail-closed) ---
 $gsCsv = Join-Path $repoRoot "logs\gatescore_daily_summary.csv"
@@ -172,13 +191,27 @@ $repo = (Resolve-Path (Join-Path (Split-Path -Parent $PSCommandPath) "..")).Path
 try {
   $logRoot = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "tools\Get-MarketLogRoot.ps1") -Market $Market
 } catch { $logRoot = $null }
-if(-not $logRoot){ $logRoot = Join-Path $repo "logs" }
+if(-not $logRoot){ $logRoot = Join-Path (Join-Path $repo "logs") $Market }
 
 $p = Join-Path $logRoot "blockg_status_stub.json"
   if(Test-Path $p){
+New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
+
+# [A2/A3] If blockg_status_stub.json is missing, synthesize a fail-closed stub so onetap_summary is ALWAYS emitted.
+if(-not (Test-Path -LiteralPath $p)){
+  $st = [pscustomobject]@{
+    as_of_date        = $todayStr
+    phase4_ok_today   = $false
+    gatescore_ok_today= $false
+    nvda_blockg_ready = $false
+    spy_blockg_ready  = $false
+    qqq_blockg_ready  = $false
+    reasons_not_ready = @("missing_blockg_status_stub")
+  }
+}
     $st = Get-Content $p -Raw -Encoding utf8 | ConvertFrom-Json
 # ---- derive Phase23 + EV-HARD ok_today from CSV evidence (fail-closed) ----
-$todayStr = (Get-Date).ToString("yyyy-MM-dd")
+  $todayStr = (([string]$today) + "").Trim(); if($todayStr.Length -ge 10){ $todayStr = $todayStr.Substring(0,10) } else { $todayStr = (Get-Date).ToString("yyyy-MM-dd") }
 $repoLogs = Join-Path $repo "logs"
 
 $phase23_health_ok_today = $false
@@ -226,7 +259,7 @@ try {
 # ---- end derive ----
     $out = [ordered]@{
       ts_utc = (Get-Date).ToUniversalTime().ToString("o")
-      as_of_date = $st.as_of_date
+      as_of_date = $todayStr
       phase4_ok_today = $st.phase4_ok_today
   phase23_health_ok_today = $phase23_health_ok_today
   ev_hard_daily_ok_today = $ev_hard_daily_ok_today
