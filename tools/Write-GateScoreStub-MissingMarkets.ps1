@@ -56,6 +56,18 @@ foreach($m in $targets){
 
   New-Item -ItemType Directory -Force -Path $ld | Out-Null
   $p = Join-Path $ld ("{0}_gatescore_events.jsonl" -f $Symbol.ToLowerInvariant())
+
+# A3/A4: Do NOT stub markets that already have real per-market Phase-5 paperlive inputs.
+$paperlive = Join-Path $ld ("{0}_phase5_paperlive_results.jsonl" -f $Symbol.ToLowerInvariant())
+if(Test-Path -LiteralPath $paperlive){
+  try{
+    $n = (Get-Content -LiteralPath $paperlive -Encoding UTF8 | Measure-Object -Line).Lines
+    if([int]$n -ge 10){
+      Write-Host ("[P53] SKIP stub: paperlive inputs present (" + $n + " lines) -> " + $paperlive) -ForegroundColor DarkYellow
+      continue
+    }
+  } catch {}
+}
 $pk = $p.ToLowerInvariant()
 if($seen.ContainsKey($pk)){
   Write-Host ("[P53] SKIP duplicate mapped target -> " + $p) -ForegroundColor DarkYellow
