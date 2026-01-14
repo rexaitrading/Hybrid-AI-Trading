@@ -50,6 +50,7 @@ try {
       elseif($sj.PSObject.Properties.Name -contains "ok"){ $ok = [bool]$sj.ok }
       $src_asof = $sa
       $reason = "from_veto_snapshot"
+      $decided = $true
     }
   } elseif(Test-Path -LiteralPath $snapEv){
     $ej = Get-Content -LiteralPath $snapEv -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -60,6 +61,7 @@ try {
       elseif($ej.PSObject.Properties.Name -contains "ok"){ $ok = [bool]$ej.ok }
       $src_asof = $ea
       $reason = "from_evidence_snapshot"
+      $decided = $true
     }
   }
 } catch {
@@ -70,8 +72,9 @@ try {
 $ok = $false
 $reason = "missing_onetap_summary"
 $src_asof = ""
+$decided = $false
 
-if(Test-Path -LiteralPath $oneTap){
+if((-not $decided) -and (Test-Path -LiteralPath $oneTap)){
   try {
     $j = Get-Content -LiteralPath $oneTap -Raw -Encoding UTF8 | ConvertFrom-Json
     if($j.PSObject.Properties.Name -contains "as_of_date"){ $src_asof = Slice-Date ([string]$j.as_of_date) }
