@@ -1,5 +1,7 @@
 [CmdletBinding()]
 param(
+  [ValidateSet("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")]
+  [string]$Market = "US",
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "ALL",
   [int]$MinEvents = 10

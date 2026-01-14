@@ -23,11 +23,16 @@ $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $writer = Join-Path $repoRoot "tools\Write-GateScoreEvents-PerMarket.ps1"
 if(-not (Test-Path -LiteralPath $writer)){ throw "Missing writer: $writer" }
 
-$markets = @("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")
+$markets = @("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")
 
 $errs = @()
 foreach($m in $markets){
-  Write-Host ("[PH3-ALL] Market=" + $m + " Symbol=" + $Symbol + " Mode=" + $Mode + " MinEvents=" + $MinEvents) -ForegroundColor Cyan
+    # Phase-5 -> Phase-3: generate per-market GateScore events from per-market Phase-5 paperlive results
+  $gsToday = Join-Path $PSScriptRoot "Build-GateScoreEvents-Today.ps1"
+  if(-not (Test-Path -LiteralPath $gsToday)){ throw "Missing: $gsToday" }
+  & $gsToday -Market $m -Symbol $Symbol | Out-Host
+  if($LASTEXITCODE -ne 0){ throw ("Build-GateScoreEvents-Today failed market=" + $m + " exit=" + $LASTEXITCODE) }
+Write-Host ("[PH3-ALL] Market=" + $m + " Symbol=" + $Symbol + " Mode=" + $Mode + " MinEvents=" + $MinEvents) -ForegroundColor Cyan
   & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $writer -Market $m -Symbol $Symbol -Mode $Mode -MinEvents $MinEvents *>&1 | Out-Host
   $rc = $LASTEXITCODE
   if($rc -ne 0){

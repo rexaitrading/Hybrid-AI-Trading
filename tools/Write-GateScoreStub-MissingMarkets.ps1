@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("ALL","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+  [ValidateSet("ALL","IN","KR","TW")]
   [string]$Market = "ALL",
 
   [ValidateSet("NVDA")]
@@ -37,7 +37,7 @@ function Read-JsonlFirst([string]$Path){
 $repoRoot = Resolve-RepoRoot
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 
-$targets = @("IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")
+$targets = @("IN","KR","TW")
 if($Market -ne "ALL"){
   $m0 = $Market.ToUpperInvariant()
   if($targets -notcontains $m0){ throw "Unsupported Market=$Market" }
@@ -46,8 +46,6 @@ if($Market -ne "ALL"){
 
 $today = (Get-Date).ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
-
-# Optional micro-polish: dedupe CN_* mapping that resolves to same HK_* log roots
 $seen = @{}
 
 foreach($m in $targets){
