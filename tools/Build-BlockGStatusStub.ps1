@@ -650,10 +650,11 @@ if(-not $gedgeOk){ $reasons.Add("edge_validity_ok_today=false") | Out-Null }
 if(-not $gdepOk){  $reasons.Add("dependency_risk_ok_today=false") | Out-Null }
 if(-not $griskOk){ $reasons.Add("risk_guard_ok_today=false") | Out-Null }
 # ---- end C5 ----
+    $evDecided = $false
     $evok = Read-StatusOkToday $evs $todayLocal
-    if($null -ne $evok){ $evHardOk = [bool]$evok; $evAsOf=$todayLocal }
-
-    $evAsOf=""
+if($null -ne $evok){ $evHardOk = [bool]$evok; $evAsOf=$todayLocal; $evDecided = $true }
+if(-not $evDecided){ $evAsOf="" }
+if(-not $evDecided){
 $evp = Prefer-LogsPath (Join-Path $logsDir "phase5_ev_hard_veto_daily.csv") (Join-Path (Join-Path $repoRoot "logs") "phase5_ev_hard_veto_daily.csv")
     if(Test-Path -LiteralPath $evp){
       try{
@@ -667,6 +668,8 @@ $evp = Prefer-LogsPath (Join-Path $logsDir "phase5_ev_hard_veto_daily.csv") (Joi
         }
       } catch { $evHardOk=$false }
     }
+
+}
 
     # Phase4 today
     $phase4Ok=$false
@@ -1262,13 +1265,14 @@ if(-not $gedgeOk){ $reasons.Add("edge_validity_ok_today=false") | Out-Null }
 if(-not $gdepOk){  $reasons.Add("dependency_risk_ok_today=false") | Out-Null }
 if(-not $griskOk){ $reasons.Add("risk_guard_ok_today=false") | Out-Null }
 # ---- end C5 ----
+$evDecided = $false
 $evok = Read-StatusOkToday $evs $todayLocal
-if($null -ne $evok){ $evHardOk = [bool]$evok; $evHardDailyAsOf=$todayLocal }
-
+if($null -ne $evok){ $evHardOk = [bool]$evok; $evHardDailyAsOf=$todayLocal; $evDecided = $true }
 if($null -ne $p4ok){ $phase4Ok = [bool]$p4ok }
 
 
 # ---- EV hard veto daily ----
+if(-not $evDecided){
 $evHardOk = $false
 $evPath = Prefer-LogsPath (Join-Path $logsDir "phase5_ev_hard_veto_daily.csv") (Join-Path (Join-Path $repoRoot "logs") "phase5_ev_hard_veto_daily.csv")
 $evHardDailyAsOf = ""
@@ -1294,6 +1298,17 @@ if($last.PSObject.Properties.Name -contains "as_of_date"){
             }
         }
     }
+}
+
+}
+# StrictMode-safe: $evPath must exist even when EV status JSON decides (CSV skipped).
+# Define deterministic fallback path for downstream audit blocks.
+if(-not (Get-Variable -Name "evPath" -Scope Local -ErrorAction SilentlyContinue)){
+  try{
+    $evPath = Prefer-LogsPath (Join-Path $logsDir "phase5_ev_hard_veto_daily.csv") (Join-Path $logsRoot "phase5_ev_hard_veto_daily.csv")
+  } catch {
+    $evPath = (Join-Path $logsDir "phase5_ev_hard_veto_daily.csv")
+  }
 }
 # EVHARD_REASON_CAPTURE_BEGIN
 # Capture today's EV-hard daily reason for audit/contract messaging
