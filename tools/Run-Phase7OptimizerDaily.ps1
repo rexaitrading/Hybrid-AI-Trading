@@ -8,6 +8,8 @@ param(
   [double]$MaxWeight   = 0.60,
   [double]$MinWeight   = 0.00,
   [switch]$Enable
+  ,[string]$MetricsPath = ".\logs\phase6_portfolio_metrics.json"
+  ,[int]$MinRows = 10
 )
 
 
@@ -108,6 +110,16 @@ function Invoke-BlockGReady {
   return $code
 }
 
+$blockgExitCache = @{}
+function Get-BlockGExitCached([string]$sym){
+  $k = ([string]$sym).Trim().ToUpperInvariant()
+  if(-not $k){ return 2 }
+  if($blockgExitCache.ContainsKey($k)){ return [int]$blockgExitCache[$k] }
+  $rc = Invoke-BlockGReady -Symbol $k
+  $blockgExitCache[$k] = [int]$rc
+  return [int]$rc
+}
+
 # ---- MAIN ----
 # Policy A: market-aware as_of_date (US lane) for daily optimizer
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
@@ -132,6 +144,8 @@ if (-not (Test-Path $BlockGPath)) { Fail-Closed "blockg_status_missing_failclose
 
 try { $s6 = Get-Content -Path $StatePath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail-Closed "phase6_state_parse_fail" @{ StatePath=$StatePath } }
 try { $bg = Get-Content -Path $BlockGPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail-Closed "blockg_parse_fail" @{ BlockGPath=$BlockGPath } }
+if (-not (Test-Path $MetricsPath)) { Fail-Closed "phase6_metrics_missing_failclosed" @{ MetricsPath=$MetricsPath } }
+try { $m6 = Get-Content -Path $MetricsPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail-Closed "phase6_metrics_parse_fail" @{ MetricsPath=$MetricsPath } }
 
 $as6 = (($s6.as_of_date + "")).Substring(0,10)
 $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
@@ -168,21 +182,38 @@ if(-not $SymbolList -or @($SymbolList).Count -eq 0){
   Fail-Closed "no_symbols" @{ raw=$raw; symbols=@(); eligible=@() }
 }
 
-# Eligibility: trust checker exit codes (cached)
-$blockgCache = @{}
-function Get-BlockGExitCached([string]$sym){
-  $k = (($sym + "")).Trim().ToUpperInvariant()
-  if($blockgCache.ContainsKey($k)){ return [int]$blockgCache[$k] }
-  $code = [int](Invoke-BlockGReady -Symbol $k)
-  $blockgCache[$k] = $code
-  return $code
+# Eligibility: BlockG ready AND Phase6 metrics evidence (Policy A realism)
+$eligible_blockg = @()
+foreach($s in @($SymbolList)){
+  if((Get-BlockGExitCached $s) -eq 0){ $eligible_blockg += $s }
 }
 
-# Eligibility: trust checker exit codes
+# metrics evidence map: symbol -> {rows, source_exists}
+$rowsBy = @{}
+try{
+  if($m6 -and $m6.PSObject.Properties.Name -contains "phase6"){
+    foreach($r in @($m6.phase6.symbols)){
+      $sym = ([string]$r.symbol).ToUpperInvariant()
+      $rows = 0
+      $okSrc = $false
+      try { $rows  = [int]$r.rows } catch { $rows = 0 }
+      try { $okSrc = [bool]$r.source_exists } catch { $okSrc = $false }
+      $rowsBy[$sym] = @{ rows=$rows; source_exists=$okSrc }
+    }
+  }
+} catch { }
+
 $eligible = @()
-foreach($s in @($SymbolList)){
-  if((Get-BlockGExitCached -sym $s) -eq 0){ $eligible += $s }
+foreach($s in @($eligible_blockg)){
+  $su = ([string]$s).ToUpperInvariant()
+  if($rowsBy.ContainsKey($su)){
+    $ri = $rowsBy[$su]
+    if([bool]$ri.source_exists -and [int]$ri.rows -ge [int]$MinRows){
+      $eligible += $su
+    }
+  }
 }
+
 if(-not $eligible -or @($eligible).Count -eq 0){
   Fail-Closed "no_eligible_symbols" @{ symbols=@($SymbolList); eligible=@($eligible); raw=$raw }
 }
@@ -194,7 +225,7 @@ foreach($s in @($SymbolList)){ $w[$s] = 0.0 }
 $base = 1.0 / [double]@($eligible).Count
 foreach($s in @($eligible)){ $w[$s] = $base }
 
-# Cap + renorm
+# Cap (do NOT renormalize  renorm cancels the cap). Remainder -> CASH.
 $capped = @{}
 $sum = 0.0
 foreach($s in @($eligible)){
@@ -203,16 +234,20 @@ foreach($s in @($eligible)){
   $sum += $c
 }
 if($sum -le 0){ Fail-Closed "weights_sum_nonpositive_after_cap" @{ MaxWeight=$MaxWeight; eligible=@($eligible) } }
-foreach($s in @($eligible)){ $w[$s] = [double]$capped[$s] / $sum }
 
-# Emit artifacts
+foreach($s in @($eligible)){ $w[$s] = [double]$capped[$s] }
+
+$rem = 1.0 - [double]$sum
+if($rem -gt 1e-12){
+  $w["CASH"] = [double]$rem
+}# Emit artifacts
 # $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)   # disabled (use env-first bootstrap repoRoot)
 $fullOutDir = $OutDir
 if (-not [System.IO.Path]::IsPathRooted($fullOutDir)) { $fullOutDir = Join-Path $repoRoot $OutDir }
 if (-not (Test-Path $fullOutDir)) { New-Item -ItemType Directory -Force -Path $fullOutDir | Out-Null }
 
 $weightsObj = [ordered]@{}
-foreach($s in @($SymbolList)){ $weightsObj[$s] = [double]$w[$s] }
+foreach($k in @($w.Keys)){ $weightsObj[$k] = [double]$w[$k] }
 
 $out = [ordered]@{
   ts_utc     = $tsUtc
@@ -241,7 +276,7 @@ $csvPath = Join-Path $fullOutDir "phase7_weights.csv"
 $csv = @()
 $csv += "as_of_date,symbol,weight,eligible,blockg_ready"
 foreach($s in @($SymbolList)){
-  $csv += ("{0},{1},{2},{3},{4}" -f $today,$s,[double]$w[$s],([bool](@($eligible) -contains $s)),([bool]((Get-BlockGExitCached -sym $s) -eq 0)))
+  $csv += ("{0},{1},{2},{3},{4}" -f $today,$s,[double]$w[$s],([bool](@($eligible) -contains $s)),([bool]((Get-BlockGExitCached $s) -eq 0)))
 }
 Write-Utf8NoBom -Path $csvPath -Text ($csv -join "`n")
 
