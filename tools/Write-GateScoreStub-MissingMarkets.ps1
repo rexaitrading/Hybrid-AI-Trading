@@ -47,6 +47,9 @@ if($Market -ne "ALL"){
 $today = (Get-Date).ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
+# Optional micro-polish: dedupe CN_* mapping that resolves to same HK_* log roots
+$seen = @{}
+
 foreach($m in $targets){
   # Resolve per-market logs dir (CN_* may map to HK_SH/HK_SZ via Get-MarketLogRoot.ps1)
   $ld = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $m
@@ -55,6 +58,12 @@ foreach($m in $targets){
 
   New-Item -ItemType Directory -Force -Path $ld | Out-Null
   $p = Join-Path $ld ("{0}_gatescore_events.jsonl" -f $Symbol.ToLowerInvariant())
+$pk = $p.ToLowerInvariant()
+if($seen.ContainsKey($pk)){
+  Write-Host ("[P53] SKIP duplicate mapped target -> " + $p) -ForegroundColor DarkYellow
+  continue
+}
+$seen[$pk] = $true
 
   # Guard: never overwrite real markets that should be produced by Phase3
   if($m -in @("US","JP","HK","SG")){
