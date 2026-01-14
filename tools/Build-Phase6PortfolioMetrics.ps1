@@ -25,7 +25,19 @@ if(-not (Test-Path -LiteralPath $logs)){
   New-Item -ItemType Directory -Force -Path $logs | Out-Null
 }
 
-$today = if($AsOf){ $AsOf } else { (Get-Date).ToString("yyyy-MM-dd") }
+# A3 single-truth: use RunContext US as_of_date unless explicit -AsOf passed
+$today = ""
+if($AsOf){
+  $today = $AsOf
+} else {
+  $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+  $rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $logs "..\tools\Resolve-RunContext.ps1") -Market US
+  $rc = $null
+  try { $rc = $rcRaw | ConvertFrom-Json -ErrorAction Stop } catch { $rc = $null }
+  if(-not $rc){ throw "[PHASE6] Resolve-RunContext invalid JSON (fail-closed)" }
+  $today = ([string]$rc.as_of_date).Trim()
+  if(-not $today){ throw "[PHASE6] RunContext as_of_date missing (fail-closed)" }
+}
 $tsUtc  = (Get-Date).ToUniversalTime().ToString("o")
 $outPath = Join-Path $logs "phase6_portfolio_metrics.json"
 
