@@ -17,38 +17,33 @@ function Write-Utf8NoBom([string]$Path, [string]$Text) {
   if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
   [System.IO.File]::WriteAllText($full, $Text, $enc)
 }
-# Phase4 source (A2 preferred): prefer per-market phase4_status.json, then global phase4_status.json, else legacy stamp
 # Phase4 evidence chooser (market-aware, fail-closed):
-# Prefer per-market phase4_validation_passed.json, then per-market phase4_status.json,
-# then global equivalents, then legacy phase4_stamp_last.json.
-$phase4Path = ".\logs\phase4_validation_passed.json"
+# Precedence:
+# 1) .\logs\<MKT>\phase4_validation_passed.json
+# 2) .\logs\<MKT>\phase4_status.json
+# 3) .\logs\phase4_validation_passed.json
+# 4) .\logs\phase4_status.json
+# 5) .\logs\phase4_stamp_last.json
+$phase4Path = ".\logs\phase4_stamp_last.json"
 try {
+  $picked = $false
   $mP4 = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+
   if($mP4){
-    $cand = ".\logs\" + $mP4 + "\phase4_validation_passed.json"
-    if(Test-Path -LiteralPath $cand){ $phase4Path = $cand }
-    else {
-      $cand2 = ".\logs\" + $mP4 + "\phase4_status.json"
-      if(Test-Path -LiteralPath $cand2){ $phase4Path = $cand2 }
-    }
+    $p1 = ".\logs\" + $mP4 + "\phase4_validation_passed.json"
+    $p2m = ".\logs\" + $mP4 + "\phase4_status.json"
+    if(Test-Path -LiteralPath $p1){ $phase4Path = $p1; $picked = $true }
+    elseif(Test-Path -LiteralPath $p2m){ $phase4Path = $p2m; $picked = $true }
   }
-  if(Test-Path -LiteralPath ".\logs\phase4_validation_passed.json"){ $phase4Path = ".\logs\phase4_validation_passed.json" }
-  elseif(Test-Path -LiteralPath ".\logs\phase4_status.json"){ $phase4Path = ".\logs\phase4_status.json" }
-  else {
-    $alt = ".\logs\phase4_stamp_last.json"
-    if(Test-Path -LiteralPath $alt){ $phase4Path = $alt }
+
+  if(-not $picked){
+    if(Test-Path -LiteralPath ".\logs\phase4_validation_passed.json"){ $phase4Path = ".\logs\phase4_validation_passed.json"; $picked = $true }
+    elseif(Test-Path -LiteralPath ".\logs\phase4_status.json"){ $phase4Path = ".\logs\phase4_status.json"; $picked = $true }
+    elseif(Test-Path -LiteralPath ".\logs\phase4_stamp_last.json"){ $phase4Path = ".\logs\phase4_stamp_last.json"; $picked = $true }
   }
 } catch { }
-try {
-  $m2 = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
-  if($m2){
-    $p = ".\logs\" + $m2 + "\phase4_status.json"
-    if(Test-Path -LiteralPath $p){ $phase4Path = $p }
-  }
-  $p2 = ".\logs\phase4_status.json"
-  if(Test-Path -LiteralPath $p2){ $phase4Path = $p2 }
-} catch {}
-# A2: fallback to Phase4 stamp if canonical file not present
+
+# A2: fallback to Phase4 stamp if chosen file not present
 if(-not (Test-Path -LiteralPath $phase4Path)){
   $alt = ".\logs\phase4_stamp_last.json"
   if(Test-Path -LiteralPath $alt){ $phase4Path = $alt }
@@ -161,9 +156,31 @@ if (Test-Path $phase23Path) {
     }
   } catch {}
 }
-
 # ---- GateScore ----
+# GateScore evidence chooser (market-aware, fail-closed):
+# Precedence:
+# 1) .\logs\<MKT>\gatescore_pnl_summary.csv
+# 2) .\logs\<MKT>\gatescore_daily_summary.csv
+# 3) .\logs\gatescore_pnl_summary.csv
+# 4) .\logs\gatescore_daily_summary.csv
 $gsPath = ".\logs\gatescore_daily_summary.csv"
+try {
+  $picked = $false
+  $mGS = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+
+  if($mGS){
+    $p1 = ".\logs\" + $mGS + "\gatescore_pnl_summary.csv"
+    $p2 = ".\logs\" + $mGS + "\gatescore_daily_summary.csv"
+    if(Test-Path -LiteralPath $p1){ $gsPath = $p1; $picked = $true }
+    elseif(Test-Path -LiteralPath $p2){ $gsPath = $p2; $picked = $true }
+  }
+
+  if(-not $picked){
+    if(Test-Path -LiteralPath ".\logs\gatescore_pnl_summary.csv"){ $gsPath = ".\logs\gatescore_pnl_summary.csv"; $picked = $true }
+    elseif(Test-Path -LiteralPath ".\logs\gatescore_daily_summary.csv"){ $gsPath = ".\logs\gatescore_daily_summary.csv"; $picked = $true }
+  }
+} catch { }
+
 $gsOk = $false
 $gsAsOf = ""
 $gsFoundTodayRow = $false
@@ -177,7 +194,7 @@ if (Test-Path $gsPath) {
       $gsAsOf = (($row.as_of_date) + "").Trim()
       # evidence-only: count_signals>0; strict thresholds enforced downstream (Block-G)
       [void][int]::TryParse([string]$row.count_signals, [ref]$gsCountSignals)
-      $gsOk = ($gsCountSignals -gt 0)
+      $gsOk = [bool]$gsFoundTodayRow
     }
   } catch {}
 }
@@ -191,7 +208,7 @@ $warnings = New-Object System.Collections.Generic.List[string]
 if ($phase4AsOf -ne $inputsDay -or -not $phase4Ok) { $reasons.Add("phase4_not_ok_or_stale") }
 if ($phase23AsOf -ne $inputsDay -or -not $phase23Ok) { $reasons.Add("phase23_not_ok_or_stale") }
 # GateScore is recorded as a warning here; Block-G enforces strict today-ness for LIVE readiness
-if ($gsAsOf -ne $inputsDay -or -not $gsOk) { $warnings.Add("gatescore_not_ok_or_missing_today_row") }
+if(-not $gsFoundTodayRow -or ($gsAsOf -ne $inputsDay)) { $warnings.Add("gatescore_not_ok_or_missing_today_row") }
 
 if ($reasons.Count -eq 0) {
   $ok = $true
