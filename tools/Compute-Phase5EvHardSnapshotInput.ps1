@@ -25,9 +25,26 @@ function Sha256Hex([string]$Text) {
   $hash = $sha.ComputeHash($bytes)
   ($hash | ForEach-Object { $_.ToString("x2") }) -join ""
 }
+# Market-aware TODAY: if HAT_MARKET set, use Resolve-RunContext.as_of_date (fail-closed)
+$m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+$sym = (($env:HAT_SYMBOL + "")).Trim().ToUpperInvariant()
+if(-not $sym){ $sym = "NVDA" }
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
-
+if($m){
+  $rcPath = Join-Path $PSScriptRoot "Resolve-RunContext.ps1"
+  if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: $rcPath" }
+  $rcRaw = (& $rcPath -Market $m -Symbol $sym | Out-String)
+  $rcRaw = (($rcRaw + "")).Trim()
+  if(-not $rcRaw){ throw "[FAIL-CLOSED] Resolve-RunContext empty stdout" }
+  $ix0 = $rcRaw.IndexOf("{"); $ix1 = $rcRaw.LastIndexOf("}")
+  if($ix0 -lt 0 -or $ix1 -le $ix0){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+  $rc = ($rcRaw.Substring($ix0, ($ix1 - $ix0 + 1))) | ConvertFrom-Json
+  if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+  $today = ([string]$rc.as_of_date).Trim()
+  if($today.Length -ge 10){ $today = $today.Substring(0,10) }
+} else {
+  $today = (Get-Date).ToString("yyyy-MM-dd")
+}
 $computedPass = $false
 $computedReason = "evidence_missing_failclosed"
 $inputsHash = ""
