@@ -3,7 +3,7 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
-  [ValidateSet("US","HK","JP","SG")]
+  [ValidateSet("US","HK","HK_SH","HK_SZ","JP","SG")]
   [string[]]$Markets = @("US","HK","JP","SG")
 )
 

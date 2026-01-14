@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ")]
   [string]$Market="US",
   [ValidateSet("NVDA","SPY","QQQ")]
   [string]$Symbol="NVDA"
@@ -26,6 +26,11 @@ function Resolve-RepoRoot(){
 $repoRoot = Resolve-RepoRoot
 
 # Prefer RunContext logs_dir (per-market). Fall back to legacy root logs.
+# A2: FORCE per-market output dir (do not write root logs for per-market status)
+$logsDir = Join-Path $repoRoot ("logs\" + $Market)
+if(-not (Test-Path -LiteralPath $logsDir)){
+  New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+}
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol $Symbol | Out-String
 $rcRaw = ($rcRaw + "").Trim()
