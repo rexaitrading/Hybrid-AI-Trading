@@ -1288,7 +1288,7 @@ if($last.PSObject.Properties.Name -contains "as_of_date"){
         # Find today row (if any) and enforce ok only for today.
         foreach ($r in $rows) {
             if ((Slice-Date ([string]$r.date)) -eq $todayLocal) {
-                $evHardDailyAsOf = $today
+                $evHardDailyAsOf = $todayLocal
                 if ($r.PSObject.Properties.Name -contains "ok") { $evHardOk = To-Bool $r.ok } else { $evHardOk = $true }
                 break
             }
@@ -2025,6 +2025,5 @@ exit 0
   } catch { }
   throw
 }
-
 
 
