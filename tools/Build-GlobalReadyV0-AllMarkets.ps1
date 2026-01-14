@@ -24,4 +24,12 @@ foreach($m in $Markets){
   }
 }
 
+# P53: seed fail-closed GateScore stubs for missing markets (deterministic; prevents missing-file ambiguity)
+$stub = Join-Path $repoRoot "tools\Write-GateScoreStub-MissingMarkets.ps1"
+if(Test-Path -LiteralPath $stub){
+  & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $stub -Market ALL -Symbol NVDA | Out-Null
+} else {
+  throw "Missing producer: $stub"
+}
+
 Write-Host "[GlobalReadyV0] wrote G1-G4 artifacts for all markets (policy still fail-closed)" -ForegroundColor Green
