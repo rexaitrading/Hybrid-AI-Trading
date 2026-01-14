@@ -40,7 +40,14 @@ function Write-Utf8NoBom {
 function Fail-Closed {
   param([string]$Reason, $Payload)
 
-  $today = (Get-Date).ToString("yyyy-MM-dd")
+  # Policy A: market-aware as_of_date (US lane) for daily optimizer
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path (Split-Path -Parent $PSCommandPath) "Resolve-RunContext.ps1") -Market US
+$rc = $null
+try { $rc = $rcRaw | ConvertFrom-Json -ErrorAction Stop } catch { $rc = $null }
+if(-not $rc){ Fail-Closed "phase7_runcontext_parse_fail" @{ market="US" } }
+$today = ([string]$rc.as_of_date).Trim()
+if(-not $today){ Fail-Closed "phase7_runcontext_asof_missing" @{ market="US" } }
   $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
   # normalize payload arrays if present
@@ -93,7 +100,7 @@ function Invoke-BlockGReady {
   # MUST be child process: checker may 'exit N' or write to stderr when not-ready
   $prev = $ErrorActionPreference
   $ErrorActionPreference = "Continue"
-  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $t 2>$null | Out-Host
+  powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $checker -Symbol $t -Market US -Mode BUILD_ONLY 2>$null | Out-Host
   $code = $LASTEXITCODE
   $ErrorActionPreference = $prev
 
@@ -102,7 +109,14 @@ function Invoke-BlockGReady {
 }
 
 # ---- MAIN ----
-$today = (Get-Date).ToString("yyyy-MM-dd")
+# Policy A: market-aware as_of_date (US lane) for daily optimizer
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path (Split-Path -Parent $PSCommandPath) "Resolve-RunContext.ps1") -Market US
+$rc = $null
+try { $rc = $rcRaw | ConvertFrom-Json -ErrorAction Stop } catch { $rc = $null }
+if(-not $rc){ Fail-Closed "phase7_runcontext_parse_fail" @{ market="US" } }
+$today = ([string]$rc.as_of_date).Trim()
+if(-not $today){ Fail-Closed "phase7_runcontext_asof_missing" @{ market="US" } }
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
 # Env override (still fail-closed by default)
