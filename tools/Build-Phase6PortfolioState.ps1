@@ -40,6 +40,8 @@ $payload = [ordered]@{
   ok        = $ok
   reason    = $reason
   ready_symbols = @($ready)
+ready_for_optimizer = @($ready)
+ready_for_live = @()
   symbols   = @($syms)
   version   = "phase6.1"
 } | ConvertTo-Json -Depth 8
