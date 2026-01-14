@@ -1,5 +1,11 @@
 [CmdletBinding()]
-param()
+param(
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+  [string]$Market = "",
+
+  [ValidateSet("NVDA","SPY","QQQ","ALL")]
+  [string]$Symbol = "NVDA"
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -15,12 +21,32 @@ if(-not $repoRoot){ throw "[REPOROOT] FAIL-CLOSED: repoRoot empty" }
 $repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
 Set-Location -LiteralPath $repoRoot
 [System.Environment]::CurrentDirectory = $repoRoot
-
-$logDir = Join-Path $repoRoot "logs"
+# Per-market logs root (A3 single-truth)
+$gm = Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1"
+if(-not (Test-Path -LiteralPath $gm)){ throw "[FAIL-CLOSED] Missing Get-MarketLogRoot.ps1: " + $gm }
+$logDir = & "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $gm -Market $Market
+if(-not $logDir){ $logDir = Join-Path (Join-Path $repoRoot "logs") $Market }
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-
 # Phase23 health is a TODAY heartbeat (do not inherit stale dates from other phases)
-$today = (Get-Date).ToString("yyyy-MM-dd")
+# Market-aware TODAY: use Resolve-RunContext.as_of_date (fail-closed)
+$m = (($Market + "")).Trim().ToUpperInvariant()
+if(-not $m){ $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant() }
+if(-not $m){ $m = "US" }
+$Market = $m
+$s = (($Symbol + "")).Trim().ToUpperInvariant()
+if(-not $s){ $s = "NVDA" }
+$Symbol = $s
+$rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: $rcPath" }
+$rcRaw = (& $rcPath -Market $Market -Symbol $Symbol | Out-String)
+$rcRaw = (($rcRaw + "")).Trim()
+if(-not $rcRaw){ throw "[FAIL-CLOSED] Resolve-RunContext returned empty stdout" }
+$ix0 = $rcRaw.IndexOf("{"); $ix1 = $rcRaw.LastIndexOf("}")
+if($ix0 -lt 0 -or $ix1 -le $ix0){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+$rc = ($rcRaw.Substring($ix0, ($ix1 - $ix0 + 1))) | ConvertFrom-Json
+if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+$today = ([string]$rc.as_of_date).Trim()
+if($today.Length -ge 10){ $today = $today.Substring(0,10) }
 
 $outCsv = Join-Path $logDir "phase23_health_daily.csv"
 
