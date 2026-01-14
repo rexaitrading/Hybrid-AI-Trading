@@ -53,7 +53,7 @@ $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $rc = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol NVDA | ConvertFrom-Json
 $todayLocal = Slice-Date ([string]$rc.as_of_date)
 
-$logsDir = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
+$logsDir = ([string]$rc.logs_dir_out).Trim()
 if(-not $logsDir){ throw "[A3] logsDir unresolved from Resolve-RunContext (fail-closed)" }
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null;
 $outPath = Join-Path $logsDir "risk_guard_status.json"
