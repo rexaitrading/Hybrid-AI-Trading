@@ -21,7 +21,14 @@ try {
 # --- UTF8_CONSOLE_END ---
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = & (Join-Path $toolsDir "Go-RepoRoot.ps1")
-$today = (Get-Date).ToString("yyyy-MM-dd")
+# A3 single-truth: as_of_date from Resolve-RunContext (market tz)
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market
+$rc = $null
+try { $rc = $rcRaw | ConvertFrom-Json -ErrorAction Stop } catch { $rc = $null }
+if(-not $rc){ throw "[A3] Resolve-RunContext returned invalid JSON (fail-closed)" }
+$today = ([string]$rc.as_of_date).Trim()
+if(-not $today){ throw "[A3] as_of_date missing in RunContext (fail-closed)" }
 
 function Get-LineCount([string]$p){
   if(-not (Test-Path -LiteralPath $p)){ return 0 }
@@ -29,7 +36,12 @@ function Get-LineCount([string]$p){
 }
 
 function Pick-BestSpyInput([string]$repoRoot){
-  $logsDir = Join-Path $repoRoot "logs"
+  # A3 single-truth: per-market logs_dir_out from RunContext
+$logsDir = ([string]$rc.logs_dir_out).Trim()
+if(-not $logsDir){ throw "[A3] logs_dir_out missing in RunContext (fail-closed)" }
+if(-not (Test-Path -LiteralPath $logsDir)){
+  New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+}
   if(-not (Test-Path -LiteralPath $logsDir)){ return "" }
 
   # NO \b word-boundary. Underscores break \b matching.

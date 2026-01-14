@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [ValidateSet("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")]
   [string]$Market = "US"
 )
 
@@ -54,7 +54,7 @@ $rc = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Pa
 $todayLocal = Slice-Date ([string]$rc.as_of_date)
 
 $logsDir = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
-if(-not $logsDir){ $logsDir = Join-Path $repoRoot "logs" }
+if(-not $logsDir){ throw "[A3] logsDir unresolved from Resolve-RunContext (fail-closed)" }
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null;
 $outPath = Join-Path $logsDir "risk_guard_status.json"
 $obj = [ordered]@{

@@ -1,5 +1,7 @@
 [CmdletBinding()]
 param(
+  [ValidateSet("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")]
+  [string]$Market = "US",
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
   [ValidateSet("rewrite","append")]
@@ -12,7 +14,16 @@ chcp 65001 | Out-Null
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
-$logsDir  = Join-Path $repoRoot "logs"
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market
+$rc = $null
+try { $rc = $rcRaw | ConvertFrom-Json -ErrorAction Stop } catch { $rc = $null }
+if(-not $rc){ throw "[A3] Resolve-RunContext invalid JSON (fail-closed)" }
+$logsDir = ([string]$rc.logs_dir_out).Trim()
+if(-not $logsDir){ throw "[A3] logs_dir_out missing in RunContext (fail-closed)" }
+if(-not (Test-Path -LiteralPath $logsDir)){
+  New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+}
 
 function SliceDate([string]$d){
   if(-not $d){ return "" }
@@ -56,7 +67,7 @@ foreach($sym in $wanted){
         if($asOf){ break }
       }
     }
-    if(-not $asOf){ $asOf = (Get-Date).ToString("yyyy-MM-dd") }
+    if(-not $asOf){ throw "[A3] as_of_date missing in input row (fail-closed)" }
 
     # realized pnl
     $rp = $null
