@@ -31,7 +31,12 @@ function Rewrite-MetricsSource([string]$Path,[string]$From,[string]$To){
   }
 }
 
-$repoRoot = (Resolve-Path ".").Path
+function Resolve-RepoRoot(){
+  $toolsDir = Split-Path -Parent $PSCommandPath
+  $rr = Split-Path -Parent $toolsDir
+  try { return (Resolve-Path -LiteralPath $rr -ErrorAction Stop).Path } catch { return $rr }
+}
+$repoRoot = Resolve-RepoRoot
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 
 # Resolve per-market log root
