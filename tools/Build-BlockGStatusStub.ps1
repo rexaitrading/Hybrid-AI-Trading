@@ -120,6 +120,26 @@ function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal)
 }
 # GS_METRICS_SOURCE_BY_SYMBOL_END
 Set-StrictMode -Version Latest
+# [A3] Helper must exist BEFORE any call sites (call-before-def caused CommandNotFoundException).
+if(-not (Get-Command _GetTodayLocalFromRunContext -ErrorAction SilentlyContinue)){
+  function _SliceDate([string]$d){
+    if(-not $d){ return "" }
+    $s = ([string]$d).Trim()
+    if($s.Length -ge 10){ return $s.Substring(0,10) }
+    return $s
+  }
+  function _GetTodayLocalFromRunContext([string]$Market,[string]$Symbol,[string]$RepoRoot){
+    $rcPath = Join-Path $RepoRoot "tools\Resolve-RunContext.ps1"
+    if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: $rcPath" }
+    $raw = (& $rcPath -Market $Market -Symbol $Symbol | Out-String)
+    $raw = (($raw + "")).Trim()
+    $i0 = $raw.IndexOf("{"); $i1 = $raw.LastIndexOf("}")
+    if($i0 -lt 0 -or $i1 -le $i0){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+    $rc = ($raw.Substring($i0, ($i1-$i0+1))) | ConvertFrom-Json
+    if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+    return (_SliceDate ([string]$rc.as_of_date))
+  }
+}
 # Mode truth (single semantic): LIVE must remain strict.
 $mode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
 $isLiveMode = ($mode -eq "LIVE")
@@ -556,7 +576,16 @@ try {
   [System.IO.File]::WriteAllText($crumbPath, $msg, (New-Object System.Text.UTF8Encoding($false)))
 } catch { }
 # --- END BREADCRUMB ---
-    $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+# [A3] Canonical todayLocal from RunContext.as_of_date (market-aware). FAIL-CLOSED.
+$rcPathA3 = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+if(-not (Test-Path -LiteralPath $rcPathA3)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: " + $rcPathA3 }
+$rcRawA3 = (& $rcPathA3 -Market $Market -Symbol $Symbol | Out-String)
+$rcRawA3 = (($rcRawA3 + "")).Trim()
+$ix0A3 = $rcRawA3.IndexOf("{"); $ix1A3 = $rcRawA3.LastIndexOf("}")
+if($ix0A3 -lt 0 -or $ix1A3 -le $ix0A3){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+$rcA3 = ($rcRawA3.Substring($ix0A3, ($ix1A3 - $ix0A3 + 1))) | ConvertFrom-Json
+if(-not $rcA3 -or -not $rcA3.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+$todayLocal = _SliceDate ([string]$rcA3.as_of_date)
     $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
     function _Slice([string]$d){ $t=(($d+"")).Trim(); if($t.Length -ge 10){ $t=$t.Substring(0,10) }; $t }
@@ -711,8 +740,8 @@ $crisisAlphaEnabled = $false
 # REGIME_READER_END
 $payload = [ordered]@{
       ts_utc=$tsUtc
-      as_of_date=$todayLocal
-      date=$todayLocal
+      as_of_date=(_GetTodayLocalFromRunContext $Market $Symbol $repoRoot)
+      date=(_GetTodayLocalFromRunContext $Market $Symbol $repoRoot)
       is_trading_day=[bool]$rcIsTradingDayFast
       session_name=[string]$rcSessionNameFast
       phase23_health_ok_today=[bool]$phase23Ok
@@ -809,7 +838,16 @@ try{
 }catch{ }
 
 # Today-ness + freshness: require as_of_date == today and age <= 180 minutes (tuneable)
-$todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+# [A3] Canonical todayLocal from RunContext.as_of_date (market-aware). FAIL-CLOSED.
+$rcPathA3 = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+if(-not (Test-Path -LiteralPath $rcPathA3)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: " + $rcPathA3 }
+$rcRawA3 = (& $rcPathA3 -Market $Market -Symbol $Symbol | Out-String)
+$rcRawA3 = (($rcRawA3 + "")).Trim()
+$ix0A3 = $rcRawA3.IndexOf("{"); $ix1A3 = $rcRawA3.LastIndexOf("}")
+if($ix0A3 -lt 0 -or $ix1A3 -le $ix0A3){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+$rcA3 = ($rcRawA3.Substring($ix0A3, ($ix1A3 - $ix0A3 + 1))) | ConvertFrom-Json
+if(-not $rcA3 -or -not $rcA3.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+$todayLocal = _SliceDate ([string]$rcA3.as_of_date)
 $intel_ok_today = ($intel_as_of_date -eq $todayLocal -and $intel_age_minutes -le 180)
 
 # Per-symbol field (NVDA only right now)
@@ -825,7 +863,16 @@ $gsMsToday = ""
 $gsMsExists = $false
 
 try {
-  $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+# [A3] Canonical todayLocal from RunContext.as_of_date (market-aware). FAIL-CLOSED.
+$rcPathA3 = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+if(-not (Test-Path -LiteralPath $rcPathA3)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: " + $rcPathA3 }
+$rcRawA3 = (& $rcPathA3 -Market $Market -Symbol $Symbol | Out-String)
+$rcRawA3 = (($rcRawA3 + "")).Trim()
+$ix0A3 = $rcRawA3.IndexOf("{"); $ix1A3 = $rcRawA3.LastIndexOf("}")
+if($ix0A3 -lt 0 -or $ix1A3 -le $ix0A3){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+$rcA3 = ($rcRawA3.Substring($ix0A3, ($ix1A3 - $ix0A3 + 1))) | ConvertFrom-Json
+if(-not $rcA3 -or -not $rcA3.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+$todayLocal = _SliceDate ([string]$rcA3.as_of_date)
 # GS_ASOF_FORCE_FROM_EVENTS_BEGIN
 # FINAL AUTHORITY: gsAsOf must follow the resolved NVDA events file (array OR jsonl).
 try {
@@ -1017,8 +1064,35 @@ try {
 if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
 # Session date (single source of truth): prefer Phase4 stamp as_of_date; fallback to local date
+# [A3] Canonical todayLocal must come from RunContext.as_of_date (market-aware). Fail-closed if RunContext missing.
+function _SliceDate([string]$d){
+  if(-not $d){ return "" }
+  $s = ([string]$d).Trim()
+  if($s.Length -ge 10){ return $s.Substring(0,10) }
+  return $s
+}
+function _GetTodayLocalFromRunContext([string]$Market,[string]$Symbol,[string]$RepoRoot){
+  $rcPath = Join-Path $RepoRoot "tools\Resolve-RunContext.ps1"
+  if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: $rcPath" }
+  $raw = (& $rcPath -Market $Market -Symbol $Symbol | Out-String)
+  $raw = (($raw + "")).Trim()
+  $i0 = $raw.IndexOf("{"); $i1 = $raw.LastIndexOf("}")
+  if($i0 -lt 0 -or $i1 -le $i0){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+  $rc = ($raw.Substring($i0, ($i1-$i0+1))) | ConvertFrom-Json
+  if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+  return (_SliceDate ([string]$rc.as_of_date))
+}
 $today = (Get-Date).ToString("yyyy-MM-dd")
-$todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+# [A3] Canonical todayLocal from RunContext.as_of_date (market-aware). FAIL-CLOSED.
+$rcPathA3 = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+if(-not (Test-Path -LiteralPath $rcPathA3)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: " + $rcPathA3 }
+$rcRawA3 = (& $rcPathA3 -Market $Market -Symbol $Symbol | Out-String)
+$rcRawA3 = (($rcRawA3 + "")).Trim()
+$ix0A3 = $rcRawA3.IndexOf("{"); $ix1A3 = $rcRawA3.LastIndexOf("}")
+if($ix0A3 -lt 0 -or $ix1A3 -le $ix0A3){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+$rcA3 = ($rcRawA3.Substring($ix0A3, ($ix1A3 - $ix0A3 + 1))) | ConvertFrom-Json
+if(-not $rcA3 -or -not $rcA3.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+$todayLocal = _SliceDate ([string]$rcA3.as_of_date)
 $p4Path = Join-Path $logsDir "phase4_validation_passed.json"
 if (Test-Path -LiteralPath $p4Path) {
   try {
@@ -1707,7 +1781,7 @@ $crashFlattenPath = [string]$cm.path
 # CRASHMODE_FLATTEN_READER_END
 $payload = [ordered]@{
     ts_utc = $tsUtc
-    as_of_date = $today
+    as_of_date = $todayLocal
     gatescore_metrics_source = $gatescore_metrics_source
 
     # Audit: per-symbol metrics_source (do NOT use for gating in strict Option-B)
@@ -1734,7 +1808,7 @@ $payload = [ordered]@{
     session_name     = [string]$rcSessionName
     ev_hard_not_evaluated_market_closed = $ev_hard_not_evaluated_market_closed
     gatescore_nvda_eligible_zero = $gsNvdaEligibleZero
-    date = $today
+    date = $todayLocal
     phase23_health_ok_today = $phase23Ok
     ev_hard_daily_ok_today  = $evHardOk
     ev_hard_daily_as_of_date = $evHardDailyAsOf
@@ -1905,7 +1979,16 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 if(-not (Get-Variable -Name "__emit_reached" -Scope Script -ErrorAction SilentlyContinue)){
   try {
     $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
-    $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+# [A3] Canonical todayLocal from RunContext.as_of_date (market-aware). FAIL-CLOSED.
+$rcPathA3 = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+if(-not (Test-Path -LiteralPath $rcPathA3)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: " + $rcPathA3 }
+$rcRawA3 = (& $rcPathA3 -Market $Market -Symbol $Symbol | Out-String)
+$rcRawA3 = (($rcRawA3 + "")).Trim()
+$ix0A3 = $rcRawA3.IndexOf("{"); $ix1A3 = $rcRawA3.LastIndexOf("}")
+if($ix0A3 -lt 0 -or $ix1A3 -le $ix0A3){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+$rcA3 = ($rcRawA3.Substring($ix0A3, ($ix1A3 - $ix0A3 + 1))) | ConvertFrom-Json
+if(-not $rcA3 -or -not $rcA3.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+$todayLocal = _SliceDate ([string]$rcA3.as_of_date)
     if(-not $repoRoot){ $repoRoot = Resolve-RepoRoot }
     if(-not $logsDir){ $logsDir = Join-Path $repoRoot "logs" }
     if(-not (Test-Path -LiteralPath $logsDir)){ New-Item -ItemType Directory -Force -Path $logsDir | Out-Null }
@@ -1942,8 +2025,6 @@ exit 0
   } catch { }
   throw
 }
-
-
 
 
 
