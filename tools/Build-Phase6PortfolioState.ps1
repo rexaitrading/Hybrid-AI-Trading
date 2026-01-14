@@ -10,11 +10,18 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $toolsDir = Join-Path $repoRoot "tools"
 $checker  = Join-Path $toolsDir "Check-BlockGReady.ps1"
 
-$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+# Policy A: daily Phase-6 readiness uses market-aware RunContext as_of_date (US lane)
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Resolve-RunContext.ps1") -Market US
+$rc = $null
+try { $rc = $rcRaw | ConvertFrom-Json -ErrorAction Stop } catch { $rc = $null }
+if(-not $rc){ throw "[PHASE6] Resolve-RunContext invalid JSON (fail-closed)" }
+$today = ([string]$rc.as_of_date).Trim()
+if(-not $today){ throw "[PHASE6] RunContext as_of_date missing (fail-closed)" }
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
 function CheckSym([string]$sym){
-  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $sym 2>$null | Out-Host
+  powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $checker -Symbol $sym -Market US -Mode BUILD_ONLY 2>$null | Out-Host
   return $LASTEXITCODE
 }
 
