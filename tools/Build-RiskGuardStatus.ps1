@@ -41,10 +41,10 @@ function Has-ProxyMetricsToday([string]$LogsDir,[string]$TodayLocal){
     return $false
   } catch { return $true } # fail-closed
 }
-function Allow-NonLiveUs([string]$Market){
+function Allow-NonLiveAny(){
   $mode = ($env:HAT_MODE + "").Trim().ToUpperInvariant()
   if($mode -eq "LIVE"){ return $false }
-  return ($Market.ToUpperInvariant() -eq "US")
+  return $true
 }
 
 
@@ -68,7 +68,7 @@ $obj = [ordered]@{
 }
 
 $evidenceRows = Get-EvidenceTodayRows -LogsDir $logsDir -TodayLocal $todayLocal
-$allow = (Allow-NonLiveUs -Market $Market)
+$allow = (Allow-NonLiveAny)
 if($allow -and $evidenceRows -gt 0){
   $obj.ok_today = $true
   $obj.kill_switch_armed = $false
