@@ -17,14 +17,68 @@ function Write-Utf8NoBom([string]$Path, [string]$Text) {
   if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
   [System.IO.File]::WriteAllText($full, $Text, $enc)
 }
-
+# Phase4 source (A2 preferred): prefer per-market phase4_status.json, then global phase4_status.json, else legacy stamp
 $phase4Path = ".\logs\phase4_validation_passed.json"
+try {
+  $m2 = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+  if($m2){
+    $p = ".\logs\" + $m2 + "\phase4_status.json"
+    if(Test-Path -LiteralPath $p){ $phase4Path = $p }
+  }
+  $p2 = ".\logs\phase4_status.json"
+  if(Test-Path -LiteralPath $p2){ $phase4Path = $p2 }
+} catch {}
 # A2: fallback to Phase4 stamp if canonical file not present
 if(-not (Test-Path -LiteralPath $phase4Path)){
   $alt = ".\logs\phase4_stamp_last.json"
   if(Test-Path -LiteralPath $alt){ $phase4Path = $alt }
 }
+# Market-aware TODAY (fail-closed): prefer Resolve-RunContext.as_of_date when HAT_MARKET set
+# Market-aware TODAY (fail-closed): prefer Resolve-RunContext.as_of_date when HAT_MARKET set
 $today = (Get-Date).ToString("yyyy-MM-dd")
+try {
+  $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+  $sym = (($env:HAT_SYMBOL + "")).Trim().ToUpperInvariant()
+  if($m){
+    if(-not $sym){ $sym = "NVDA" }
+    $rcPath = Join-Path $PSScriptRoot "Resolve-RunContext.ps1"
+    if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: $rcPath" }
+    $rcRaw = (& $rcPath -Market $m -Symbol $sym | Out-String)
+    $rcRaw = (($rcRaw + "")).Trim()
+    if(-not $rcRaw){ throw "[FAIL-CLOSED] Resolve-RunContext empty stdout" }
+    $ix0 = $rcRaw.IndexOf("{"); $ix1 = $rcRaw.LastIndexOf("}")
+    if($ix0 -lt 0 -or $ix1 -le $ix0){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+    $rc = ($rcRaw.Substring($ix0, ($ix1 - $ix0 + 1))) | ConvertFrom-Json
+    if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+    $today = ([string]$rc.as_of_date).Trim()
+    if($today.Length -ge 10){ $today = $today.Substring(0,10) }
+  }
+} catch {
+  # fail-closed posture: keep $today as local date ONLY if RunContext cannot be resolved
+}
+try {
+  $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+  $sym = (($env:HAT_SYMBOL + "")).Trim().ToUpperInvariant()
+  if($m){
+    if(-not $sym){ $sym = "NVDA" }
+    $rcPath = Join-Path $PSScriptRoot "Resolve-RunContext.ps1"
+    if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: $rcPath" }
+    $rcRaw = (& $rcPath -Market $m -Symbol $sym | Out-String)
+    $rcRaw = (($rcRaw + "")).Trim()
+    if(-not $rcRaw){ throw "[FAIL-CLOSED] Resolve-RunContext empty stdout" }
+    $ix0 = $rcRaw.IndexOf("{"); $ix1 = $rcRaw.LastIndexOf("}")
+    if($ix0 -lt 0 -or $ix1 -le $ix0){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+    $rc = ($rcRaw.Substring($ix0, ($ix1 - $ix0 + 1))) | ConvertFrom-Json
+    if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+    $today = ([string]$rc.as_of_date).Trim()
+    if($today.Length -ge 10){ $today = $today.Substring(0,10) }
+  }
+} catch {
+  # fail-closed posture: keep $today as local date ONLY if RunContext cannot be resolved
+}
+# EVH_RAW_CANONICAL_ASOF_GUARD
+$m_guard = (($env:HAT_MARKET + "")).Trim()
+if(-not $m_guard){
 # Canonical as-of: follow Phase4 stamp if present (prevents midnight boundary mismatch)
 if(Test-Path $phase4Path){
   try {
@@ -32,6 +86,7 @@ if(Test-Path $phase4Path){
     $d0 = (($j0.as_of_date) + "").Trim()
     if($d0){ $today = $d0 }
   } catch {}
+}
 }
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
@@ -77,7 +132,12 @@ if (Test-Path $phase23Path) {
     if ($rows.Count -gt 0) {
       $last = $rows | Sort-Object date | Select-Object -Last 1
       $phase23AsOf = (($last.date) + "").Trim()
-      try { $phase23Ok = [bool]$last.phase23_ok } catch { $phase23Ok = $false }
+      try {
+  if($last.PSObject.Properties.Name -contains "ok"){ $phase23Ok = [bool]$last.ok }
+  elseif($last.PSObject.Properties.Name -contains "phase23_ok"){ $phase23Ok = [bool]$last.phase23_ok }
+  elseif($last.PSObject.Properties.Name -contains "phase23_ok_today"){ $phase23Ok = [bool]$last.phase23_ok_today }
+  else { $phase23Ok = $false }
+} catch { $phase23Ok = $false }
     }
   } catch {}
 }
@@ -123,10 +183,11 @@ if ($reasons.Count -eq 0) {
 
 $out = [ordered]@{
   ts_utc = $tsUtc
-  as_of_date = $effectiveTradingDay
+  as_of_date = $inputsDay
   snapshot_date = $today
   effective_trading_day = $effectiveTradingDay
   ok = $ok
+  ok_today = $ok
   reason = $reason
   warnings = @($warnings)
   inputs = [ordered]@{
