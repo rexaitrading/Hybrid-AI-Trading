@@ -1,23 +1,42 @@
 [CmdletBinding()]
-param()
-
+param(
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+  [string]$Market = "",
+  [ValidateSet("NVDA","SPY","QQQ","ALL")]
+  [string]$Symbol = "NVDA"
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
 $root = (Resolve-Path ".").Path
 Set-Location $root
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
+# Market-aware TODAY + per-market logs (fail-closed)
+$m = (($Market + "")).Trim().ToUpperInvariant()
+if(-not $m){ $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant() }
+if(-not $m){ $m = "US" }
+$Market = $m
+$sym = (($Symbol + "")).Trim().ToUpperInvariant()
+if(-not $sym){ $sym = (($env:HAT_SYMBOL + "")).Trim().ToUpperInvariant() }
+if(-not $sym){ $sym = "NVDA" }
+$Symbol = $sym
 
-# EVHARD_REASON_DETAIL_BEGIN
-function _SliceDate([string]$d){
-  if(-not $d){ return "" }
-  if($d.Length -ge 10){ return $d.Substring(0,10) }
-  return $d
-}
-# EVHARD_REASON_DETAIL_END
-$logDir = Join-Path $root "logs"
+$rcPath = Join-Path $root "tools\Resolve-RunContext.ps1"
+if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: $rcPath" }
+$rcRaw = (& $rcPath -Market $Market -Symbol $Symbol | Out-String).Trim()
+$ix0 = $rcRaw.IndexOf("{"); $ix1 = $rcRaw.LastIndexOf("}")
+if($ix0 -lt 0 -or $ix1 -le $ix0){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+$rc = ($rcRaw.Substring($ix0, ($ix1-$ix0+1))) | ConvertFrom-Json
+if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+$today = ([string]$rc.as_of_date).Trim()
+if($today.Length -ge 10){ $today = $today.Substring(0,10) }
+
+$gm = Join-Path $root "tools\Get-MarketLogRoot.ps1"
+if(-not (Test-Path -LiteralPath $gm)){ throw "[FAIL-CLOSED] Missing Get-MarketLogRoot.ps1: $gm" }
+$logDir = (& "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $gm -Market $Market | Out-String).Trim()
+if(-not $logDir){ $logDir = Join-Path (Join-Path $root "logs") $Market }
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
 $outCsv = Join-Path $logDir "phase5_ev_hard_veto_daily.csv"
 
 function Safe-Bool([bool]$b){ if($b){ "true" } else { "false" } }
@@ -27,11 +46,11 @@ $ok = $false
 $reason = "snapshot_missing"
 
 # PREFER_EV_HARD_SNAPSHOT_BEGIN
-# Prefer unified EV-hard snapshot; fallback to legacy veto snapshot.
+# Prefer per-market unified EV-hard snapshot; fallback to legacy veto snapshot; then root.
 $snap = Join-Path $logDir "ev_hard_snapshot.json"
-if (-not (Test-Path $snap)) {
-  $snap = Join-Path $logDir "phase5_ev_hard_veto_snapshot.json"
-}
+if (-not (Test-Path $snap)) { $snap = Join-Path $logDir "phase5_ev_hard_veto_snapshot.json" }
+if (-not (Test-Path $snap)) { $snap = Join-Path (Join-Path $root "logs") "ev_hard_snapshot.json" }
+if (-not (Test-Path $snap)) { $snap = Join-Path (Join-Path $root "logs") "phase5_ev_hard_veto_snapshot.json" }
 # PREFER_EV_HARD_SNAPSHOT_END
 # A2 evidence path for deterministic contract reasons
 $snapshotPathUsed = $snap
@@ -39,7 +58,13 @@ $snapshotPathUsed = $snap
 if (Test-Path $snap) {
   try {
     $j = Get-Content $snap -Raw -Encoding utf8 | ConvertFrom-Json
-    $d = _SliceDate ([string]$j.as_of_date)
+function _SliceDate([string]$d){
+  if(-not $d){ return "" }
+  $s = ([string]$d).Trim()
+  if($s.Length -ge 10){ return $s.Substring(0,10) }
+  return $s
+}
+$d = _SliceDate ([string]$j.as_of_date)
 
     $okFlag = $false
     if ($j.PSObject.Properties.Name -contains "ok_today") { $okFlag = [bool]$j.ok_today }

@@ -26,6 +26,15 @@ function Write-Utf8NoBom([string]$Path, [string]$Text) {
   [System.IO.File]::WriteAllText($full, $Text, $enc)
 }
 # Market-aware TODAY: if HAT_MARKET set, use Resolve-RunContext.as_of_date (fail-closed)
+# --- ASOF PRIORITY (A3): env:HAT_ASOF_DATE wins when provided ---
+$asofEnv = (($env:HAT_ASOF_DATE + "")).Trim()
+if($asofEnv){
+  $asofEnv = $asofEnv.Substring(0,[Math]::Min(10,$asofEnv.Length))
+  if($asofEnv -match '^\d{4}-\d{2}-\d{2}$'){
+    $today = $asofEnv
+  }
+}
+# --- ASOF PRIORITY END ---
 $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
 $sym = (($env:HAT_SYMBOL + "")).Trim().ToUpperInvariant()
 if(-not $sym){ $sym = "NVDA" }

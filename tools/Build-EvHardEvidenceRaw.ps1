@@ -6,6 +6,38 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# --- EVHARD market-aware log roots (A3) ---
+function Resolve-RepoRoot(){
+  $rr = (($env:HAT_REPO_ROOT + "")).Trim()
+  if($rr){
+    try { return (Resolve-Path -LiteralPath $rr -ErrorAction Stop).Path } catch { }
+  }
+  $toolsDir = Split-Path -Parent $PSCommandPath
+  $repo = Split-Path -Parent $toolsDir
+  try { return (Resolve-Path -LiteralPath $repo -ErrorAction Stop).Path } catch { return $repo }
+}
+function Prefer-LogsPath([string]$Primary,[string]$Fallback){
+  if($Primary -and (Test-Path -LiteralPath $Primary)){ return $Primary }
+  return $Fallback
+}
+function Get-LogsDir([string]$RepoRoot,[string]$Market){
+  $m = (($Market + "")).Trim().ToUpperInvariant()
+  if(-not $m){ $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant() }
+  if(-not $m){ $m = "US" }
+  $gm = Join-Path $RepoRoot "tools\Get-MarketLogRoot.ps1"
+  if(Test-Path -LiteralPath $gm){
+    $ld = (& "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $gm -Market $m | Out-String).Trim()
+    if($ld){ return $ld }
+  }
+  return (Join-Path (Join-Path $RepoRoot "logs") $m)
+}
+
+$repoRoot = Resolve-RepoRoot
+$logsRoot = Join-Path $repoRoot "logs"
+$logsDir  = Get-LogsDir -RepoRoot $repoRoot -Market (($env:HAT_MARKET + "")).Trim()
+New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+# --- EVHARD market-aware log roots END ---
+
 function Write-Utf8NoBom([string]$Path, [string]$Text) {
   $enc = New-Object System.Text.UTF8Encoding($false)
   $full = $Path
@@ -138,7 +170,8 @@ if (Test-Path $phase4Path) {
 }
 
 # ---- Phase23 ----
-$phase23Path = ".\logs\phase23_health_daily.csv"
+# Prefer per-market Phase23 heartbeat, fallback to root logs (fail-closed).
+$phase23Path = Prefer-LogsPath (Join-Path $logsDir "phase23_health_daily.csv") (Join-Path $logsRoot "phase23_health_daily.csv")
 $phase23Ok = $false
 $phase23AsOf = ""
 if (Test-Path $phase23Path) {
