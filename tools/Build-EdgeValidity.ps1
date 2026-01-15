@@ -87,4 +87,4 @@ $obj["evidence_path"] = (Join-Path $logsDir "nvda_gatescore_events.jsonl")
 $obj["evidence_rows_today"] = [int]$evidenceRows
 
 Write-Utf8NoBomLf $outPath ($obj | ConvertTo-Json -Depth 8)
-Write-Host ("[EDGE] wrote " + $outPath + " ok_today=false reason=stub_not_implemented") -ForegroundColor Yellow
+Write-Host ("[EDGE] wrote " + $outPath + " ok_today=" + ([bool]$obj.ok_today) + " reasons=" + ((@($obj.reasons) -join ","))) -ForegroundColor Yellow
