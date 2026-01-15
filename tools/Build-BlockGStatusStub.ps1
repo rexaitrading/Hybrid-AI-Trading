@@ -743,8 +743,8 @@ $crisisAlphaEnabled = $false
 # REGIME_READER_END
 $payload = [ordered]@{
       ts_utc=$tsUtc
-      as_of_date=(_GetTodayLocalFromRunContext $Market $Symbol $repoRoot)
-      date=(_GetTodayLocalFromRunContext $Market $Symbol $repoRoot)
+      as_of_date = $todayLocal
+      date = $todayLocal
       is_trading_day=[bool]$rcIsTradingDayFast
       session_name=[string]$rcSessionNameFast
       phase23_health_ok_today=[bool]$phase23Ok
@@ -1074,17 +1074,7 @@ function _SliceDate([string]$d){
   if($s.Length -ge 10){ return $s.Substring(0,10) }
   return $s
 }
-function _GetTodayLocalFromRunContext([string]$Market,[string]$Symbol,[string]$RepoRoot){
-  $rcPath = Join-Path $RepoRoot "tools\Resolve-RunContext.ps1"
-  if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: $rcPath" }
-  $raw = (& $rcPath -Market $Market -Symbol $Symbol | Out-String)
-  $raw = (($raw + "")).Trim()
-  $i0 = $raw.IndexOf("{"); $i1 = $raw.LastIndexOf("}")
-  if($i0 -lt 0 -or $i1 -le $i0){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
-  $rc = ($raw.Substring($i0, ($i1-$i0+1))) | ConvertFrom-Json
-  if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
-  return (_SliceDate ([string]$rc.as_of_date))
-}
+
 $today = (Get-Date).ToString("yyyy-MM-dd")
 # [A3] Canonical todayLocal from RunContext.as_of_date (market-aware). FAIL-CLOSED.
 $rcPathA3 = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
