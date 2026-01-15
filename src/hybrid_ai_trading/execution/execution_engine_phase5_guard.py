@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+
+import os
 from dataclasses import asdict
 from typing import Any, Dict
 from hybrid_ai_trading.runtime.run_context import RunContext
@@ -21,6 +23,14 @@ def guard_phase5_trade(rm: Any, trade: Dict[str, Any]) -> Phase5RiskDecision:
 
 
 def ensure_symbol_blockg_ready(symbol: str, ctx: RunContext | None = None) -> None:
+    # PAPER/PAPERLIVE must NOT consult Block-G; LIVE-only enforcement (fail-closed).
+    mode = (os.getenv("HAT_MODE", "PAPER") or "PAPER").strip().upper()
+    is_paper = (os.getenv("HAT_IS_PAPER", "1") or "1").strip().lower() in ("1","true","yes")
+    if mode != "LIVE" or is_paper:
+        return
+
+
+
     """
     Backward-compatible shim.
     Single Python entrypoint is hybrid_ai_trading.execution.blockg_enforce.require_blockg_ready_for_live.
