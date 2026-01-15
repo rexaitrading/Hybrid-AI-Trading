@@ -300,3 +300,9 @@ tools/Disarm-NVDA-Live.ps1
 ### 2026-01-14 21:27:57 — RC7 fix: NVDA paperlive today uses market as_of_date (JP fail-closed)
 - src: nvda_paperlive_today.py now accepts --market/--as-of-date (env:HAT_MARKET/HAT_ASOF_DATE); non-US requires as-of-date; no fake stamping.
 - tools: Run-NvdaPaperliveToday.ps1 now passes market/as_of_date and defaults OutPath to logs\<Market>\nvda_phase5_paperlive_results_today.jsonl (fail-closed non-US).
+
+## 2026-01-15 14:44:41 — Phase-1 foundation sweep: exclude paperlive from stamp detection (CHECK-only)
+- Added tools/CHECK-Phase1FoundationSweep.ps1 to run a consolidated Phase-1 evidence sweep across US/HK/SG/JP/KR/TW.
+- Root cause: prior stamp scan matched live inside paperlive causing false FAIL-CLOSED.
+- Fix: exclude paperlive filenames; tighten live detection to token-ish match; keep fail-closed semantics.
+- Proof: PHASE1_SWEEP_OK=TRUE and STAMP_HITS=NONE for all markets.
