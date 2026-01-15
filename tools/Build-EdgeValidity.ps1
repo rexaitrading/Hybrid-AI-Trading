@@ -42,9 +42,10 @@ function Has-ProxyMetricsToday([string]$LogsDir,[string]$TodayLocal){
   } catch { return $true } # fail-closed
 }
 function Allow-NonLiveUs([string]$Market){
+  # Non-LIVE may evaluate any market; LIVE remains strict fail-closed.
   $mode = ($env:HAT_MODE + "").Trim().ToUpperInvariant()
   if($mode -eq "LIVE"){ return $false }
-  return ($Market.ToUpperInvariant() -eq "US")
+  return $true
 }
 
 
