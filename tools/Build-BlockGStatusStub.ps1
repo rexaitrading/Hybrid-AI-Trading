@@ -1620,8 +1620,10 @@ $gsAgeDays = 9999
 try {
   if ($gsAsOf) {
     $d0 = [datetime]::ParseExact(($gsAsOf + ""), "yyyy-MM-dd", $null)
-    $d1 = [datetime]::ParseExact(($today + ""), "yyyy-MM-dd", $null)
+    $d1 = [datetime]::ParseExact(($todayLocal + ""), "yyyy-MM-dd", $null)
     $gsAgeDays = [int]([math]::Floor(($d1 - $d0).TotalDays))
+  # Clamp: age_days must never be negative (market as_of_date can be ahead of local clock).
+  if($gsAgeDays -lt 0){ $gsAgeDays = 0 }
   }
 } catch { $gsAgeDays = 9999 }
 
