@@ -188,6 +188,17 @@ if($mode -notin @("ALL_STRICT","SYMBOL_ONLY","BUILD_ONLY")){ Fail-Script ("Inval
 if($s -eq "ALL" -and $mode -eq "SYMBOL_ONLY"){ Fail-Script "Invalid combination: -Symbol ALL with -Mode SYMBOL_ONLY" }
 # --- END Mode normalization ---
 
+# NONLIVE_ONLY_NONUS_BEGIN
+# Policy: non-US markets are NON-LIVE only until JP-native LIVE minima + evidence exist.
+# Fail-closed: deny LIVE for non-US regardless of other gates.
+$mkt = (($Market + "")).Trim().ToUpperInvariant()
+ $runMode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+if($runMode -eq "LIVE" -and $mkt -ne "US"){
+  Fail-Contract ("nonlive_only_market market=" + $mkt)
+}
+# NONLIVE_ONLY_NONUS_END
+
+
 # 1) Optional build step (single semantic owner)
 if ($Build) {
   $builder = Join-Path $toolsDir "Build-BlockGStatusStub.ps1"
