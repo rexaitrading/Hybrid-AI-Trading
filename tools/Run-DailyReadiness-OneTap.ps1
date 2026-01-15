@@ -243,7 +243,7 @@ try {
     }
 
     try {
-& (Join-Path $repoRoot "tools\Run-BlockGLockPack.ps1") -Symbol NVDA 2>&1 | Out-Host
+& (Join-Path $repoRoot "tools\Run-BlockGLockPack.ps1") -Market $Market -Symbol $Symbol 2>&1 | Out-Host
       $lockpack_exit = [int]$LASTEXITCODE
     } catch { $lockpack_exit = 2 }
 
