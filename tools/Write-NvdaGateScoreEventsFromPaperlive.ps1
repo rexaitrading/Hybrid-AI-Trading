@@ -20,7 +20,13 @@ try {
 # --- UTF8_CONSOLE_END ---
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $logsDir  = Join-Path $repoRoot "logs"
-$today    = (Get-Date).ToString("yyyy-MM-dd")
+$today = ((($env:HAT_ASOF_DATE + "")).Trim())
+if($today){
+  if($today.Length -ge 10){ $today = $today.Substring(0,10) }
+  if($today -notmatch '^\d{4}-\d{2}-\d{2}$'){ throw ("[FAIL-CLOSED] HAT_ASOF_DATE not yyyy-MM-dd: " + $today) }
+} else {
+  $today = (Get-Date).ToString("yyyy-MM-dd")
+}
 function Pick-LatestPaperlive([string]$dir) {
     $all = @(Get-ChildItem -LiteralPath $dir -File -Force -ErrorAction SilentlyContinue)
     if (-not $all -or $all.Length -eq 0) { return "" }

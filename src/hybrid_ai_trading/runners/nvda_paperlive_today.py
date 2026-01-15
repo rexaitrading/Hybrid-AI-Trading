@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Any, Dict
 
 
+
+import os
+import re
 def iso_utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -14,6 +17,9 @@ def iso_utc_now() -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="logs/nvda_phase5_paperlive_results_today.jsonl")
+    ap.add_argument("--market", default=(os.getenv("HAT_MARKET", "US") or "US").strip().upper())
+    ap.add_argument("--as-of-date", dest="as_of_date", default=(os.getenv("HAT_ASOF_DATE", "") or "").strip(),
+                    help="Market day YYYY-MM-DD (env:HAT_ASOF_DATE). Non-US markets must provide.")
     ap.add_argument("--n", type=int, default=200)
     ap.add_argument("--regime", default="NVDA_BPLUS_LIVE")
     ap.add_argument("--edge", type=float, default=0.03)
@@ -27,8 +33,14 @@ def main() -> int:
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     now_local = datetime.now().astimezone().replace(microsecond=0)
-    as_of_date = now_local.date().isoformat()
-
+    if getattr(args, "as_of_date", ""):
+        as_of_date = args.as_of_date[:10]
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", as_of_date):
+            raise SystemExit(f"[FAIL-CLOSED] invalid --as-of-date '{args.as_of_date}' (need YYYY-MM-DD)")
+    else:
+        if getattr(args, "market", "US").upper() != "US":
+            raise SystemExit(f"[FAIL-CLOSED] missing --as-of-date for Market={args.market} (set env:HAT_ASOF_DATE)")
+        as_of_date = now_local.date().isoformat()
     hh, mm, ss = [int(x) for x in args.local_start.split(":")]
     base = now_local.replace(hour=hh, minute=mm, second=ss)
 
@@ -58,7 +70,14 @@ def main() -> int:
         lines.append(json.dumps(rec, ensure_ascii=False, separators=(",", ":")))
 
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"[nvda_paperlive_today] wrote {len(lines)} rows -> {out_path} as_of_date={as_of_date}")
+    # PRINT_ASCII_SAFE_BEGIN
+    msg = f"[nvda_paperlive_today] wrote {len(lines)} rows -> {out_path} as_of_date={as_of_date}"
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        safe_path = str(out_path).encode('ascii','backslashreplace').decode('ascii')
+        print(f"[nvda_paperlive_today] wrote {len(lines)} rows -> {safe_path} as_of_date={as_of_date}")
+    # PRINT_ASCII_SAFE_END
     return 0
 
 
