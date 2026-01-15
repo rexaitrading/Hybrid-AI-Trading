@@ -473,6 +473,19 @@ try {
 $ErrorActionPreference = "Stop"
 
 
+
+# A3_MARKET_ENVFIRST_BEGIN
+# Contract: resolve Market env-first BEFORE any Get-MarketLogRoot usage to prevent logs\US bleed.
+$mEnv = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+$m = (($Market + "")).Trim().ToUpperInvariant()
+# If caller did not pass -Market, many scripts default to "US". Treat that as defaulted and allow env override.
+if($mEnv){
+  if((-not $m) -or ($m -eq "US")){ $m = $mEnv }
+}
+if(-not $m){ $m = "US" }
+$Market = $m
+# A3_MARKET_ENVFIRST_END
+
 # A3_MARKET_ENVFIRST_BEGIN
 # Contract: Market must be resolved env-first to prevent US log bleed.
 $m = (($Market + "")).Trim().ToUpperInvariant()
@@ -598,6 +611,23 @@ try {
 } catch { }
 # --- END BREADCRUMB ---
 $rcA3 = Get-RunContextOrFail $repoRoot $Market $Symbol
+
+# A3_FORCE_LOGSDIR_FROM_RUNCONTEXT_BEGIN
+# Contract: logs paths MUST be derived from RunContext (authoritative) to prevent US bleed.
+if(-not $rcA3){ throw "[FAIL-CLOSED] rcA3 empty" }
+if(-not ($rcA3.PSObject.Properties.Name -contains "market")){ throw "[FAIL-CLOSED] rcA3 missing market" }
+if(-not ($rcA3.PSObject.Properties.Name -contains "logs_dir_out")){ throw "[FAIL-CLOSED] rcA3 missing logs_dir_out" }
+$Market = ([string]$rcA3.market).Trim().ToUpperInvariant()
+$logsDir = ([string]$rcA3.logs_dir_out).Trim()
+  # A3: logsDirOut must follow RunContext logs_dir_out (prevents US debug/path bleed).
+  $logsDirOut = $logsDir
+  # A3: recompute statusPath after forcing logsDirOut
+  $statusPath = Join-Path $logsDirOut "blockg_status_stub.json"
+if(-not $logsDir){ throw "[FAIL-CLOSED] rcA3.logs_dir_out empty" }
+
+if(($Market -ne "US") -and ($logsDir -match "\\\\logs\\\\US(\\\\|$)")){ throw ("[FAIL-CLOSED] US_LOG_BLEED: Market=" + $Market + " logsDir=" + $logsDir) }
+# A3_FORCE_LOGSDIR_FROM_RUNCONTEXT_END
+
 $todayLocal = _SliceDate ([string]$rcA3.as_of_date)
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
@@ -2011,4 +2041,3 @@ exit 0
   } catch { }
   throw
 }
-
