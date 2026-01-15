@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [string]$InputPath = ".\logs\spy_phase5_paperlive_results_with_micro_today.jsonl",
-  [string]$OutPath   = ".\logs\spy_phase5_paperlive_results_with_micro_today.jsonl",
+  [string]$OutPath   = ".\logs\spy_phase5_paperlive_results_today.jsonl",
   [int]$TargetEvents = 120
 )
 
@@ -34,7 +34,7 @@ while ($out.Count -lt $TargetEvents) {
   $j = $base[$idx % $base.Count]
   $clone = $j | ConvertTo-Json -Depth 10 | ConvertFrom-Json
 
-  $clone.idx = $out.Count
+  $clone | Add-Member -NotePropertyName "idx" -NotePropertyValue ($out.Count) -Force
   if ($clone.PSObject.Properties.Name -contains "ts_trade") {
     # Keep date stable, add seconds for uniqueness
     $clone.ts_trade = ($today + "T09:30:" + "{0:D2}" -f ($out.Count % 60))

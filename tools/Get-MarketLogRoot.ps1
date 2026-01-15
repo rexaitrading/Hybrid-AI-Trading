@@ -1,10 +1,11 @@
 [CmdletBinding()]
 param(
+  [Parameter(Mandatory=$true)]
   [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
-  [string]$Market = "US"
+  [string]$Market
 )
 
-# --- Stock Connect market ID normalization (no engine constraints) ---
+# --- Stock Connect market ID normalization (NO engine constraints; logs MUST match Resolve-RunContext) ---
 $marketIn = ($Market + "").Trim().ToUpperInvariant()
 switch($marketIn){
   "CN_SH" { $Market = "HK_SH" }
@@ -12,25 +13,30 @@ switch($marketIn){
   default { }
 }
 # --- end normalization ---
-$logMarket = ($Market + "").Trim().ToUpperInvariant()
-
-
 
 Set-StrictMode -Version Latest
-$ErrorActionPreference="Stop"
-chcp 65001 | Out-Null
+$ErrorActionPreference = "Stop"
 
-$toolsDir = Split-Path -Parent $PSCommandPath
-$repoRoot = Split-Path -Parent $toolsDir
-$cfg = Join-Path $repoRoot ("configs\markets\" + $Market + ".json")
-if(-not (Test-Path -LiteralPath $cfg)){ throw "Missing market config: $cfg" }
-
-$j = Get-Content -LiteralPath $cfg -Raw -Encoding UTF8 | ConvertFrom-Json
-$ns = [string]$j.log_namespace
-if(-not $ns){ $ns = $Market }
-
-$root = Join-Path $repoRoot ("logs\" + $ns)
-if(-not (Test-Path -LiteralPath $root)){
-  New-Item -ItemType Directory -Force -Path $root | Out-Null
+function Find-RepoRoot([string]$start){
+  if(-not $start){ throw "[FAIL-CLOSED] Find-RepoRoot start path is empty." }
+  $p = (Resolve-Path -LiteralPath $start).Path
+  while($true){
+    if(Test-Path -LiteralPath (Join-Path $p ".git")){ return $p }
+    $parent = Split-Path -Parent $p
+    if(-not $parent -or $parent -eq $p){ break }
+    $p = $parent
+  }
+  throw "[FAIL-CLOSED] RepoRoot not found (walk-up to .git failed) start=$start"
 }
-$root
+
+# Canonical repo root from this script's folder (never trust env vars / configs for path)
+$repoRoot = Find-RepoRoot $PSScriptRoot
+
+$m = ([string]$Market).ToUpperInvariant().Trim()
+if(-not $m){ throw "[FAIL-CLOSED] Market empty" }
+
+$logRoot = Join-Path (Join-Path $repoRoot "logs") $m
+New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
+
+# Emit ONLY the path (no extra Write-Host)
+$logRoot

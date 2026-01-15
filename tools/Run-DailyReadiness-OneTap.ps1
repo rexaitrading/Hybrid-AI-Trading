@@ -287,7 +287,7 @@ try {
     # Phase-4 validation + status producer
     $phase4 = Join-Path $repoRoot "tools\Run-Phase4Validation.ps1"
     if(Test-Path -LiteralPath $phase4){
-      & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $phase4 2>&1 | Out-Host
+& $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $phase4 -Market $Market -Symbol $Symbol 2>&1 | Out-Host
       $p4s = Join-Path $repoRoot "tools\Write-Phase4Status.ps1"
       if(Test-Path -LiteralPath $p4s){ & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $p4s -Market $Market -Symbol $Symbol 2>&1 | Out-Host }
     } else { Write-Host ("[ONETAP] WARN missing Phase4 builder: " + $phase4) -ForegroundColor Yellow }

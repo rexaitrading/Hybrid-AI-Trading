@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
-  [string]$Symbol="NVDA"
+  [string]$Symbol="ALL"
 )
 
 Set-StrictMode -Version Latest
@@ -16,6 +16,30 @@ $phase4 = Join-Path $PSScriptRoot "Check-Phase4Today.ps1"
 & $phase4
 if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
 
+function Invoke-PaperliveToday([string]$sym){
+  $map = @{
+    "NVDA" = @(".\tools\Run-NvdaPaperliveToday.ps1", ".\tools\Expand-NvdaPaperliveToday.ps1", ".\tools\Export-NvdaPaperliveResultsToday.ps1")
+    "SPY"  = @(".\tools\Run-SpyPaperliveToday.ps1",  ".\tools\Expand-SpyPaperliveToday.ps1")
+    "QQQ"  = @(".\tools\Run-QqqPaperliveToday.ps1",  ".\tools\Expand-QqqPaperliveToday.ps1")
+  }
+  if(-not $map.ContainsKey($sym)){ return }
+  foreach($p in @($map[$sym])){
+    if(Test-Path -LiteralPath $p){
+      Write-Host ("[PRE] Phase5 producer: {0} ({1})" -f $sym,$p) -ForegroundColor DarkCyan
+      & $p | Out-Host
+      if($LASTEXITCODE -ne 0){ throw ("[PRE] Phase5 producer failed: {0} rc={1}" -f $p,$LASTEXITCODE) }
+    } else {
+      Write-Host ("[PRE] WARN: producer not found: {0}" -f $p) -ForegroundColor Yellow
+    }
+  }
+}
+
+# ---- Phase5 paperlive TODAY producers (evidence build) ----
+if($Symbol -eq "ALL"){
+  foreach($s in @("NVDA","SPY","QQQ")){ Invoke-PaperliveToday $s }
+} else {
+  Invoke-PaperliveToday $Symbol
+}
 $phase5 = Join-Path $PSScriptRoot "Check-Phase5Today.ps1"
 # ALL_MODE_PHASE_GATES
 if($Symbol -eq "ALL"){
@@ -141,3 +165,4 @@ if(Test-Path $evEvidence){
 $rc = $LASTEXITCODE
 Write-Host "[PRE] BlockG check rc=$rc" -ForegroundColor Yellow
 exit $rc
+
