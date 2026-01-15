@@ -472,8 +472,17 @@ try {
 }
 $ErrorActionPreference = "Stop"
 
+
+# A3_MARKET_ENVFIRST_BEGIN
+# Contract: Market must be resolved env-first to prevent US log bleed.
+$m = (($Market + "")).Trim().ToUpperInvariant()
+if(-not $m){ $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant() }
+if(-not $m){ $m = "US" }
+$Market = $m
+# A3_MARKET_ENVFIRST_END
+
 function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
-  $path = Join-Path $RepoRoot "logs\phase4_validation_passed.json"
+  $path = Prefer-LogsPath (Join-Path $logsDir "phase4_validation_passed.json") (Join-Path $logsRoot "phase4_validation_passed.json")
   if(-not (Test-Path $path)){ return $false }
 
   try {
