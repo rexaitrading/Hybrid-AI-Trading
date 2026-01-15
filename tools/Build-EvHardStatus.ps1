@@ -5,6 +5,7 @@ param(
 )
 
 Set-StrictMode -Version Latest
+$decided = $false  # StrictMode-safe default (A2)
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
 
