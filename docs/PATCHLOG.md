@@ -297,3 +297,6 @@ tools/Disarm-NVDA-Live.ps1
 - FIX: gatescore_ok_today / gatescore_ok_live_today coherent with freshness + age policy.
 - VALIDATION: Build-BlockGStatusStub FULL emits gsAsOf=2026-01-10 (age=1), ok_today=false on 2026-01-11; pytest -k blockg green.
 - CHECKPOINT: CHECKPOINT_20260111_BLOCKG_A2_COHERENCE
+### 2026-01-14 21:27:57 — RC7 fix: NVDA paperlive today uses market as_of_date (JP fail-closed)
+- src: nvda_paperlive_today.py now accepts --market/--as-of-date (env:HAT_MARKET/HAT_ASOF_DATE); non-US requires as-of-date; no fake stamping.
+- tools: Run-NvdaPaperliveToday.ps1 now passes market/as_of_date and defaults OutPath to logs\<Market>\nvda_phase5_paperlive_results_today.jsonl (fail-closed non-US).
