@@ -2,14 +2,45 @@
 param(
     [ValidateSet("NVDA","SPY","QQQ","ALL")]
     [string]$Symbol = "ALL",
+    [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+    [string]$Market = "",
     [switch]$StrictToday
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
-$logsDir  = Join-Path $repoRoot "logs"
+
+# Market-aware logs dir
+$m = (($Market + "")).Trim().ToUpperInvariant()
+if(-not $m){ $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant() }
+if(-not $m){ $m = "US" }
+$Market = $m
+
+$gm = Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1"
+$logsDir = Join-Path $repoRoot "logs"
+if(Test-Path -LiteralPath $gm){
+  $ld = (& "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $gm -Market $Market | Out-String).Trim()
+  if($ld){ $logsDir = $ld }
+} else {
+  $logsDir = Join-Path (Join-Path $repoRoot "logs") $Market
+}
+New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+
+# Market-aware today (RunContext)
 $today = (Get-Date).ToString("yyyy-MM-dd")
+try{
+  $rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+  if(Test-Path -LiteralPath $rcPath){
+    $rawRc = (& $rcPath -Market $Market -Symbol NVDA | Out-String).Trim()
+    $i0 = $rawRc.IndexOf("{"); $i1 = $rawRc.LastIndexOf("}")
+    if($i0 -ge 0 -and $i1 -gt $i0){
+      $rc = ($rawRc.Substring($i0, ($i1-$i0+1))) | ConvertFrom-Json
+      if($rc -and $rc.as_of_date){ $today = ([string]$rc.as_of_date).Substring(0,10) }
+    }
+  }
+} catch { }
+
 $outPath = Join-Path $logsDir "gatescore_pnl_summary.csv"
 # ------------------------------
 # FAST PATH: NVDA-only JSONL scan (PS5-safe; no ConvertFrom-Json)
@@ -127,17 +158,19 @@ function _TryString([object]$v) {
 function Read-Jsonl([string]$Path) {
     if([string]::IsNullOrWhiteSpace($Path)){ return @() }
     if (-not (Test-Path -LiteralPath $Path)) { return @() }
-# PERF: stream file in chunks (avoid huge arrays)
-    $chunks = Get-Content -LiteralPath $Path -Encoding UTF8 -ReadCount 2000
-$out = New-Object System.Collections.Generic.List[object]
-foreach ($blk in $chunks) {
-    foreach ($ln in $blk) {
-        $s = $ln.Trim()
-        if (-not $s) { continue }
-        try { $o = ($s | ConvertFrom-Json); if($null -ne $o){ $out.Add($o) | Out-Null } } catch { }
-    }
-    }
-    return @($out)
+
+    $out = New-Object System.Collections.Generic.List[object]
+    try {
+        foreach($ln in [System.IO.File]::ReadLines([System.IO.Path]::GetFullPath($Path))) {
+            $s = ($ln + "").Trim()
+            if (-not $s) { continue }
+            try {
+                $o = ($s | ConvertFrom-Json)
+                if($null -ne $o){ $out.Add($o) | Out-Null }
+            } catch { }
+        }
+    } catch { }
+    return $out.ToArray()
 }
 function Get-EventDate($e) {
     $props = $e.PSObject.Properties.Name
@@ -211,7 +244,7 @@ foreach ($it in $eventFiles) {
     $sym = [string]$it.sym
     if ($wanted -notcontains $sym) { continue }
     $path = [string]$it.path
-    if (-not (Test-Path $path)) { continue }
+    if([string]::IsNullOrWhiteSpace($path) -or (-not (Test-Path -LiteralPath $path))){ continue }
     if($sym -eq "NVDA" -and ($wanted -contains "NVDA")){
       $targetDate = $today
       if(-not $StrictToday){ $targetDate = $today }
@@ -264,7 +297,7 @@ $local = _StageToLocal $path; $m = Fast-NvdaSummaryFromJsonl -Path $local -Targe
     # GS_SUMMARY_DEBUG_NVDA_END
     $stdPath = [string]$it.std
     $stdEvents = @()
-    if ($stdPath -and (Test-Path -LiteralPath $stdPath)) { $stdEvents = @(Read-Jsonl $stdPath) }
+    if((-not [string]::IsNullOrWhiteSpace($stdPath)) -and (Test-Path -LiteralPath $stdPath)) { $stdEvents = @(Read-Jsonl $stdPath) }
     if ($events.Count -eq 0) { continue }
     
     # Determine latest event date in this file (fail-closed if none)
@@ -380,7 +413,7 @@ if ($allZero) {
 Write-Host "GateScore PnL summary: writing $outPath" -ForegroundColor Cyan
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $csv = $rowsOut | Sort-Object symbol | ConvertTo-Csv -NoTypeInformation
-[System.IO.File]::WriteAllLines($outPath, $csv, $utf8NoBom)
+[System.IO.File]::WriteAllLines($outPath, [string[]]$csv, $utf8NoBom)
 Write-Host "GateScore PnL summary: sample rows:" -ForegroundColor Yellow
 $rowsOut | Format-Table -AutoSize
 exit 0
