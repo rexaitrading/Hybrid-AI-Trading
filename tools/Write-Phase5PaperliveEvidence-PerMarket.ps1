@@ -62,23 +62,6 @@ foreach($m in $targets){
     $name = Split-Path -Leaf $src
     $dst = Join-Path $ld $name
 
-    # STOP GLOBAL OVERWRITE for non-US markets (JP/HK/SG/...)
-    # - Never copy stale global canonical into per-market canonical.
-    # - Never overwrite an existing per-market today file.
-    if($m -ne "US"){
-      # Skip canonical file for non-US (global canonical is stale by design/proof).
-      if($name -like "*_phase5_paperlive_results.jsonl" -and $name -notlike "*_phase5_paperlive_results_today.jsonl"){
-        Write-Host ("[PH5-EVID] skip non-US canonical: " + $dst) -ForegroundColor Yellow
-        continue
-      }
-      # Preserve existing per-market today (do not overwrite).
-      if(Test-Path -LiteralPath $dst){
-        Write-Host ("[PH5-EVID] keep existing non-US file: " + $dst) -ForegroundColor Yellow
-        continue
-      }
-    }
-
-
     Copy-Item -LiteralPath $src -Destination $dst -Force
     Normalize-Utf8Lf $dst
 
