@@ -430,7 +430,23 @@ try {
     $asOf = ""
     if($cj.PSObject.Properties.Name -contains "as_of_date"){ $asOf = [string]$cj.as_of_date }
     if($asOf.Length -ge 10){ $asOf = $asOf.Substring(0,10) }
-    if($asOf -eq $todayLocal){
+      # TODAYKEY_BEGIN (crisis reader): ensure compare key exists even before RunContext sets todayLocal
+      $todayKey = ""
+      try { if(Get-Variable -Name "todayLocal" -Scope Local -ErrorAction SilentlyContinue){ $todayKey = ([string]$todayLocal) } } catch { $todayKey = "" }
+      $todayKey = (($todayKey + "")).Trim()
+      if($todayKey.Length -ge 10){ $todayKey = $todayKey.Substring(0,10) }
+      if(-not $todayKey){
+        $todayKey = ((($env:HAT_ASOF_DATE + "")).Trim())
+        if($todayKey.Length -ge 10){ $todayKey = $todayKey.Substring(0,10) }
+        if($todayKey -notmatch '^\d{4}-\d{2}-\d{2}$'){ $todayKey = "" }
+      }
+      if(-not $todayKey){
+        # Non-LIVE last resort; LIVE semantics for missing files remain handled by existing logic above
+        $todayKey = (Get-Date).ToString("yyyy-MM-dd")
+      }
+      # TODAYKEY_END
+
+    if($asOf -eq $todayKey){
       if($cj.PSObject.Properties.Name -contains "ok_today"){ $crisisOkToday = [bool]$cj.ok_today }
       if($cj.PSObject.Properties.Name -contains "crisis_regime"){ $crisisRegime = [bool]$cj.crisis_regime }
       if($cj.PSObject.Properties.Name -contains "portfolio_halt"){ $crisisPortfolioHalt = [bool]$cj.portfolio_halt }
@@ -591,7 +607,23 @@ try {
     $asOf = ""
     if($cj.PSObject.Properties.Name -contains "as_of_date"){ $asOf = [string]$cj.as_of_date }
     if($asOf.Length -ge 10){ $asOf = $asOf.Substring(0,10) }
-    if($asOf -eq $todayLocal){
+      # TODAYKEY_BEGIN (crisis reader): ensure compare key exists even before RunContext sets todayLocal
+      $todayKey = ""
+      try { if(Get-Variable -Name "todayLocal" -Scope Local -ErrorAction SilentlyContinue){ $todayKey = ([string]$todayLocal) } } catch { $todayKey = "" }
+      $todayKey = (($todayKey + "")).Trim()
+      if($todayKey.Length -ge 10){ $todayKey = $todayKey.Substring(0,10) }
+      if(-not $todayKey){
+        $todayKey = ((($env:HAT_ASOF_DATE + "")).Trim())
+        if($todayKey.Length -ge 10){ $todayKey = $todayKey.Substring(0,10) }
+        if($todayKey -notmatch '^\d{4}-\d{2}-\d{2}$'){ $todayKey = "" }
+      }
+      if(-not $todayKey){
+        # Non-LIVE last resort; LIVE semantics for missing files remain handled by existing logic above
+        $todayKey = (Get-Date).ToString("yyyy-MM-dd")
+      }
+      # TODAYKEY_END
+
+    if($asOf -eq $todayKey){
       if($cj.PSObject.Properties.Name -contains "ok_today"){ $crisisOkToday = [bool]$cj.ok_today }
       if($cj.PSObject.Properties.Name -contains "crisis_regime"){ $crisisRegime = [bool]$cj.crisis_regime }
       if($cj.PSObject.Properties.Name -contains "portfolio_halt"){ $crisisPortfolioHalt = [bool]$cj.portfolio_halt }
