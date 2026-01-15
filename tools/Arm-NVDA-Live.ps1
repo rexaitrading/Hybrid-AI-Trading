@@ -63,6 +63,37 @@ powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Build-
 if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub failed exit=$LASTEXITCODE" }
 
 Write-Host "[ARM] Step 4/4 Check BlockG readiness (NVDA)" -ForegroundColor Cyan
+# A4_ARM_DIRECT_CHECK_BLOCKGREADY_BEGIN
+# Contract: Arm-NVDA-Live.ps1 MUST directly EXECUTE Check-BlockGReady.ps1 (LockPack Step-3).
+try {
+  $ready = Join-Path $PSScriptRoot "Check-BlockGReady.ps1"
+  if(-not (Test-Path -LiteralPath $ready)){ throw "[FAIL-CLOSED] Missing: $ready" }
+
+  # Resolve Market/Symbol for the gate (prefer explicit vars; fallback env; fail-closed default).
+  $m = $null; $s = $null
+  try { if(Get-Variable -Name "Market" -Scope Local -ErrorAction SilentlyContinue){ $m = ($Market + "") } } catch { }
+  try { if(Get-Variable -Name "Symbol" -Scope Local -ErrorAction SilentlyContinue){ $s = ($Symbol + "") } } catch { }
+  if(-not $m){ $m = (($env:HAT_MARKET + "")).Trim() }
+  if(-not $s){ $s = (($env:HAT_SYMBOL + "")).Trim() }
+  if(-not $m){ $m = "US" }
+  if(-not $s){ $s = "NVDA" }
+  $m = $m.ToUpperInvariant().Trim()
+  $s = $s.ToUpperInvariant().Trim()
+
+  Write-Host ("[ARM] Check-BlockGReady (direct) market=" + $m + " symbol=" + $s) -ForegroundColor Cyan
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Check-BlockGReady.ps1") -Market $m -Symbol $s | Out-Host
+  $code = [int]$LASTEXITCODE
+  if($code -ne 0){
+    Write-Host ("[ARM] FAIL-CLOSED: Check-BlockGReady exit=" + $code) -ForegroundColor Red
+    exit $code
+  }
+  Write-Host "[ARM] OK: Check-BlockGReady passed" -ForegroundColor Green
+} catch {
+  Write-Host ("[ARM] FAIL-CLOSED: Check-BlockGReady exception: " + $_.Exception.Message) -ForegroundColor Red
+  exit 2
+}
+# A4_ARM_DIRECT_CHECK_BLOCKGREADY_END
+
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Invoke-BlockGCheck.ps1") -Symbol NVDA -Mode ALL_STRICT | Out-Host
 $rc = $LASTEXITCODE
 if ($rc -ne 0) { Fail ("BlockG readiness failed exit=" + $rc) }
