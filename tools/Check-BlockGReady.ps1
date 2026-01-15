@@ -92,6 +92,15 @@ function Dump-Reasons($st){
     if($st -and ($st.PSObject.Properties.Name -contains "reasons_not_ready")){
       $r = @($st.reasons_not_ready)
 
+      # DIAG: always include the contract failure headline as a reason (if present)
+      try {
+        if(Get-Variable -Name "__contract_fail_msg" -Scope Script -ErrorAction SilentlyContinue){
+          $m = (($script:__contract_fail_msg + "")).Trim()
+          if($m){ $r = @($m) + @($r) }
+        }
+      } catch { }
+
+
       # SYMBOL_ONLY: filter out other-symbol contamination + strict-all reasons
       if(($mode + "") -eq "SYMBOL_ONLY"){
         $sym = ($s + "")
@@ -101,7 +110,7 @@ function Dump-Reasons($st){
           if($t -match 'metrics_source_missing_for_symbol='){ continue }
           if($t -match '^strict_option_b_blocks_spy_qqq='){ continue }
           # keep only reasons clearly about this symbol OR global daily fields
-          if($t -match '(^phase23_|^phase4_|^ev_hard_|^gatescore_|^intel_|^market_closed_|^nvda_blockg_ready=|^spy_blockg_ready=|^qqq_blockg_ready=)'){
+          if($t -match '(^phase23_|^phase4_|^ev_hard_|^gatescore_|^intel_|^market_closed_|^crisis_|^global_ready_|^market_dna_|^edge_validity_|^dependency_risk_|^risk_guard_|^nvda_blockg_ready=|^spy_blockg_ready=|^qqq_blockg_ready=)'){
             # if a per-symbol ready flag appears, keep only if matches requested symbol
             if($t -match '^(nvda|spy|qqq)_blockg_ready='){
               if($sym -eq "NVDA" -and $t -match '^nvda_'){ $r2 += $t; continue }
@@ -115,6 +124,38 @@ function Dump-Reasons($st){
         $r = $r2
       }
 
+      # DERIVE_REASONS_FROM_FIELDS_BEGIN
+      # Diagnostic-only: if stub fields indicate failed gates but reasons_not_ready is sparse,
+      # emit derived reasons so operator can act. Does NOT change gating.
+      try {
+        $extra = New-Object System.Collections.Generic.List[string]
+        function _Add([string]$x){ if($x){ $extra.Add($x) | Out-Null } }
+
+        if($st.PSObject.Properties.Name -contains "global_ready_ok_today"){
+          if(-not [bool]$st.global_ready_ok_today){ _Add "global_ready_ok_today=false" }
+        }
+        foreach($k in @("market_dna_ok_today","edge_validity_ok_today","dependency_risk_ok_today","risk_guard_ok_today")){
+          try {
+            if($st.PSObject.Properties.Name -contains $k){ if(-not [bool]$st.$k){ _Add ($k + "=false") } }
+          } catch { }
+        }
+
+        if($st.PSObject.Properties.Name -contains "intel_ok_today"){ if(-not [bool]$st.intel_ok_today){ _Add "intel_ok_today=false" } }
+        if($st.PSObject.Properties.Name -contains "nvda_intel_ok_today"){ if(-not [bool]$st.nvda_intel_ok_today){ _Add "nvda_intel_ok_today=false" } }
+
+        if($st.PSObject.Properties.Name -contains "gatescore_ok_live_today"){
+          if(-not [bool]$st.gatescore_ok_live_today){ _Add "gatescore_ok_live_today=false" }
+        }
+
+        # merge extras (dedup) into $r
+        if($extra.Count -gt 0){
+          $seen2 = @{}
+          foreach($x in @($r)){ $s=($x+""); if($s){ $seen2[$s]=1 } }
+          foreach($x in $extra){ $s=($x+""); if($s -and (-not $seen2.ContainsKey($s))){ $r += $s; $seen2[$s]=1 } }
+        }
+      } catch { }
+      # DERIVE_REASONS_FROM_FIELDS_END
+
       if($r -and $r.Count -gt 0){
         Write-Host "[BLOCKG] reasons_not_ready:" -ForegroundColor DarkYellow
         foreach($x in $r){
@@ -124,6 +165,8 @@ function Dump-Reasons($st){
     }
   } catch { }
 }function Fail-Contract([string]$Msg) {
+  # DIAG: capture contract fail headline for reasons output (StrictMode-safe)
+  $script:__contract_fail_msg = ($Msg + "")
   Write-Host "[BLOCKG] NOT READY: $Msg" -ForegroundColor Red
   try { Dump-Reasons $st } catch { }
   exit 2
