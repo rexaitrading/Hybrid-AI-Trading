@@ -117,7 +117,20 @@ class IBAdapter(Broker):
         # Institutional defense-in-depth: PowerShell checker is semantic owner for LIVE.
         # Paper is allowed to pass without PS checker (weekend exit=10 diagnostic OK).
         if not is_paper:
-            require_blockg_ready_via_powershell(str(getattr(contract, "symbol", symbol)).upper(), build=False)
+            # A1_IB_ADAPTER_MARKET_PASS_BEGIN
+            mk = ""
+            try:
+                if ctx is not None and hasattr(ctx, "market") and getattr(ctx, "market"):
+                    mk = str(getattr(ctx, "market")).upper().strip()
+            except Exception:
+                mk = ""
+            if not mk:
+                mk = str(__import__('os').environ.get('HAT_MARKET','US')).upper().strip()
+            # Option-1 policy: non-US is NON-LIVE only. Fail-closed before broker submit.
+            if mk != "US":
+                raise RuntimeError(f"BLOCK-G FAIL-CLOSED: nonlive_only_market market={mk}")
+            require_blockg_ready_via_powershell(str(getattr(contract, "symbol", symbol)).upper(), market=mk, build=False)
+            # A1_IB_ADAPTER_MARKET_PASS_END
         # BLOCKG_PS_SECOND_GATE_END
 
         trade = ib_place_order_chokepoint(self.ib, contract, order, ctx=ctx, meta=meta0)

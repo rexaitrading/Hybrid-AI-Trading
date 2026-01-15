@@ -114,7 +114,12 @@ def require_blockg_ready_for_live(symbol: str, *, status: dict | None = None) ->
     if (os.getenv("HAT_BLOCKG_POWERSHELL_ENFORCE", "1") == "1"
             and (status is None)
             and (not _running_under_pytest())):
-        require_blockg_ready_via_powershell(sym, build=False)
+        # A1_BLOCKG_ENFORCE_MARKET_PASS_BEGIN
+        mk = (os.environ.get('HAT_MARKET','US') or 'US').strip().upper()
+        if mk != 'US':
+            raise BlockGNotReady(f'BLOCK-G FAIL-CLOSED: nonlive_only_market market={mk}')
+        require_blockg_ready_via_powershell(sym, market=mk, build=False)
+        # A1_BLOCKG_ENFORCE_MARKET_PASS_END
     # Institutional hard checks (fail-closed):
     # - market_closed_today must be false
     # - contract must be for today
