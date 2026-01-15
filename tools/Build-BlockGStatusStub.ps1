@@ -81,7 +81,26 @@ function Get-MaxAsOfDateFromJsonlTail([string]$Path,[int]$TailLines=8000){
   }
   return $max
 }
-# GS_METRICS_SOURCE_BY_SYMBOL_BEGIN
+
+function Has-TodayAsOfDateInJsonlTail([string]$Path,[string]$Today,[int]$TailLines=8000){
+  if(-not $Today){ return $false }
+  if(-not (Test-Path -LiteralPath $Path)){ return $false }
+  $t = $Today
+  if($t.Length -ge 10){ $t = $t.Substring(0,10) }
+  foreach($ln in (Get-Content -LiteralPath $Path -Tail $TailLines -Encoding UTF8)){
+    $s = ($ln + "").Trim(); if(-not $s){ continue }
+    try {
+      $o = $s | ConvertFrom-Json
+      if($o -and ($o.PSObject.Properties.Name -contains "as_of_date")){
+        $d = [string]$o.as_of_date
+        if($d.Length -ge 10){ $d = $d.Substring(0,10) }
+        if($d -eq $t){ return $true }
+      }
+    } catch { }
+  }
+  return $false
+}
+
 # Audit: capture metrics_source per symbol from RESOLVED events file (today-only).
 function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal){
   $p = Resolve-GatescoreEventsPath $sym $logsDir
@@ -738,6 +757,8 @@ $p4 = Prefer-LogsPath (Join-Path $logsDir "phase4_validation_passed.json") (Join
       $evPath = Resolve-GatescoreEventsPath "NVDA" $logsDir
       $mx = Get-MaxAsOfDateFromJsonlTail -Path $evPath -TailLines 8000
       if($mx){ $gsAsOf = $mx }
+      # If events file has any rows stamped todayLocal, treat GateScore as fresh today (fail-closed).
+      if(Has-TodayAsOfDateInJsonlTail -Path $evPath -Today $todayLocal -TailLines 8000){ $gsAsOf = $todayLocal }
     } catch { $gsAsOf="" }
 
     if(-not $gsAsOf){
@@ -1238,6 +1259,17 @@ if (-not $gsAsOf) {
   } catch { }
 }
 # GS_ASOF_FALLBACK_FROM_EVENTS_TAIL_END
+
+# GS_ASOF_TODAY_PRESENT_OVERRIDE_BEGIN
+# If resolved events has any rows stamped todayLocal, treat GateScore as fresh today (fail-closed).
+try {
+  $evPathToday = Resolve-GatescoreEventsPath "NVDA" $logsDir
+  if(Has-TodayAsOfDateInJsonlTail -Path $evPathToday -Today $todayLocal -TailLines 8000){
+    $gsAsOf = $todayLocal
+  }
+} catch { }
+# GS_ASOF_TODAY_PRESENT_OVERRIDE_END
+
 # ---- Phase4 ----
 $phase4Ok = Get-Phase4OkToday $repoRoot $today
 # A2: prefer producer status json (FULL builder) before legacy fallback logic
