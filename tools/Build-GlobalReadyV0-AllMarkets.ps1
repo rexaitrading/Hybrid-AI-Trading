@@ -7,6 +7,13 @@ chcp 65001 | Out-Null
 
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
+function Normalize-StockConnectMarket([string]$m){
+  $x = ([string]$m).Trim().ToUpperInvariant()
+  if($x -eq "CN_SH"){ return "HK_SH" }
+  if($x -eq "CN_SZ"){ return "HK_SZ" }
+  return $x
+}
+
 
 $Markets = @("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")
 $prods = @(
@@ -17,10 +24,16 @@ $prods = @(
 )
 
 foreach($m in $Markets){
+  $m2 = Normalize-StockConnectMarket $m
+  # STOCKCONNECT_SKIP_BEGIN
+  # CN_SH/CN_SZ are Stock-Connect routed identifiers; do NOT run G1-G4 producers until they formally support HK_SH/HK_SZ.
+  if($m2 -eq "HK_SH" -or $m2 -eq "HK_SZ"){ continue }
+  # STOCKCONNECT_SKIP_END
+
   foreach($rel in $prods){
     $p = Join-Path $repoRoot $rel
     if(-not (Test-Path -LiteralPath $p)){ throw "Missing producer: $p" }
-    & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $p -Market $m | Out-Null
+    & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $p -Market $m2 | Out-Null
   }
 }
 
