@@ -70,10 +70,32 @@ $obj = [ordered]@{
 $evidenceRows = Get-EvidenceTodayRows -LogsDir $logsDir -TodayLocal $todayLocal
 $allow = (Allow-NonLiveAny)
 if($allow -and $evidenceRows -gt 0){
-  $obj.ok_today = $true
+      # GREADY_PROXY_DENY_RISK_BEGIN
+    # Strict: proxy-only GateScore evidence does NOT satisfy RiskGuard global-ready.
+    $proxyRowsToday = 0
+    try {
+      $evPath = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+      if(Test-Path -LiteralPath $evPath){
+        $patDay = '"as_of_date":"{0}"' -f $todayLocal
+        foreach($h in (Select-String -LiteralPath $evPath -Pattern $patDay -SimpleMatch -ErrorAction SilentlyContinue)){
+          if($h.Line -match '"metrics_source":"proxy_'){ $proxyRowsToday += 1 }
+        }
+      }
+    } catch { $proxyRowsToday = $evidenceRows }
+
+    if($proxyRowsToday -ge $evidenceRows){
+      $obj.ok_today = $false
+      $obj.kill_switch_armed = $true
+      $obj.cooldown_minutes = 0
+      $obj.reasons = @("deny_proxy_metrics_source")
+    } else {
+      # allow non-proxy evidence (fall through to existing ok_today=true below)
+    }
+    # GREADY_PROXY_DENY_RISK_END
+# proxydeny_guarded $obj.ok_today = $true
   $obj.kill_switch_armed = $false
   $obj.cooldown_minutes = 0
-  $obj.reasons = @("default_nonlive_us")
+# proxydeny_guarded   $obj.reasons = @("default_nonlive_us")
 } else {
   $rs = @()
   if(-not $allow){ $rs += "blocked_policy_nonlive_us_only" }
