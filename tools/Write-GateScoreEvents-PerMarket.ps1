@@ -19,6 +19,37 @@ function Write-Utf8NoBomLf([string]$Path,[string]$Text){
   if($Text.Length -gt 0 -and $Text[-1] -ne "`n"){ $Text += "`n" }
   [System.IO.File]::WriteAllText($Path, $Text, $utf8)
 }
+# PROXY_STAMP_JSONL_BEGIN
+function Stamp-ProxyMetricsSourceJsonl([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path)){ return }
+  $in = @(Get-Content -LiteralPath $Path -Encoding UTF8)
+  if(-not $in -or $in.Count -eq 0){ return }
+  $out = New-Object System.Collections.Generic.List[string]
+  $changed = 0
+  foreach($ln in $in){
+    $t = ($ln + '''').Trim()
+    if(-not $t){ continue }
+    try {
+      $o = $t | ConvertFrom-Json -ErrorAction Stop
+      if($o){
+        if($o.PSObject.Properties.Name -contains 'metrics_source'){ $o.metrics_source = 'proxy_us_paperlive_v1' }
+        else { $o | Add-Member -NotePropertyName 'metrics_source' -NotePropertyValue 'proxy_us_paperlive_v1' -Force }
+        $out.Add(($o | ConvertTo-Json -Compress))
+        $changed++
+      }
+    } catch {
+      $out.Add($t)
+    }
+  }
+  if($changed -gt 0){
+    $txt = (($out.ToArray() -join "
+") + "
+")
+    [System.IO.File]::WriteAllText($Path, $txt, (New-Object System.Text.UTF8Encoding($false)))
+  }
+}
+# PROXY_STAMP_JSONL_END
+
 
 function Rewrite-MetricsSource([string]$Path,[string]$From,[string]$To){
   if(-not (Test-Path -LiteralPath $Path)){ return }
@@ -44,6 +75,15 @@ $rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join
 $rcRaw = ($rcRaw + "").Trim()
 if(-not $rcRaw){ throw "[GS-PERMKT] RunContext empty" }
 $rc = $rcRaw | ConvertFrom-Json
+# ASOF_ENV_BEGIN
+try {
+  if($rc -and ($rc.PSObject.Properties.Name -contains 'as_of_date')){
+    $d = (([string]$rc.as_of_date)).Trim()
+    if($d.Length -gt 10){ $d = $d.Substring(0,10) }
+    if($d -match '^\d{4}-\d{2}-\d{2}$'){ $env:HAT_ASOF_DATE = $d }
+  }
+} catch { }
+# ASOF_ENV_END
 $logsDirOut = [string]$rc.logs_dir_out
 if(-not $logsDirOut){ throw "[GS-PERMKT] RunContext missing logs_dir_out" }
 New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
@@ -119,6 +159,11 @@ if(-not (Test-Path -LiteralPath $writer)){ throw "[GS-PERMKT] Missing writer: Wr
 
 $outPath = Join-Path $logsDirOut "nvda_gatescore_events.jsonl"
 Write-Host ("[GS-PERMKT] market=" + $Market + " input=" + $input + " out=" + $outPath + " proxy=" + $proxy) -ForegroundColor Cyan
+# PROXY_MODE_ENV_BEGIN
+try {
+  if($proxy){ $env:HAT_GATESCORE_PROXY_MODE = "1" } else { Remove-Item Env:\HAT_GATESCORE_PROXY_MODE -ErrorAction SilentlyContinue }
+} catch { }
+# PROXY_MODE_ENV_END
 
 & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $writer -InputPath $input -OutPath $outPath -MinEvents $MinEvents -Mode $Mode *>&1 | Out-Host
 $code = $LASTEXITCODE
@@ -126,13 +171,10 @@ if($code -ne 0){
   Write-Host ("[GS-PERMKT] writer exit_code=" + $code) -ForegroundColor Yellow
   exit $code
 }
-
 # If proxy mode, stamp metrics_source so LIVE remains denied
 if($proxy){
-  Rewrite-MetricsSource $outPath '"metrics_source":"paperlive_real_v1"' '"metrics_source":"proxy_us_paperlive_v1"'
-  Rewrite-MetricsSource $outPath '"metrics_source":"paperlive_real_v2"' '"metrics_source":"proxy_us_paperlive_v1"'
+  Stamp-ProxyMetricsSourceJsonl $outPath
   Write-Host ("[GS-PERMKT] proxy stamp applied: metrics_source=proxy_us_paperlive_v1") -ForegroundColor Yellow
 }
-
 Write-Host ("[GS-PERMKT] OK wrote " + $outPath) -ForegroundColor Green
 exit 0
