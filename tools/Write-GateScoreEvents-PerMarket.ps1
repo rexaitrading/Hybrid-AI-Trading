@@ -27,26 +27,28 @@ function Stamp-ProxyMetricsSourceJsonl([string]$Path){
   $out = New-Object System.Collections.Generic.List[string]
   $changed = 0
   foreach($ln in $in){
-    $t = ($ln + '''').Trim()
+    $t = (($ln + "")).Trim()
     if(-not $t){ continue }
     try {
       $o = $t | ConvertFrom-Json -ErrorAction Stop
-      if($o){
-        if($o.PSObject.Properties.Name -contains 'metrics_source'){ $o.metrics_source = 'proxy_us_paperlive_v1' }
-        else { $o | Add-Member -NotePropertyName 'metrics_source' -NotePropertyValue 'proxy_us_paperlive_v1' -Force }
+      if($null -ne $o){
+        $prior = $null
+        if($o.PSObject.Properties.Name -contains "metrics_source"){ $prior = [string]$o.metrics_source }
+        if($prior -ne "proxy_us_paperlive_v1"){
+          $o | Add-Member -NotePropertyName metrics_source -NotePropertyValue "proxy_us_paperlive_v1" -Force
+          $changed++
+        }
         $out.Add(($o | ConvertTo-Json -Compress))
-        $changed++
+        continue
       }
-    } catch {
-      $out.Add($t)
-    }
+    } catch { }
+    $out.Add($t)
   }
-  if($changed -gt 0){
-    $txt = (($out.ToArray() -join "
-") + "
-")
-    [System.IO.File]::WriteAllText($Path, $txt, (New-Object System.Text.UTF8Encoding($false)))
-  }
+  if($changed -le 0){ return }
+  $txt2 = ($out.ToArray() -join "`n")
+  $txt2 = $txt2 -replace "`r`n","`n"
+  if($txt2.Length -gt 0 -and $txt2[-1] -ne "`n"){ $txt2 += "`n" }
+  [System.IO.File]::WriteAllText($Path, $txt2, (New-Object System.Text.UTF8Encoding($false)))
 }
 # PROXY_STAMP_JSONL_END
 
@@ -84,9 +86,13 @@ try {
   }
 } catch { }
 # ASOF_ENV_END
-$logsDirOut = [string]$rc.logs_dir_out
-if(-not $logsDirOut){ throw "[GS-PERMKT] RunContext missing logs_dir_out" }
+# LOGSDIROUT_FS_TRUTH_BEGIN
+# FS-truth: do NOT trust RunContext logs_dir_out string (can be mojibake); build logs path from repoRoot + market.
+$m2 = ([string]$Market).Trim().ToUpperInvariant()
+if(-not $m2){ $m2 = "US" }
+$logsDirOut = Join-Path (Join-Path $repoRoot "logs") $m2
 New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
+# LOGSDIROUT_FS_TRUTH_END
 
 # Candidate inputs (local first)
 $localInputs = @(
@@ -171,8 +177,29 @@ if($code -ne 0){
   Write-Host ("[GS-PERMKT] writer exit_code=" + $code) -ForegroundColor Yellow
   exit $code
 }
-# If proxy mode, stamp metrics_source so LIVE remains denied
-if($proxy){
+# CANON_OUTPATH_FOR_PROXY_STAMP_BEGIN
+# Always stamp the canonical filesystem path (prevents mojibake path mismatch)
+try {
+  if(Test-Path -LiteralPath $outPath){
+    $outPath = (Resolve-Path -LiteralPath $outPath).Path
+  }
+} catch { }
+# CANON_OUTPATH_FOR_PROXY_STAMP_END
+# If proxy mode, stamp metrics_source so LIVE remains denied# TODAYLOCAL_BEGIN
+# market-day truth (RunContext)
+$todayLocal = ""
+try {
+  if($rc -and ($rc.PSObject.Properties.Name -contains "as_of_date")){
+    $todayLocal = (([string]$rc.as_of_date)).Trim()
+    if($todayLocal.Length -gt 10){ $todayLocal = $todayLocal.Substring(0,10) }
+  }
+} catch { $todayLocal = "" }
+# TODAYLOCAL_END
+
+# If non-US market, stamp metrics_source so LIVE remains denied (fail-closed, deterministic)
+$m2 = ([string]$Market).Trim().ToUpperInvariant()
+if(-not $m2){ $m2 = "US" }
+if($m2 -ne "US"){
   Stamp-ProxyMetricsSourceJsonl $outPath
   Write-Host ("[GS-PERMKT] proxy stamp applied: metrics_source=proxy_us_paperlive_v1") -ForegroundColor Yellow
 }
