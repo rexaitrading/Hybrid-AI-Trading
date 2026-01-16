@@ -36,6 +36,7 @@ function Resolve-TimeZoneInfo([string]$tzId){
     "America/Los_Angeles" = "Pacific Standard Time"
     "Asia/Tokyo" = "Tokyo Standard Time"
     "Asia/Hong_Kong" = "China Standard Time"
+    "Asia/Taipei" = "Taipei Standard Time"
     "Asia/Singapore" = "Singapore Standard Time"
     "Asia/Shanghai"  = "China Standard Time"
     "UTC" = "UTC"
