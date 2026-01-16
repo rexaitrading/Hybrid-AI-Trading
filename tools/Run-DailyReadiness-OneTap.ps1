@@ -232,7 +232,7 @@ try {
     }
 
     try {
-& (Join-Path $repoRoot "tools\Run-BlockGLockPack.ps1") -Market $Market -Symbol $Symbol 2>&1 | Out-Host
+      # MOVED: Run-BlockGLockPack.ps1 is executed after producers to avoid stale BlockG snapshot
       $lockpack_exit = [int]$LASTEXITCODE
     } catch { $lockpack_exit = 2 }
 
@@ -251,6 +251,18 @@ try {
 
     # Per-market GateScore events (script hardened in your Fix Pack)
     $gsPm = Join-Path $repoRoot "tools\Write-GateScoreEvents-PerMarket.ps1"
+
+    # LOCKPACK_MOVED_AFTER_GS_BEGIN
+    # Re-run LockPack AFTER producers so BlockG snapshot reflects current-day evidence (GateScore + GlobalReady + EV-hard + Phase23).
+    try {
+      & (Join-Path $repoRoot "tools\Run-BlockGLockPack.ps1") -Market $Market -Symbol $Symbol 2>&1 | Out-Host
+      $lockpack_exit = [int]$LASTEXITCODE
+    } catch { $lockpack_exit = 2 }
+    if($lockpack_exit -ne 0){
+      Write-Host ("[ONETAP] WARN: LockPack failed (exit=" + $lockpack_exit + "). Continuing so onetap_summary.json is emitted (fail-closed).") -ForegroundColor Yellow
+    }
+    # LOCKPACK_MOVED_AFTER_GS_END
+
     if(Test-Path -LiteralPath $gsPm){
       & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $gsPm -Market $Market -Symbol $Symbol -Mode rewrite -MinEvents 10 2>&1 | Out-Host
     } else {
