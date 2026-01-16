@@ -70,12 +70,71 @@ $obj = [ordered]@{
 $evidenceRows = Get-EvidenceTodayRows -LogsDir $logsDir -TodayLocal $todayLocal
 $allow = (Allow-NonLiveUs -Market $Market)
 if($allow -and $evidenceRows -gt 0){
-  $obj.ok_today = $true
+  # GREADY_PROXY_DENY_MAIN_BEGIN
+  # Strict: proxy-only GateScore evidence does NOT satisfy Global-Ready.
+  $proxyRowsToday = 0
+  try {
+    $evPath = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+    if(Test-Path -LiteralPath $evPath){
+      $patDay = '"as_of_date":"{0}"' -f $todayLocal
+      foreach($h in (Select-String -LiteralPath $evPath -Pattern $patDay -SimpleMatch -ErrorAction SilentlyContinue)){
+        if($h.Line -match '"metrics_source":"proxy_'){ $proxyRowsToday += 1 }
+      }
+    }
+  } catch { $proxyRowsToday = $evidenceRows }
+  if($proxyRowsToday -ge $evidenceRows){
+  # moved_by_proxydeny $obj.ok_today = $true
   $obj.dna_class = "institutional-compression"
   $obj.reason = "default_nonlive_us"
-} else {
+    # Deny (keep ok_today false), but set accurate reason(s)
+    try {
+      if($obj.Contains("reason")){ $obj.reason = "deny_proxy_metrics_source" }
+      if($obj.Contains("reasons")){ $obj.reasons = @("deny_proxy_metrics_source") }
+    } catch {
+      try { $obj.reason = "deny_proxy_metrics_source" } catch { }
+    }
+  } else {
+    # allow non-proxy evidence
+    $obj.ok_today = $true
+  }
+  # GREADY_PROXY_DENY_MAIN_END} else {
   if(-not $allow){ $obj.reason = "blocked_policy_nonlive_us_only" }
-  elseif($evidenceRows -le 0){ $obj.reason = "missing_gatescore_evidence_today" }
+  elseif($evidenceRows -le 0){
+  # GREADY_PROXY_REASON_BEGIN
+  # Strict policy: proxy-only GateScore evidence does NOT satisfy Global-Ready.
+  # But the reason must be accurate (avoid "missing evidence" when proxy rows exist).
+  try {
+    $todayRows = 0
+    $todayProxyRows = 0
+    $evPath = Join-Path $logsDir "nvda_gatescore_events.jsonl"
+    if(Test-Path -LiteralPath $evPath){
+      foreach($ln in (Get-Content -LiteralPath $evPath -Encoding UTF8)){
+        $s = ($ln + "").Trim(); if(-not $s){ continue }
+        try {
+          $e = $s | ConvertFrom-Json
+          $d = ""
+          if($e.PSObject.Properties.Name -contains "as_of_date"){
+            $d = ([string]$e.as_of_date)
+            if($d.Length -ge 10){ $d = $d.Substring(0,10) }
+          }
+          if($d -ne $todayLocal){ continue }
+          $todayRows += 1
+          $ms = ""
+          if($e.PSObject.Properties.Name -contains "metrics_source"){ $ms = ([string]$e.metrics_source).Trim() }
+          if($ms -match '^(?i)proxy_'){ $todayProxyRows += 1 }
+        } catch { }
+      }
+    }
+    if($todayRows -gt 0 -and $todayProxyRows -ge $todayRows){
+      $obj.reason = "deny_proxy_metrics_source"
+    } else {
+      $obj.reason = "missing_gatescore_evidence_today"
+    }
+  } catch {
+    $obj.reason = "missing_gatescore_evidence_today"
+  }
+  # GREADY_PROXY_REASON_END
+}
 }
 $obj["evidence_path"] = (Join-Path $logsDir "nvda_gatescore_events.jsonl")
 $obj["evidence_rows_today"] = [int]$evidenceRows
