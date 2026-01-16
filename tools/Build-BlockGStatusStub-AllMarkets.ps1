@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 chcp 65001 | Out-Null
 
 $toolsDir = Split-Path -Parent $PSCommandPath
-$repoRoot = Split-Path -Parent $toolsDir
+try { $repoRoot = (Resolve-Path -LiteralPath (Split-Path -Parent $toolsDir) -ErrorAction Stop).Path } catch { $repoRoot = (Split-Path -Parent $toolsDir) }
 
 function Fail([string]$m){
   Write-Host ("[BLOCKG-ALL] FAIL-CLOSED: " + $m) -ForegroundColor Red
@@ -33,10 +33,8 @@ foreach($m in $Markets){
 
   & $psExe -NoProfile -ExecutionPolicy Bypass -File $builder -Symbol $Symbol -Market $m2 *>&1 | Out-Host
   if($LASTEXITCODE -ne 0){ Fail ("Build-BlockGStatusStub failed Market=" + $m2 + " exit=" + $LASTEXITCODE) }
-
-  $logRoot = & $psExe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Get-MarketLogRoot.ps1") -Market $m2
-  if(-not $logRoot){ Fail ("Get-MarketLogRoot returned empty for Market=" + $m2) }
-
+  $logRoot = Join-Path (Join-Path $repoRoot "logs") $m2
+  New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
   $stub = Join-Path $logRoot "blockg_status_stub.json"
   if(-not (Test-Path -LiteralPath $stub)){ Fail ("Missing stub after build Market=" + $m2 + " path=" + $stub) }
 
@@ -46,4 +44,5 @@ foreach($m in $Markets){
 
 Write-Host "[BLOCKG-ALL] DONE" -ForegroundColor Green
 exit 0
+
 

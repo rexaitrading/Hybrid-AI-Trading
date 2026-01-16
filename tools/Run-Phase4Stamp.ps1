@@ -19,7 +19,35 @@ $ErrorActionPreference="Stop"
 # $toolsDir = Split-Path -Parent $PSCommandPath   # disabled (use env HAT_REPO_ROOT)
 $root = $repoRoot
 Set-Location $root
+# --- A3: market-aware todayLocal (RunContext single truth) ---
+function _Slice10([string]$d){
+  $s = ([string]$d).Trim()
+  if($s.Length -ge 10){ return $s.Substring(0,10) }
+  return $s
+}
+function _TryGetTodayLocal([string]$Market,[string]$Symbol){
+  try{
+    $rcFile = Join-Path $PSScriptRoot "Resolve-RunContext.ps1"
+    if(Test-Path -LiteralPath $rcFile){
+      $raw = (& "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $rcFile -Market $Market -Symbol $Symbol | Out-String).Trim()
+      $i0=$raw.IndexOf("{"); $i1=$raw.LastIndexOf("}")
+      if($i0 -ge 0 -and $i1 -gt $i0){
+        $rc = ($raw.Substring($i0, ($i1-$i0+1))) | ConvertFrom-Json
+        if($rc -and $rc.as_of_date){ return _Slice10 ([string]$rc.as_of_date) }
+      }
+    }
+  } catch { }
+  return ""
+}
+# --- A3 END ---
 $today = (Get-Date).ToString("yyyy-MM-dd")
+try {
+  $mk = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+  if(-not $mk){ $mk = "US" }
+  $sym = "NVDA"
+  $tl = _TryGetTodayLocal $mk $sym
+  if($tl){ $today = $tl }
+} catch { }
 $tsUtc  = (Get-Date).ToUniversalTime().ToString("o")
 
 $logDir = Join-Path $root "logs"
@@ -162,7 +190,14 @@ $payloadJson = $payload | ConvertTo-Json -Depth 6
 # --- A2: Emit canonical Phase4 output for downstream producers ---
 # Downstream EV-hard evidence expects phase4_validation_passed.json.
 try {
-  $canonPath = Join-Path $logDir "phase4_validation_passed.json"
+  # Canonical per-market emit (A2/A3): always write logs\<MKT>\phase4_validation_passed.json
+$mk2 = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+if(-not $mk2){ $mk2 = "US" }
+
+# FS-truth: do NOT trust Get-MarketLogRoot / RunContext string (mojibake risk); build logs path from repoRoot + market.
+$logsDir2 = Join-Path (Join-Path $repoRoot "logs") $mk2
+New-Item -ItemType Directory -Force -Path $logsDir2 | Out-Null
+$canonPath = Join-Path $logsDir2 "phase4_validation_passed.json"
   Copy-Item -LiteralPath $outJson -Destination $canonPath -Force
 } catch {
   # fail-closed: do not break Phase4 stamp because of compat emit

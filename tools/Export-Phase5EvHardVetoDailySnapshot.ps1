@@ -30,7 +30,34 @@ function Write-Utf8NoBom {
 }
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+# --- A3: market-aware TODAY (prefer HAT_ASOF_DATE, else Resolve-RunContext when HAT_MARKET is set) ---
 $today = (Get-Date).ToString("yyyy-MM-dd")
+try {
+  $asofEnv = (($env:HAT_ASOF_DATE + "")).Trim()
+  if($asofEnv){
+    $asofEnv = $asofEnv.Substring(0,[Math]::Min(10,$asofEnv.Length))
+    if($asofEnv -match '^\d{4}-\d{2}-\d{2}$'){ $today = $asofEnv }
+  } else {
+    $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+    if($m){
+      $sym = (($env:HAT_SYMBOL + "")).Trim().ToUpperInvariant()
+      if(-not $sym){ $sym = "NVDA" }
+      $rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+      if(Test-Path -LiteralPath $rcPath){
+        $raw = (& $rcPath -Market $m -Symbol $sym | Out-String).Trim()
+        $i0=$raw.IndexOf("{"); $i1=$raw.LastIndexOf("}")
+        if($i0 -ge 0 -and $i1 -gt $i0){
+          $rc = ($raw.Substring($i0, ($i1-$i0+1))) | ConvertFrom-Json
+          if($rc -and $rc.as_of_date){
+            $d = ([string]$rc.as_of_date).Trim()
+            if($d.Length -ge 10){ $today = $d.Substring(0,10) }
+          }
+        }
+      }
+    }
+  }
+} catch { }
+# --- A3 END ---
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
 $ok = $false
@@ -94,3 +121,4 @@ Write-Utf8NoBom -Path $DailyCsv -Text $csv
 
 Write-Host ("[EV-HARD] as_of_date={0} ok={1} reason={2}" -f $today,$ok,$reason) -ForegroundColor Cyan
 exit 0
+

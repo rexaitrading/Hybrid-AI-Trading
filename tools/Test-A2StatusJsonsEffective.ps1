@@ -16,13 +16,10 @@ function Resolve-RepoRoot(){
 $repoRoot = Resolve-RepoRoot
 
 function Get-MarketLogsDir([string]$Market){
-  try{
-    $p = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
-    if($p){ return $p }
-  } catch { }
-  return (Join-Path $repoRoot ("logs\{0}" -f $Market))
+  $m = ([string]$Market).Trim().ToUpperInvariant()
+  if(-not $m){ return (Join-Path $repoRoot "logs") }
+  return (Join-Path $repoRoot ("logs\{0}" -f $m))
 }
-
 function Slice10([string]$d){
   $s = ([string]$d).Trim()
   if($s.Length -ge 10){ return $s.Substring(0,10) }
@@ -97,4 +94,5 @@ if($fail){
 
 Write-Host "[A2] OK: effective status audit passed" -ForegroundColor Green
 exit 0
+
 
