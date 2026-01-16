@@ -567,6 +567,53 @@ function Read-StatusOkToday([string]$StatusPath,[string]$TodayLocal){
   return $false
 }
 # A2_STATUS_JSON_HELPERS_END
+# A2_STATUS_JSON_STRICT_BEGIN
+function Read-StatusJsonStrict(
+  [string]$Path,
+  [string]$ExpectedKind,
+  [string]$TodayLocal,
+  [string]$ExpectedMarket = $null
+){
+  if(-not (Test-Path -LiteralPath $Path)){ return $null }
+
+  $raw = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+  if(-not $raw){ throw "[FAIL-CLOSED] empty status json: $Path" }
+
+  $j = $raw | ConvertFrom-Json -ErrorAction Stop
+
+  if(-not ($j.PSObject.Properties.Name -contains "kind")){
+    throw "[FAIL-CLOSED] status json missing kind: $Path"
+  }
+  if($j.kind -ne $ExpectedKind){
+    throw "[FAIL-CLOSED] status json kind mismatch: $Path expected=$ExpectedKind got=$($j.kind)"
+  }
+
+  if($ExpectedMarket){
+    if(-not ($j.PSObject.Properties.Name -contains "market")){
+      throw "[FAIL-CLOSED] status json missing market: $Path"
+    }
+    if(([string]$j.market).ToUpperInvariant() -ne $ExpectedMarket){
+      throw "[FAIL-CLOSED] status json market mismatch: $Path expected=$ExpectedMarket got=$($j.market)"
+    }
+  }
+
+  if(-not ($j.PSObject.Properties.Name -contains "as_of_date")){
+    throw "[FAIL-CLOSED] status json missing as_of_date: $Path"
+  }
+
+  $asOf = [string]$j.as_of_date
+  if($asOf.Length -ge 10){ $asOf = $asOf.Substring(0,10) }
+  if($asOf -ne $TodayLocal){
+    throw "[FAIL-CLOSED] status json stale: $Path as_of_date=$asOf today=$TodayLocal"
+  }
+
+  if(-not ($j.PSObject.Properties.Name -contains "ok_today")){
+    throw "[FAIL-CLOSED] status json missing ok_today: $Path"
+  }
+
+  return [bool]$j.ok_today
+}
+# A2_STATUS_JSON_STRICT_END
 
 $repoRoot = Resolve-RepoRoot
 
@@ -2170,3 +2217,4 @@ exit 0
   } catch { }
   throw
 }
+
