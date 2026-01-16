@@ -44,6 +44,7 @@ function Run-Tool([string]$label,[string[]]$argList,[int]$timeoutSec=120){
     throw ("[A4] ArgumentList empty after sanitize (label=" + $label + ")")
   }
 
+  Write-Host ("[A4] RUN label=" + $label + " timeoutSec=" + $timeoutSec + " out=" + $out + " err=" + $err) -ForegroundColor Cyan
   $p = Start-Process -FilePath $psExe -ArgumentList $args2 -PassThru -NoNewWindow `
       -RedirectStandardOutput $out -RedirectStandardError $err
 
