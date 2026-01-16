@@ -35,7 +35,7 @@ $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $rcRaw = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol $Symbol | Out-String
 $rcRaw = ($rcRaw + "").Trim()
 
-$logsDir = Join-Path $repoRoot "logs"
+# [A2] removed root logsDir reset (prevents cross-market bleed)
 $todayLocal = $null
 
 if($rcRaw){
@@ -62,13 +62,17 @@ $okToday = $false
 $asOf = $todayLocal
 $evidence=@()
 
-# Evidence candidates (per-market first, then root logs)
+# Evidence candidates (A2): NON-US must not fall back to root logs (prevents stale/cross-market bleed)
 $cands = @(
   (Join-Path $logsDir "phase23_health_daily.csv"),
-  (Join-Path $logsDir "phase23_health.csv"),
-  (Join-Path (Join-Path $repoRoot "logs") "phase23_health_daily.csv"),
-  (Join-Path (Join-Path $repoRoot "logs") "phase23_health.csv")
+  (Join-Path $logsDir "phase23_health.csv")
 )
+if((($Market + "")).Trim().ToUpperInvariant() -eq "US"){
+  $cands += @(
+    (Join-Path (Join-Path $repoRoot "logs") "phase23_health_daily.csv"),
+    (Join-Path (Join-Path $repoRoot "logs") "phase23_health.csv")
+  )
+}
 
 $p = $null
 foreach($cand in $cands){
