@@ -89,13 +89,12 @@ if($allow -and $evidenceRows -gt 0){
       $obj.cooldown_minutes = 0
       $obj.reasons = @("deny_proxy_metrics_source")
     } else {
-      # allow non-proxy evidence (fall through to existing ok_today=true below)
+      # G4 minimal non-live guard: with real (non-proxy) GateScore evidence, allow RiskGuard to pass.
+      $obj.ok_today = $true
+      $obj.kill_switch_armed = $false
+      $obj.cooldown_minutes = 0
+      $obj.reasons = @("default_nonlive_us")
     }
-    # GREADY_PROXY_DENY_RISK_END
-# proxydeny_guarded $obj.ok_today = $true
-  $obj.kill_switch_armed = $false
-  $obj.cooldown_minutes = 0
-# proxydeny_guarded   $obj.reasons = @("default_nonlive_us")
 } else {
   $rs = @()
   if(-not $allow){ $rs += "blocked_policy_nonlive_us_only" }
