@@ -1302,6 +1302,42 @@ try {
 } catch { }
 # GS_ASOF_TODAY_PRESENT_OVERRIDE_END
 
+# A2_GS_SUMMARY_NONLIVE_BEGIN
+# PAPER/PAPERLIVE: use per-market GateScore summary CSV as the contract truth for legacy fields.
+# LIVE: unchanged (still uses per-event evaluator + live minima + source vetoes).
+try {
+  $mode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  if($mode -ne "LIVE"){
+    # Prefer pnl summary, else daily summary
+    $gsCsv = Join-Path $logsDir "gatescore_pnl_summary.csv"
+    if(-not (Test-Path -LiteralPath $gsCsv)){ $gsCsv = Join-Path $logsDir "gatescore_daily_summary.csv" }
+
+    if(Test-Path -LiteralPath $gsCsv){
+      $rows = @(Import-Csv -LiteralPath $gsCsv)
+      foreach($r in $rows){
+        $d = ""
+        if($r.PSObject.Properties.Name -contains "as_of_date"){ $d = Slice-Date ([string]$r.as_of_date) }
+        if($d -ne $todayLocal){ continue }
+        if((([string]$r.symbol).Trim().ToUpperInvariant()) -ne "NVDA"){ continue }
+
+        # Populate legacy fields from summary (contract-visible)
+        try { $gsCount = [int]$r.count_signals } catch { $gsCount = 0 }
+        try { $gsPnl   = [int]$r.pnl_samples } catch { $gsPnl = 0 }
+        try { $gsEdge  = [double]$r.mean_edge_ratio } catch { $gsEdge = 0.0 }
+        try { $gsMicro = [double]$r.mean_micro_score } catch { $gsMicro = 0.0 }
+
+        # Make daily sample flags reflect these values in non-live (informational, still fail-closed if missing)
+        $gatescore_daily_samples_ok = ($gsCount -ge [int]$minSignals -and $gsPnl -ge [int]$minPnl)
+        $gsSamplesOk = [bool]$gatescore_daily_samples_ok
+        $gsThreshOk = ((([double]$gsEdge + 1e-9) -ge [double]$minEdge) -and (([double]$gsMicro + 1e-9) -ge [double]$minMicro))
+        $gsOkToday = ($gsFresh -and $gsSamplesOk -and $gsThreshOk)
+
+        break
+      }
+    }
+  }
+} catch { }
+# A2_GS_SUMMARY_NONLIVE_END
 # ---- Phase4 ----
 $phase4Ok = Get-Phase4OkToday $repoRoot $today
 # A2: prefer producer status json (FULL builder) before legacy fallback logic
@@ -1612,6 +1648,33 @@ $gsCount = [int]$gsNVDA.cnt
 $gsPnl   = [int]$gsNVDA.pnl
 $gsEdge  = [double]$gsNVDA.edge
 $gsMicro = [double]$gsNVDA.micro
+# A2_GS_SUMMARY_NONLIVE_POST_BEGIN
+# After legacy vars are overwritten from $gsNVDA (which can be 0 in proxy/PAPER modes),
+# re-hydrate legacy GateScore fields from per-market summary CSV for PAPER/PAPERLIVE only.
+try {
+  $mode2 = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  if($mode2 -ne "LIVE"){
+    $gsCsv2 = Join-Path $logsDir "gatescore_pnl_summary.csv"
+    if(-not (Test-Path -LiteralPath $gsCsv2)){ $gsCsv2 = Join-Path $logsDir "gatescore_daily_summary.csv" }
+
+    if(Test-Path -LiteralPath $gsCsv2){
+      $rows2 = @(Import-Csv -LiteralPath $gsCsv2)
+      foreach($r2 in $rows2){
+        $d2 = ""
+        if($r2.PSObject.Properties.Name -contains "as_of_date"){ $d2 = Slice-Date ([string]$r2.as_of_date) }
+        if($d2 -ne $todayLocal){ continue }
+        if((([string]$r2.symbol).Trim().ToUpperInvariant()) -ne "NVDA"){ continue }
+
+        try { $gsCount = [int]$r2.count_signals } catch { $gsCount = 0 }
+        try { $gsPnl   = [int]$r2.pnl_samples } catch { $gsPnl = 0 }
+        try { $gsEdge  = [double]$r2.mean_edge_ratio } catch { $gsEdge = 0.0 }
+        try { $gsMicro = [double]$r2.mean_micro_score } catch { $gsMicro = 0.0 }
+        break
+      }
+    }
+  }
+} catch { }
+# A2_GS_SUMMARY_NONLIVE_POST_END
 
 $minSignals = [int]$gsNVDA.minSignals
 $minPnl     = [int]$gsNVDA.minPnl
