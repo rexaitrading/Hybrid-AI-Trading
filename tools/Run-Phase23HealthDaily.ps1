@@ -21,6 +21,15 @@ if(-not $repoRoot){ throw "[REPOROOT] FAIL-CLOSED: repoRoot empty" }
 $repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
 Set-Location -LiteralPath $repoRoot
 [System.Environment]::CurrentDirectory = $repoRoot
+# A3_MARKET_SYMBOL_NORMALIZED_BEFORE_LOGROOT
+$m = (($Market + "")).Trim().ToUpperInvariant()
+if(-not $m){ $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant() }
+if(-not $m){ $m = "US" }
+$Market = $m
+$s = (($Symbol + "")).Trim().ToUpperInvariant()
+if(-not $s){ $s = "NVDA" }
+$Symbol = $s
+
 # Per-market logs root (A3 single-truth)
 $gm = Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1"
 if(-not (Test-Path -LiteralPath $gm)){ throw "[FAIL-CLOSED] Missing Get-MarketLogRoot.ps1: " + $gm }
@@ -29,13 +38,7 @@ if(-not $logDir){ $logDir = Join-Path (Join-Path $repoRoot "logs") $Market }
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 # Phase23 health is a TODAY heartbeat (do not inherit stale dates from other phases)
 # Market-aware TODAY: use Resolve-RunContext.as_of_date (fail-closed)
-$m = (($Market + "")).Trim().ToUpperInvariant()
-if(-not $m){ $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant() }
-if(-not $m){ $m = "US" }
-$Market = $m
-$s = (($Symbol + "")).Trim().ToUpperInvariant()
-if(-not $s){ $s = "NVDA" }
-$Symbol = $s
+# [A3] Market/Symbol normalized above before Get-MarketLogRoot.
 $rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
 if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: $rcPath" }
 $rcRaw = (& $rcPath -Market $Market -Symbol $Symbol | Out-String)
