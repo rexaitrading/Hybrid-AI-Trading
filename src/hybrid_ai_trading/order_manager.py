@@ -44,6 +44,7 @@ class OrderManager:
         self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None, ctx: RunContext | None = None
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
+        meta0 = _merge_meta_ctx(meta, ctx, symbol)
         oid, info = self.broker.place_order(symbol, "BUY", qty, "MARKET", meta=meta0, ctx=ctx)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
@@ -54,6 +55,7 @@ class OrderManager:
         self, symbol: str, qty: float, meta: Optional[Dict[str, Any]] = None, ctx: RunContext | None = None
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
+        meta0 = _merge_meta_ctx(meta, ctx, symbol)
         oid, info = self.broker.place_order(symbol, "SELL", qty, "MARKET", meta=meta0, ctx=ctx)
         out: Dict[str, Any] = {"orderId": oid}
         out.update(info)
@@ -69,6 +71,7 @@ class OrderManager:
         ctx: RunContext | None = None,
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
+        meta0 = _merge_meta_ctx(meta, ctx, symbol)
         oid, info = self.broker.place_order(
             symbol, "BUY", qty, "LIMIT", limit_price=limit_price, meta=meta0, ctx=ctx)
         out: Dict[str, Any] = {"orderId": oid}
@@ -85,6 +88,7 @@ class OrderManager:
         ctx: RunContext | None = None,
     ) -> Dict[str, Any]:
         _blockg_guard_if_live(symbol)
+        meta0 = _merge_meta_ctx(meta, ctx, symbol)
         oid, info = self.broker.place_order(
             symbol, "SELL", qty, "LIMIT", limit_price=limit_price, meta=meta0, ctx=ctx)
         out: Dict[str, Any] = {"orderId": oid}

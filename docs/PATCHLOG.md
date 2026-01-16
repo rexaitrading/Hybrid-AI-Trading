@@ -306,3 +306,8 @@ tools/Disarm-NVDA-Live.ps1
 - Root cause: prior stamp scan matched live inside paperlive causing false FAIL-CLOSED.
 - Fix: exclude paperlive filenames; tighten live detection to token-ish match; keep fail-closed semantics.
 - Proof: PHASE1_SWEEP_OK=TRUE and STAMP_HITS=NONE for all markets.
+## 2026-01-16 15:45:06 — A1 OrderManager hardening (risk wiring + meta0 crash fix)
+- Fix root OrderManager meta0 NameError by defining meta0 = _merge_meta_ctx(meta, ctx, symbol) in buy/sell market+limit methods (prevents shadow entrypoint crash/bypass ambiguity).
+- Fix execution OrderManager: accept risk_manager=... wiring (prevents silent risk_veto disable).
+- Remove LIVE ambiguity: ensure_symbol_blockg_ready(... allow_paper=False, is_paper=False ...) (defense-in-depth; no functional change today).
+- Reversible backups: *.bak_20260116_154506_A1_OM

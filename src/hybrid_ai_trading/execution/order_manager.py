@@ -65,6 +65,9 @@ class OrderManager:
         self, risk_mgr=None, portfolio=None, dry_run: bool = True, **kwargs
     ) -> None:
         self.risk_mgr = risk_mgr
+        if self.risk_mgr is None:
+            # Compat: callers may pass risk_manager=... (ExecutionEngine wiring)
+            self.risk_mgr = kwargs.get('risk_manager') or kwargs.get('risk_mgr') or None
         self.portfolio = portfolio
         self.dry_run = dry_run
         self._open_ids = set()
@@ -533,7 +536,7 @@ class OrderManager:
                 client_name = (client.__class__.__name__ if client is not None else "")
                 client_mod  = (getattr(client.__class__, "__module__", "") if client is not None else "")
                 if sym_u in ("NVDA","SPY","QQQ"):
-                    ensure_symbol_blockg_ready(sym_u, allow_paper=True, is_paper=False, ctx=_get_ctx_cached(self))
+                    ensure_symbol_blockg_ready(sym_u, allow_paper=False, is_paper=False, ctx=_get_ctx_cached(self))
                 # BLOCKG_PS_CHECK_BEFORE_LIVE_SUBMIT (authoritative, fail-closed)
                 if not _running_under_pytest():
                     r = run_blockg_check(sym_u)
