@@ -63,11 +63,11 @@ $mcJson = $mcRaw.Substring($ix0, ($ix1 - $ix0 + 1))
 $mc = $mcJson | ConvertFrom-Json -ErrorAction Stop
 if(-not $mc){ throw "Resolve-MarketContext returned empty" }
 
-# Per-market logs dir (canonical)
-$lmPath = Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1"
-$logsDirOut = $null
-try { $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $lmPath -Market $Market } catch { $logsDirOut = $null }
-if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
+# Per-market logs dir (A3 FS-truth canonical; avoid mojibake)
+$mk2 = ($Market + "").Trim().ToUpperInvariant()
+if(-not $mk2){ $mk2 = "US" }
+$logsDirOut = Join-Path (Join-Path $repoRoot "logs") $mk2
+New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
 
 # Output: keep BOTH logs_dir and logs_dir_out for compatibility
 [pscustomobject]@{

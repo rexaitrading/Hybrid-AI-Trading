@@ -30,6 +30,13 @@ class _IB:
         self.args = (a, k)
         return object()
 
+class _Ctx:
+    # Minimal RunContext stub for deterministic LIVE session gating
+    def __init__(self):
+        self.mode = "LIVE"
+        self.market = "US"
+        self.market_closed_today = False
+        self.session_name = "RTH"
 
 def _write_status(tmp_path: Path, *, nvda_ready: bool) -> Path:
     p = tmp_path / "blockg_status_stub.json"
@@ -81,7 +88,7 @@ def test_ib_chokepoint_blocks_live_when_blockg_not_ready(tmp_path: Path, monkeyp
     o = _O()
 
     with pytest.raises(BlockGNotReady):
-        ib_place_order_chokepoint(ib, c, o)
+        ib_place_order_chokepoint(ib, c, o, ctx=_Ctx())
 
     assert ib.called is False
 
@@ -97,5 +104,5 @@ def test_ib_chokepoint_allows_live_when_blockg_ready(tmp_path: Path, monkeypatch
     ib = _IB()
     c = _C("NVDA")
     o = _O()
-    ib_place_order_chokepoint(ib, c, o)
+    ib_place_order_chokepoint(ib, c, o, ctx=_Ctx())
     assert ib.called is True
