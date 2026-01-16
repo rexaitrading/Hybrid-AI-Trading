@@ -266,7 +266,8 @@ if ($reasons.Count -eq 0) {
 
 $out = [ordered]@{
   ts_utc = $tsUtc
-  as_of_date = $inputsDay
+  as_of_date = $effectiveTradingDay
+  inputs_day = $inputsDay
   snapshot_date = $today
   effective_trading_day = $effectiveTradingDay
   ok = $ok
