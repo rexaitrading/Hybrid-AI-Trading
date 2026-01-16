@@ -1,9 +1,20 @@
 [CmdletBinding()]
 param(
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+  [string]$Market = "US",
+
+  [ValidateSet("NVDA","SPY","QQQ","ALL")]
+  [string]$Symbol = "NVDA",
+
   [int]$TimeoutSec = 60
 )
 
-
+# A3_PHASE4STAMP_ENV_WIRE_BEGIN
+$env:HAT_MARKET = ((($Market + "")).Trim().ToUpperInvariant())
+if(-not $env:HAT_MARKET){ $env:HAT_MARKET = "US" }
+$env:HAT_SYMBOL = ((($Symbol + "")).Trim().ToUpperInvariant())
+if(-not $env:HAT_SYMBOL){ $env:HAT_SYMBOL = "NVDA" }
+# A3_PHASE4STAMP_ENV_WIRE_END
 # --- repo root bootstrap (env-first) ---
 $repoRoot = ($env:HAT_REPO_ROOT + "").Trim()
 if(-not $repoRoot){
