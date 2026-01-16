@@ -1,5 +1,7 @@
 [CmdletBinding()]
 param(
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ")]
+  [string]$Market="US",
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol="ALL"
 )
@@ -10,7 +12,12 @@ chcp 65001 | Out-Null
 [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
 $ErrorActionPreference="Stop"
 
-
+# A3_PREMARKET_ENV_WIRE_BEGIN
+$env:HAT_MARKET = ((($Market + "")).Trim().ToUpperInvariant())
+if(-not $env:HAT_MARKET){ $env:HAT_MARKET = "US" }
+$env:HAT_SYMBOL = ((($Symbol + "")).Trim().ToUpperInvariant())
+if(-not $env:HAT_SYMBOL){ $env:HAT_SYMBOL = "ALL" }
+# A3_PREMARKET_ENV_WIRE_END
 # ---- Phase today-ness hard gates (fail-closed) ----
 $phase4 = Join-Path $PSScriptRoot "Check-Phase4Today.ps1"
 & $phase4
@@ -57,10 +64,8 @@ if($Symbol -eq "ALL"){
   & $phase5 -Symbol $Symbol -RequireRunContext
   if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
 }
-& $phase5 -Symbol $Symbol -RequireRunContext
-if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
-$root = (Resolve-Path ".").Path
-Set-Location $root
+#$root = (Resolve-Path ".").Path  # [A3] disabled (env-truth repo root already active)
+# [A3] disabled Set-Location $root (env-truth repo root already active)
 $today = (Get-Date).ToString("yyyy-MM-dd")
 
 Write-Host "[PRE] RepoRoot=$root Today=$today Symbol=$Symbol" -ForegroundColor Cyan
@@ -68,14 +73,14 @@ Write-Host "[PRE] RepoRoot=$root Today=$today Symbol=$Symbol" -ForegroundColor C
 # --- 0) Phase23 health daily (must be today-stamped) ---
 $phase23 = ".\tools\Run-Phase23HealthDaily.ps1"
 if(Test-Path $phase23){
-  & $phase23 | Out-Host
+  & $phase23 -Market $env:HAT_MARKET -Symbol NVDA | Out-Host
   if($LASTEXITCODE -ne 0){ throw "[PRE] Run-Phase23HealthDaily failed rc=$LASTEXITCODE" }
 } else {
   Write-Host "[PRE] WARN: tools\Run-Phase23HealthDaily.ps1 not found (phase23 likely stale -> fail-closed)" -ForegroundColor Yellow
 }
 
 # --- 1) Phase-4 validation (must be today-stamped) ---
-& ".\tools\Run-Phase4Validation.ps1"
+& ".\tools\Run-Phase4Validation.ps1" -Market $env:HAT_MARKET -Symbol NVDA
 if($LASTEXITCODE -ne 0){ throw "[PRE] Phase4 validation failed rc=$LASTEXITCODE" }
 
 # --- RunContext (single source of truth for mode/state) ---
@@ -123,6 +128,11 @@ $gsPnl = ".\tools\Build-GateScorePnlSummary.ps1"
 $gsDaily = ".\tools\Build-GateScoreDailySummary.ps1"
 
 if(Test-Path $gsPnl){
+# A3_GS_MARKET_WIRE_BEGIN
+$m0 = (( $env:HAT_MARKET + "" )).Trim().ToUpperInvariant()
+if(-not $m0){ $m0 = "US" }
+$env:HAT_MARKET = $m0
+# A3_GS_MARKET_WIRE_END
   & $gsPnl -StrictToday
   # allow fail-closed rc=2 (no today events) so Block-G can report reasons deterministically
   if($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 2){ throw "[PRE] Build-GateScorePnlSummary failed rc=$LASTEXITCODE" }
@@ -154,7 +164,10 @@ if(Test-Path $evEvidence){
 
 # --- 6) EV-hard strict-today pipeline (fail-closed) ---
 & ".\tools\Build-EvHardSnapshot.ps1"
-& ".\tools\Compute-Phase5EvHardSnapshotInput.ps1" -EvidencePath ".\logs\ev_hard_snapshot.json"
+& ".\tools\Compute-Phase5EvHardSnapshotInput.ps1" -EvidencePath (`
+  if($env:HAT_MARKET -and $env:HAT_MARKET -ne "US"){ ".\logs\$($env:HAT_MARKET)\ev_hard_snapshot.json" } else { ".\logs\ev_hard_snapshot.json" } `
+)
+# A3_EVIDENCEPATH_MARKET_END
 & ".\tools\Export-Phase5EvHardVetoDailySnapshot.ps1"
 & ".\tools\Run-EvHardVetoDaily.ps1"
 
