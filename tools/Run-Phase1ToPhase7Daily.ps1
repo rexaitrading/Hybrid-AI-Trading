@@ -96,10 +96,8 @@ Run-Step "Phase23: Health daily" {
 }
 
 Run-Step "Phase5: EV-hard snapshot" {
-  Run-PS ".\tools\Build-EvHardSnapshot.ps1" @{
-    Market = $env:HAT_MARKET
-    Symbol = $env:HAT_SYMBOL
-  }
+  # EV-hard snapshot consumes env:HAT_MARKET internally; do NOT pass Market/Symbol
+  Run-PS ".\tools\Build-EvHardSnapshot.ps1" @{}
 }
 
 Run-Step "Phase5: EV-hard daily veto row" {
@@ -133,3 +131,4 @@ Run-Step "BlockG: Contract-only checker" {
 
 Write-Host "`nDONE: Run-Phase1ToPhase7Daily completed." -ForegroundColor Yellow
 exit 0
+
