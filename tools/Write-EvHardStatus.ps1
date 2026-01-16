@@ -72,8 +72,7 @@ $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $rr = Get-CanonicalRepoRoot
 $rcRaw = & (Join-Path $rr "tools\Resolve-RunContext.ps1") -Market $Market -Symbol $Symbol | Out-String
 $rcRaw = ($rcRaw + "").Trim()
-
-$logsDir = Join-Path $repoRoot "logs"
+# [A3] disabled: do NOT reset logsDir to root logs (must remain per-market)
 $todayLocal = $null
 
 if($rcRaw){
@@ -145,7 +144,8 @@ if($asOf -ne $todayLocal){ $okToday = $false }
 
 $out = [ordered]@{
   kind="ev_hard_status"
-  as_of_date=$asOf
+  as_of_date=$todayLocal
+  evidence_as_of_date=$asOf
   ok_today=[bool]$okToday
   reason=$reason
   evidence_paths=$evidence
@@ -213,3 +213,5 @@ try{
 Write-Utf8NoBomLf (Join-Path $logsDir "ev_hard_status.json") (($out | ConvertTo-Json -Depth 6))
 Write-Host "[A2] wrote logs\ev_hard_status.json" -ForegroundColor Green
 exit 0
+
+
