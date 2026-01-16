@@ -199,7 +199,9 @@ try {
 # If non-US market, stamp metrics_source so LIVE remains denied (fail-closed, deterministic)
 $m2 = ([string]$Market).Trim().ToUpperInvariant()
 if(-not $m2){ $m2 = "US" }
-if($m2 -ne "US"){
+# GS_PROXY_STAMP_ONLY_WHEN_PROXY_BEGIN
+if($proxy){
+# GS_PROXY_STAMP_ONLY_WHEN_PROXY_END
   Stamp-ProxyMetricsSourceJsonl $outPath
   Write-Host ("[GS-PERMKT] proxy stamp applied: metrics_source=proxy_us_paperlive_v1") -ForegroundColor Yellow
 }
