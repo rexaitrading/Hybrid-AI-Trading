@@ -36,6 +36,15 @@ $repoRoot = Resolve-RepoRoot
 $logsRoot = Join-Path $repoRoot "logs"
 $logsDir  = Get-LogsDir -RepoRoot $repoRoot -Market (($env:HAT_MARKET + "")).Trim()
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+  # EVHARD_OUTPATH_A2_BEGIN
+  # A2: default OutPath must be per-market to avoid cross-market bleed.
+  try {
+    $op = (($OutPath + "")).Trim()
+    if((-not $op) -or ($op -ieq ".\logs\ev_hard_evidence_raw.json") -or ($op -ieq "logs\ev_hard_evidence_raw.json")){
+      $OutPath = (Join-Path $logsDir "ev_hard_evidence_raw.json")
+    }
+  } catch { }
+  # EVHARD_OUTPATH_A2_END
 # --- EVHARD market-aware log roots END ---
 
 function Write-Utf8NoBom([string]$Path, [string]$Text) {
@@ -171,7 +180,11 @@ if (Test-Path $phase4Path) {
 
 # ---- Phase23 ----
 # Prefer per-market Phase23 heartbeat, fallback to root logs (fail-closed).
-$phase23Path = Prefer-LogsPath (Join-Path $logsDir "phase23_health_daily.csv") (Join-Path $logsRoot "phase23_health_daily.csv")
+# A2: NON-US must not fall back to root logs (prevents stale/cross-market bleed)
+$phase23Path = (Join-Path $logsDir "phase23_health_daily.csv")
+if((($env:HAT_MARKET + "")).Trim().ToUpperInvariant() -eq "US"){
+  $phase23Path = Prefer-LogsPath $phase23Path (Join-Path $logsRoot "phase23_health_daily.csv")
+}
 $phase23Ok = $false
 $phase23AsOf = ""
 if (Test-Path $phase23Path) {
