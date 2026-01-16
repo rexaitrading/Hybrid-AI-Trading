@@ -112,7 +112,22 @@ $out = [ordered]@{
   evidence_paths=$evidence
   ts_utc=(Get-Date).ToUniversalTime().ToString("o")
 }
+$OutPath = Join-Path $logsDir "phase23_status.json"
+Write-Utf8NoBomLf $OutPath (($out | ConvertTo-Json -Depth 6))
+# A2_PHASE23_OUTPATH_GUARD_BEGIN
+$mkt = (($Market + "")).Trim().ToUpperInvariant()
+if(-not $mkt){ $mkt = "US" }
 
-Write-Utf8NoBomLf (Join-Path $logsDir "phase23_status.json") (($out | ConvertTo-Json -Depth 6))
-Write-Host "[A2] wrote logs\phase23_status.json" -ForegroundColor Green
+# Fail-closed: non-US must write under logs\<MKT>\
+if($mkt -ne "US"){
+  $expect = [System.IO.Path]::GetFullPath((Join-Path (Join-Path $repoRoot "logs") $mkt))
+  $actualDir = [System.IO.Path]::GetFullPath((Split-Path -Parent $OutPath))
+  if($actualDir -ne $expect){
+    throw ("[FAIL-CLOSED] phase23 outpath bleed: market={0} outdir={1} expect={2}" -f $mkt,$actualDir,$expect)
+  }
+}
+
+try { $rel = [System.IO.Path]::GetRelativePath($repoRoot, $OutPath) } catch { $rel = $OutPath }
+Write-Host ("[A2] wrote {0}" -f $rel) -ForegroundColor Green
+# A2_PHASE23_OUTPATH_GUARD_END
 exit 0
