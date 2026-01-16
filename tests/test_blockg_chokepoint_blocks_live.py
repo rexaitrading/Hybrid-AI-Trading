@@ -38,6 +38,13 @@ class _IB:
         self.called = True
         return None
 
+class _Ctx:
+    # Minimal RunContext stub for deterministic LIVE session gating
+    def __init__(self):
+        self.mode = "LIVE"
+        self.market = "US"
+        self.market_closed_today = False
+        self.session_name = "RTH"
 def test_chokepoint_blocks_live_when_not_ready(tmp_path, monkeypatch):
     # Force "live"
     monkeypatch.setenv("HAT_IS_PAPER", "0")
@@ -52,7 +59,7 @@ def test_chokepoint_blocks_live_when_not_ready(tmp_path, monkeypatch):
 
     ib = _IB()
     with pytest.raises(RuntimeError, match="BLOCKG_NOT_READY_TEST"):
-        ib_place_order_chokepoint(ib, _C("NVDA"), object())
+        ib_place_order_chokepoint(ib, _C("NVDA"), object(), ctx=_Ctx())
 
     assert ib.called is False
 
