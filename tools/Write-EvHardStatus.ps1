@@ -102,14 +102,11 @@ $evidence=@()
 
 # Evidence candidates (A2): NON-US must not fall back to root logs (prevents cross-market day mismatch)
 $cands = @(
-# A2_PREFER_EV_HARD_RAW_BEGIN
-# Prefer per-market raw evidence first (ev_hard_evidence_raw.json) when present.
-# This is the authoritative daily ok source once raw is generated (prevents stale snapshot bleed).
-  (Join-Path $logsDir "ev_hard_evidence_raw.json"),  # A2_PREFER_EV_HARD_RAW_REAL
-
-  (Join-Path $logsDir "phase5_ev_hard_veto_evidence.json"),
-  (Join-Path $logsDir "ev_hard_evidence.json"),
+  (Join-Path $logsDir "phase5_ev_hard_veto_snapshot.json")
   (Join-Path $logsDir "ev_hard_snapshot.json")
+  (Join-Path $logsDir "ev_hard_evidence_raw.json")
+  (Join-Path $logsDir "phase5_ev_hard_veto_evidence.json")
+  (Join-Path $logsDir "ev_hard_evidence.json")
 )
 if((($Market + "")).Trim().ToUpperInvariant() -eq "US"){
   $cands += @(
