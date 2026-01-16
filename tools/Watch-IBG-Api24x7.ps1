@@ -83,15 +83,17 @@ Log "WATCH_START host=$IbHost port=$Port clientId=$ClientId interval=$IntervalSe
 $fail = 0
 
 while($true){
+  $rc = 999  # default rc if try/catch fails (prevents unbound var)
+
   try{
     $rc = Probe
     if($rc -eq 0){
       $fail = 0
-      Log "API_OK"`r`n      $fail = 0`r`n} else {
+      Log "API_OK"
+    } else {
       $fail++
       Log ("API_FAIL rc=$rc failStreak=$fail")
     }
-
     if((-not $MonitorOnly) -and $AllowKill -and ($fail -ge $FailStreakToRestart) -and ($IbGatewayExe -and (Test-Path -LiteralPath $IbGatewayExe))) {
       Log "RESTART_SEQUENCE_BEGIN"
       CaptureContext

@@ -32,6 +32,7 @@ $logRoot = Join-Path (Join-Path $root "logs") $Market
 New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
 # --- PER-MARKET EV-HARD OUTPUT PATHS (authoritative) ---
 $dstEvidence = Join-Path $logRoot "ev_hard_snapshot.json"
+  $dstRaw      = Join-Path $logRoot "ev_hard_evidence_raw.json"
 $dstVeto     = Join-Path $logRoot "phase5_ev_hard_veto_snapshot.json"
 # --- PER-MARKET EV-HARD OUTPUT PATHS END ---
 $build   = Join-Path $root "tools\Build-EvHardSnapshot.ps1"
@@ -44,11 +45,11 @@ if(-not (Test-Path $rawBuild)) { throw "[EV-HARD-SNAP] missing $rawBuild" }
 if(-not (Test-Path $build))   { throw "[EV-HARD-SNAP] missing $build" }
 if(-not (Test-Path $compute)) { throw "[EV-HARD-SNAP] missing $compute" }
 if(-not (Test-Path $export))  { throw "[EV-HARD-SNAP] missing $export" }
-& $rawBuild
+  & $rawBuild -OutPath $dstRaw
 if($LASTEXITCODE -ne 0){ throw "[EV-HARD-SNAP] Build-EvHardEvidenceRaw failed rc=$LASTEXITCODE" }
 
 
-& $build -OutPath $dstEvidence
+  & $build -EvidencePath $dstRaw -OutPath $dstEvidence
 if($LASTEXITCODE -ne 0){ throw "[EV-HARD-SNAP] Build-EvHardSnapshot failed rc=$LASTEXITCODE" }
 
 & $compute -EvidencePath $dstEvidence

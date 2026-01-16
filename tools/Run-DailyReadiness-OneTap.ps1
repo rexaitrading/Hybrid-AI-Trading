@@ -42,12 +42,20 @@ function Get-CanonicalRepoRoot {
 
 function Resolve-MarketSafe([string]$MarketParam){
   $m = ""
-  if($PSBoundParameters.ContainsKey("Market") -and (($MarketParam + "") -ne "")){
+  # IMPORTANT: inside a function, $PSBoundParameters refers to THIS function (param name is MarketParam).
+  # So prefer MarketParam directly when provided; env is fallback only.
+  if((($MarketParam + "") -ne "")){
     $m = ([string]$MarketParam).ToUpperInvariant().Trim()
   } elseif(($env:HAT_MARKET + "") -ne ""){
     $m = ([string]$env:HAT_MARKET).ToUpperInvariant().Trim()
+  } else {
+    $m = "US"
   }
-  if(-not $m){ $m = "US" }
+
+  # Stock Connect normalization (no engine constraints)
+  if($m -eq "CN_SH"){ $m = "HK_SH" }
+  if($m -eq "CN_SZ"){ $m = "HK_SZ" }
+
   return $m
 }
 
@@ -194,27 +202,7 @@ try {
   $env:HAT_MARKET = $Market
   $env:HAT_SYMBOL = $Symbol
   $env:HAT_REPO_ROOT = $repoRoot
-# A2_EFFECTIVE_AUDIT_BEGIN
-# Fail-closed: ensure BlockG stub matches contract-effective A2 status JSONs for this market.
-try {
-  $a2 = Join-Path $repoRoot "tools\Test-A2StatusJsonsEffective.ps1"
-  if(Test-Path -LiteralPath $a2){
-    Write-Host ("[A2] effective audit (market=" + $Market + " symbol=" + $Symbol + ")") -ForegroundColor Cyan
-    & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $a2 -Markets @($Market) -Symbol $Symbol 2>&1 | Out-Host
-    $a2Exit = [int]$LASTEXITCODE
-    if($a2Exit -ne 0){
-      if($finalExit -eq 0){ $finalExit = $a2Exit }
-      Write-Host ("[A2] FAIL-CLOSED: effective audit failed exit=" + $a2Exit) -ForegroundColor Red
-    }
-  } else {
-    if($finalExit -eq 0){ $finalExit = 2 }
-    Write-Host ("[A2] FAIL-CLOSED: missing effective audit script => " + $a2) -ForegroundColor Red
-  }
-} catch {
-  if($finalExit -eq 0){ $finalExit = 2 }
-  Write-Host ("[A2] FAIL-CLOSED: effective audit exception: " + $_.Exception.Message) -ForegroundColor Red
-}
-# A2_EFFECTIVE_AUDIT_END
+
 
 
   # Resolve RunContext ONCE (NO child powershell.exe)
@@ -229,6 +217,7 @@ try {
   if(-not $rcObj -or -not $rcObj.as_of_date){ throw "[A3] Resolve-RunContext missing as_of_date (fail-closed)" }
   $asOfDate = ([string]$rcObj.as_of_date).Trim()
   if($asOfDate.Length -ge 10){ $asOfDate = $asOfDate.Substring(0,10) }
+  $env:HAT_ASOF_DATE = $asOfDate  # A3: propagate market-aware as_of_date to child producers
 
   Push-Location -LiteralPath $repoRoot
   try {
@@ -294,18 +283,18 @@ try {
 
     # Phase-23 health daily
     $p23 = Join-Path $repoRoot "tools\Run-Phase23HealthDaily.ps1"
-    # [A2] refresh phase23_status.json (per-market)
-    try { & (Join-Path $repoRoot "tools\Write-Phase23Status.ps1") -Market $Market -Symbol $Symbol 2>&1 | Out-Host } catch { Write-Host ("[A2] WARN Phase23Status producer failed: " + $_.Exception.Message) -ForegroundColor Yellow }
     if(Test-Path -LiteralPath $p23){
     & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $p23 -Market $Market -Symbol $Symbol 2>&1 | Out-Host
     }
+    # [A2] refresh phase23_status.json (per-market) AFTER heartbeat so today row exists
+    try { & (Join-Path $repoRoot "tools\Write-Phase23Status.ps1") -Market $Market -Symbol $Symbol 2>&1 | Out-Host } catch { Write-Host ("[A2] WARN Phase23Status producer failed: " + $_.Exception.Message) -ForegroundColor Yellow }
 
     if($LASTEXITCODE -ne 0 -and $finalExit -eq 0){ $finalExit = [int]$LASTEXITCODE; Write-Host ("[ONETAP] FAIL-CLOSED: Phase23 health failed exit=" + $LASTEXITCODE) -ForegroundColor Red }
 
     # EV-hard daily
     $evd = Join-Path $repoRoot "tools\Run-EvHardVetoDaily.ps1"
     # EV-hard snapshot chain (REQUIRED): regenerates ev_hard_evidence_raw.json + builds veto snapshot before daily veto
-    try { & (Join-Path $repoRoot "tools\Write-EvHardVetoSnapshot.ps1") 2>&1 | Out-Host } catch { Write-Host ("[EV-HARD] WARN snapshot chain failed: " + $_.Exception.Message) -ForegroundColor Yellow }
+    try { & (Join-Path $repoRoot "tools\Write-EvHardVetoSnapshot.ps1") -Market $Market -Symbol $Symbol 2>&1 | Out-Host } catch { Write-Host ("[EV-HARD] WARN snapshot chain failed: " + $_.Exception.Message) -ForegroundColor Yellow }
 
     # EV-hard daily (per-market)  REQUIRED to create logs\<Market>\phase5_ev_hard_veto_daily.csv
     if(Test-Path -LiteralPath $evd){ & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $evd -Market $Market -Symbol $Symbol 2>&1 | Out-Host } else { Write-Host ("[ONETAP] WARN missing EV-hard runner: " + $evd) -ForegroundColor Yellow }
@@ -315,6 +304,29 @@ try {
 
     # [A2] refresh ev_hard_status.json (per-market)  AFTER evd so evidence is current
     try { & (Join-Path $repoRoot "tools\Write-EvHardStatus.ps1") -Market $Market -Symbol $Symbol 2>&1 | Out-Host } catch { Write-Host ("[A2] WARN EvHardStatus producer failed: " + $_.Exception.Message) -ForegroundColor Yellow }
+
+# A2_EFFECTIVE_AUDIT_BEGIN
+# Fail-closed: ensure BlockG stub matches contract-effective A2 status JSONs for this market.
+try {
+  $a2 = Join-Path $repoRoot "tools\Test-A2StatusJsonsEffective.ps1"
+  if(Test-Path -LiteralPath $a2){
+    Write-Host ("[A2] effective audit (market=" + $Market + " symbol=" + $Symbol + ")") -ForegroundColor Cyan
+    & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $a2 -Markets @($Market) -Symbol $Symbol 2>&1 | Out-Host
+    $a2Exit = [int]$LASTEXITCODE
+    if($a2Exit -ne 0){
+      if($finalExit -eq 0){ $finalExit = $a2Exit }
+      Write-Host ("[A2] FAIL-CLOSED: effective audit failed exit=" + $a2Exit) -ForegroundColor Red
+    }
+  } else {
+    if($finalExit -eq 0){ $finalExit = 2 }
+    Write-Host ("[A2] FAIL-CLOSED: missing effective audit script => " + $a2) -ForegroundColor Red
+  }
+} catch {
+  if($finalExit -eq 0){ $finalExit = 2 }
+  Write-Host ("[A2] FAIL-CLOSED: effective audit exception: " + $_.Exception.Message) -ForegroundColor Red
+}
+# A2_EFFECTIVE_AUDIT_END
+
 
 
 
@@ -342,3 +354,4 @@ try {
 }
 
 exit $finalExit
+

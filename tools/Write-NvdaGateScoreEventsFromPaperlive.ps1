@@ -204,13 +204,22 @@ foreach ($ln in $lines) {
     } catch { $metricsSource = "" }
     # METRICS_SOURCE_AUDIT_END
 # METRICS_SOURCE_OVERRIDE_NO_PROXY_BEGIN
-# Institutional rule: paperlive-derived events must not emit proxy_* metrics_source.
-# If upstream tags proxy (or missing), override to a real paperlive label.
+# Institutional rule:
+# - When PROXY_MODE is declared by the caller (non-US markets using US paperlive), preserve proxy marker.
+# - Only normalize missing/blank metrics_source -> paperlive_real_v1.
 try {
+    $proxyMode = ((($env:HAT_GATESCORE_PROXY_MODE + "")).Trim() -eq "1")
     $ms0 = ($metricsSource + "").Trim()
-    if (-not $ms0) { $metricsSource = "paperlive_real_v1" }
-    elseif ($ms0 -match '^(?i)proxy_') { $metricsSource = "paperlive_real_v1" }
-} catch { $metricsSource = "paperlive_real_v1" }
+
+    if($proxyMode){
+        $metricsSource = "proxy_us_paperlive_v1"
+    } elseif (-not $ms0) {
+        $metricsSource = "paperlive_real_v1"
+    } elseif ($ms0 -match '^(?i)proxy_') {
+        # If upstream already marked proxy but caller did NOT declare proxy mode, keep it (do not erase evidence)
+        $metricsSource = $ms0
+    }
+} catch { if(-not $metricsSource){ $metricsSource = "paperlive_real_v1" } }
 # METRICS_SOURCE_OVERRIDE_NO_PROXY_END
     foreach ($k in @("pnl_samples","pnlSamples","pnl_n","trades_n","trade_count","n_trades","samples","sample_count")) {
         $v = Get-FromResult0 $j $k
