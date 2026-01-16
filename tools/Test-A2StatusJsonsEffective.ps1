@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string[]]$Markets = @("US","HK","JP","SG"),
+  [string[]]$Markets = @("US","HK","JP","SG","IN","KR","TW"),
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA"
 )
@@ -97,3 +97,4 @@ if($fail){
 
 Write-Host "[A2] OK: effective status audit passed" -ForegroundColor Green
 exit 0
+

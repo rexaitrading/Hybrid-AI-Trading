@@ -3,8 +3,8 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
-  [ValidateSet("US","HK","HK_SH","HK_SZ","JP","SG")]
-  [string[]]$Markets = @("US","HK","JP","SG")
+  [ValidateSet("US","HK","HK_SH","HK_SZ","JP","SG","IN","KR","TW")]
+  [string[]]$Markets = @("US","HK","JP","SG","IN","KR","TW")
 )
 
 Set-StrictMode -Version Latest
@@ -46,3 +46,4 @@ foreach($m in $Markets){
 
 Write-Host "[BLOCKG-ALL] DONE" -ForegroundColor Green
 exit 0
+
