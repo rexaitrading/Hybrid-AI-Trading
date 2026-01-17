@@ -824,8 +824,28 @@ $p23 = Prefer-LogsPath (Join-Path $logsDir "phase23_health_daily.csv") (Join-Pat
 
     # EV-hard today
     $evHardOk=$false
+    # EVH_STATUS_JSON_STICKY_BEGIN
+    $evHardOkFromStatusJson = $false
+    # EVH_STATUS_JSON_STICKY_END
     # A2: prefer producer status json (fallback to CSV below)
 $evs = Prefer-LogsPath (Join-Path $logsDir "ev_hard_status.json") (Join-Path $logsRoot "ev_hard_status.json")
+    # EVH_STATUS_JSON_AUTHORITY_BEGIN
+    # A2 coherence: if per-market ev_hard_status.json exists for todayLocal, it is authoritative for evHardOk.
+    try {
+      if($evs -and (Test-Path -LiteralPath $evs)){
+        $evj = $null
+        try { $evj = (Get-Content -LiteralPath $evs -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop) } catch { $evj = $null }
+        if($evj -and ($evj.PSObject.Properties.Name -contains "as_of_date")){
+          $d = [string]$evj.as_of_date; if($d.Length -ge 10){ $d = $d.Substring(0,10) }
+          if($d -eq $todayLocal){
+            $evHardOkFromStatusJson = $true
+            if($evj.PSObject.Properties.Name -contains "ok_today"){ $evHardOk = [bool]$evj.ok_today }
+            if($evj.PSObject.Properties.Name -contains "not_evaluated_market_closed"){ $ev_hard_not_evaluated_market_closed = [bool]$evj.not_evaluated_market_closed }
+          }
+        }
+      }
+    } catch { }
+    # EVH_STATUS_JSON_AUTHORITY_END
 # ---- C5 Global-Ready gates (fail-closed) ----
 Ensure-GlobalReadyV0 -Market $Market -LogsDir $logsDir -TodayLocal $todayLocal
 $gdnaPath  = Prefer-LogsPath (Join-Path $logsDir "market_dna.json") (Join-Path $logsRoot "market_dna.json")
@@ -855,6 +875,7 @@ if(-not $gedgeOk){ $reasons.Add("edge_validity_ok_today=false") | Out-Null }
 if(-not $gdepOk){  $reasons.Add("dependency_risk_ok_today=false") | Out-Null }
 if(-not $griskOk){ $reasons.Add("risk_guard_ok_today=false") | Out-Null }
 # ---- end C5 ----
+    if(-not $evHardOkFromStatusJson){
     $evDecided = $false
     $evok = Read-StatusOkToday $evs $todayLocal
 if($null -ne $evok){ $evHardOk = [bool]$evok; $evAsOf=$todayLocal; $evDecided = $true }
@@ -876,6 +897,7 @@ $evp = Prefer-LogsPath (Join-Path $logsDir "phase5_ev_hard_veto_daily.csv") (Joi
 
 }
 
+    }
     # Phase4 today
     $phase4Ok=$false
     # A2: prefer producer status json (fallback to legacy JSON below)
@@ -960,6 +982,24 @@ try {
 } catch { $gsRecentEnough_diag = $false; $gsFreshForSession_diag = $false }
 # POLICYB_GSFLAGS_DIAG_SHARED_V1_END
 
+  # EVH_FINALMILE_SAFE_BEGIN
+  # A2 coherence: compute evHardOk_final from per-market ev_hard_status.json (todayLocal) OUTSIDE payload hash (parser-safe).
+  $evHardOk_final = $evHardOk
+  try {
+    $pEv = Join-Path $logsDir "ev_hard_status.json"
+    if(Test-Path -LiteralPath $pEv){
+      $jEv = $null
+      try { $jEv = (Get-Content -LiteralPath $pEv -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop) } catch { $jEv = $null }
+      if($jEv -and ($jEv.PSObject.Properties.Name -contains "as_of_date")){
+        $dEv = [string]$jEv.as_of_date; if($dEv.Length -ge 10){ $dEv = $dEv.Substring(0,10) }
+        if($dEv -eq $todayLocal){
+          if($jEv.PSObject.Properties.Name -contains "ok_today"){ $evHardOk_final = [bool]$jEv.ok_today }
+          if($jEv.PSObject.Properties.Name -contains "not_evaluated_market_closed"){ $ev_hard_not_evaluated_market_closed = [bool]$jEv.not_evaluated_market_closed }
+        }
+      }
+    }
+  } catch { }
+  # EVH_FINALMILE_SAFE_END
 $payload = [ordered]@{
       ts_utc=$tsUtc
       as_of_date = $todayLocal
@@ -2169,6 +2209,26 @@ try { $globalReadyOk = ([bool]$gdnaOk -and [bool]$gedgeOk -and [bool]$gdepOk -an
   } catch { }
   try { if((-not [bool]$marketClosedToday) -and (($contract_semantics_level + "") -ne "FULL_LIVE_ELIGIBLE")){ Write-Host ("[SEM] full_live_eligible=false reason=" + $contract_semantics_reason) -ForegroundColor DarkGray } } catch { }
   # CONTRACT_SEMANTICS_REASON_END
+  # EVH_FINALMILE_DEFINE_FULL_BEGIN
+  # StrictMode safety: define evHardOk_final for FULL payload path.
+  $evHardOk_final = $evHardOk
+  # If per-market ev_hard_status.json exists for todayLocal, prefer it (A2 coherence).
+  try {
+    $pEv = Join-Path $logsDir "ev_hard_status.json"
+    if(Test-Path -LiteralPath $pEv){
+      $jEv = $null
+      try { $jEv = (Get-Content -LiteralPath $pEv -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop) } catch { $jEv = $null }
+      if($jEv -and ($jEv.PSObject.Properties.Name -contains "as_of_date")){
+        $dEv = [string]$jEv.as_of_date; if($dEv.Length -ge 10){ $dEv = $dEv.Substring(0,10) }
+        if($dEv -eq $todayLocal){
+          if($jEv.PSObject.Properties.Name -contains "ok_today"){ $evHardOk_final = [bool]$jEv.ok_today }
+          if($jEv.PSObject.Properties.Name -contains "not_evaluated_market_closed"){ $ev_hard_not_evaluated_market_closed = [bool]$jEv.not_evaluated_market_closed }
+        }
+      }
+    }
+  } catch { }
+  # EVH_FINALMILE_DEFINE_FULL_END
+
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $todayLocal
@@ -2204,7 +2264,7 @@ $payload = [ordered]@{
     date = $todayLocal
     phase23_health_ok_today = $phase23Ok
      phase23_not_evaluated_market_closed = [bool]$phase23_not_evaluated_market_closed
-    ev_hard_daily_ok_today  = $evHardOk
+    ev_hard_daily_ok_today  = $evHardOk_final
     ev_hard_daily_as_of_date = $evHardDailyAsOf
     # EVH_STUB_SESSION_ASOF_CLAMP_V1_BEGIN
     # Policy B: on CLOSED days, session/as_of diagnostic must use pinned todayLocal (not snapshot as_of).

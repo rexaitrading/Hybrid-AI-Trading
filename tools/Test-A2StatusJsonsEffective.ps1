@@ -6,6 +6,22 @@ param(
 )
 
 Set-StrictMode -Version Latest
+
+# A2_POLICYB_CLOSED_DAY_ACCEPT_BEGIN
+function A2-EffectiveOk([object]$st,[string]$okKey,[string]$notEvalKey){
+  try {
+    if($null -eq $st){ return $false }
+    $ok=$false
+    try { if($st.PSObject.Properties.Name -contains $okKey){ $ok = [bool]$st.$okKey } } catch { $ok=$false }
+    if($ok){ return $true }
+    $ne=$false
+    try { if($st.PSObject.Properties.Name -contains $notEvalKey){ $ne = [bool]$st.$notEvalKey } } catch { $ne=$false }
+    if($ne){ return $true }  # closed-day diagnostic accept
+    return $false
+  } catch { return $false }
+}
+# A2_POLICYB_CLOSED_DAY_ACCEPT_END
+
 $ErrorActionPreference="Stop"
 
 function Resolve-RepoRoot(){
@@ -36,6 +52,9 @@ function EffectiveOk([string]$StatusPath,[string]$TodayLocal){
   if(-not $j){ return $null }
   $asOf=""; if($j.PSObject.Properties.Name -contains "as_of_date"){ $asOf = Slice10 ([string]$j.as_of_date) }
   $ok=$false; if($j.PSObject.Properties.Name -contains "ok_today"){ $ok=[bool]$j.ok_today }
+  # Closed-day not evaluated => effective is UNKNOWN (null), not true.
+  $ne=$false; if($j.PSObject.Properties.Name -contains "not_evaluated_market_closed"){ $ne=[bool]$j.not_evaluated_market_closed }
+  if(($asOf -eq $TodayLocal) -and $ne){ return $null }
   return (($asOf -eq $TodayLocal) -and $ok)
 }
 
@@ -94,5 +113,3 @@ if($fail){
 
 Write-Host "[A2] OK: effective status audit passed" -ForegroundColor Green
 exit 0
-
-

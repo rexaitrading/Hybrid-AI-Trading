@@ -106,6 +106,13 @@ function Resolve-AsOfDateSafe([string]$RepoRoot,[string]$MarketResolved,[string]
 }
 
 function Emit-OneTapSummary {
+  function Get-BoolProp($obj,[string]$name,[bool]$default){
+    try {
+      if($null -eq $obj){ return $default }
+      if($obj.PSObject.Properties.Name -contains $name){ return [bool]$obj.$name }
+      return $default
+    } catch { return $default }
+  }
   # Unconditional, fail-closed emission; never throws to caller.
   try {
     $repo = Get-CanonicalRepoRoot
@@ -163,6 +170,10 @@ function Emit-OneTapSummary {
     try { $phase23_health_ok_today = Get-LatestOkTodayFromCsv (Join-Path $logRoot "phase23_health_daily.csv") $todayStr } catch { $phase23_health_ok_today = $false }
     try { $ev_hard_daily_ok_today  = Get-LatestOkTodayFromCsv (Join-Path $logRoot "phase5_ev_hard_veto_daily.csv") $todayStr } catch { $ev_hard_daily_ok_today = $false }
 
+    # ONETAP_REASONSSAFE_V2_BEGIN
+    $rrn = @()
+    if($st -and ($st.PSObject.Properties.Name -contains "reasons_not_ready")){ $rrn = @($st.reasons_not_ready) }
+    # ONETAP_REASONSSAFE_V2_END
     $out = [ordered]@{
       ts_utc                   = (Get-Date).ToUniversalTime().ToString("o")
       as_of_date               = $todayStr
@@ -170,10 +181,10 @@ function Emit-OneTapSummary {
       phase23_health_ok_today  = [bool]$phase23_health_ok_today
       ev_hard_daily_ok_today   = [bool]$ev_hard_daily_ok_today
       gatescore_ok_today       = [bool]$st.gatescore_ok_today
-      nvda_blockg_ready        = [bool]$st.nvda_blockg_ready
-      spy_blockg_ready         = [bool]$st.spy_blockg_ready
-      qqq_blockg_ready         = [bool]$st.qqq_blockg_ready
-      reasons_not_ready        = $st.reasons_not_ready
+      nvda_blockg_ready        = (Get-BoolProp $st "nvda_blockg_ready" $false)
+      spy_blockg_ready         = (Get-BoolProp $st "spy_blockg_ready" $false)
+      qqq_blockg_ready         = (Get-BoolProp $st "qqq_blockg_ready" $false)
+      reasons_not_ready        = $rrn
     }
 
     $json = ($out | ConvertTo-Json -Depth 6)
