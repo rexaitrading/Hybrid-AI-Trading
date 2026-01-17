@@ -18,7 +18,16 @@ $pulseLog = Join-Path $repoRoot "logs\risk_pulse.jsonl"
 $intelFeedLog = Join-Path $repoRoot "logs\intel_feed.jsonl"
 
 $ts = (Get-Date).ToUniversalTime().ToString("o")
-$today = (Get-Date).ToString("yyyy-MM-dd")
+# A3_INTEL_ASOF_MARKET_BEGIN
+$mk = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant(); if(-not $mk){ $mk="US" }
+$rc = (& ".\tools\Resolve-RunContext.ps1" -Market $mk -Symbol NVDA | Out-String | ConvertFrom-Json)
+if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date for intel pulse" }
+$today = ([string]$rc.as_of_date).Substring(0,10)
+$logsDir = ([string]$rc.logs_dir)
+if(-not $logsDir){ throw "[FAIL-CLOSED] Resolve-RunContext missing logs_dir for intel pulse" }
+$env:HAT_AS_OF_DATE = $today
+$env:HAT_LOGS_DIR   = $logsDir
+# A3_INTEL_ASOF_MARKET_END
 
 function Read-JsonSafe([string]$path) {
   if (-not (Test-Path $path)) { return $null }
