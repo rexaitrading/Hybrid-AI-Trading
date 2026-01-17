@@ -2026,6 +2026,22 @@ if($marketClosedToday){
 
 
 
+# POLICYB_GSFLAGS_DIAG_CLAMP_V1_FINAL_BEGIN
+# Policy B: CLOSED days -> dashboard-only GateScore flag diagnostics (NO gating var changes).
+$gsRecentEnough_diag = $false
+$gsFreshForSession_diag = $false
+try {
+  if(Get-Variable -Name 'gsRecentEnough' -Scope Local -ErrorAction SilentlyContinue){
+    $gsRecentEnough_diag = [bool]$gsRecentEnough
+    $gsFreshForSession_diag = [bool]$gsRecentEnough
+  }
+} catch { }
+if($marketClosedToday){
+  $gsRecentEnough_diag = $true
+  $gsFreshForSession_diag = $true
+}
+# POLICYB_GSFLAGS_DIAG_CLAMP_V1_FINAL_END
+
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $todayLocal
