@@ -68,6 +68,19 @@ $obj = [ordered]@{
   reason     = "stub_not_implemented"
 }
 
+# GREADY_POLICYB_CLOSED_DAY_BEGIN
+# Policy B: market-closed days are NOT evaluated but are diagnostic-OK (ok_today=true).
+try {
+  if($rc -and ($rc.PSObject.Properties.Name -contains "market_closed_today") -and [bool]$rc.market_closed_today){
+    $obj.ok_today = $true
+    try { $obj["not_evaluated_market_closed"] = $true } catch { }
+    try { if($rc.PSObject.Properties.Name -contains "market_closed_reason"){ $obj["market_closed_reason"] = [string]$rc.market_closed_reason } } catch { }
+    try { if($obj.PSObject.Properties.Name -contains "reason"){ $obj.reason = "market_closed_today" } else { $obj["reason"] = "market_closed_today" } } catch { try { $obj["reason"]="market_closed_today" } catch { } }
+  }
+} catch { }
+# GREADY_POLICYB_CLOSED_DAY_END
+
+
 $evidenceRows = Get-EvidenceTodayRows -LogsDir $logsDir -TodayLocal $todayLocal
 $allow = (Allow-NonLiveUs -Market $Market)
 if($allow -and $evidenceRows -gt 0){

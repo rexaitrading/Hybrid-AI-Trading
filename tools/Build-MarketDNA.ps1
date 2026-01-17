@@ -67,6 +67,16 @@ $obj = [ordered]@{
   reason     = "stub_not_implemented"
 }
 
+try {
+  if($rc -and ($rc.PSObject.Properties.Name -contains "market_closed_today") -and [bool]$rc.market_closed_today){
+    $obj.ok_today = $true
+    try { $obj["not_evaluated_market_closed"] = $true } catch { }
+    try { if($rc.PSObject.Properties.Name -contains "market_closed_reason"){ $obj["market_closed_reason"] = [string]$rc.market_closed_reason } } catch { }
+    $obj.reason = "market_closed_today"
+  }
+} catch { }
+
+
 $evidenceRows = Get-EvidenceTodayRows -LogsDir $logsDir -TodayLocal $todayLocal
 $allow = (Allow-NonLiveUs -Market $Market)
 if($allow -and $evidenceRows -gt 0){
@@ -97,7 +107,8 @@ if($allow -and $evidenceRows -gt 0){
     # allow non-proxy evidence
     $obj.ok_today = $true
   }
-  # GREADY_PROXY_DENY_MAIN_END} else {
+# GREADY_PROXY_DENY_MAIN_END
+} else {
   if(-not $allow){ $obj.reason = "blocked_policy_nonlive_us_only" }
   elseif($evidenceRows -le 0){
   # GREADY_PROXY_REASON_BEGIN
