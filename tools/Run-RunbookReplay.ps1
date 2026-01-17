@@ -103,7 +103,7 @@ $env:HAT_LOGS_DIR  = $logsDirOut
 $steps = @()
 $fail = $false
 
-function Run-Step([string]$name,[scriptblock]$sb){
+function Run-Step([string]$name,[scriptblock]$sb,[switch]$IgnoreFailure){
   $ts0 = (Get-Date).ToUniversalTime().ToString("o")
   $exit = 0
   $err = ""
@@ -122,7 +122,7 @@ function Run-Step([string]$name,[scriptblock]$sb){
     exit_code = $exit
     error = $err
   }
-  if($exit -ne 0){ $script:fail = $true }
+  if($exit -ne 0 -and (-not $IgnoreFailure)){ $script:fail = $true }
   if(-not $NoConsole){
     $c = if($exit -eq 0){ "Green" } else { "Red" }
     Write-Host ("[RUNBOOK] step=" + $name + " exit=" + $exit + " err=" + $err) -ForegroundColor $c
@@ -135,9 +135,20 @@ Run-Step "phase23_status" { & $p23Path -Market $mk -Symbol $sy | Out-Null }
 Run-Step "ev_hard_status" { & $evhPath -Market $mk -Symbol $sy | Out-Null }
 Run-Step "blockg_stub"    { & $bgPath  -Market $mk -Symbol $sy | Out-Null }
 Run-Step "ops_dashboard"  { & $dashPath -Market $mk -Symbol $sy -Mode $Mode -EmitConsole:(-not $NoConsole) | Out-Null }
-Run-Step "killswitch_status" { & $ksPath -Market $mk -Symbol $sy -Mode $Mode -NoConsole:$NoConsole | Out-Null }
+Run-Step "killswitch_status" { & $ksPath -Market $mk -Symbol $sy -Mode $Mode -NoConsole:$NoConsole | Out-Null } -IgnoreFailure
 
 # Build report (always emitted)
+# Derive trade_allowed from killswitch artifact (if present)
+$tradeAllowed = $null
+try {
+  $ksJsonPath = Join-Path $logsDirOut "killswitch_status.json"
+  if(Test-Path -LiteralPath $ksJsonPath){
+    $ksObj = (Get-Content -LiteralPath $ksJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop)
+    if($ksObj -and ($ksObj.PSObject.Properties.Name -contains "kill")){
+      $tradeAllowed = (-not [bool]$ksObj.kill)
+    }
+  }
+} catch { $tradeAllowed = $null }
 $report = [pscustomobject]@{
   ts_utc = (Get-Date).ToUniversalTime().ToString("o")
   market = $mk
@@ -146,6 +157,7 @@ $report = [pscustomobject]@{
   as_of_date = $asOf
   logs_dir_out = $logsDirOut
   ok = (-not $fail)
+  trade_allowed = $tradeAllowed
   steps = @($steps)
 }
 
