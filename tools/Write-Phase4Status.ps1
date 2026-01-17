@@ -125,6 +125,7 @@ $obj = [ordered]@{
   market    = $Market
   as_of_date= $todayLocal
   ok_today  = [bool]$okToday
+  phase4_ok_today = [bool]$okToday
   reason    = $reason
   evidence_paths = @($passPath)
   evidence_as_of_date = $passAsOf
