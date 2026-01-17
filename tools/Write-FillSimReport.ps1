@@ -66,7 +66,7 @@ function ShaFrac01([string]$s){
   # take first 8 bytes -> UInt64
   $u = [BitConverter]::ToUInt64($h, 0)
   # divide by 2^64
-  return ([double]$u) / ([double]::Pow(2,64))
+  return ([double]$u) / ([Math]::Pow(2,64))
 }
 function ToDoubleOrNull($v){
   try {
@@ -122,6 +122,9 @@ $outPath = Join-Path $logsDirOut "fill_sim_report.json"
 
 # Candidate input files (best-effort)
 $candOrders = @(
+  (Join-Path $logsDirOut "nvda_phase5_paperlive_results_today.jsonl"),
+  (Join-Path $logsDirOut "nvda_phase5_paperlive_results.jsonl"),
+  (Join-Path $logsDirOut "nvda_gatescore_events.jsonl"),
   (Join-Path $logsDirOut "paperlive_orders.jsonl"),
   (Join-Path $logsDirOut "orders.jsonl"),
   (Join-Path $logsDirOut "paper_orders.jsonl"),
@@ -319,8 +322,8 @@ $artifact = [pscustomobject]@{
   deny_reasons = @($deny)
 
   inputs = [pscustomobject]@{
-    orders_path = $ordersPath
-    quotes_path = $quotesPath
+    orders_path = [string]$ordersPath
+    quotes_path = [string]$quotesPath
     quotes_count = $quotes.Count
   }
 
