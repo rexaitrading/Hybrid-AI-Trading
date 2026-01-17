@@ -1979,6 +1979,23 @@ $crashFlattenOk   = [bool]$cm.ok
 $crashFlattenExit = [int]$cm.exit_code
 $crashFlattenPath = [string]$cm.path
 # CRASHMODE_FLATTEN_READER_END
+# EVH_STUB_SESSION_ASOF_CLAMP_V1_PRE_BEGIN
+# Policy B: compute EV-hard session/as_of diagnostic outside hash literal (PS5-safe).
+$evSessionAsOfPinned = $evSessionAsOf
+if($marketClosedToday){
+  $evSessionAsOfPinned = $todayLocal
+  try {
+    $pEv = Join-Path $logsDir "ev_hard_status.json"
+    if(Test-Path -LiteralPath $pEv){
+      $jEv = Get-Content -LiteralPath $pEv -Raw -Encoding UTF8 | ConvertFrom-Json
+      $namesEv = @($jEv.PSObject.Properties.Name)
+      if($namesEv -contains "evidence_as_of_date"){ $evSessionAsOfPinned = [string]$jEv.evidence_as_of_date }
+      elseif($namesEv -contains "as_of_date"){ $evSessionAsOfPinned = [string]$jEv.as_of_date }
+    }
+  } catch { }
+}
+# EVH_STUB_SESSION_ASOF_CLAMP_V1_PRE_END
+
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $todayLocal
@@ -2014,9 +2031,9 @@ $payload = [ordered]@{
     ev_hard_daily_as_of_date = $evHardDailyAsOf
     # EVH_STUB_SESSION_ASOF_CLAMP_V1_BEGIN
     # Policy B: on CLOSED days, session/as_of diagnostic must use pinned todayLocal (not snapshot as_of).
-    ev_hard_session_as_of_date = (if($marketClosedToday){ $todayLocal } else { $evSessionAsOf })
+    ev_hard_session_as_of_date = $evSessionAsOfPinned
+    ev_hard_as_of_date         = $evSessionAsOfPinned
     # EVH_STUB_SESSION_ASOF_CLAMP_V1_END
-    ev_hard_as_of_date = (if($marketClosedToday){ $todayLocal } else { $evSessionAsOf })
     ev_hard_session_ok = $evSessionOk
     phase4_ok_today         = $phase4Ok
 intel_ok_today           = [bool]$intel_ok_today
@@ -2220,5 +2237,6 @@ exit 0
   } catch { }
   throw
 }
+
 
 
