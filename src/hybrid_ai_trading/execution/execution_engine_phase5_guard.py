@@ -26,7 +26,7 @@ def ensure_symbol_blockg_ready(symbol: str, ctx: RunContext | None = None) -> No
     # PAPER/PAPERLIVE must NOT consult Block-G; LIVE-only enforcement (fail-closed).
     mode = (os.getenv("HAT_MODE", "PAPER") or "PAPER").strip().upper()
     is_paper = (os.getenv("HAT_IS_PAPER", "1") or "1").strip().lower() in ("1","true","yes")
-    if mode != "LIVE" or is_paper:
+    if mode not in ("LIVE", "PAPERLIVE") or is_paper:
         return
 
 
