@@ -114,7 +114,7 @@ function Run-Step([string]$name,[scriptblock]$sb){
     $err = $_.Exception.Message
   }
   $ts1 = (Get-Date).ToUniversalTime().ToString("o")
-  $steps += [pscustomobject]@{
+  $script:steps += [pscustomobject]@{
     name = $name
     ts_utc_start = $ts0
     ts_utc_end = $ts1
@@ -144,7 +144,7 @@ $report = [pscustomobject]@{
   as_of_date = $asOf
   logs_dir_out = $logsDirOut
   ok = (-not $fail)
-  steps = $steps
+  steps = @($steps)
 }
 
 try {
