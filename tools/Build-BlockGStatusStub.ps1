@@ -2012,8 +2012,11 @@ $payload = [ordered]@{
     phase23_health_ok_today = $phase23Ok
     ev_hard_daily_ok_today  = $evHardOk
     ev_hard_daily_as_of_date = $evHardDailyAsOf
-    ev_hard_session_as_of_date = $evSessionAsOf
-    ev_hard_as_of_date = $evSessionAsOf
+    # EVH_STUB_SESSION_ASOF_CLAMP_V1_BEGIN
+    # Policy B: on CLOSED days, session/as_of diagnostic must use pinned todayLocal (not snapshot as_of).
+    ev_hard_session_as_of_date = (if($marketClosedToday){ $todayLocal } else { $evSessionAsOf })
+    # EVH_STUB_SESSION_ASOF_CLAMP_V1_END
+    ev_hard_as_of_date = (if($marketClosedToday){ $todayLocal } else { $evSessionAsOf })
     ev_hard_session_ok = $evSessionOk
     phase4_ok_today         = $phase4Ok
 intel_ok_today           = [bool]$intel_ok_today
@@ -2217,4 +2220,5 @@ exit 0
   } catch { }
   throw
 }
+
 
