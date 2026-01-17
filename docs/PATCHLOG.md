@@ -322,3 +322,7 @@ tools/Disarm-NVDA-Live.ps1
 - OneTap: guard missing stub fields; reasons_not_ready computed outside hash literal (parser-safe under StrictMode).
 - Validation: PAPERLIVE OneTap smoke => A2 OK + onetap_summary.json emitted.
 - CHECKPOINT: CHECKPOINT_20260117_A2_CLOSED_DAY_AUDIT_GREEN
+## 2026-01-17 00:49:00 — KR A2 closed-day semantics: fail-closed when RunContext missing
+- Fix: Write-Phase23Status / Write-EvHardStatus now fail-closed to market_closed_today when RunContext is missing/unreadable (prevents blank reason/not_evaluated fields).
+- Result: KR phase23_status.json and ev_hard_status.json now emit ok_today=false + not_evaluated_market_closed=true + reason=market_closed_today on closed days.
+- CHECKPOINT: CHECKPOINT_20260117_KR_CLOSED_DAY_SEMANTICS_GREEN
