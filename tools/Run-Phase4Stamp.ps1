@@ -51,7 +51,15 @@ function _TryGetTodayLocal([string]$Market,[string]$Symbol){
   return ""
 }
 # --- A3 END ---
-$today = (Get-Date).ToString("yyyy-MM-dd")
+# A3_PHASE4STAMP_TODAY_BEGIN
+$today = (($env:HAT_AS_OF_DATE + "")).Trim()
+if(-not $today){
+  $rc = (& (Join-Path $PSScriptRoot "Resolve-RunContext.ps1") -Market $Market -Symbol $Symbol | Out-String | ConvertFrom-Json)
+  if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+  $today = ([string]$rc.as_of_date).Trim()
+}
+if($today.Length -ge 10){ $today = $today.Substring(0,10) }
+# A3_PHASE4STAMP_TODAY_END
 try {
   $mk = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
   if(-not $mk){ $mk = "US" }

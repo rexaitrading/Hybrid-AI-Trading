@@ -4,6 +4,24 @@ param(
   [string]$OutPath = ".\logs\ev_hard_snapshot.json"
 )
 
+# A3_EVH_OUTPATH_WIRE_BEGIN
+$ld = (($env:HAT_LOGS_DIR + "")).Trim()
+if($env:HAT_MARKET -and -not $ld){
+  # Market-scoped mode must not bleed into global logs
+  throw "[FAIL-CLOSED] HAT_MARKET set but HAT_LOGS_DIR missing (RunContext not wired)"
+}
+if($ld){
+  # Only override defaults when caller did not explicitly pass a different path
+  if((($EvidencePath + "") -eq ".\logs\ev_hard_evidence_raw.json") -or (($EvidencePath + "") -eq "logs\ev_hard_evidence_raw.json")){
+    $EvidencePath = (Join-Path $ld "ev_hard_evidence_raw.json")
+  }
+  if((($OutPath + "") -eq ".\logs\ev_hard_snapshot.json") -or (($OutPath + "") -eq "logs\ev_hard_snapshot.json")){
+    $OutPath = (Join-Path $ld "ev_hard_snapshot.json")
+  }
+}
+# A3_EVH_OUTPATH_WIRE_END
+
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -52,7 +70,7 @@ if($m){
   $today = ([string]$rc.as_of_date).Trim()
   if($today.Length -ge 10){ $today = $today.Substring(0,10) }
 } else {
-  $today = (Get-Date).ToString("yyyy-MM-dd")
+# A3_EVHARD_NO_LOCAL_TODAY: removed local clock override (RunContext is single truth)
 }
 # EVH_EFFECTIVE_TRADING_DAY_BEGIN
 $effectiveTradingDay = $today
