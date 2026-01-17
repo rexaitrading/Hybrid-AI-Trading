@@ -156,6 +156,17 @@ elseif($j.PSObject.Properties.Name -contains "ok"){ $okToday = [bool]$j.ok }
 # conservative today-ness
 if($asOf -ne $todayLocal){ $okToday = $false }
 
+# EVHARD_POLICYB_CLAMP_V1_BEGIN
+# Policy B: market-closed days are NOT evaluated but remain DENY; stamp pinned day for diagnostics.
+if($marketClosedToday){
+  $notEvaluatedMarketClosed = $true
+  $okToday = $false
+  $reason = "market_closed_today"
+  # Clamp evidence_as_of_date to todayLocal so builder/stub does not inherit prior-session date on CLOSED days.
+  $asOf = $todayLocal
+}
+# EVHARD_POLICYB_CLAMP_V1_END
+
 $out = [ordered]@{
   kind="ev_hard_status"
   as_of_date=$todayLocal
