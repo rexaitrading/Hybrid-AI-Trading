@@ -233,6 +233,21 @@ if($mode -notin @("ALL_STRICT","SYMBOL_ONLY","BUILD_ONLY")){ Fail-Script ("Inval
 if($s -eq "ALL" -and $mode -eq "SYMBOL_ONLY"){ Fail-Script "Invalid combination: -Symbol ALL with -Mode SYMBOL_ONLY" }
 # --- END Mode normalization ---
 
+# POLICYA_USONLY_SPYQQQ_BEGIN
+function RequiredSymsForMarket([string]$MarketIn){
+  $m = (($MarketIn + "")).Trim().ToUpperInvariant()
+  if($m -eq "US"){ return @("NVDA","SPY","QQQ") }
+  return @("NVDA")
+}
+$reqSyms = RequiredSymsForMarket $Market
+# Policy A: non-US markets do not support SPY/QQQ readiness checks.
+if((($Market + "")).Trim().ToUpperInvariant() -ne "US"){
+  $symU = (($Symbol + "")).Trim().ToUpperInvariant()
+  if($symU -in @("SPY","QQQ")){ Fail-Contract ("symbol_not_applicable_for_market market=" + (($Market + "")).Trim().ToUpperInvariant() + " symbol=" + $symU) }
+}
+# POLICYA_USONLY_SPYQQQ_END
+
+
 # NO_BYPASS_AUDIT_BEGIN
 function Audit-NoBypassPlaceOrder([string]$repoRoot,[string]$runMode){
   try {
@@ -623,7 +638,7 @@ if($hasGsb){
       Fail $msg
     }
   } else {
-    foreach($sym in @("NVDA","SPY","QQQ")) {
+    foreach($sym in $reqSyms) {
       $gs = Get-GS $sym
       if (-not $gs) {
         $k = ($sym.ToLowerInvariant() + "_blockg_ready")
@@ -645,7 +660,7 @@ if($hasGsb){
 } elseif($requireGsb) {
   # Legacy fail-closed: no *_blockg_ready keys to trust, so gatescore_by_symbol is required.
   if ($s -ne "ALL") { Fail ("Missing gatescore_by_symbol." + $s) }
-  foreach($sym in @("NVDA","SPY","QQQ")) { Fail ("Missing gatescore_by_symbol." + $sym) }
+  foreach($sym in $reqSyms) { Fail ("Missing gatescore_by_symbol." + $sym) }
 }
 # OPTIONAL_GATESCORE_BY_SYMBOL_POLICY_END
 
@@ -657,7 +672,7 @@ function SymReady([string]$sym) {
 }
 # $s normalized earlier
 if ($s -eq "ALL") {
-  foreach ($sym in @("NVDA","SPY","QQQ")) {
+  foreach ($sym in $reqSyms) {
     if (-not (SymReady $sym)) { Fail "$sym not ready ($($sym.ToLower())_blockg_ready=false)" }
   }
 } else {

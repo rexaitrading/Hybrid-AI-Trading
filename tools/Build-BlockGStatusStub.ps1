@@ -2017,6 +2017,9 @@ try {
 }
 # STRICT_OPTION_B_VETO_END
 # AUDIT_METRICS_SOURCE_MISSING_BEGIN
+# POLICYA_USONLY_SPYQQQ_BEGIN
+# Policy A: Only US market audits SPY/QQQ metrics_source; non-US treats them non-applicable.
+if((($Market + "")).Trim().ToUpperInvariant() -eq "US"){
 # Audit-only: add explicit reasons when per-symbol metrics_source is missing (does not change gating)
 try {
   $msSpy = ((Get-MetricsSourceTop "SPY" $logsDir $todayLocal).top + "")
@@ -2036,6 +2039,8 @@ try {
   try { $reasons.Add("metrics_source_missing_for_symbol=QQQ") | Out-Null } catch { }
 }
 # AUDIT_METRICS_SOURCE_MISSING_END
+}
+# POLICYA_USONLY_SPYQQQ_END
 
 # --- EMIT GUARANTEE (institutional) ---
 $script:__emit_reached = $true
