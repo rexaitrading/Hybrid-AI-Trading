@@ -58,6 +58,19 @@ if($rcRaw){
 
 if(-not $todayLocal){ $todayLocal = (Get-Date).ToString("yyyy-MM-dd") }
 
+# POLICYB_PHASE23_V1_BEGIN
+# Policy B: market-closed days are NOT EVALUATED but remain DENY.
+$marketClosedToday = $false
+$marketClosedReason = ""
+$notEvaluatedMarketClosed = $false
+$reason = ""
+try {
+  if($rcObj -and ($rcObj.PSObject.Properties.Name -contains "market_closed_today")){ $marketClosedToday = [bool]$rcObj.market_closed_today }
+  if($rcObj -and ($rcObj.PSObject.Properties.Name -contains "market_closed_reason")){ $marketClosedReason = [string]$rcObj.market_closed_reason }
+} catch { $marketClosedToday = $false; $marketClosedReason = "" }
+# POLICYB_PHASE23_V1_END
+
+
 # POLICYB_MARKET_CLOSED_BEGIN
 # Policy B: Market-closed days are NOT EVALUATED (diagnostic) but remain DENY (ok_today=false).
 $marketClosedToday = $false
@@ -106,6 +119,18 @@ foreach($cand in $cands){
 }
 
 if($p){
+# POLICYB_SKIP_SCAN_V1_BEGIN
+if($marketClosedToday){
+  $notEvaluatedMarketClosed = $true
+  if(-not $marketClosedReason){ $marketClosedReason = "weekend" }
+  $reason = "market_closed_today"
+  $asOf = $todayLocal
+  $okToday = $false
+  $p = $null
+  $evidence = @()
+}
+# POLICYB_SKIP_SCAN_V1_END
+
   $evidence += $p
   try{
     $rows = @(Import-Csv -LiteralPath $p)
@@ -130,6 +155,16 @@ if($p){
     }
   } catch { $okToday = $false }
 }
+# A2_EVIDENCE_SANITIZE_BEGIN
+# Contract: evidence_paths must never contain null/empty entries.
+try {
+  if($null -ne $evidence){
+    $evidence = @($evidence | Where-Object { ($_ -ne $null) -and (("$($_)".Trim()).Length -gt 0) })
+  } else {
+    $evidence = @()
+  }
+} catch { $evidence = @() }
+# A2_EVIDENCE_SANITIZE_END
 
 $out = [ordered]@{
   kind="phase23_status"
