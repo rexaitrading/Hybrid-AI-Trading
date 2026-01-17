@@ -132,6 +132,7 @@ if($marketClosedToday){
 # POLICYB_SKIP_SCAN_V1_END
 
   $evidence += $p
+  if(-not $marketClosedToday){
   try{
     $rows = @(Import-Csv -LiteralPath $p)
     foreach($r in $rows){
@@ -154,6 +155,7 @@ if($marketClosedToday){
       }
     }
   } catch { $okToday = $false }
+  }
 }
 # A2_EVIDENCE_SANITIZE_BEGIN
 # Contract: evidence_paths must never contain null/empty entries.
