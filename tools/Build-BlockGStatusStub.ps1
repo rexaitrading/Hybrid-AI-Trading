@@ -174,6 +174,9 @@ if(-not (Get-Command _GetTodayLocalFromRunContext -ErrorAction SilentlyContinue)
 # Mode truth (single semantic): LIVE must remain strict.
 $mode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
 $isLiveMode = ($mode -eq "LIVE")
+  # Contract semantics level (fail-closed deterministic)
+  $contract_semantics_level = "PAPER_STRICT"
+  if($isLiveMode){ $contract_semantics_level = "LIVE_STRICT" }
 try {
 # --- OUTPUT ENCODING (institutional) ---
 try {
@@ -542,7 +545,11 @@ function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
     $j = $raw | ConvertFrom-Json
     $asOf = [string]$j.as_of_date
     $ok = [bool]$j.phase4_ok_today
-    return (($asOf.Substring(0,10)) -eq $todayLocal) -and $ok
+    $t = ((($Today + "")).Trim())
+    if($t.Length -ge 10){ $t = $t.Substring(0,10) }
+    $a = ((($asOf + "")).Trim())
+    if($a.Length -ge 10){ $a = $a.Substring(0,10) }
+    return ($a -eq $t) -and $ok
   } catch {
     return $false
   }
@@ -946,6 +953,7 @@ try {
 $payload = [ordered]@{
       ts_utc=$tsUtc
       as_of_date = $todayLocal
+    contract_semantics_level = $contract_semantics_level
       date = $todayLocal
       is_trading_day=[bool]$rcIsTradingDayFast
       session_name=[string]$rcSessionNameFast
@@ -2095,9 +2103,17 @@ try { if(Get-Variable -Name 'jrisk' -Scope Local -ErrorAction SilentlyContinue){
 try { $globalReadyOk = ([bool]$gdnaOk -and [bool]$gedgeOk -and [bool]$gdepOk -and [bool]$griskOk) } catch { $globalReadyOk = $false }
 # GREADY_MAP_OKTODAY_V1_APPLY_END
 
+  # [FIX] precompute rounded values OUTSIDE hashtable (parser-safe)
+  $gatescore_mean_edge_ratio_rounded6 = 0.0
+  try {
+    $gatescore_mean_edge_ratio_rounded6 = [math]::Round([double]$gatescore_mean_edge_ratio, 6)
+  } catch {
+    $gatescore_mean_edge_ratio_rounded6 = 0.0
+  }
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $todayLocal
+    contract_semantics_level = $contract_semantics_level
     gatescore_metrics_source = $gatescore_metrics_source
 
     # Audit: per-symbol metrics_source (do NOT use for gating in strict Option-B)
@@ -2223,66 +2239,10 @@ gatescore_samples_ok    = $gsSamplesOk
 
     gatescore_mean_edge_ratio  = $gsEdge
     # A3_GS_EDGE_ROUNDING_BEGIN
-    try { $gatescore_mean_edge_ratio_rounded6 = [math]::Round([double]$gatescore_mean_edge_ratio, 6) } catch { $gatescore_mean_edge_ratio_rounded6 = 0.0 }
-    # A3_GS_EDGE_ROUNDING_END
-    gatescore_mean_micro_score = $gsMicro
-    gatescore_min_edge_ratio   = $minEdge
-    gatescore_min_micro_score  = $minMicro
-nvda_blockg_ready = ([bool]$nvdaReady -and ((-not $isLiveMode) -or [bool]$nvda_intel_ok_today))
-    build_mode = "FULL"
-    contract_semantics_level = "FULL_LIVE_ELIGIBLE"
-    spy_blockg_ready  = $spyReady
-    qqq_blockg_ready  = $qqqReady
-
-    reasons_not_ready = @($reasons)
-}
-# --- PATCH1: micro diagnostics persisted into payload (guaranteed) ---
-try {
-  $evPath = ($payload["gatescore_metrics_source_debug_path"] + "")
-  $ev = Get-GSEventsObjects $evPath
-  if($ev -and $ev.Count -gt 0){
-    $microSrcKey   = Find-FirstMatchingKey $ev[0] '(?i)micro.*(source|src)'
-    $microScoreKey = Find-FirstMatchingKey $ev[0] '(?i)^micro_score$|(?i)micro.*score'
-
-    $payload["micro_source_field_detected"] = ($microSrcKey + "")
-    $payload["micro_score_field_detected"]  = ($microScoreKey + "")
-
-    $top=@{}
-    if($microSrcKey){
-      foreach($e in $ev){
-        $v=""
-        try { $v = ($e.$microSrcKey + "") } catch { $v="" }
-        if(-not $v){ $v="(missing)" }
-        if(-not $top.ContainsKey($v)){ $top[$v]=0 }
-        $top[$v]++
-      }
-    }
-
-    if($top.Count -gt 0){
-      $payload["micro_score_source_top"] = @(
-        $top.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 5 |
-          ForEach-Object { "{0}:{1}" -f $_.Name,$_.Value }
-      )
-      $derived = @($top.Keys | Where-Object { $_ -match '^(?i)derived_' })
-      $payload["micro_score_source_disallowed_for_live_detected"] = [bool]($derived.Count -gt 0)
-    } else {
-      $payload["micro_score_source_top"] = @()
-      $payload["micro_score_source_disallowed_for_live_detected"] = $true
-    }
-  } else {
-    $payload["micro_source_field_detected"] = ""
-    $payload["micro_score_field_detected"]  = ""
-    $payload["micro_score_source_top"] = @()
-    $payload["micro_score_source_disallowed_for_live_detected"] = $true
-  }
-} catch {
-  $payload["micro_source_field_detected"] = ""
-  $payload["micro_score_field_detected"]  = ""
-  $payload["micro_score_source_top"] = @()
-  $payload["micro_score_source_disallowed_for_live_detected"] = $true
-}
+    gatescore_mean_edge_ratio_rounded6 = $gatescore_mean_edge_ratio_rounded6
 # --- END PATCH1 ---
 
+  }
 $payloadJson = $payload | ConvertTo-Json -Depth 6
 Write-Host ("[BLOCK-G] Writing Block-G status stub: " + (Split-Path -Leaf $statusPath)) -ForegroundColor Cyan
 # Phase-5 transition: keep legacy stub path ONLY for US (prevents cross-market contamination)
@@ -2307,7 +2267,7 @@ if(-not $repoRoot){ $repoRoot = Resolve-RepoRoot }
     if(-not $logsDir){ $logsDir = Join-Path $repoRoot "logs" }
     if(-not (Test-Path -LiteralPath $logsDir)){ New-Item -ItemType Directory -Force -Path $logsDir | Out-Null }
     if(-not $statusPath){ $statusPath = Join-Path $logsDirOut "blockg_status_stub.json" }
-    $min = [ordered]@{ ts_utc=$tsUtc; as_of_date=$todayLocal; ok=$false; reason="builder_skipped_emit_block_failclosed"; reasons_not_ready=@("builder_skipped_emit_block") }
+    $min = [ordered]@{ ts_utc=$tsUtc; as_of_date=$todayLocal; ok=$false; reason="builder_skipped_emit_block_failclosed"; reasons_not_ready=@("builder_skipped_emit_block") ; contract_semantics_level=$contract_semantics_level }
     $enc = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($statusPath, ($min | ConvertTo-Json -Depth 6), $enc)
   } catch { }

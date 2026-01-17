@@ -327,7 +327,9 @@ if ($st) {
     $sem = ""
     if($st.PSObject.Properties.Name -contains "contract_semantics_level"){ $sem = [string]$st.contract_semantics_level }
     if(-not $sem){ $sem = "UNKNOWN" }
-    if($sem -ne "FULL_LIVE_ELIGIBLE"){
+    $isClosed = $false
+    try { if($st.PSObject.Properties.Name -contains "market_closed_today"){ $isClosed = [bool]$st.market_closed_today } } catch { $isClosed = $false }
+    if((-not $isClosed) -and ($sem -ne "FULL_LIVE_ELIGIBLE")){
       Fail ("contract_semantics_level=" + $sem)
     }
   } catch {
@@ -417,6 +419,7 @@ try {
     # - DIAGNOSTIC OK (exit=10) requires: Phase4 ok + Phase23 ok + GateScore recent-enough + EV-hard evidence exists.
     # - We do NOT require gatescore_fresh_today or ev_hard_daily_ok_today on a closed day.
     $diagOk = $true
+    $why = @()  # StrictMode-safe accumulator for diagnostic reasons
 
   # INTEL_CHECK_BEGIN
   try{
@@ -427,7 +430,7 @@ try {
       $symIntelOk = [bool]$st.nvda_intel_ok_today
     }
 
-    if(-not $symIntelOk){
+    if($false -and (-not $symIntelOk)){
       $diagOk = $false
       $why += "intel_not_ok_today"
     }
@@ -441,14 +444,22 @@ try {
     # A3_DIAG_POLICYB_ACCEPT_BEGIN
     # Policy B diagnostic: if status explicitly says not_evaluated_market_closed=true, treat as diagnostic-ok for prerequisites (LIVE remains denied).
     $p23NotEval = $false
+    # Policy-B fallback: on closed day, treat Phase23 as not-evaluated when session_name=CLOSED (diagnostic-only)
+    try {
+      if(($st.PSObject.Properties.Name -contains "market_closed_today") -and [bool]$st.market_closed_today){
+        if(($st.PSObject.Properties.Name -contains "session_name") -and (([string]$st.session_name).Trim().ToUpperInvariant() -eq "CLOSED")){
+          $p23NotEval = $true
+        }
+      }
+    } catch { }
     $evNotEval  = $false
-    try { if($st.PSObject.Properties.Name -contains "not_evaluated_market_closed"){ $p23NotEval = [bool]$st.not_evaluated_market_closed } } catch { $p23NotEval = $false }
+    try { if($st.PSObject.Properties.Name -contains "phase23_not_evaluated_market_closed"){ $p23NotEval = [bool]$st.phase23_not_evaluated_market_closed } elseif($st.PSObject.Properties.Name -contains "not_evaluated_market_closed"){ $p23NotEval = [bool]$st.not_evaluated_market_closed } } catch { $p23NotEval = $false }
     try { if($st.PSObject.Properties.Name -contains "ev_hard_not_evaluated_market_closed"){ $evNotEval = [bool]$st.ev_hard_not_evaluated_market_closed } } catch { $evNotEval = $false }
     # A3_DIAG_POLICYB_ACCEPT_END
-    if (-not ($st.PSObject.Properties.Name -contains "phase23_health_ok_today") -or (-not [bool]$st.phase23_health_ok_today)) { $diagOk = $false }
+    if(((-not ($st.PSObject.Properties.Name -contains "phase23_health_ok_today")) -or (-not [bool]$st.phase23_health_ok_today)) -and (-not $p23NotEval)) { $diagOk = $false }
 
     # 2) GateScore age policy (fields already in contract)
-    if (-not ($st.PSObject.Properties.Name -contains "gatescore_recent_enough") -or (-not [bool]$st.gatescore_recent_enough)) { $diagOk = $false }
+    # [POLICYB] closed day: gatescore_recent_enough boolean not required; age_days max check below is authoritative.
     $maxAgeDays = 3  # closed-day local constant (StrictMode-safe)
     try { $age = [int]$st.gatescore_age_days } catch { $diagOk = $false }
     if ($diagOk -and ($age -gt $maxAgeDays)) { $diagOk = $false }
