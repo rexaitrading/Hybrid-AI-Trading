@@ -884,6 +884,16 @@ try {
 }
 $crisisAlphaEnabled = $false
 # REGIME_READER_END
+# POLICYB_GSFLAGS_DIAG_CLAMP_V1_BEGIN
+# Policy B: CLOSED days -> clamp dashboard-only GateScore flags (do NOT affect gating vars).
+$gsRecentEnough_diag = $gsRecentEnough
+$gsFreshForSession_diag = [bool]$gsRecentEnough
+if($marketClosedToday){
+  $gsRecentEnough_diag = $true
+  $gsFreshForSession_diag = $true
+}
+# POLICYB_GSFLAGS_DIAG_CLAMP_V1_END
+
 $payload = [ordered]@{
       ts_utc=$tsUtc
       as_of_date = $todayLocal
@@ -2090,8 +2100,8 @@ global_ready_ok_today    = [bool]$globalReadyOk
 
     gatescore_as_of_date = $gatescore_as_of_date_pinned
     gatescore_age_days = $gsAgeDays
-    gatescore_recent_enough = $gsRecentEnough
-    gatescore_fresh_for_session = [bool]$gsRecentEnough
+    gatescore_recent_enough = $gsRecentEnough_diag
+    gatescore_fresh_for_session = $gsFreshForSession_diag
 gatescore_samples_ok    = $gsSamplesOk
     gatescore_daily_samples_ok   = $gatescore_daily_samples_ok
     gatescore_rolling_samples_ok = $gatescore_rolling_samples_ok
