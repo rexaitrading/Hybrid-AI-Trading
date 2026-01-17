@@ -953,11 +953,14 @@ try {
 $payload = [ordered]@{
       ts_utc=$tsUtc
       as_of_date = $todayLocal
+      builder_path = "FAST"
+      contract_semantics_reason = ""  # FAST is not authoritative for LIVE eligibility
     contract_semantics_level = $contract_semantics_level
       date = $todayLocal
       is_trading_day=[bool]$rcIsTradingDayFast
       session_name=[string]$rcSessionNameFast
       phase23_health_ok_today=[bool]$phase23Ok
+      phase23_not_evaluated_market_closed = [bool]$marketClosedToday
       ev_hard_daily_ok_today=[bool]$evHardOk
       ev_hard_daily_as_of_date=$evAsOf
       phase4_ok_today=[bool]$phase4Ok
@@ -976,7 +979,8 @@ $payload = [ordered]@{
     $script:__emit_reached = $true
     [System.IO.File]::WriteAllText($statusPath, ($payload | ConvertTo-Json -Depth 6), $enc)
     Write-Host ("[BLOCK-G] FAST stub wrote: " + $statusPath) -ForegroundColor Yellow
-    return
+    if([bool]$marketClosedToday){ return }  # closed day: FAST is authoritative
+    # open day: continue into FULL builder for FULL_LIVE_ELIGIBLE computation
   } catch {
     # Fail-closed: still try to emit something
     try{
@@ -998,7 +1002,8 @@ try {
       $enc = New-Object System.Text.UTF8Encoding($false)
       [System.IO.File]::WriteAllText($statusPath, '{"ok":false,"reason":"fast_builder_exception"}', $enc)
     } catch { }
-    return
+    if([bool]$marketClosedToday){ return }  # closed day: FAST fail-closed returns
+    # open day: continue into FULL builder (fail-closed later if needed)
   }
 }
 # --- END FAST BUILDER MODE ---
@@ -1215,6 +1220,8 @@ try {
 # EVH_MARKET_CLOSED_AUDIT_BEGIN
 # Audit-only clarity: when market is closed we do not treat EV-hard as "passed".
 $ev_hard_not_evaluated_market_closed = $false
+$phase23_not_evaluated_market_closed = $false
+try { if($marketClosedToday){ $phase23_not_evaluated_market_closed = $true } } catch { $phase23_not_evaluated_market_closed = $false }
 try {
   if($marketClosedToday){ $ev_hard_not_evaluated_market_closed = $true }
 } catch { $ev_hard_not_evaluated_market_closed = $false }
@@ -2056,8 +2063,8 @@ if($marketClosedToday){
     if(Test-Path -LiteralPath $pEv){
       $jEv = Get-Content -LiteralPath $pEv -Raw -Encoding UTF8 | ConvertFrom-Json
       $namesEv = @($jEv.PSObject.Properties.Name)
-      if($namesEv -contains "evidence_as_of_date"){ $evSessionAsOfPinned = [string]$jEv.evidence_as_of_date }
-      elseif($namesEv -contains "as_of_date"){ $evSessionAsOfPinned = [string]$jEv.as_of_date }
+      # Closed day: keep pinned todayLocal (do NOT overwrite with evidence_as_of_date/as_of_date)
+      $null = $namesEv  # no-op: preserve parse without changing pinned value
     }
   } catch { }
 }
@@ -2110,10 +2117,54 @@ try { $globalReadyOk = ([bool]$gdnaOk -and [bool]$gedgeOk -and [bool]$gdepOk -an
   } catch {
     $gatescore_mean_edge_ratio_rounded6 = 0.0
   }
+  # CONTRACT_SEMANTICS_FULL_LIVE_ELIGIBLE_BEGIN
+  try {
+    $liveEligible = $false
+    if(-not [bool]$marketClosedToday){
+      $liveEligible = $true
+      # Session gate (ALL_STRICT open day expects RTH)
+      try { if((([string]$rcSessionName).Trim().ToUpperInvariant()) -ne "RTH"){ $liveEligible = $false } } catch { $liveEligible = $false }
+      # Core daily receipts
+      if(-not [bool]$phase4Ok){ $liveEligible = $false }
+      if(-not [bool]$phase23Ok){ $liveEligible = $false }
+      if(-not [bool]$evHardOk){  $liveEligible = $false }
+      # Global-Ready receipts
+      if(-not [bool]$globalReadyOk){ $liveEligible = $false }
+      if(-not [bool]$regimeOkToday){ $liveEligible = $false }
+      # GateScore receipts (use computed vars when present)
+      try { if(-not [bool]$gsFreshToday){ $liveEligible = $false } } catch { $liveEligible = $false }
+      try { if(Get-Variable -Name "gsRecentEnough" -Scope Local -ErrorAction SilentlyContinue){ if(-not [bool]$gsRecentEnough){ $liveEligible = $false } } } catch { $liveEligible = $false }
+      try { if(Get-Variable -Name "gsNVDA" -Scope Local -ErrorAction SilentlyContinue){ if($gsNVDA -and ($gsNVDA.PSObject.Properties.Name -contains "okLiveToday")){ if(-not [bool]$gsNVDA.okLiveToday){ $liveEligible = $false } } } } catch { $liveEligible = $false }
+    }
+    if($liveEligible){ $contract_semantics_level = "FULL_LIVE_ELIGIBLE" }
+  } catch { }
+  # CONTRACT_SEMANTICS_FULL_LIVE_ELIGIBLE_END
+  # CONTRACT_SEMANTICS_REASON_BEGIN
+  $contract_semantics_reason = ""
+  try {
+    if([bool]$marketClosedToday){ $contract_semantics_reason = "closed_day" }
+    else {
+      if((([string]$rcSessionName).Trim().ToUpperInvariant()) -ne "RTH"){ $contract_semantics_reason = "session_not_rth" }
+      elseif(-not [bool]$phase4Ok){ $contract_semantics_reason = "phase4_ok_today=false" }
+      elseif(-not [bool]$phase23Ok){ $contract_semantics_reason = "phase23_health_ok_today=false" }
+      elseif(-not [bool]$evHardOk){ $contract_semantics_reason = "ev_hard_daily_ok_today=false" }
+      elseif(-not [bool]$globalReadyOk){ $contract_semantics_reason = "global_ready_ok_today=false" }
+      elseif(-not [bool]$regimeOkToday){ $contract_semantics_reason = "regime_ok_today=false" }
+      elseif(-not [bool]$gsFreshToday){ $contract_semantics_reason = "gatescore_fresh_today=false" }
+      else {
+        try { if(Get-Variable -Name "gsRecentEnough" -Scope Local -ErrorAction SilentlyContinue){ if(-not [bool]$gsRecentEnough){ $contract_semantics_reason = "gatescore_recent_enough=false" } } } catch { }
+        try { if(Get-Variable -Name "gsNVDA" -Scope Local -ErrorAction SilentlyContinue){ if($gsNVDA -and ($gsNVDA.PSObject.Properties.Name -contains "okLiveToday")){ if(-not [bool]$gsNVDA.okLiveToday){ $contract_semantics_reason = "gatescore_ok_live_today=false" } } } } catch { }
+      }
+    }
+  } catch { }
+  try { if((-not [bool]$marketClosedToday) -and (($contract_semantics_level + "") -ne "FULL_LIVE_ELIGIBLE")){ Write-Host ("[SEM] full_live_eligible=false reason=" + $contract_semantics_reason) -ForegroundColor DarkGray } } catch { }
+  # CONTRACT_SEMANTICS_REASON_END
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $todayLocal
     contract_semantics_level = $contract_semantics_level
+    builder_path = "FULL"
+    contract_semantics_reason = $contract_semantics_reason
     gatescore_metrics_source = $gatescore_metrics_source
 
     # Audit: per-symbol metrics_source (do NOT use for gating in strict Option-B)
@@ -2142,6 +2193,7 @@ $payload = [ordered]@{
     gatescore_nvda_eligible_zero = $gsNvdaEligibleZero
     date = $todayLocal
     phase23_health_ok_today = $phase23Ok
+     phase23_not_evaluated_market_closed = [bool]$phase23_not_evaluated_market_closed
     ev_hard_daily_ok_today  = $evHardOk
     ev_hard_daily_as_of_date = $evHardDailyAsOf
     # EVH_STUB_SESSION_ASOF_CLAMP_V1_BEGIN

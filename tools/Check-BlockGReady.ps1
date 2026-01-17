@@ -223,6 +223,40 @@ if($mode -notin @("ALL_STRICT","SYMBOL_ONLY","BUILD_ONLY")){ Fail-Script ("Inval
 if($s -eq "ALL" -and $mode -eq "SYMBOL_ONLY"){ Fail-Script "Invalid combination: -Symbol ALL with -Mode SYMBOL_ONLY" }
 # --- END Mode normalization ---
 
+# NO_BYPASS_AUDIT_BEGIN
+function Audit-NoBypassPlaceOrder([string]$repoRoot,[string]$runMode){
+  try {
+    $hits = @()
+    # scan python sources (exclude tests/docs/logs/quarantine)
+    $py = Get-ChildItem -LiteralPath $repoRoot -Recurse -File -Filter "*.py" -ErrorAction Stop | Where-Object {
+      $p = ($_.FullName -replace "\\\\","/")
+      return ($p -notmatch "/tests/") -and ($p -notmatch "/docs/") -and ($p -notmatch "/logs/") -and ($p -notmatch "/scripts/_quarantine/") -and ($p -notmatch "/__pycache__/")
+    }
+    foreach($f in $py){
+      $txt = Get-Content -LiteralPath $f.FullName -Raw -ErrorAction SilentlyContinue
+      if(-not $txt){ continue }
+      if($txt -match "ib\.placeOrder\(" -or $txt -match "\.placeOrder\("){
+        # allow ib_safe.py only (single chokepoint)
+        $rel = ($f.FullName.Substring($repoRoot.Length)).TrimStart("\","/") -replace "\\\\","/"
+        if($rel -ne "src/hybrid_ai_trading/broker/ib_safe.py"){ $hits += $rel }
+      }
+    }
+    $hits = $hits | Sort-Object -Unique
+    if($hits.Count -gt 0){
+      if($runMode -eq "LIVE"){ Fail-Contract ("no_bypass_placeorder_violation count=" + $hits.Count + " first=" + $hits[0]) }
+      else {
+        Write-Host ("[BLOCKG] NOTE: placeOrder bypass hits (non-LIVE): " + ($hits -join ", ")) -ForegroundColor Yellow
+      }
+    }
+  } catch {
+    if($runMode -eq "LIVE"){ Fail-Contract ("no_bypass_audit_failed " + $_.Exception.Message) }
+  }
+}
+# run audit (LIVE fail-closed; PAPER/PAPERLIVE warn)
+$runMode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+if($runMode -in @("LIVE","PAPERLIVE","PAPER")){ Audit-NoBypassPlaceOrder $repoRoot $runMode }
+# NO_BYPASS_AUDIT_END
+
 # NONLIVE_ONLY_NONUS_BEGIN
 # Policy: non-US markets are NON-LIVE only until JP-native LIVE minima + evidence exist.
 # Fail-closed: deny LIVE for non-US regardless of other gates.

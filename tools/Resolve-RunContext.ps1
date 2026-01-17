@@ -162,6 +162,8 @@ if(-not $TradeMode){
 }
 if($TradeMode -notin @("PAPER","PAPERLIVE","LIVE")){ $TradeMode = "PAPER" }
 $isPaper = ($TradeMode -ne "LIVE")
+$isLive = ($TradeMode -eq "LIVE")
+$isPaperLive = ($TradeMode -eq "PAPERLIVE")
 
 # MarketContext is authoritative for session/calendar/day truth
 $mcPath = Join-Path $repoRoot "tools\Resolve-MarketContext.ps1"
@@ -229,6 +231,8 @@ try {
   trade_mode = $TradeMode
   mode = $TradeMode
   is_paper = [bool]$isPaper
+  is_live = [bool]$isLive
+  is_paperlive = [bool]$isPaperLive
 
   symbol = $Symbol
   market = $Market
