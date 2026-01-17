@@ -89,7 +89,7 @@ $env:HAT_LOGS_DIR  = $logsDirOut
 # Call dashboard and parse its [DASH] line
 $dashRaw = (& $dashPath -Market $mk -Symbol $sy -Mode $Mode -EmitConsole:(-not $NoConsole) 2>&1 | Out-String)
 
-$dashLine = ($dashRaw -split "`r?`n" | Where-Object { $_ -like "[DASH]*" } | Select-Object -Last 1)
+$dashLine = ($dashRaw -split "\r?\n" | Where-Object { $_ -match "^\[DASH\]" } | Select-Object -Last 1)
 if(-not $dashLine){
   # Always emit, but fail-closed semantics: kill=true if we cannot parse dashboard line
   $obj = [pscustomobject]@{
