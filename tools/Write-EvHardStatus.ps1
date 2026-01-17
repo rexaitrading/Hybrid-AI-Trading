@@ -249,5 +249,5 @@ try{
 # A2_EV_HARD_OK_TODAY_GUARD_END
 
 Write-Utf8NoBomLf (Join-Path $logsDir "ev_hard_status.json") (($out | ConvertTo-Json -Depth 6))
-Write-Host "[A2] wrote logs\ev_hard_status.json" -ForegroundColor Green
+Write-Host ("[A2] wrote " + (Join-Path $logsDir "ev_hard_status.json")) -ForegroundColor Green
 exit 0
