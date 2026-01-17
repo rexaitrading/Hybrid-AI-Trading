@@ -62,7 +62,12 @@ $logsDirOut = $null
 try {
   $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
 } catch { $logsDirOut = $null }
-if(-not $logsDirOut){ $logsDirOut = $logsDir }
+# G_READY_LOGSDIROUT_FAILCLOSED_BEGIN
+if(-not $logsDirOut){
+  # Fail-closed: per-market contract must not bleed into root logs
+  Fail-Contract ("market_log_root_missing market=" + (($Market + "")).Trim().ToUpperInvariant())
+}
+# G_READY_LOGSDIROUT_FAILCLOSED_END
 # --- end logs roots ---
 
 
@@ -460,6 +465,11 @@ $reqFields = @(
   "regime_ok_today",
   "regime",
   "crisis_ok_today",
+  "global_ready_ok_today",
+  "market_dna_ok_today",
+  "edge_validity_ok_today",
+  "dependency_risk_ok_today",
+  "risk_guard_ok_today",
   "phase4_ok_today",
   "ev_hard_daily_ok_today",
   "gatescore_fresh_today"
