@@ -13,6 +13,16 @@ param(
 )
 
 Set-StrictMode -Version Latest
+# --- HAT_RUNMODE_SINGLETRUTH_BEGIN
+$toolsDir = Split-Path -Parent $PSCommandPath
+$rmPath = Join-Path $toolsDir "Resolve-HatRunMode.ps1"
+if(-not (Test-Path -LiteralPath $rmPath)){ throw "[FAIL-CLOSED] missing Resolve-HatRunMode.ps1" }
+$rmRaw = (& $rmPath 2>&1 | Out-String)
+$ix0 = $rmRaw.IndexOf("{"); $ix1 = $rmRaw.LastIndexOf("}")
+if($ix0 -lt 0 -or $ix1 -le $ix0){ throw "[FAIL-CLOSED] Resolve-HatRunMode did not return JSON" }
+$rmObj = ($rmRaw.Substring($ix0, ($ix1 - $ix0 + 1)) | ConvertFrom-Json -ErrorAction Stop)
+$script:__HAT_RUNMODE = ([string]$rmObj.run_mode).Trim().ToUpperInvariant()
+# --- HAT_RUNMODE_SINGLETRUTH_END
 # A3_REPOROOT_SINGLE_TRUTH_BEGIN
 # Single truth for repo_root: if env:HAT_REPO_ROOT is set, we MUST use it verbatim (GetFullPath only).
 # No Resolve-Path on env root (prevents mojibake corruption).
@@ -84,7 +94,7 @@ if(-not $PSBoundParameters.ContainsKey("Symbol")){
 # TradeMode (accept HAT_TRADE_MODE first, then HAT_MODE)
 if(-not $PSBoundParameters.ContainsKey("TradeMode")){
   $tmEnv = (($env:HAT_TRADE_MODE + "")).Trim().ToUpperInvariant()
-  if(-not $tmEnv){ $tmEnv = (($env:HAT_MODE + "")).Trim().ToUpperInvariant() }
+  # HAT_MODE no longer parsed here (single truth via Resolve-HatRunMode); leave empty unless HAT_TRADE_MODE provided
   if($tmEnv){
     if($tmEnv -notin @("PAPER","PAPERLIVE","LIVE")){
       throw ("[FAIL-CLOSED] invalid HAT_TRADE_MODE/HAT_MODE=" + $tmEnv)
@@ -157,7 +167,7 @@ if($repoRoot){
 # [A3] disabled secondary repoRoot assignment: $repoRoot = CanonPath $repoRoot
 # A3_REPOROOT_CANON_END
 if(-not $TradeMode){
-  $TradeMode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  $TradeMode = $script:__HAT_RUNMODE
   if(-not $TradeMode){ $TradeMode = "PAPER" }
 }
 if($TradeMode -notin @("PAPER","PAPERLIVE","LIVE")){ $TradeMode = "PAPER" }

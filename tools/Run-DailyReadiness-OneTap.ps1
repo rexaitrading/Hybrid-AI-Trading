@@ -178,6 +178,19 @@ function Emit-OneTapSummary {
 
     $json = ($out | ConvertTo-Json -Depth 6)
     $dst  = Join-Path $logRoot "onetap_summary.json"
+      # DASHBOARD_LINE_BEGIN (diagnostic only)
+      try {
+        $top = ""
+        if($summary.PSObject.Properties.Name -contains "reasons_not_ready"){
+          $rr = @($summary.reasons_not_ready)
+          if($rr.Count -gt 0){ $top = (($rr[0] + "")).Trim() }
+        }
+        $bp = ""; if($summary.PSObject.Properties.Name -contains "builder_path"){ $bp = [string]$summary.builder_path }
+        $sem = ""; if($summary.PSObject.Properties.Name -contains "contract_semantics_level"){ $sem = [string]$summary.contract_semantics_level }
+        $sr  = ""; if($summary.PSObject.Properties.Name -contains "contract_semantics_reason"){ $sr = [string]$summary.contract_semantics_reason }
+        Write-Host ("[DASH] market=" + $Market + " sym=" + $Symbol + " rc=" + $finalExit + " builder=" + $bp + " sem=" + $sem + " sem_reason=" + $sr + " top=" + $top) -ForegroundColor Cyan
+      } catch { }
+      # DASHBOARD_LINE_END
     Write-Host ("[ONETAP] TARGET logRoot=" + $logRoot + " dst=" + $dst + " as_of=" + $todayStr + " Market=" + $m) -ForegroundColor Cyan
     [System.IO.File]::WriteAllText($dst, ($json -replace "`r`n","`n"), (New-Object System.Text.UTF8Encoding($false)))
     Write-Host ("[ONETAP] wrote " + $dst) -ForegroundColor Cyan
@@ -366,4 +379,3 @@ try {
 }
 
 exit $finalExit
-

@@ -139,6 +139,16 @@ function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal)
 }
 # GS_METRICS_SOURCE_BY_SYMBOL_END
 Set-StrictMode -Version Latest
+# --- HAT_RUNMODE_SINGLETRUTH_BEGIN
+$toolsDir = Split-Path -Parent $PSCommandPath
+$rmPath = Join-Path $toolsDir "Resolve-HatRunMode.ps1"
+if(-not (Test-Path -LiteralPath $rmPath)){ throw "[FAIL-CLOSED] missing Resolve-HatRunMode.ps1" }
+$rmRaw = (& $rmPath 2>&1 | Out-String)
+$ix0 = $rmRaw.IndexOf("{"); $ix1 = $rmRaw.LastIndexOf("}")
+if($ix0 -lt 0 -or $ix1 -le $ix0){ throw "[FAIL-CLOSED] Resolve-HatRunMode did not return JSON" }
+$rmObj = ($rmRaw.Substring($ix0, ($ix1 - $ix0 + 1)) | ConvertFrom-Json -ErrorAction Stop)
+$script:__HAT_RUNMODE = ([string]$rmObj.run_mode).Trim().ToUpperInvariant()
+# --- HAT_RUNMODE_SINGLETRUTH_END
 function Get-RunContextOrFail([string]$RepoRoot,[string]$Market,[string]$Symbol){
   $rcPath = Join-Path $RepoRoot "tools\Resolve-RunContext.ps1"
   if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] Missing Resolve-RunContext.ps1: $rcPath" }
@@ -172,7 +182,7 @@ if(-not (Get-Command _GetTodayLocalFromRunContext -ErrorAction SilentlyContinue)
   }
 }
 # Mode truth (single semantic): LIVE must remain strict.
-$mode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  $mode = $script:__HAT_RUNMODE
 $isLiveMode = ($mode -eq "LIVE")
   # Contract semantics level (fail-closed deterministic)
   $contract_semantics_level = "PAPER_STRICT"
@@ -422,7 +432,7 @@ $crisisStatusPath = Join-Path $logsDir "crisis_regime_status.json"
 # If missing, default OK for NON-LIVE only; keep fail-closed for LIVE.
 # LIVE semantics preserved: missing => crisisOkToday stays false.
 try {
-  $mode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  $mode = $script:__HAT_RUNMODE
   if(-not (Test-Path -LiteralPath $crisisStatusPath)){
     if($mode -ne "LIVE"){
       $crisisOkToday = $true
@@ -654,7 +664,7 @@ $crisisStatusPath = Join-Path $logsDir "crisis_regime_status.json"
 # If missing, default OK for NON-LIVE only; keep fail-closed for LIVE.
 # LIVE semantics preserved: missing => crisisOkToday stays false.
 try {
-  $mode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  $mode = $script:__HAT_RUNMODE
   if(-not (Test-Path -LiteralPath $crisisStatusPath)){
     if($mode -ne "LIVE"){
       $crisisOkToday = $true
@@ -1427,7 +1437,7 @@ try {
 # PAPER/PAPERLIVE: use per-market GateScore summary CSV as the contract truth for legacy fields.
 # LIVE: unchanged (still uses per-event evaluator + live minima + source vetoes).
 try {
-  $mode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  $mode = $script:__HAT_RUNMODE
   if($mode -ne "LIVE"){
     # Prefer pnl summary, else daily summary
     $gsCsv = Join-Path $logsDir "gatescore_pnl_summary.csv"
@@ -1773,7 +1783,7 @@ $gsMicro = [double]$gsNVDA.micro
 # After legacy vars are overwritten from $gsNVDA (which can be 0 in proxy/PAPER modes),
 # re-hydrate legacy GateScore fields from per-market summary CSV for PAPER/PAPERLIVE only.
 try {
-  $mode2 = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  $mode2 = $script:__HAT_RUNMODE
   if($mode2 -ne "LIVE"){
     $gsCsv2 = Join-Path $logsDir "gatescore_pnl_summary.csv"
     if(-not (Test-Path -LiteralPath $gsCsv2)){ $gsCsv2 = Join-Path $logsDir "gatescore_daily_summary.csv" }

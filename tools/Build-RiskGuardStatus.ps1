@@ -5,6 +5,16 @@ param(
 )
 
 Set-StrictMode -Version Latest
+# --- HAT_RUNMODE_SINGLETRUTH_BEGIN
+$toolsDir = Split-Path -Parent $PSCommandPath
+$rmPath = Join-Path $toolsDir "Resolve-HatRunMode.ps1"
+if(-not (Test-Path -LiteralPath $rmPath)){ throw "[FAIL-CLOSED] missing Resolve-HatRunMode.ps1" }
+$rmRaw = (& $rmPath 2>&1 | Out-String)
+$ix0 = $rmRaw.IndexOf("{"); $ix1 = $rmRaw.LastIndexOf("}")
+if($ix0 -lt 0 -or $ix1 -le $ix0){ throw "[FAIL-CLOSED] Resolve-HatRunMode did not return JSON" }
+$rmObj = ($rmRaw.Substring($ix0, ($ix1 - $ix0 + 1)) | ConvertFrom-Json -ErrorAction Stop)
+$script:__HAT_RUNMODE = ([string]$rmObj.run_mode).Trim().ToUpperInvariant()
+# --- HAT_RUNMODE_SINGLETRUTH_END
 $ErrorActionPreference="Stop"
 chcp 65001 | Out-Null
 
@@ -42,7 +52,7 @@ function Has-ProxyMetricsToday([string]$LogsDir,[string]$TodayLocal){
   } catch { return $true } # fail-closed
 }
 function Allow-NonLiveAny(){
-  $mode = ($env:HAT_MODE + "").Trim().ToUpperInvariant()
+  $mode = $script:__HAT_RUNMODE
   if($mode -eq "LIVE"){ return $false }
   return $true
 }

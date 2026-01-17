@@ -35,6 +35,16 @@ try {
 # --- END PATH BAN ---
 
 Set-StrictMode -Version Latest
+# --- HAT_RUNMODE_SINGLETRUTH_BEGIN
+$toolsDir = Split-Path -Parent $PSCommandPath
+$rmPath = Join-Path $toolsDir "Resolve-HatRunMode.ps1"
+if(-not (Test-Path -LiteralPath $rmPath)){ throw "[FAIL-CLOSED] missing Resolve-HatRunMode.ps1" }
+$rmRaw = (& $rmPath 2>&1 | Out-String)
+$ix0 = $rmRaw.IndexOf("{"); $ix1 = $rmRaw.LastIndexOf("}")
+if($ix0 -lt 0 -or $ix1 -le $ix0){ throw "[FAIL-CLOSED] Resolve-HatRunMode did not return JSON" }
+$rmObj = ($rmRaw.Substring($ix0, ($ix1 - $ix0 + 1)) | ConvertFrom-Json -ErrorAction Stop)
+$script:__HAT_RUNMODE = ([string]$rmObj.run_mode).Trim().ToUpperInvariant()
+# --- HAT_RUNMODE_SINGLETRUTH_END
 # --- OUTPUT ENCODING (institutional) ---
 try {
   $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -228,22 +238,23 @@ function Audit-NoBypassPlaceOrder([string]$repoRoot,[string]$runMode){
   try {
     $hits = @()
     # scan python sources (exclude tests/docs/logs/quarantine)
-    $py = Get-ChildItem -LiteralPath $repoRoot -Recurse -File -Filter "*.py" -ErrorAction Stop | Where-Object {
-      $p = ($_.FullName -replace "\\\\","/")
-      return ($p -notmatch "/tests/") -and ($p -notmatch "/docs/") -and ($p -notmatch "/logs/") -and ($p -notmatch "/scripts/_quarantine/") -and ($p -notmatch "/__pycache__/")
-    }
+    # scan python runtime surface only (src/) to avoid permission-denied dirs
+    $srcRoot = Join-Path $repoRoot "src"
+    if(-not (Test-Path -LiteralPath $srcRoot)){ throw "src_root_missing" }
+    $py = Get-ChildItem -LiteralPath $srcRoot -Recurse -File -Filter "*.py" -ErrorAction Stop
     foreach($f in $py){
       $txt = Get-Content -LiteralPath $f.FullName -Raw -ErrorAction SilentlyContinue
       if(-not $txt){ continue }
       if($txt -match "ib\.placeOrder\(" -or $txt -match "\.placeOrder\("){
         # allow ib_safe.py only (single chokepoint)
-        $rel = ($f.FullName.Substring($repoRoot.Length)).TrimStart("\","/") -replace "\\\\","/"
+        $rel = ($f.FullName.Substring($repoRoot.Length)).TrimStart("\","/")
+        $rel = (($rel -replace "\\","/")).ToLowerInvariant()
         if($rel -ne "src/hybrid_ai_trading/broker/ib_safe.py"){ $hits += $rel }
       }
     }
     $hits = $hits | Sort-Object -Unique
-    if($hits.Count -gt 0){
-      if($runMode -eq "LIVE"){ Fail-Contract ("no_bypass_placeorder_violation count=" + $hits.Count + " first=" + $hits[0]) }
+    if(@($hits).Count -gt 0){
+      if($runMode -eq "LIVE"){ Fail-Contract ("no_bypass_placeorder_violation count=" + @($hits).Count + " first=" + $hits[0]) }
       else {
         Write-Host ("[BLOCKG] NOTE: placeOrder bypass hits (non-LIVE): " + ($hits -join ", ")) -ForegroundColor Yellow
       }
@@ -253,7 +264,7 @@ function Audit-NoBypassPlaceOrder([string]$repoRoot,[string]$runMode){
   }
 }
 # run audit (LIVE fail-closed; PAPER/PAPERLIVE warn)
-$runMode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  $runMode = $script:__HAT_RUNMODE
 if($runMode -in @("LIVE","PAPERLIVE","PAPER")){ Audit-NoBypassPlaceOrder $repoRoot $runMode }
 # NO_BYPASS_AUDIT_END
 
@@ -261,7 +272,7 @@ if($runMode -in @("LIVE","PAPERLIVE","PAPER")){ Audit-NoBypassPlaceOrder $repoRo
 # Policy: non-US markets are NON-LIVE only until JP-native LIVE minima + evidence exist.
 # Fail-closed: deny LIVE for non-US regardless of other gates.
 $mkt = (($Market + "")).Trim().ToUpperInvariant()
- $runMode = (($env:HAT_MODE + "")).Trim().ToUpperInvariant()
+  $runMode = $script:__HAT_RUNMODE
 if($runMode -eq "LIVE" -and $mkt -ne "US"){
   Fail-Contract ("nonlive_only_market market=" + $mkt)
 }
