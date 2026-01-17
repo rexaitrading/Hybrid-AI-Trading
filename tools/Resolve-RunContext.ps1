@@ -168,6 +168,18 @@ $mcPath = Join-Path $repoRoot "tools\Resolve-MarketContext.ps1"
 if(-not (Test-Path -LiteralPath $mcPath)){ throw "Missing Resolve-MarketContext.ps1" }
 
 $mcArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$mcPath,"-Market",$Market)
+# A3_ASOF_ENV_PRECEDENCE_BEGIN
+# A3: Single-truth as_of_date. If -AsOfDate not provided, allow env:HAT_ASOF_DATE to pin the run.
+if(-not ((($AsOfDate + "")).Trim())){
+  $envAsof = (($env:HAT_ASOF_DATE + "")).Trim()
+  if($envAsof){
+    if($envAsof -notmatch "^\d{4}-\d{2}-\d{2}$"){
+      throw "[FAIL-CLOSED] HAT_ASOF_DATE invalid (expected yyyy-MM-dd): $envAsof"
+    }
+    $AsOfDate = $envAsof
+  }
+}
+# A3_ASOF_ENV_PRECEDENCE_END
 if((($AsOfDate + "")).Trim()){
   $mcArgs += @("-AsOfDate",$AsOfDate)
 }
