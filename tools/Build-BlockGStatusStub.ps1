@@ -510,15 +510,15 @@ $ErrorActionPreference = "Stop"
 
 
 # A3_MARKET_ENVFIRST_BEGIN
-# Contract: resolve Market env-first BEFORE any Get-MarketLogRoot usage to prevent logs\US bleed.
-$mEnv = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+# MARKET_PARAM_WINS_V1_BEGIN
+# Contract: -Market parameter MUST win. Env is fallback only (prevents HAT_MARKET bleed into other markets).
 $m = (($Market + "")).Trim().ToUpperInvariant()
-# If caller did not pass -Market, many scripts default to "US". Treat that as defaulted and allow env override.
-if($mEnv){
-  if((-not $m) -or ($m -eq "US")){ $m = $mEnv }
+if(-not $m){
+  $m = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
 }
 if(-not $m){ $m = "US" }
 $Market = $m
+# MARKET_PARAM_WINS_V1_END
 # A3_MARKET_ENVFIRST_END
 
 # A3_MARKET_ENVFIRST_BEGIN
