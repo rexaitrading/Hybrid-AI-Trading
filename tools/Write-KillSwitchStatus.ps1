@@ -87,7 +87,12 @@ $env:HAT_ASOF_DATE = $asOf
 $env:HAT_LOGS_DIR  = $logsDirOut
 
 # Call dashboard and parse its [DASH] line
-$dashRaw = (& $dashPath -Market $mk -Symbol $sy -Mode $Mode -EmitConsole:(-not $NoConsole) 2>&1 | Out-String)
+# Call dashboard in a child PowerShell to capture host output reliably (Write-Host)
+$dashArgs = @(
+  "-NoProfile","-ExecutionPolicy","Bypass","-File",$dashPath,
+  "-Market",$mk,"-Symbol",$sy,"-Mode",$Mode
+)
+$dashRaw = (& powershell @dashArgs 2>&1 | Out-String)
 
 $dashLine = ($dashRaw -split "\r?\n" | Where-Object { $_ -match "^\[DASH\]" } | Select-Object -Last 1)
 if(-not $dashLine){
