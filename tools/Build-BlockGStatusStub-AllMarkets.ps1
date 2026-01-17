@@ -33,7 +33,10 @@ foreach($m in $Markets){
 
   & $psExe -NoProfile -ExecutionPolicy Bypass -File $builder -Symbol $Symbol -Market $m2 *>&1 | Out-Host
   if($LASTEXITCODE -ne 0){ Fail ("Build-BlockGStatusStub failed Market=" + $m2 + " exit=" + $LASTEXITCODE) }
-  $logRoot = Join-Path (Join-Path $repoRoot "logs") $m2
+  $mlr = Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1"
+  if(-not (Test-Path -LiteralPath $mlr)){ Fail ("Missing Get-MarketLogRoot.ps1: " + $mlr) }
+  $logRoot = (& $psExe -NoProfile -ExecutionPolicy Bypass -File $mlr -Market $m2 2>&1 | Out-String).Trim()
+  if(-not $logRoot){ Fail ("Get-MarketLogRoot returned empty for Market=" + $m2) }
   New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
   $stub = Join-Path $logRoot "blockg_status_stub.json"
   if(-not (Test-Path -LiteralPath $stub)){ Fail ("Missing stub after build Market=" + $m2 + " path=" + $stub) }
@@ -44,5 +47,4 @@ foreach($m in $Markets){
 
 Write-Host "[BLOCKG-ALL] DONE" -ForegroundColor Green
 exit 0
-
 
