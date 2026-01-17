@@ -115,6 +115,61 @@ if(-not $OutPath){
   $OutPath = Join-Path $logsDirOut "ops_dashboard.json"
 }
 
+# IB_WATCHDOG_V1_BEGIN
+# IBG API watchdog (output-only). Determines ib.connected + adds invariant violations for LIVE/PAPERLIVE.
+$ib = [ordered]@{
+  watch_log_present = $false
+  watch_log_path = ""
+  watch_log_age_minutes = 999999
+  connected = $false
+  signal = ""
+  last_line = ""
+}
+
+try {
+  $cand = Get-ChildItem -LiteralPath (Join-Path $repoRoot "logs") -File -Filter "ibg_api_watch_*.log" -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+  if($cand){
+    $ib.watch_log_present = $true
+    $ib.watch_log_path = [string]$cand.FullName
+    $age = [int][math]::Floor(((Get-Date).ToUniversalTime() - $cand.LastWriteTimeUtc).TotalMinutes)
+    $ib.watch_log_age_minutes = $age
+
+    # Tail scan (fail-closed): if stale or bad tokens appear, connected=false.
+    $tail = @(Get-Content -LiteralPath $cand.FullName -Tail 200 -Encoding UTF8 -ErrorAction SilentlyContinue)
+    if($tail.Count -gt 0){ $ib.last_line = [string]$tail[-1] }
+
+    $bad = $false
+    foreach($ln in $tail){
+      $s = ($ln + "")
+      if($s -match "Error 1100" -or $s -match "Connectivity between IBKR" -or $s -match "positions request timed out" -or $s -match "WATCH_ERR"){
+        $bad = $true; $ib.signal = "IBG_ERR"; break
+      }
+      if($s -match "WATCH_OK" -or $s -match "PORT_UP" -or $s -match "CONNECTED"){
+        if(-not $ib.signal){ $ib.signal = "IBG_OK" }
+      }
+    }
+
+    # Freshness thresholds by mode (conservative).
+    $maxAge = 999999
+    if($runMode -eq "LIVE"){ $maxAge = 2 }
+    elseif($runMode -eq "PAPERLIVE"){ $maxAge = 10 }
+    else { $maxAge = 999999 }
+
+    if($age -le $maxAge -and (-not $bad)){ $ib.connected = $true } else { $ib.connected = $false }
+    if(-not $ib.connected){
+      $viol.Add(("ibg_disconnected_or_stale age_min=" + $age + " max=" + $maxAge + " signal=" + $ib.signal)) | Out-Null
+    }
+  } else {
+    # No watchdog log => fail-closed for LIVE/PAPERLIVE only.
+    if($runMode -in @("LIVE","PAPERLIVE")){ $viol.Add("ibg_watch_log_missing") | Out-Null }
+  }
+} catch {
+  if($runMode -in @("LIVE","PAPERLIVE")){ $viol.Add(("ibg_watch_check_failed " + $_.Exception.Message)) | Out-Null }
+}
+# IB_WATCHDOG_V1_END
+
+
 # --- A2 status reads ---
 function Read-A2Status([string]$Path,[string]$Today){
   $o = [ordered]@{
@@ -266,6 +321,7 @@ $payload = [ordered]@{
   market = $mk
   symbol = $sy
   run_mode = $runMode
+  ib = $ib
 
   runcontext = [ordered]@{
     as_of_date = $asOf
