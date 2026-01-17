@@ -23,10 +23,34 @@ function Slice10([string]$s){ if(-not $s){return ""}; if($s.Length -ge 10){retur
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = (Resolve-Path -LiteralPath (Split-Path -Parent $toolsDir) -ErrorAction Stop).Path
-$logsDir = Join-Path $repoRoot "logs"
+# A3_CRISIS_RUNCONTEXT_BEGIN
+$mkt = ((($env:HAT_MARKET + "")).Trim().ToUpperInvariant())
+if(-not $mkt){ $mkt = "US" }
+$env:HAT_MARKET = $mkt
+
+$todayLocal = (($env:HAT_AS_OF_DATE + "")).Trim()
+if(-not $todayLocal){ $todayLocal = (($env:HAT_ASOF_DATE + "")).Trim() }  # legacy
+$logsDir = (($env:HAT_LOGS_DIR + "")).Trim()
+if(-not $logsDir){ $logsDir = (($env:HAT_LOGS_DIR_OUT + "")).Trim() }
+
+if((-not $todayLocal) -or (-not $logsDir)){
+  $rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+  if(-not (Test-Path -LiteralPath $rcPath)){ throw "[FAIL-CLOSED] missing Resolve-RunContext.ps1: $rcPath" }
+  $rcRaw = (& $rcPath -Market $mkt -Symbol $Symbol | Out-String).Trim()
+  $i0=$rcRaw.IndexOf("{"); $i1=$rcRaw.LastIndexOf("}")
+  if($i0 -lt 0 -or $i1 -le $i0){ throw "[FAIL-CLOSED] Resolve-RunContext did not return JSON" }
+  $rc = ($rcRaw.Substring($i0, ($i1-$i0+1))) | ConvertFrom-Json
+  if(-not $todayLocal){ $todayLocal = ([string]$rc.as_of_date).Substring(0,10) }
+  if(-not $logsDir){ $logsDir = [string]$rc.logs_dir }
+}
+if(-not $todayLocal){ throw "[FAIL-CLOSED] missing todayLocal (RunContext/env required)" }
+if(-not $logsDir){ throw "[FAIL-CLOSED] missing logsDir (RunContext/env required)" }
+$env:HAT_AS_OF_DATE = $todayLocal
+$env:HAT_LOGS_DIR = $logsDir
+# A3_CRISIS_RUNCONTEXT_END
+New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 
-$todayLocal = (Get-Date).ToString("yyyy-MM-dd")
 $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
 # A) Intel keyword signal (today)
