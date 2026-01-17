@@ -76,6 +76,10 @@ def test_ib_placeorder_blocks_live_nvda_when_not_ready(tmp_path: Path, monkeypat
     _write_blockg(status_path, nvda_ready=False)
     monkeypatch.setenv("HAT_BLOCKG_STATUS_PATH", str(status_path))
 
+    import hybrid_ai_trading.broker.ib_safe as ibsafe
+    monkeypatch.setattr(ibsafe, "_runctx_from_ps", lambda *a, **k: {"market_closed_today": False, "session_name": "RTH"})
+    monkeypatch.setattr(ibsafe, "require_blockg_ready_via_powershell", lambda *a, **k: (_ for _ in ()).throw(BlockGNotReady("TEST_DENY")))
+
     ib = _IB()
     contract = _C("NVDA")
     order = object()
@@ -90,6 +94,7 @@ def test_ib_placeorder_allows_live_nvda_when_ready(tmp_path: Path, monkeypatch):
     # Deterministic allow-test: PS ALL_STRICT includes market_session_open_now (time-dependent).
     # Patch the exact imported symbol used by ib_safe chokepoint.
     import hybrid_ai_trading.broker.ib_safe as ibsafe
+    monkeypatch.setattr(ibsafe, "_runctx_from_ps", lambda *a, **k: {"market_closed_today": False, "session_name": "RTH"})
     monkeypatch.setattr(ibsafe, "require_blockg_ready_via_powershell", lambda *a, **k: None)
 
     monkeypatch.setenv("HAT_IS_PAPER", "0")

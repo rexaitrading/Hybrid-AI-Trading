@@ -38,6 +38,9 @@ def _base_status(as_of_date: str) -> dict:
 def test_live_path_blocks_when_blockg_not_ready(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("HAT_IS_PAPER", "0")
     monkeypatch.setenv("HAT_BLOCKG_STATUS_PATH", str(tmp_path / "blockg_status_stub.json"))
+    monkeypatch.setenv("HAT_MODE", "LIVE")
+    import hybrid_ai_trading.execution.execution_engine_phase5_guard as guard
+    monkeypatch.setattr(guard, "require_blockg_ready_via_powershell", lambda *a, **k: (_ for _ in ()).throw(BlockGNotReady("TEST_DENY")))
 
     status = _base_status("2099-01-01")
     status["nvda_blockg_ready"] = False
