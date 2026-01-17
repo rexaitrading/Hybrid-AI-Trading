@@ -1995,6 +1995,18 @@ if($marketClosedToday){
   } catch { }
 }
 # EVH_STUB_SESSION_ASOF_CLAMP_V1_PRE_END
+# INTEL_GS_POLICYB_CLAMP_V1_PRE_BEGIN
+# Policy B: on market-closed days, clamp intel/gatescore as_of diagnostics to pinned todayLocal (DENY unchanged).
+$intel_as_of_date_pinned = $intel_as_of_date
+$gatescore_as_of_date_pinned = $gsAsOf
+if($marketClosedToday){
+  if($todayLocal){
+    $intel_as_of_date_pinned = $todayLocal
+    $gatescore_as_of_date_pinned = $todayLocal
+  }
+}
+# INTEL_GS_POLICYB_CLAMP_V1_PRE_END
+
 
 $payload = [ordered]@{
     ts_utc = $tsUtc
@@ -2059,7 +2071,7 @@ global_ready_ok_today    = [bool]$globalReadyOk
     risk_flatten         = [bool]$crisisRiskFlatten
     cooldown_minutes     = [int]$crisisCooldownMinutes
     crisis_status_path   = (Canon $crisisStatusPath)
-    intel_as_of_date          = $intel_as_of_date
+    intel_as_of_date          = $intel_as_of_date_pinned
     intel_age_minutes         = [int]$intel_age_minutes
     intel_kind                = $intel_kind
     intel_source_path         = $intel_source_path
@@ -2068,7 +2080,7 @@ global_ready_ok_today    = [bool]$globalReadyOk
 
     gatescore_fresh_today   = (($gsAsOf -ne "") -and ($gsAsOf -eq $todayLocal))
 
-    gatescore_as_of_date = $gsAsOf
+    gatescore_as_of_date = $gatescore_as_of_date_pinned
     gatescore_age_days = $gsAgeDays
     gatescore_recent_enough = $gsRecentEnough
     gatescore_fresh_for_session = [bool]$gsRecentEnough
