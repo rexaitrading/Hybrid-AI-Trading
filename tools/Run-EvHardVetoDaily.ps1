@@ -31,11 +31,24 @@ if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext mi
 $today = ([string]$rc.as_of_date).Trim()
 if($today.Length -ge 10){ $today = $today.Substring(0,10) }
 
+
+# A3_EVH_VETO_LOGSDIR_BEGIN
+$ldEnv = (($env:HAT_LOGS_DIR + "")).Trim()
+if($env:HAT_MARKET -and (-not $ldEnv)){ throw "[FAIL-CLOSED] HAT_MARKET set but HAT_LOGS_DIR missing (A3 wiring required)" }
+if($ldEnv){
+  $logDir = $ldEnv
+  New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+  Write-Host ("[A3] EVH veto using env:HAT_LOGS_DIR=" + $logDir) -ForegroundColor DarkGray
+}
+# A3_EVH_VETO_LOGSDIR_END
+
+if(-not $logDir){
 $gm = Join-Path $root "tools\Get-MarketLogRoot.ps1"
 if(-not (Test-Path -LiteralPath $gm)){ throw "[FAIL-CLOSED] Missing Get-MarketLogRoot.ps1: $gm" }
 $logDir = (& "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $gm -Market $Market | Out-String).Trim()
 if(-not $logDir){ $logDir = Join-Path (Join-Path $root "logs") $Market }
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+}
 
 $outCsv = Join-Path $logDir "phase5_ev_hard_veto_daily.csv"
 
