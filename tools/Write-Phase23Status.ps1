@@ -171,7 +171,12 @@ try {
 $out = [ordered]@{
   kind="phase23_status"
   as_of_date=$asOf
-  ok_today=[bool]$okToday
+ok_today=[bool]$okToday
+# A2_SCHEMA_PHASE23_KEYS_V1_BEGIN
+# Contract aliases (backward compatible): emit canonical keys expected by interpreters.
+phase23_health_ok_today=[bool]$okToday
+phase23_ok_today=[bool]$okToday
+# A2_SCHEMA_PHASE23_KEYS_V1_END
   reason=$reason
   not_evaluated_market_closed=[bool]$notEvaluatedMarketClosed
   market_closed_reason=$marketClosedReason

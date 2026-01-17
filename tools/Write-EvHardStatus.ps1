@@ -171,7 +171,12 @@ $out = [ordered]@{
   kind="ev_hard_status"
   as_of_date=$todayLocal
   evidence_as_of_date=$asOf
-  ok_today=[bool]$okToday
+ok_today=[bool]$okToday
+# A2_SCHEMA_EVHARD_KEYS_V1_BEGIN
+# Contract aliases (backward compatible): emit canonical keys expected by interpreters.
+ev_hard_daily_ok_today=[bool]$okToday
+ev_hard_daily_as_of_date=$asOf
+# A2_SCHEMA_EVHARD_KEYS_V1_END
   reason=$reason
   not_evaluated_market_closed=[bool]$notEvaluatedMarketClosed
   market_closed_reason=$marketClosedReason
@@ -240,4 +245,3 @@ try{
 Write-Utf8NoBomLf (Join-Path $logsDir "ev_hard_status.json") (($out | ConvertTo-Json -Depth 6))
 Write-Host "[A2] wrote logs\ev_hard_status.json" -ForegroundColor Green
 exit 0
-

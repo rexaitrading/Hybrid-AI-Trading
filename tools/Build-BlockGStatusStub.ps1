@@ -731,6 +731,18 @@ $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
     function _Slice([string]$d){ $t=(($d+"")).Trim(); if($t.Length -ge 10){ $t=$t.Substring(0,10) }; $t }
     function _ToBool($v){ $s=(($v+"")).Trim().ToLowerInvariant(); return ($s -in @("1","true","yes","y","ok","pass","passed")) }
+# GREADY_MAP_OKTODAY_V1_BEGIN
+# StrictMode-safe: map ok_today -> <component>_ok_today for Global-Ready files.
+function _PickOkToday([object]$j, [string]$preferredKey){
+  if($null -eq $j){ return $false }
+  try{
+    if($j.PSObject.Properties.Name -contains $preferredKey){ return [bool]$j.$preferredKey }
+    if($j.PSObject.Properties.Name -contains "ok_today"){ return [bool]$j.ok_today }
+    if($j.PSObject.Properties.Name -contains "ok"){ return [bool]$j.ok }
+  } catch { }
+  return $false
+}
+# GREADY_MAP_OKTODAY_V1_END
 # GSFLAGS_DIAG_HELPER_V1_BEGIN
 # StrictMode-safe GSFLAGS diagnostics resolver (dashboard-only; NO gating changes).
 function Resolve-GSFlagsDiag {
@@ -2065,6 +2077,15 @@ try {
   $gsFreshForSession_diag = [bool]$d.fresh_for_session
 } catch { $gsRecentEnough_diag = $false; $gsFreshForSession_diag = $false }
 # POLICYB_GSFLAGS_DIAG_SHARED_V1_END
+
+# GREADY_MAP_OKTODAY_V1_APPLY_BEGIN
+# Map Global-Ready file schemas into contract booleans (accept ok_today fallback).
+try { if(Get-Variable -Name 'jdna' -Scope Local -ErrorAction SilentlyContinue){ $gdnaOk = _PickOkToday $jdna 'market_dna_ok_today' } } catch { }
+try { if(Get-Variable -Name 'jedge' -Scope Local -ErrorAction SilentlyContinue){ $gedgeOk = _PickOkToday $jedge 'edge_validity_ok_today' } } catch { }
+try { if(Get-Variable -Name 'jdep' -Scope Local -ErrorAction SilentlyContinue){ $gdepOk = _PickOkToday $jdep 'dependency_risk_ok_today' } } catch { }
+try { if(Get-Variable -Name 'jrisk' -Scope Local -ErrorAction SilentlyContinue){ $griskOk = _PickOkToday $jrisk 'risk_guard_ok_today' } } catch { }
+try { $globalReadyOk = ([bool]$gdnaOk -and [bool]$gedgeOk -and [bool]$gdepOk -and [bool]$griskOk) } catch { $globalReadyOk = $false }
+# GREADY_MAP_OKTODAY_V1_APPLY_END
 
 $payload = [ordered]@{
     ts_utc = $tsUtc
