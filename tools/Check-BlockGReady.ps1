@@ -97,6 +97,36 @@ function Dump-Reasons($st){
     if($st -and ($st.PSObject.Properties.Name -contains "reasons_not_ready")){
       $r = @($st.reasons_not_ready)
 
+      # OPT_CLOSED_DAY_REASONS_FILTER_BEGIN
+      # Optional clean: on closed-day diagnostic failure, print only operator-actionable reasons (no gating change).
+      try {
+        $head = ""
+        if(Get-Variable -Name "__contract_fail_msg" -Scope Script -ErrorAction SilentlyContinue){
+          $head = (($script:__contract_fail_msg + "")).Trim()
+        }
+        if($head -like "market_closed_today=true (diagnostic failed prerequisites)*"){
+          $keep = New-Object System.Collections.Generic.List[string]
+          $wl = @(
+            "^market_closed_today",
+            "^intel_ok_today",
+            "^nvda_intel_ok_today",
+            "^gatescore_ok_live_today",
+            "^metrics_source_missing_for_symbol=",
+            "^(nvda|spy|qqq)_blockg_ready=",
+            "^ev_hard_"
+          )
+          foreach($x in @($r)){
+            $t = (($x + "")).Trim()
+            if(-not $t){ continue }
+            foreach($p in $wl){ if($t -match $p){ $keep.Add($t) | Out-Null; break } }
+          }
+          # Always keep the headline first
+          if($head){ $r = @($head) + @($keep) } else { $r = @($keep) }
+        }
+      } catch { }
+      # OPT_CLOSED_DAY_REASONS_FILTER_END
+
+
       # DIAG: always include the contract failure headline as a reason (if present)
       try {
         if(Get-Variable -Name "__contract_fail_msg" -Scope Script -ErrorAction SilentlyContinue){
