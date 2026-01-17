@@ -62,12 +62,18 @@ if(-not $todayLocal){ $todayLocal = (($env:HAT_AS_OF_DATE + "")).Trim(); if(-not
 # Policy B: market-closed days are NOT EVALUATED but remain DENY.
 $marketClosedToday = $false
 $marketClosedReason = ""
+# KR_CLOSED_FAILCLOSED_BEGIN
+# Fail-closed: if RunContext missing/unreadable, treat market as closed to prevent inconsistent status JSON.
+$marketClosedToday = $false
+$notEvaluatedMarketClosed = $false
+$reason = ""
+# KR_CLOSED_FAILCLOSED_END
 $notEvaluatedMarketClosed = $false
 $reason = ""
 try {
   if($rcObj -and ($rcObj.PSObject.Properties.Name -contains "market_closed_today")){ $marketClosedToday = [bool]$rcObj.market_closed_today }
   if($rcObj -and ($rcObj.PSObject.Properties.Name -contains "market_closed_reason")){ $marketClosedReason = [string]$rcObj.market_closed_reason }
-} catch { $marketClosedToday = $false; $marketClosedReason = "" }
+ } catch { $marketClosedToday = $true; $marketClosedReason = "runcontext_missing" }
 # POLICYB_PHASE23_V1_END
 
 

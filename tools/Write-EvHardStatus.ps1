@@ -97,10 +97,16 @@ if(-not $todayLocal){ $todayLocal = (($env:HAT_AS_OF_DATE + "")).Trim(); if(-not
 # Policy B: Market-closed days are NOT EVALUATED (diagnostic) but remain DENY (ok_today=false).
 $marketClosedToday = $false
 $marketClosedReason = ""
+# KR_CLOSED_FAILCLOSED_BEGIN
+# Fail-closed: if RunContext missing/unreadable, treat market as closed to prevent inconsistent status JSON.
+$marketClosedToday = $false
+$notEvaluatedMarketClosed = $false
+$reason = ""
+# KR_CLOSED_FAILCLOSED_END
 try {
   if($rc -and ($rc.PSObject.Properties.Name -contains "market_closed_today")){ $marketClosedToday = [bool]$rc.market_closed_today }
   if($rc -and ($rc.PSObject.Properties.Name -contains "market_closed_reason")){ $marketClosedReason = [string]$rc.market_closed_reason }
-} catch { $marketClosedToday = $false; $marketClosedReason = "" }
+ } catch { $marketClosedToday = $true; $marketClosedReason = "runcontext_missing" }
 $notEvaluatedMarketClosed = $false
 if($marketClosedToday){
   $notEvaluatedMarketClosed = $true
