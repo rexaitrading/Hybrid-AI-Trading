@@ -311,3 +311,9 @@ tools/Disarm-NVDA-Live.ps1
 - Fix execution OrderManager: accept risk_manager=... wiring (prevents silent risk_veto disable).
 - Remove LIVE ambiguity: ensure_symbol_blockg_ready(... allow_paper=False, is_paper=False ...) (defense-in-depth; no functional change today).
 - Reversible backups: *.bak_20260116_154506_A1_OM
+## 2026-01-17 00:15:24 — Mode drift cleanup: canonical HAT_MODE single truth (LIVE/PAPERLIVE/PAPER)
+- Added tools/Resolve-HatRunMode.ps1 as the single semantic authority for runtime lane.
+- Removed direct $env:HAT_MODE parsing from Block-G + Global-Ready builders + RunContext; consumers now use canonical run_mode.
+- Preserved LIVE fail-closed guards: Run-OneTap-WhenRTH refuses LIVE; Phase5 paperlive evidence copy refuses LIVE.
+- Validation: Resolve-HatRunMode returns correct flags for PAPERLIVE/LIVE; original-surface scan shows zero remaining direct HAT_MODE parses; LIVE guard checks fail-closed as expected.
+- CHECKPOINT: CHECKPOINT_20260117_MODEDRIFT_A1e
