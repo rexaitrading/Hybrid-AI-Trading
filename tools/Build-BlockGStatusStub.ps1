@@ -731,6 +731,33 @@ $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
 
     function _Slice([string]$d){ $t=(($d+"")).Trim(); if($t.Length -ge 10){ $t=$t.Substring(0,10) }; $t }
     function _ToBool($v){ $s=(($v+"")).Trim().ToLowerInvariant(); return ($s -in @("1","true","yes","y","ok","pass","passed")) }
+# GSFLAGS_DIAG_HELPER_V1_BEGIN
+# StrictMode-safe GSFLAGS diagnostics resolver (dashboard-only; NO gating changes).
+function Resolve-GSFlagsDiag {
+  param(
+    [bool]$MarketClosedToday,
+    [object]$GsRecentEnough
+  )
+  $re = $false
+  $fs = $false
+  try {
+    if($null -ne $GsRecentEnough){
+      $re = [bool]$GsRecentEnough
+      $fs = [bool]$GsRecentEnough
+    }
+  } catch { $re = $false; $fs = $false }
+
+  if($MarketClosedToday){
+    $re = $true
+    $fs = $true
+  }
+
+  return [ordered]@{
+    recent_enough = [bool]$re
+    fresh_for_session = [bool]$fs
+  }
+}
+# GSFLAGS_DIAG_HELPER_V1_END
 
     # Ensure logsRoot points to repo-root logs (not market logs) for fallback paths
     if(-not (Get-Variable -Name "logsRoot" -Scope Local -ErrorAction SilentlyContinue)){
@@ -884,15 +911,17 @@ try {
 }
 $crisisAlphaEnabled = $false
 # REGIME_READER_END
-# POLICYB_GSFLAGS_DIAG_CLAMP_V1_BEGIN
-# Policy B: CLOSED days -> clamp dashboard-only GateScore flags (do NOT affect gating vars).
-$gsRecentEnough_diag = $gsRecentEnough
-$gsFreshForSession_diag = [bool]$gsRecentEnough
-if($marketClosedToday){
-  $gsRecentEnough_diag = $true
-  $gsFreshForSession_diag = $true
-}
-# POLICYB_GSFLAGS_DIAG_CLAMP_V1_END
+
+# POLICYB_GSFLAGS_DIAG_SHARED_V1_BEGIN
+# Policy B: GSFLAGS diagnostics for FAST payload (NO gating changes).
+$gsRecentEnough_diag = $false
+$gsFreshForSession_diag = $false
+try {
+  $d = Resolve-GSFlagsDiag -MarketClosedToday:$marketClosedToday -GsRecentEnough $null
+  $gsRecentEnough_diag = [bool]$d.recent_enough
+  $gsFreshForSession_diag = [bool]$d.fresh_for_session
+} catch { $gsRecentEnough_diag = $false; $gsFreshForSession_diag = $false }
+# POLICYB_GSFLAGS_DIAG_SHARED_V1_END
 
 $payload = [ordered]@{
       ts_utc=$tsUtc
@@ -907,8 +936,8 @@ $payload = [ordered]@{
       gatescore_as_of_date=$gsAsOf
       gatescore_fresh_today=[bool]$gsFreshToday
       gatescore_age_days=0
-      gatescore_recent_enough=$true
-      gatescore_fresh_for_session=$true
+      gatescore_recent_enough=$gsRecentEnough_diag
+      gatescore_fresh_for_session=$gsFreshForSession_diag
       gatescore_ok_today=[bool]$gsFreshToday
       nvda_blockg_ready=[bool]$nvdaReady
       reasons_not_ready=@($reasons)
@@ -2024,23 +2053,18 @@ if($marketClosedToday){
 }
 # POLICYB_AGE_CLAMP_V1_END
 
-
-
-# POLICYB_GSFLAGS_DIAG_CLAMP_V1_FINAL_BEGIN
-# Policy B: CLOSED days -> dashboard-only GateScore flag diagnostics (NO gating var changes).
+# POLICYB_GSFLAGS_DIAG_SHARED_V1_BEGIN
+# Policy B: GSFLAGS diagnostics for FULL payload (NO gating changes).
 $gsRecentEnough_diag = $false
 $gsFreshForSession_diag = $false
 try {
-  if(Get-Variable -Name 'gsRecentEnough' -Scope Local -ErrorAction SilentlyContinue){
-    $gsRecentEnough_diag = [bool]$gsRecentEnough
-    $gsFreshForSession_diag = [bool]$gsRecentEnough
-  }
-} catch { }
-if($marketClosedToday){
-  $gsRecentEnough_diag = $true
-  $gsFreshForSession_diag = $true
-}
-# POLICYB_GSFLAGS_DIAG_CLAMP_V1_FINAL_END
+  $ge = $null
+  if(Get-Variable -Name 'gsRecentEnough' -Scope Local -ErrorAction SilentlyContinue){ $ge = $gsRecentEnough }
+  $d = Resolve-GSFlagsDiag -MarketClosedToday:$marketClosedToday -GsRecentEnough $ge
+  $gsRecentEnough_diag = [bool]$d.recent_enough
+  $gsFreshForSession_diag = [bool]$d.fresh_for_session
+} catch { $gsRecentEnough_diag = $false; $gsFreshForSession_diag = $false }
+# POLICYB_GSFLAGS_DIAG_SHARED_V1_END
 
 $payload = [ordered]@{
     ts_utc = $tsUtc
@@ -2283,6 +2307,3 @@ exit 0
   } catch { }
   throw
 }
-
-
-
