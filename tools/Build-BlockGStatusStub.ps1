@@ -2222,6 +2222,9 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_min_pnl_samples = $minPnl
 
     gatescore_mean_edge_ratio  = $gsEdge
+    # A3_GS_EDGE_ROUNDING_BEGIN
+    try { $gatescore_mean_edge_ratio_rounded6 = [math]::Round([double]$gatescore_mean_edge_ratio, 6) } catch { $gatescore_mean_edge_ratio_rounded6 = 0.0 }
+    # A3_GS_EDGE_ROUNDING_END
     gatescore_mean_micro_score = $gsMicro
     gatescore_min_edge_ratio   = $minEdge
     gatescore_min_micro_score  = $minMicro

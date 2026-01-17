@@ -438,6 +438,13 @@ try {
   # INTEL_CHECK_END
     # 1) Core producers
     if (-not ($st.PSObject.Properties.Name -contains "phase4_ok_today") -or (-not [bool]$st.phase4_ok_today)) { $diagOk = $false }
+    # A3_DIAG_POLICYB_ACCEPT_BEGIN
+    # Policy B diagnostic: if status explicitly says not_evaluated_market_closed=true, treat as diagnostic-ok for prerequisites (LIVE remains denied).
+    $p23NotEval = $false
+    $evNotEval  = $false
+    try { if($st.PSObject.Properties.Name -contains "not_evaluated_market_closed"){ $p23NotEval = [bool]$st.not_evaluated_market_closed } } catch { $p23NotEval = $false }
+    try { if($st.PSObject.Properties.Name -contains "ev_hard_not_evaluated_market_closed"){ $evNotEval = [bool]$st.ev_hard_not_evaluated_market_closed } } catch { $evNotEval = $false }
+    # A3_DIAG_POLICYB_ACCEPT_END
     if (-not ($st.PSObject.Properties.Name -contains "phase23_health_ok_today") -or (-not [bool]$st.phase23_health_ok_today)) { $diagOk = $false }
 
     # 2) GateScore age policy (fields already in contract)
