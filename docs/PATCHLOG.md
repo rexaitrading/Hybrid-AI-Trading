@@ -317,3 +317,8 @@ tools/Disarm-NVDA-Live.ps1
 - Preserved LIVE fail-closed guards: Run-OneTap-WhenRTH refuses LIVE; Phase5 paperlive evidence copy refuses LIVE.
 - Validation: Resolve-HatRunMode returns correct flags for PAPERLIVE/LIVE; original-surface scan shows zero remaining direct HAT_MODE parses; LIVE guard checks fail-closed as expected.
 - CHECKPOINT: CHECKPOINT_20260117_MODEDRIFT_A1e
+## 2026-01-17 00:43:00 — A2 closed-day effective audit semantics + OneTap summary harden
+- A2: EffectiveOk returns null when not_evaluated_market_closed=true (prevents false contradictions vs stub on weekends/holidays).
+- OneTap: guard missing stub fields; reasons_not_ready computed outside hash literal (parser-safe under StrictMode).
+- Validation: PAPERLIVE OneTap smoke => A2 OK + onetap_summary.json emitted.
+- CHECKPOINT: CHECKPOINT_20260117_A2_CLOSED_DAY_AUDIT_GREEN
