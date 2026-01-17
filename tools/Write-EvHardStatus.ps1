@@ -93,6 +93,23 @@ if($rcRaw){
 
 if(-not $todayLocal){ $todayLocal = (Get-Date).ToString("yyyy-MM-dd") }
 
+# POLICYB_MARKET_CLOSED_BEGIN
+# Policy B: Market-closed days are NOT EVALUATED (diagnostic) but remain DENY (ok_today=false).
+$marketClosedToday = $false
+$marketClosedReason = ""
+try {
+  if($rc -and ($rc.PSObject.Properties.Name -contains "market_closed_today")){ $marketClosedToday = [bool]$rc.market_closed_today }
+  if($rc -and ($rc.PSObject.Properties.Name -contains "market_closed_reason")){ $marketClosedReason = [string]$rc.market_closed_reason }
+} catch { $marketClosedToday = $false; $marketClosedReason = "" }
+$notEvaluatedMarketClosed = $false
+if($marketClosedToday){
+  $notEvaluatedMarketClosed = $true
+  $okToday = $false   # deny preserved
+  $reason = "market_closed_today"
+}
+# POLICYB_MARKET_CLOSED_END
+
+
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 
 $okToday = $false
@@ -145,6 +162,8 @@ $out = [ordered]@{
   evidence_as_of_date=$asOf
   ok_today=[bool]$okToday
   reason=$reason
+  not_evaluated_market_closed=[bool]$notEvaluatedMarketClosed
+  market_closed_reason=$marketClosedReason
   evidence_paths=$evidence
   ts_utc=(Get-Date).ToUniversalTime().ToString("o")
 }
@@ -210,5 +229,4 @@ try{
 Write-Utf8NoBomLf (Join-Path $logsDir "ev_hard_status.json") (($out | ConvertTo-Json -Depth 6))
 Write-Host "[A2] wrote logs\ev_hard_status.json" -ForegroundColor Green
 exit 0
-
 

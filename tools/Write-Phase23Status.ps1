@@ -37,18 +37,20 @@ $rcRaw = ($rcRaw + "").Trim()
 
 # [A2] removed root logsDir reset (prevents cross-market bleed)
 $todayLocal = $null
+$rcObj = $null
 
 if($rcRaw){
   try{
-    $rc = $rcRaw | ConvertFrom-Json
+    $rcObj = $rcRaw | ConvertFrom-Json
+    $rcObj = $rcObj
     if($rc){
-      if(($rc.PSObject.Properties.Name -contains "logs_dir") -and $rc.logs_dir){
-        $logsDir = [string]$rc.logs_dir
-      } elseif(($rc.PSObject.Properties.Name -contains "logs_dir_out") -and $rc.logs_dir_out){
-        $logsDir = [string]$rc.logs_dir_out
+      if(($rcObj.PSObject.Properties.Name -contains "logs_dir") -and $rcObj.logs_dir){
+        $logsDir = [string]$rcObj.logs_dir
+      } elseif(($rcObj.PSObject.Properties.Name -contains "logs_dir_out") -and $rcObj.logs_dir_out){
+        $logsDir = [string]$rcObj.logs_dir_out
       }
-      if(($rc.PSObject.Properties.Name -contains "as_of_date") -and $rc.as_of_date){
-        $todayLocal = [string]$rc.as_of_date
+      if(($rcObj.PSObject.Properties.Name -contains "as_of_date") -and $rcObj.as_of_date){
+        $todayLocal = [string]$rcObj.as_of_date
       }
     }
   } catch { }
@@ -56,9 +58,30 @@ if($rcRaw){
 
 if(-not $todayLocal){ $todayLocal = (Get-Date).ToString("yyyy-MM-dd") }
 
+# POLICYB_MARKET_CLOSED_BEGIN
+# Policy B: Market-closed days are NOT EVALUATED (diagnostic) but remain DENY (ok_today=false).
+$marketClosedToday = $false
+$marketClosedReason = ""
+try {
+  if($rcObj -and ($rcObj.PSObject.Properties.Name -contains "market_closed_today")){ $marketClosedToday = [bool]$rcObj.market_closed_today }
+  if($rcObj -and ($rcObj.PSObject.Properties.Name -contains "market_closed_reason")){ $marketClosedReason = [string]$rcObj.market_closed_reason }
+} catch { $marketClosedToday = $false; $marketClosedReason = "" }
+$notEvaluatedMarketClosed = $false
+$reason = ""
+if($marketClosedToday){
+  $notEvaluatedMarketClosed = $true
+  $okToday = $false   # deny preserved
+  $reason = "market_closed_today"
+}
+# POLICYB_MARKET_CLOSED_END
+
+
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 
 $okToday = $false
+$reason = ""
+$notEvaluatedMarketClosed = $false
+$marketClosedReason = ""
 $asOf = $todayLocal
 $evidence=@()
 
@@ -109,6 +132,9 @@ $out = [ordered]@{
   kind="phase23_status"
   as_of_date=$asOf
   ok_today=[bool]$okToday
+  reason=$reason
+  not_evaluated_market_closed=[bool]$notEvaluatedMarketClosed
+  market_closed_reason=$marketClosedReason
   evidence_paths=$evidence
   ts_utc=(Get-Date).ToUniversalTime().ToString("o")
 }
