@@ -43,7 +43,7 @@ if($rcRaw){
   try{
     $rcObj = $rcRaw | ConvertFrom-Json
     $rcObj = $rcObj
-    if($rc){
+    if($rcObj){
       if(($rcObj.PSObject.Properties.Name -contains "logs_dir") -and $rcObj.logs_dir){
         $logsDir = [string]$rcObj.logs_dir
       } elseif(($rcObj.PSObject.Properties.Name -contains "logs_dir_out") -and $rcObj.logs_dir_out){
@@ -126,8 +126,8 @@ if($marketClosedToday){
   $reason = "market_closed_today"
   $asOf = $todayLocal
   $okToday = $false
-  $p = $null
-  $evidence = @()
+# [POLICYB] removed: do not null $p (keep evidence_paths)
+# [POLICYB] removed: do not clear $evidence (keep evidence_paths)
 }
 # POLICYB_SKIP_SCAN_V1_END
 
