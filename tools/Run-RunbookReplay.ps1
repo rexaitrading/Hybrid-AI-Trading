@@ -66,8 +66,9 @@ $evhPath = Join-Path $toolsDir "Write-EvHardStatus.ps1"
 $bgPath  = Join-Path $toolsDir "Build-BlockGStatusStub.ps1"
 $dashPath= Join-Path $toolsDir "Build-OpsDashboard.ps1"
 $ksPath  = Join-Path $toolsDir "Write-KillSwitchStatus.ps1"
+$invPath = Join-Path $toolsDir "Write-InvariantsStatus.ps1"
 
-foreach($p in @($rcPath,$p4Path,$p23Path,$evhPath,$bgPath,$dashPath,$ksPath)){
+foreach($p in @($rcPath,$p4Path,$p23Path,$evhPath,$bgPath,$dashPath,$ksPath,$invPath)){
   if(-not (Test-Path -LiteralPath $p)){ Fail ("missing tool: " + $p) }
 }
 
@@ -136,6 +137,7 @@ Run-Step "ev_hard_status" { & $evhPath -Market $mk -Symbol $sy | Out-Null }
 Run-Step "blockg_stub"    { & $bgPath  -Market $mk -Symbol $sy | Out-Null }
 Run-Step "ops_dashboard"  { & $dashPath -Market $mk -Symbol $sy -Mode $Mode -EmitConsole:(-not $NoConsole) | Out-Null }
 Run-Step "killswitch_status" { & $ksPath -Market $mk -Symbol $sy -Mode $Mode -NoConsole:$NoConsole | Out-Null } -IgnoreFailure
+Run-Step "invariants_status" { & $invPath -Market $mk -Symbol $sy -Mode $Mode -NoConsole:$NoConsole | Out-Null } -IgnoreFailure
 
 # Build report (always emitted)
 # Derive trade_allowed from killswitch artifact (if present)
