@@ -2006,6 +2006,14 @@ if($marketClosedToday){
   }
 }
 # INTEL_GS_POLICYB_CLAMP_V1_PRE_END
+# POLICYB_AGE_CLAMP_V1_BEGIN
+# Policy B: market-closed days are NOT evaluated (DENY unchanged). Clamp age diagnostics only.
+if($marketClosedToday){
+  $intel_age_minutes = 0
+  $gsAgeDays = 0
+}
+# POLICYB_AGE_CLAMP_V1_END
+
 
 
 $payload = [ordered]@{
