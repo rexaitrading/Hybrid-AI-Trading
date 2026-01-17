@@ -18,10 +18,14 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $repoRoot = Split-Path -Parent $toolsDir
 $psExe    = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 
-$logsRoot = Join-Path $repoRoot "logs"
-if(-not (Test-Path -LiteralPath $logsRoot)){
-  New-Item -ItemType Directory -Force -Path $logsRoot | Out-Null
-}
+# A3_INVOKE_BLOCKG_RUNCONTEXT_BEGIN
+$rc = (& (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol $Symbol | Out-String | ConvertFrom-Json)
+if(-not $rc -or -not $rc.logs_dir){ throw "[FAIL-CLOSED] Resolve-RunContext missing logs_dir" }
+$logsRoot = ([string]$rc.logs_dir)
+if(-not (Test-Path -LiteralPath $logsRoot)){ New-Item -ItemType Directory -Force -Path $logsRoot | Out-Null }
+if($rc.PSObject.Properties.Name -contains "as_of_date"){ $env:HAT_AS_OF_DATE = ([string]$rc.as_of_date) }
+$env:HAT_LOGS_DIR = $logsRoot
+# A3_INVOKE_BLOCKG_RUNCONTEXT_END
 $ts = (Get-Date).ToString("yyyyMMdd_HHmmss")
 
 function Run-Tool([string]$label,[string[]]$argList,[int]$timeoutSec=120){

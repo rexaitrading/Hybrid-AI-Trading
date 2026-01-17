@@ -32,6 +32,17 @@ $Symbol = (($Symbol + "")).Trim().ToUpperInvariant()
 if(-not $Symbol){ $Symbol = "NVDA" }
 $env:HAT_SYMBOL = $Symbol
 
+# A3_PHASE1TO7_RUNCONTEXT_BEGIN
+$rc = (& (Join-Path $PSScriptRoot "Resolve-RunContext.ps1") -Market $env:HAT_MARKET -Symbol $env:HAT_SYMBOL | Out-String | ConvertFrom-Json)
+if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+if(-not $rc.logs_dir){ throw "[FAIL-CLOSED] Resolve-RunContext missing logs_dir" }
+$env:HAT_AS_OF_DATE = ([string]$rc.as_of_date)
+$env:HAT_LOGS_DIR   = ([string]$rc.logs_dir)
+if($rc.PSObject.Properties.Name -contains "session_name"){ $env:HAT_SESSION_NAME = ([string]$rc.session_name) }
+Write-Host ("[A3] rc market=" + $env:HAT_MARKET + " as_of=" + $env:HAT_AS_OF_DATE + " session=" + (($env:HAT_SESSION_NAME + "")).Trim() + " logs_dir=" + $env:HAT_LOGS_DIR) -ForegroundColor DarkGray
+# A3_PHASE1TO7_RUNCONTEXT_END
+
+
 function Run-Step([string]$name, [scriptblock]$sb){
   Write-Host "`n==================== $name ====================" -ForegroundColor Cyan
   & $sb
@@ -131,4 +142,3 @@ Run-Step "BlockG: Contract-only checker" {
 
 Write-Host "`nDONE: Run-Phase1ToPhase7Daily completed." -ForegroundColor Yellow
 exit 0
-

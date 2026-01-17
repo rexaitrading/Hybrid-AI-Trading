@@ -18,6 +18,17 @@ if(-not $env:HAT_MARKET){ $env:HAT_MARKET = "US" }
 $env:HAT_SYMBOL = ((($Symbol + "")).Trim().ToUpperInvariant())
 if(-not $env:HAT_SYMBOL){ $env:HAT_SYMBOL = "ALL" }
 # A3_PREMARKET_ENV_WIRE_END
+
+# A3_PREMARKET_RUNCONTEXT_BEGIN
+$rc = (& (Join-Path $PSScriptRoot "Resolve-RunContext.ps1") -Market $env:HAT_MARKET -Symbol $env:HAT_SYMBOL | Out-String | ConvertFrom-Json)
+if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+if(-not $rc.logs_dir){ throw "[FAIL-CLOSED] Resolve-RunContext missing logs_dir" }
+$env:HAT_AS_OF_DATE = ([string]$rc.as_of_date)
+$env:HAT_LOGS_DIR   = ([string]$rc.logs_dir)
+if($rc.PSObject.Properties.Name -contains "session_name"){ $env:HAT_SESSION_NAME = ([string]$rc.session_name) }
+Write-Host ("[A3] rc market=" + $env:HAT_MARKET + " as_of=" + $env:HAT_AS_OF_DATE + " session=" + (($env:HAT_SESSION_NAME + "")).Trim() + " logs_dir=" + $env:HAT_LOGS_DIR) -ForegroundColor DarkGray
+# A3_PREMARKET_RUNCONTEXT_END
+
 # ---- Phase today-ness hard gates (fail-closed) ----
 $phase4 = Join-Path $PSScriptRoot "Check-Phase4Today.ps1"
 & $phase4
@@ -66,7 +77,7 @@ if($Symbol -eq "ALL"){
 }
 #$root = (Resolve-Path ".").Path  # [A3] disabled (env-truth repo root already active)
 # [A3] disabled Set-Location $root (env-truth repo root already active)
-$today = (Get-Date).ToString("yyyy-MM-dd")
+$today = (($env:HAT_AS_OF_DATE + "")).Trim()
 
 Write-Host "[PRE] RepoRoot=$root Today=$today Symbol=$Symbol" -ForegroundColor Cyan
 
@@ -178,4 +189,3 @@ if(Test-Path $evEvidence){
 $rc = $LASTEXITCODE
 Write-Host "[PRE] BlockG check rc=$rc" -ForegroundColor Yellow
 exit $rc
-
