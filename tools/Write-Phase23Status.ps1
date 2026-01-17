@@ -78,10 +78,13 @@ if($marketClosedToday){
 
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 
-$okToday = $false
-$reason = ""
-$notEvaluatedMarketClosed = $false
-$marketClosedReason = ""
+# POLICYB_RESET_GUARD_BEGIN
+# Policy B: do NOT overwrite values already computed above. Only provide defaults if missing.
+if(-not (Get-Variable -Name okToday -Scope Local -ErrorAction SilentlyContinue)){ $okToday = $false }
+if(-not (Get-Variable -Name reason -Scope Local -ErrorAction SilentlyContinue)){ $reason = "" }
+if(-not (Get-Variable -Name notEvaluatedMarketClosed -Scope Local -ErrorAction SilentlyContinue)){ $notEvaluatedMarketClosed = $false }
+if(-not (Get-Variable -Name marketClosedReason -Scope Local -ErrorAction SilentlyContinue)){ $marketClosedReason = "" }
+# POLICYB_RESET_GUARD_END
 $asOf = $todayLocal
 $evidence=@()
 
