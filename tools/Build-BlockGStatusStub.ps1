@@ -401,7 +401,11 @@ $logsRoot = Join-Path $repoRoot "logs"
 try {
   $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
 } catch { $logsDirOut = $null }
-if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
+# G_READY_STUB_LOGSDIROUT_FAILCLOSED_BEGIN
+if(-not $logsDirOut){
+  throw ("[FAIL-CLOSED] Get-MarketLogRoot returned empty (no root logs fallback). market=" + (($Market + "")).Trim().ToUpperInvariant() + " repoRoot=" + $repoRoot)
+}
+# G_READY_STUB_LOGSDIROUT_FAILCLOSED_END
 $logsDir = $logsDirOut
 # CRISIS_REGIME_STATUS_BEGIN
 # A2: Crisis regime producer status (fail-closed for LIVE when missing/stale)
@@ -624,7 +628,11 @@ $logsRoot = Join-Path $repoRoot "logs"
 try {
   $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
 } catch { $logsDirOut = $null }
-if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
+# G_READY_STUB_LOGSDIROUT_FAILCLOSED_BEGIN
+if(-not $logsDirOut){
+  throw ("[FAIL-CLOSED] Get-MarketLogRoot returned empty (no root logs fallback). market=" + (($Market + "")).Trim().ToUpperInvariant() + " repoRoot=" + $repoRoot)
+}
+# G_READY_STUB_LOGSDIROUT_FAILCLOSED_END
 # repoRoot resolved above (canonical)
 $logsDir = $logsDirOut
 # CRISIS_REGIME_STATUS_BEGIN
