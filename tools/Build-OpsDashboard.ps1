@@ -189,6 +189,22 @@ try {
 } catch { }
 
 # --- Invariants & killswitch ---
+
+# KILLSWITCH_OUTPUT_ONLY_V1_BEGIN
+# Output-only kill-switch logic (no actions executed).
+function Add-KillReason([System.Collections.Generic.List[string]]$lst,[string]$msg){
+  try { if($msg){ $lst.Add($msg) | Out-Null } } catch { }
+}
+function Resolve-TopReason([System.Collections.Generic.List[string]]$violations,[string]$blockgTop){
+  try {
+    if($violations -and $violations.Count -gt 0){ return [string]$violations[0] }
+  } catch { }
+  $t = ([string]$blockgTop).Trim()
+  if($t){ return $t }
+  return "-"
+}
+# KILLSWITCH_OUTPUT_ONLY_V1_END
+
 $invOk = ($viol.Count -eq 0)
 $kill = $false
 $killAction = "NONE"
@@ -212,12 +228,37 @@ if($runMode -eq "LIVE"){
 }
 
 # killswitch mapping (output-only for now)
-if($runMode -in @("LIVE","PAPERLIVE")){
+# Policy:
+# - LIVE: any invariant violation => kill=true (DISARM). Crisis/flatten/portfolio_halt => FLATTEN_AND_DISARM.
+# - PAPERLIVE: invariant violation => kill=true (HALT_PAPERLIVE).
+# - PAPER: never kill; only report.
+$kill = $false
+$killAction = "NONE"
+$killReasons = New-Object System.Collections.Generic.List[string]
+
+if($runMode -eq "LIVE"){
+  if([bool]$risk.crisis_regime -or [bool]$risk.portfolio_halt -or [bool]$risk.risk_flatten){
+    $kill = $true
+    $killAction = "FLATTEN_AND_DISARM"
+    if([bool]$risk.crisis_regime){ Add-KillReason $killReasons "crisis_regime=true" }
+    if([bool]$risk.portfolio_halt){ Add-KillReason $killReasons "portfolio_halt=true" }
+    if([bool]$risk.risk_flatten){ Add-KillReason $killReasons "risk_flatten=true" }
+  }
   if($viol.Count -gt 0){
     $kill = $true
-    if($runMode -eq "LIVE"){ $killAction = "DISARM" } else { $killAction = "HALT_PAPERLIVE" }
-    foreach($v in $viol){ $killReasons.Add($v) | Out-Null }
+    if($killAction -eq "NONE"){ $killAction = "DISARM" }
+    foreach($v in $viol){ Add-KillReason $killReasons $v }
   }
+} elseif($runMode -eq "PAPERLIVE"){
+  if($viol.Count -gt 0){
+    $kill = $true
+    $killAction = "HALT_PAPERLIVE"
+    foreach($v in $viol){ Add-KillReason $killReasons $v }
+  }
+} else {
+  # PAPER: output-only; no kill
+  $kill = $false
+  $killAction = "NONE"
 }
 
 $payload = [ordered]@{
@@ -273,7 +314,7 @@ Write-Utf8NoBomLf $OutPath (($payload | ConvertTo-Json -Depth 8))
 
 if($EmitConsole){
   $top2 = ($top + "")
-  if(-not $top2){ $top2 = "-" }
+  $top2 = Resolve-TopReason $viol $top
   Write-Host ("[DASH] market=" + $mk + " sym=" + $sy + " mode=" + $runMode + " asof=" + $asOf + " closed=" + $mc + " sem=" + $sem + " kill=" + $kill + " top=" + $top2) -ForegroundColor Cyan
 }
 
