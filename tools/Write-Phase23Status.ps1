@@ -56,7 +56,7 @@ if($rcRaw){
   } catch { }
 }
 
-if(-not $todayLocal){ $todayLocal = (Get-Date).ToString("yyyy-MM-dd") }
+if(-not $todayLocal){ $todayLocal = (($env:HAT_AS_OF_DATE + "")).Trim(); if(-not $todayLocal){ $todayLocal = (($env:HAT_ASOF_DATE + "")).Trim() } if(-not $todayLocal){ throw "[FAIL-CLOSED] missing todayLocal (RunContext/env required)" } }
 
 # POLICYB_PHASE23_V1_BEGIN
 # Policy B: market-closed days are NOT EVALUATED but remain DENY.

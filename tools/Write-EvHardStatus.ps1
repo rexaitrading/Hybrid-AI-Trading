@@ -91,7 +91,7 @@ if($rcRaw){
   } catch { }
 }
 
-if(-not $todayLocal){ $todayLocal = (Get-Date).ToString("yyyy-MM-dd") }
+if(-not $todayLocal){ $todayLocal = (($env:HAT_AS_OF_DATE + "")).Trim(); if(-not $todayLocal){ $todayLocal = (($env:HAT_ASOF_DATE + "")).Trim() } if(-not $todayLocal){ throw "[FAIL-CLOSED] missing todayLocal (RunContext/env required)" } }
 
 # POLICYB_MARKET_CLOSED_BEGIN
 # Policy B: Market-closed days are NOT EVALUATED (diagnostic) but remain DENY (ok_today=false).
@@ -200,7 +200,7 @@ try{
   if(-not $m){ $m = (($env:HAT_MARKET + "")).Trim() }
   if(-not $s){ $s = (($env:HAT_SYMBOL + "")).Trim(); if(-not $s){ $s = "NVDA" } }
 
-  $todayLocal = (Get-Date).ToString("yyyy-MM-dd")
+  $todayLocal = (($env:HAT_AS_OF_DATE + "")).Trim(); if(-not $todayLocal){ $todayLocal = (($env:HAT_ASOF_DATE + "")).Trim() } if(-not $todayLocal){ throw "[FAIL-CLOSED] missing todayLocal (RunContext/env required)" }
   try{
     $rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
     if(Test-Path -LiteralPath $rcPath){

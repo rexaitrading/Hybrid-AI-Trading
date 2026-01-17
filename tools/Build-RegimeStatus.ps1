@@ -44,7 +44,11 @@ try {
   if($rcRaw){ $rc = $rcRaw | ConvertFrom-Json -ErrorAction Stop } else { $rc = $null }
 } catch { $rc = $null }
 # Fail-closed defaults
-$rc_as_of_date = (Get-Date).ToString("yyyy-MM-dd")
+# A3_REGIME_NO_LOCAL_ASOF_BEGIN
+$rc_as_of_date = (($env:HAT_AS_OF_DATE + "")).Trim()
+if(-not $rc_as_of_date){ $rc_as_of_date = (($env:HAT_ASOF_DATE + "")).Trim() }  # legacy
+if(-not $rc_as_of_date){ $rc_as_of_date = "" }  # remain empty if RC unreadable -> regime_ok_today fails later
+# A3_REGIME_NO_LOCAL_ASOF_END
 $rc_as_of_date_source = "local_fallback"
 $rc_market_closed_today = $true
 $rc_market_closed_reason = "unknown"
@@ -100,7 +104,7 @@ function Read-RunContextSafe([string]$RepoRoot,[string]$Market,[string]$Symbol,[
 
 # breadcrumb always (proves rc path + rawAll length)
 try {
-  $dbg = Join-Path $RepoRoot "logs\US\_runcontext_seen_always.txt"
+# [A3_DISABLED]   $dbg = Join-Path $RepoRoot "logs\US\_runcontext_seen_always.txt"
   New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dbg) | Out-Null
   $msg = "ts_utc=" + (Get-Date).ToUniversalTime().ToString("o") + "`n" +
          "rcPath=" + $rcPath + "`n" +
@@ -111,7 +115,7 @@ try {
   [System.IO.File]::WriteAllText($dbg, $msg, (New-Object System.Text.UTF8Encoding($false)))
 } catch { }if(-not $rawAll){
     try {
-      $dbg = Join-Path $RepoRoot "logs\US\_runcontext_capture_last.txt"
+# [A3_DISABLED]       $dbg = Join-Path $RepoRoot "logs\US\_runcontext_capture_last.txt"
       New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dbg) | Out-Null
       [System.IO.File]::WriteAllText($dbg, ("EMPTY rawAll; exit=" + $p.ExitCode), (New-Object System.Text.UTF8Encoding($false)))
     } catch { }
@@ -122,7 +126,7 @@ try {
   $i1 = $rawAll.LastIndexOf('}')
   if($i0 -lt 0 -or $i1 -le $i0){
     try {
-      $dbg = Join-Path $RepoRoot "logs\US\_runcontext_capture_last.txt"
+# [A3_DISABLED]       $dbg = Join-Path $RepoRoot "logs\US\_runcontext_capture_last.txt"
       New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dbg) | Out-Null
       [System.IO.File]::WriteAllText($dbg, ("NO JSON; exit=" + $p.ExitCode + "
 " + $rawAll), (New-Object System.Text.UTF8Encoding($false)))
@@ -133,7 +137,7 @@ try {
   $json = $rawAll.Substring($i0, ($i1 - $i0 + 1))
   try { return ($json | ConvertFrom-Json -ErrorAction Stop) } catch {
     try {
-      $dbg = Join-Path $RepoRoot "logs\US\_runcontext_capture_last.txt"
+# [A3_DISABLED]       $dbg = Join-Path $RepoRoot "logs\US\_runcontext_capture_last.txt"
       New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dbg) | Out-Null
       [System.IO.File]::WriteAllText($dbg, ("JSON PARSE FAIL; exit=" + $p.ExitCode + "
 " + $rawAll), (New-Object System.Text.UTF8Encoding($false)))
@@ -147,7 +151,15 @@ $logsDirOut = $null
 try {
   $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
 } catch { $logsDirOut = $null }
-if(-not $logsDirOut){ $logsDirOut = Join-Path $repoRoot "logs" }
+# A3_REGIME_LOGSDIR_OUT_BEGIN
+$logsDirOut = (($env:HAT_LOGS_DIR_OUT + "")).Trim()
+if(-not $logsDirOut){ $logsDirOut = (($env:HAT_LOGS_DIR + "")).Trim() }
+if(-not $logsDirOut){
+  try { $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market } catch { $logsDirOut = $null }
+  $logsDirOut = (($logsDirOut + "")).Trim()
+}
+if(-not $logsDirOut){ $logsDirOut = Join-Path (Join-Path $repoRoot "logs") $Market }
+# A3_REGIME_LOGSDIR_OUT_END
 New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
 
 # 1) Crisis producer is authoritative for CRISIS
