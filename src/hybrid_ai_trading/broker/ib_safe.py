@@ -21,6 +21,11 @@ from hybrid_ai_trading.execution.live_arm import require_live_arm
 # -----------------------------
 # Live/paper detection + symbol
 # -----------------------------
+# A1_PAPERLIVE_LIVELIKE_V3_BEGIN
+def _is_live_like_mode(mode: str) -> bool:
+    m = (mode or "").upper().strip()
+    return m in ("LIVE", "PAPERLIVE")
+# A1_PAPERLIVE_LIVELIKE_V3_END
 def _is_live(ctx: RunContext | None = None) -> bool:
     # A3: ctx is authoritative; env is fallback.
     try:
@@ -118,9 +123,9 @@ def _runctx_from_ps(market: str, symbol: str, as_of_date: str | None = None) -> 
     return json.loads(out[i0 : i1 + 1])
 
 def _enforce_live_session_gate(ctx: RunContext | None, meta: Dict[str, Any] | None, sym: str | None) -> None:
-    # Enforce ONLY for LIVE (NOT for PAPER/PAPERLIVE).
+    # Enforce for LIVE and PAPERLIVE (PAPER remains exempt).
     mode = _infer_mode(ctx)
-    if mode != "LIVE":
+    if not _is_live_like_mode(mode):
         return
 
     # Prefer ctx truth if available
@@ -201,9 +206,10 @@ def ib_place_order_chokepoint(ib: Any, *args: Any, ctx: RunContext | None = None
             sym = str(meta.get("symbol", "") or "").upper().strip()
         except Exception:
             sym = None
+    mode = _infer_mode(ctx)
     _enforce_live_session_gate(ctx, meta, sym)
     # Enforce Block-G + live gates (fail-closed)
-    if _is_live(ctx):
+    if _is_live_like_mode(mode):
         # CrashMode cooldown deny (defense-in-depth). Fail-closed for LIVE/PAPERLIVE.
         # Allow risk-action callers (flatten/close) to pass a meta flag.
         allow_risk_action = False
@@ -421,4 +427,3 @@ def map_ib_error(err: BaseException) -> str:
     if "unreachable" in msg:
         return "HOST_UNREACHABLE"
     return "UNKNOWN"
-
