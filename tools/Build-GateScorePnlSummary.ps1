@@ -18,7 +18,11 @@ if(-not $m){ $m = "US" }
 $Market = $m
 
 $gm = Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1"
-$logsDir = Join-Path $repoRoot "logs"
+# A3_GS_PNL_BEGIN
+$logsDir = (($env:HAT_LOGS_DIR + "")).Trim()
+if($env:HAT_MARKET -and (-not $logsDir)){ throw "[FAIL-CLOSED] HAT_MARKET set but HAT_LOGS_DIR missing (A3 wiring required)" }
+if(-not $logsDir){ $logsDir = Join-Path $repoRoot "logs" }
+# A3_GS_PNL_END
 if(Test-Path -LiteralPath $gm){
   $ld = (& "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $gm -Market $Market | Out-String).Trim()
   if($ld){ $logsDir = $ld }
@@ -28,7 +32,22 @@ if(Test-Path -LiteralPath $gm){
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 
 # Market-aware today (RunContext)
-$today = (Get-Date).ToString("yyyy-MM-dd")
+# A3_GS_PNL_TODAY_BEGIN
+$today = (($env:HAT_AS_OF_DATE + "")).Trim()
+if(-not $today){ $today = (($env:HAT_ASOF_DATE + "")).Trim() }  # legacy fallback
+if(-not $today){
+  $rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+  if(Test-Path -LiteralPath $rcPath){
+    $rawRc = (& $rcPath -Market $Market -Symbol NVDA | Out-String).Trim()
+    $i0=$rawRc.IndexOf("{"); $i1=$rawRc.LastIndexOf("}")
+    if($i0 -ge 0 -and $i1 -gt $i0){ $rc = ($rawRc.Substring($i0, ($i1-$i0+1))) | ConvertFrom-Json }
+    if($rc -and $rc.as_of_date){ $today = ([string]$rc.as_of_date).Substring(0,10) }
+  }
+}
+if(-not $today -and $env:HAT_MARKET){ throw "[FAIL-CLOSED] missing as_of_date for market context" }
+if($today.Length -ge 10){ $today = $today.Substring(0,10) }
+$env:HAT_AS_OF_DATE = $today
+# A3_GS_PNL_TODAY_END
 try{
   $rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
   if(Test-Path -LiteralPath $rcPath){

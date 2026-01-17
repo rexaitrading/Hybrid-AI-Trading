@@ -10,10 +10,25 @@ $ErrorActionPreference="Stop"
 $root = (Resolve-Path ".").Path
 Set-Location $root
 
-$today = (Get-Date).ToString("yyyy-MM-dd")
+# A3_GS_RUN_DAILY_BEGIN
+$today = (($env:HAT_AS_OF_DATE + "")).Trim()
+if(-not $today){ $today = (($env:HAT_ASOF_DATE + "")).Trim() }  # legacy fallback
+if(-not $today){
+  $mk = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant(); if(-not $mk){ $mk="US" }
+  $rc = (& ".\tools\Resolve-RunContext.ps1" -Market $mk -Symbol NVDA | Out-String | ConvertFrom-Json)
+  if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
+  $today = ([string]$rc.as_of_date).Trim()
+}
+if($today.Length -ge 10){ $today = $today.Substring(0,10) }
+$env:HAT_AS_OF_DATE = $today
+# A3_GS_RUN_DAILY_END
 $tsUtc  = (Get-Date).ToUniversalTime().ToString("o")
 
-$logDir = Join-Path $root "logs"
+# A3_GS_RUN_DAILY_LOGDIR_BEGIN
+$logDir = (($env:HAT_LOGS_DIR + "")).Trim()
+if($env:HAT_MARKET -and (-not $logDir)){ throw "[FAIL-CLOSED] HAT_MARKET set but HAT_LOGS_DIR missing (A3 wiring required)" }
+if(-not $logDir){ $logDir = Join-Path $root "logs" }
+# A3_GS_RUN_DAILY_LOGDIR_END
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $outCsv = Join-Path $logDir "gatescore_daily_summary.csv"
 

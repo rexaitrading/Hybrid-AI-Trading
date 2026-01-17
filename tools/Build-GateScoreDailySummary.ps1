@@ -36,7 +36,11 @@ $Market = $m
 
 # ---- Market-aware logs dir (A3) ----
 $gm = Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1"
-$logs = Join-Path $repoRoot "logs"
+# A3_GS_DAILY_SUMMARY_BEGIN
+$logs = (($env:HAT_LOGS_DIR + "")).Trim()
+if($env:HAT_MARKET -and (-not $logs)){ throw "[FAIL-CLOSED] HAT_MARKET set but HAT_LOGS_DIR missing (A3 wiring required)" }
+if(-not $logs){ $logs = Join-Path $repoRoot "logs" }
+# A3_GS_DAILY_SUMMARY_END
 if(Test-Path -LiteralPath $gm){
   $ld = (& "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $gm -Market $Market | Out-String).Trim()
   if($ld){ $logs = $ld } else { $logs = Join-Path (Join-Path $repoRoot "logs") $Market }
@@ -49,7 +53,23 @@ $src = Join-Path $logs "gatescore_pnl_summary.csv"
 $out = Join-Path $logs "gatescore_daily_summary.csv"
 
 # ---- Canonical ASOF (A3 single truth) ----
-$asOf = (Get-Date).ToString("yyyy-MM-dd")
+# A3_GS_ASOF_BEGIN
+$asOf = (($env:HAT_AS_OF_DATE + "")).Trim()
+if(-not $asOf){ $asOf = (($env:HAT_ASOF_DATE + "")).Trim() }  # legacy fallback
+if(-not $asOf){
+  # Resolve-RunContext is authoritative
+  $rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
+  if(Test-Path -LiteralPath $rcPath){
+    $rcRaw = (& "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $rcPath -Market $Market -Symbol NVDA | Out-String).Trim()
+    $i0=$rcRaw.IndexOf("{"); $i1=$rcRaw.LastIndexOf("}")
+    if($i0 -ge 0 -and $i1 -gt $i0){ $rc = ($rcRaw.Substring($i0, ($i1-$i0+1))) | ConvertFrom-Json }
+    if($rc -and $rc.as_of_date){ $asOf = Slice10 ([string]$rc.as_of_date) }
+  }
+}
+if(-not $asOf -and $env:HAT_MARKET){ throw "[FAIL-CLOSED] missing as_of_date for market context" }
+if($asOf.Length -ge 10){ $asOf = $asOf.Substring(0,10) }
+$env:HAT_AS_OF_DATE = $asOf
+# A3_GS_ASOF_END
 try{
   $rcPath = Join-Path $repoRoot "tools\Resolve-RunContext.ps1"
   if(Test-Path -LiteralPath $rcPath){
