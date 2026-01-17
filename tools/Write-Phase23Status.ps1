@@ -99,7 +99,7 @@ if(-not (Get-Variable -Name notEvaluatedMarketClosed -Scope Local -ErrorAction S
 if(-not (Get-Variable -Name marketClosedReason -Scope Local -ErrorAction SilentlyContinue)){ $marketClosedReason = "" }
 # POLICYB_RESET_GUARD_END
 $asOf = $todayLocal
-$evidence=@()
+# [A2] removed clobber: do not clear $evidence here
 
 # Evidence candidates (A2): NON-US must not fall back to root logs (prevents stale/cross-market bleed)
 $cands = @(
@@ -113,7 +113,7 @@ if((($Market + "")).Trim().ToUpperInvariant() -eq "US"){
   )
 }
 
-$p = $null
+# [A2] removed clobber: do not reset $p to $null here
 foreach($cand in $cands){
   if(Test-Path -LiteralPath $cand){ $p = $cand; break }
 }
@@ -163,7 +163,7 @@ try {
   if($null -ne $evidence){
     $evidence = @($evidence | Where-Object { ($_ -ne $null) -and (("$($_)".Trim()).Length -gt 0) })
   } else {
-    $evidence = @()
+# [A2] removed clobber: do not clear $evidence here
   }
 } catch { $evidence = @() }
 # A2_EVIDENCE_SANITIZE_END
