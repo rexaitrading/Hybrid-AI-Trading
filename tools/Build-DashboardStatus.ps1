@@ -6,7 +6,10 @@ param(
   [ValidateSet("US","JP","HK","SG","IN","KR","TW","ALL")]
   [string]$Market = "ALL",
 
-  [string]$OutPath = ".\logs\dashboard_status.json"
+  [string]$OutPath = ".\logs\dashboard_status.json",
+
+  [ValidateSet("STRICT","ALLOW_CLOSED_PAPER")]
+  [string]$ClosedDayPolicy = "ALLOW_CLOSED_PAPER"
 )
 
 Set-StrictMode -Version Latest
@@ -66,23 +69,54 @@ foreach($m in $markets){
   $phase4  = Read-JsonOrNull (Join-Path $mDir "phase4_validation_passed.json")
   $evhard  = Read-JsonOrNull (Join-Path $mDir "ev_hard_status.json")
 
-  # minimal “todayness” inference (if file missing => unknown => RED)
+  # todayness inference (fail-closed, schema-safe)
   $today = $nowLocal.ToString("yyyy-MM-dd")
   $todayness_ok = $false
   $todayness_reason = ""
+  $p23_reason = ""
 
-  # prefer explicit fields if present
-  if($phase23 -and ($phase23.PSObject.Properties.Name -contains "phase23_health_ok_today")){
-    $todayness_ok = [bool]$phase23.phase23_health_ok_today
-    $todayness_reason = "phase23.phase23_health_ok_today"
-  } elseif($phase4 -and ($phase4.PSObject.Properties.Name -contains "validation_passed")){
-    # phase4 validation is not perfect “todayness” but it’s a signal
-    $todayness_ok = [bool]$phase4.validation_passed
-    $todayness_reason = "phase4.validation_passed (proxy)"
-    if(-not $todayness_ok){ $todayness_reason += " (false)" }
-  } else {
-    $todayness_ok = $false
-    $todayness_reason = "missing phase23/phase4 todayness signals"
+  if($phase23){
+    if($phase23.PSObject.Properties.Name -contains "reason"){ $p23_reason = ("" + $phase23.reason) }
+
+    if($phase23.PSObject.Properties.Name -contains "phase23_health_ok_today"){
+      $todayness_ok = [bool]$phase23.phase23_health_ok_today
+      $todayness_reason = "phase23_health_ok_today"
+    } elseif($phase23.PSObject.Properties.Name -contains "phase23_ok_today"){
+      $todayness_ok = [bool]$phase23.phase23_ok_today
+      $todayness_reason = "phase23_ok_today"
+    } elseif($phase23.PSObject.Properties.Name -contains "ok_today"){
+      $todayness_ok = [bool]$phase23.ok_today
+      $todayness_reason = "ok_today"
+    }
+  }
+
+  if(-not $todayness_ok){
+    if($phase4){
+      if($phase4.PSObject.Properties.Name -contains "phase4_ok_today"){
+        $todayness_ok = [bool]$phase4.phase4_ok_today
+        $todayness_reason = "phase4_ok_today"
+      } elseif($phase4.PSObject.Properties.Name -contains "validation_passed"){
+        $todayness_ok = [bool]$phase4.validation_passed
+        $todayness_reason = "validation_passed"
+      } elseif($phase4.PSObject.Properties.Name -contains "ok"){
+        $todayness_ok = [bool]$phase4.ok
+        $todayness_reason = "ok"
+      }
+    }
+  }
+
+  if(-not $todayness_ok){
+    $todayness_reason = "missing_todayness_signals"
+  }
+
+  # Closed-day policy:
+  # - LIVE: always strict (fail-closed)
+  # - PAPER/PAPERLIVE: allow closed days to proceed as AMBER (not RED)
+  if((-not $todayness_ok) -and ($Mode -ne "LIVE") -and ($ClosedDayPolicy -eq "ALLOW_CLOSED_PAPER")){
+    if($p23_reason -eq "market_closed_today"){
+      $todayness_ok = $true
+      $todayness_reason = "closed_day_allowed_for_paper"
+    }
   }
 
   # Block-G status (best-effort; missing => AMBER; LIVE requires strict)
