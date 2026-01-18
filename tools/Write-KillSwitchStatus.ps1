@@ -224,7 +224,8 @@ $obj2 = [pscustomobject]@{
     slip_samples = $slipSamples
     slip_max_bps = $slipMaxBps
     slip_median_bps_observed = $slipMedianObs
-    slip_triggered = $slipTriggeredkill = $kill
+    slip_triggered = $slipTriggered
+    kill = $kill
   top_reason = $top
   signal = $sig
   age_min = $ageMin
