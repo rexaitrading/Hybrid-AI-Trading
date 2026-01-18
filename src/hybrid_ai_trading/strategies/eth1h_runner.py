@@ -362,7 +362,7 @@ class ETH1HRunner:
                 else px
             )
 
-        fill = self.logger.fill_event(sub, px_fill=filled_px, order_id=oid, meta=meta)
+        fill = self.logger.fill_event(sub, px_fill=filled_px, order_id=oid, meta={**(meta if isinstance(meta, dict) else {}), **meta_extra, "expected_px": float(px), "requested_price": float(px)})
         self.risk.on_fill(side=side, qty=qty, px=filled_px, bar_ts=last_ts)
         self.alerts.notify(
             "filled",
