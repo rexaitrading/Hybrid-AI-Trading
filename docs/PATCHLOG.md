@@ -326,3 +326,20 @@ tools/Disarm-NVDA-Live.ps1
 - Fix: Write-Phase23Status / Write-EvHardStatus now fail-closed to market_closed_today when RunContext is missing/unreadable (prevents blank reason/not_evaluated fields).
 - Result: KR phase23_status.json and ev_hard_status.json now emit ok_today=false + not_evaluated_market_closed=true + reason=market_closed_today on closed days.
 - CHECKPOINT: CHECKPOINT_20260117_KR_CLOSED_DAY_SEMANTICS_GREEN
+## 2026-01-18 01:16:45 — Trade labeling + AAR scaffolding (US/PAPERLIVE proofed)
+
+**New tools:**
+- `tools/Build-TradeLabels.ps1` — writes `trade_labels.jsonl` from orders + gatescore (+ optional sim/regime inputs), truth-preserving.
+- `tools/Build-DailyAAR.ps1` — generates `daily_aar.md` from `trade_labels.jsonl` only (no guessing).
+- `tools/Build-Counterfactuals.ps1` — truth-preserving stub: writes blocked record when bars cache missing.
+
+**Hard-proven fixes inside TradeLabels:**
+- Brace mismatch in `Pick-GS` from non-balanced replacement ? removed extra `}` at line 117.
+- `if` used as expression inside hashtable (`= (if(...))`) ? converted to `= $(if(...){...} else {...})`.
+
+**Verification:**
+- Parse: `Parser.ParseFile` captured-errors ? **PARSE_OK** (all 3 tools)
+- Runtime: `Build-TradeLabels.ps1 -Market US -Symbol NVDA -Mode PAPERLIVE` ? wrote `logs/US/trade_labels.jsonl` (1 row)
+
+**Scope:** tools/Build-TradeLabels.ps1, tools/Build-DailyAAR.ps1, tools/Build-Counterfactuals.ps1
+
