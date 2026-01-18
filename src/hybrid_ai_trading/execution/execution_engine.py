@@ -16,7 +16,6 @@ Responsibilities:
 
 import logging
 from datetime import datetime, timezone
-from datetime import datetime
 from typing import Any, Dict, Optional
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
 from hybrid_ai_trading.execution.live_ready_stamp import require_nvda_live_stamp

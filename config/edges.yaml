@@ -1,0 +1,60 @@
+schema: edges.v1
+as_of: 2026-01-18
+notes: >
+  Ladder-3 edge contract. 2-3 micro-edges only. Off-market definition.
+  These edges are definitions; live proofs and execution validation occur in Phase-3 market hours.
+
+edges:
+  - id: ORB_LONG_V1
+    market: US
+    symbol_set: [NVDA, SPY, QQQ]
+    family: trend_continuation
+    description: "RTH ORB breakout long-only; enter on breakout, exit via stop/target/VWAP fail/time stop."
+    entry:
+      trigger: "close breaks ORB_high after ORB window"
+      window_ny: { orb_start: "09:30", orb_end: "09:34", trade_start: "09:35", trade_end: "16:00" }
+      cooldown_minutes: 5
+    invalidation:
+      rule: "stop hit"
+      stop_model: { kind: "ATR", atr_n: 14, atr_mult: 1.0, min_stop_abs: 0.10 }
+    take_profit:
+      rule: "R-multiple target"
+      r_mult_tp: 1.2
+    time_stop:
+      bars: 45
+    deny_rules:
+      - "insufficient_rth_coverage"
+      - "risk_guard_denied"
+      - "killswitch_halt"
+    scoring_params:
+      risk_unit_usd: 100.0
+      fee_per_trade_usd: 0.35
+      slip_bps: 1.5
+      max_shares: 500
+
+  - id: VWAP_MEANREV_LONG_V1
+    market: US
+    symbol_set: [NVDA]
+    family: mean_reversion
+    description: "Mean reversion toward VWAP after sharp deviation; conservative exits."
+    entry:
+      trigger: "price deviates below VWAP by threshold then reclaims"
+      vwap_dev_bps: 20.0
+      confirm_bars: 2
+    invalidation:
+      rule: "stop hit"
+      stop_model: { kind: "ATR", atr_n: 14, atr_mult: 1.2, min_stop_abs: 0.10 }
+    take_profit:
+      rule: "VWAP touch or R-multiple"
+      r_mult_tp: 1.0
+    time_stop:
+      bars: 30
+    deny_rules:
+      - "news_impulse_active"
+      - "risk_guard_denied"
+      - "killswitch_halt"
+    scoring_params:
+      risk_unit_usd: 100.0
+      fee_per_trade_usd: 0.35
+      slip_bps: 2.0
+      max_shares: 400
