@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [ValidateSet("NVDA","SPY","QQQ")] [string]$Symbol="NVDA",
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")] [string]$Market="US"
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW")] [string]$Market="US"
 )
 Set-StrictMode -Version Latest
 

@@ -7,7 +7,7 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW")]
   [string]$Market = "US",
 
   [int]$WindowBars = 180,

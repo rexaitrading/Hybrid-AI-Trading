@@ -1,0 +1,75 @@
+[CmdletBinding()]
+param(
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [string]$Market = "US",
+  [string]$AsOfDate = ""
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference="Stop"
+chcp 65001 | Out-Null
+
+$toolsDir = Split-Path -Parent $PSCommandPath
+$repoRoot = Split-Path -Parent $toolsDir
+$cfg = Join-Path $repoRoot ("configs\markets\" + $Market + ".json")
+if(-not (Test-Path -LiteralPath $cfg)){ throw "Missing market config: $cfg" }
+
+$j = Get-Content -LiteralPath $cfg -Raw -Encoding UTF8 | ConvertFrom-Json
+$tzRaw = [string]$j.tz
+$cal = [string]$j.calendar_id
+
+function Resolve-TimeZoneInfo([string]$tzId){
+  # Accept Windows tz ids; if config stores IANA ids, map a minimal subset.
+  $map = @{
+    "America/New_York" = "Eastern Standard Time"
+    "America/Chicago"  = "Central Standard Time"
+    "America/Los_Angeles" = "Pacific Standard Time"
+    "Asia/Tokyo" = "Tokyo Standard Time"
+    "Asia/Hong_Kong" = "China Standard Time"
+    "Asia/Singapore" = "Singapore Standard Time"
+    "UTC" = "UTC"
+  }
+
+  $candidate = ($tzId + "").Trim()
+  if(-not $candidate){ $candidate = "UTC" }
+
+  try { return [System.TimeZoneInfo]::FindSystemTimeZoneById($candidate) } catch { }
+
+  if($map.ContainsKey($candidate)){
+    try { return [System.TimeZoneInfo]::FindSystemTimeZoneById($map[$candidate]) } catch { }
+  }
+
+  # Last resort: fail-closed to UTC
+  return [System.TimeZoneInfo]::Utc
+}
+
+function Parse-HHMM([string]$hhmm){
+  if(-not $hhmm){ return $null }
+  $t = $hhmm.Trim()
+  return [TimeSpan]::ParseExact($t, "hh\:mm", $null)
+}
+function LocalDateTime([string]$ymd, [TimeSpan]$ts){
+  return [datetime]::ParseExact($ymd, "yyyy-MM-dd", $null).Add($ts)
+}
+
+$tzi = Resolve-TimeZoneInfo $tzRaw
+$tzResolvedId = $tzi.Id
+
+# AsOfDate default: today in market tz (best-effort; fallback to local date)
+$asOfSource = "param"
+if(-not $AsOfDate){
+  $asOfSource = "market_tz_now"
+  try {
+    $nowUtc = [DateTimeOffset]::UtcNow
+    $local = [System.TimeZoneInfo]::ConvertTime($nowUtc.UtcDateTime, $tzi)
+    $AsOfDate = $local.ToString("yyyy-MM-dd")
+  } catch {
+    $AsOfDate = (Get-Date).ToString("yyyy-MM-dd")
+    $asOfSource = "local_fallback"
+  }
+}
+
+# Base closed-day logic: weekend
+$dt = [DateTime]::ParseExact($AsOfDate,"yyyy-MM-dd",$null)
+$closed = ($dt.DayOfWeek -eq "Saturday" -or $dt.DayOfWeek -eq "Sunday")
+$closed_reason = if($closed){"weekend"}else{""}

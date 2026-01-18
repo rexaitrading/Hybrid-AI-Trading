@@ -1,17 +1,9 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ")]
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
   [string]$Market = "US",
   [string]$AsOfDate = ""
 )
-
-# --- Stock Connect market ID normalization (no engine constraints) ---
-$marketIn = ($Market + "").Trim().ToUpperInvariant()
-switch($marketIn){
-default { }
-}
-# --- end normalization ---
-
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
@@ -34,9 +26,7 @@ function Resolve-TimeZoneInfo([string]$tzId){
     "America/Los_Angeles" = "Pacific Standard Time"
     "Asia/Tokyo" = "Tokyo Standard Time"
     "Asia/Hong_Kong" = "China Standard Time"
-    "Asia/Taipei" = "Taipei Standard Time"
     "Asia/Singapore" = "Singapore Standard Time"
-    "Asia/Shanghai"  = "China Standard Time"
     "UTC" = "UTC"
   }
 
@@ -58,7 +48,6 @@ function Parse-HHMM([string]$hhmm){
   $t = $hhmm.Trim()
   return [TimeSpan]::ParseExact($t, "hh\:mm", $null)
 }
-
 function LocalDateTime([string]$ymd, [TimeSpan]$ts){
   return [datetime]::ParseExact($ymd, "yyyy-MM-dd", $null).Add($ts)
 }
@@ -71,9 +60,9 @@ $asOfSource = "param"
 if(-not $AsOfDate){
   $asOfSource = "market_tz_now"
   try {
-    $nowUtc0 = [DateTimeOffset]::UtcNow
-    $local0 = [System.TimeZoneInfo]::ConvertTime($nowUtc0.UtcDateTime, $tzi)
-    $AsOfDate = $local0.ToString("yyyy-MM-dd")
+    $nowUtc = [DateTimeOffset]::UtcNow
+    $local = [System.TimeZoneInfo]::ConvertTime($nowUtc.UtcDateTime, $tzi)
+    $AsOfDate = $local.ToString("yyyy-MM-dd")
   } catch {
     $AsOfDate = (Get-Date).ToString("yyyy-MM-dd")
     $asOfSource = "local_fallback"
@@ -99,7 +88,6 @@ try {
         $dates = @($obj.closed_dates)
       }
     } elseif($hj.PSObject.Properties.Name -contains "closed_dates") {
-      # Back-compat: top-level applies to US only
       if($m -eq "US"){ $dates = @($hj.closed_dates) }
     }
 
@@ -131,10 +119,6 @@ $inRth = $false
 $inLunch = $false
 $isOpenNow = $false
 
-# NEW: trading day + session label (authoritative)
-$isTradingDay = (-not $closed)
-$sessionName = "CLOSED"
-
 try {
   $nowUtc = [DateTimeOffset]::UtcNow
   $nowLocal = [System.TimeZoneInfo]::ConvertTime($nowUtc.UtcDateTime, $tzi)
@@ -143,7 +127,6 @@ try {
   if(-not $closed){
     $o = Parse-HHMM $rthOpen
     $c = Parse-HHMM $rthClose
-
     if($o -and $c){
       $startDt = LocalDateTime $AsOfDate $o
       $endDt   = LocalDateTime $AsOfDate $c
@@ -158,64 +141,9 @@ try {
       }
 
       $isOpenNow = ($inRth -and -not $inLunch)
-
-      # Session label
-      if($nowLocal -lt $startDt){
-        $sessionName = "PRE_OPEN"
-      } elseif($nowLocal -ge $endDt){
-        $sessionName = "AFTER_CLOSE"
-      } else {
-        if($inLunch){
-          $sessionName = "LUNCH_BREAK"
-        } elseif($isOpenNow){
-          $sessionName = "RTH"
-        } else {
-          $sessionName = "RTH_CLOSED"
-        }
-      }
-    } else {
-      # No valid RTH window => fail-closed
-      $isTradingDay = $false
-      $isOpenNow = $false
-      $sessionName = "CLOSED"
     }
-  } else {
-    $isOpenNow = $false
-    $sessionName = "CLOSED"
   }
 } catch {
-  # fail-closed
-  $closed = $true
-  if(-not $closed_reason){ $closed_reason = "error" }
-  $isTradingDay = $false
-  $inRth = $false
-  $inLunch = $false
+  # fail-closed: keep isOpenNow=false
   $isOpenNow = $false
-  $sessionName = "CLOSED"
 }
-
-[pscustomobject]@{
-  market = $Market
-  tz = $tzRaw
-  tz_resolved_id = $tzResolvedId
-  calendar_id = $cal
-  as_of_date = $AsOfDate
-  as_of_date_source = $asOfSource
-
-  market_closed_today = [bool]$closed
-  market_closed_reason = $closed_reason
-
-  is_trading_day = [bool]$isTradingDay
-  session_name = $sessionName
-
-  rth_open_local = $rthOpen
-  rth_close_local = $rthClose
-  lunch_start_local = $lunchStart
-  lunch_end_local = $lunchEnd
-
-  now_utc = $nowUtcIso
-  now_local = $nowLocalIso
-  in_rth = [bool]$inRth
-  in_lunch = [bool]$inLunch
-  is_open_now = [bool]$isOpenNow
-} | ConvertTo-Json -Depth 6

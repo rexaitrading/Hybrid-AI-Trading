@@ -2,7 +2,7 @@
 param(
     [ValidateSet("NVDA","SPY","QQQ","ALL")]
     [string]$Symbol = "ALL",
-    [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+    [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ")]
     [string]$Market = "",
     [switch]$StrictToday
 )

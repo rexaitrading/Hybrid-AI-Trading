@@ -2,7 +2,7 @@
 param(
   [int]$MinEvents = 120,
 
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW")]
   [string]$Market = ((($env:HAT_MARKET + "")).Trim().ToUpperInvariant()),
 
   [string]$AsOfDate = ((($env:HAT_ASOF_DATE + "")).Trim()),

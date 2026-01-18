@@ -1,0 +1,20 @@
+$payload = [ordered]@{Cm
+# CRASHMODE_FLATTEN_READER_BEGIN
+# CrashMode flatten evidence (producer: logs/<Market>/crashmode_flatten_status.json). MUST be outside payload hashtable.
+$crashFlattenOk = $false
+$crashFlattenExit = 0
+$crashFlattenPath = Join-Path $logsDirOut "crashmode_flatten_status.json"
+try {
+  if(Test-Path -LiteralPath $crashFlattenPath){
+    $fj = Get-Content -LiteralPath $crashFlattenPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if($fj){
+      if($fj.PSObject.Properties.Name -contains "ok"){ $crashFlattenOk = [bool]$fj.ok }
+      if($fj.PSObject.Properties.Name -contains "exit_code"){ $crashFlattenExit = [int]$fj.exit_code }
+    }
+  }
+} catch {
+  $crashFlattenOk = $false
+  $crashFlattenExit = 2
+}
+# CRASHMODE_FLATTEN_READER_END
+$payload = [ordered]@{

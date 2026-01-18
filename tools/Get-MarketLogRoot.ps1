@@ -1,16 +1,14 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory=$true)]
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ")]
   [string]$Market
 )
 
 # --- Stock Connect market ID normalization (NO engine constraints; logs MUST match Resolve-RunContext) ---
 $marketIn = ($Market + "").Trim().ToUpperInvariant()
 switch($marketIn){
-  "CN_SH" { $Market = "HK_SH" }
-  "CN_SZ" { $Market = "HK_SZ" }
-  default { }
+default { }
 }
 # --- end normalization ---
 

@@ -4,7 +4,7 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")]
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ")]
   [string]$Market = "US",
 
   [switch]$Build
@@ -53,10 +53,7 @@ function Resolve-MarketSafe([string]$MarketParam){
   }
 
   # Stock Connect normalization (no engine constraints)
-  if($m -eq "CN_SH"){ $m = "HK_SH" }
-  if($m -eq "CN_SZ"){ $m = "HK_SZ" }
-
-  return $m
+return $m
 }
 
 function Resolve-SymbolSafe([string]$SymbolParam){

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")] [string]$Market="JP",
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW")] [string]$Market="JP",
   [ValidateSet("REQUIRE_ENABLED","ALLOW_DISABLED")] [string]$Mode="REQUIRE_ENABLED"
 )
 

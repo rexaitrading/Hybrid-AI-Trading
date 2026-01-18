@@ -9,13 +9,11 @@ $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 function Normalize-StockConnectMarket([string]$m){
   $x = ([string]$m).Trim().ToUpperInvariant()
-  if($x -eq "CN_SH"){ return "HK_SH" }
-  if($x -eq "CN_SZ"){ return "HK_SZ" }
-  return $x
+return $x
 }
 
 
-$Markets = @("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")
+$Markets = @("US","JP","HK","SG","IN","KR","TW")
 $prods = @(
   "tools\Build-MarketDNA.ps1",
   "tools\Build-EdgeValidity.ps1",
@@ -26,7 +24,7 @@ $prods = @(
 foreach($m in $Markets){
   $m2 = Normalize-StockConnectMarket $m
   # STOCKCONNECT_SKIP_BEGIN
-  # CN_SH/CN_SZ are Stock-Connect routed identifiers; do NOT run G1-G4 producers until they formally support HK_SH/HK_SZ.
+  # HK_SH/HK_SZ are Stock-Connect routed identifiers; do NOT run G1-G4 producers until they formally support HK_SH/HK_SZ.
   if($m2 -eq "HK_SH" -or $m2 -eq "HK_SZ"){ continue }
   # STOCKCONNECT_SKIP_END
 

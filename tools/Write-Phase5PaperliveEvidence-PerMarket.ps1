@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("ALL","US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ","HK_SH","HK_SZ")]
+  [ValidateSet("ALL","US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ")]
   [string]$Market="ALL",
 
   [ValidateSet("NVDA","SPY","QQQ")]
@@ -55,10 +55,9 @@ if($srcs.Count -eq 0){
   throw ("[PH5-EVID] FAIL-CLOSED: missing global inputs: " + $srcA + " and " + $srcB)
 }
 
-$targets = @("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")
 if($Market -ne "ALL"){
   $m0 = $Market.ToUpperInvariant()
-  $targets = @($m0)
+
 }
 
 foreach($m in $targets){

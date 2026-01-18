@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ","CN_SH","CN_SZ")] [string]$Market="US",
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ")] [string]$Market="US",
   [ValidateSet("NVDA","SPY","QQQ")] [string]$Symbol="NVDA"
 )# --- repo root bootstrap (env-first) ---
 $repoRoot = ($env:HAT_REPO_ROOT + "").Trim()

@@ -3,7 +3,7 @@ param(
   [string]$InputPath = ".\logs\nvda_phase5_paperlive_results.jsonl",
   [string]$OutPath   = ".\logs\nvda_phase5_paperlive_results_today.jsonl",
 
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW")]
   [string]$Market = ((($env:HAT_MARKET + "")).Trim().ToUpperInvariant()),
 
   [string]$AsOfDate = ((($env:HAT_ASOF_DATE + "")).Trim())
