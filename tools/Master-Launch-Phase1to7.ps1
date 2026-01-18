@@ -4,7 +4,7 @@ param(
   [string]$Symbol = "NVDA",
 
 
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW","CN_SH","CN_SZ")]
+  [ValidateSet("US","JP","HK","SG","IN","KR","TW")]
   [string]$Market = "US",
   [int]$BlockGReuseMinutes = 5,
   [int]$BlockGTimeoutSec   = 90,
@@ -188,6 +188,7 @@ if(-not $SkipIntel){
 # REGIME_HOOK_BEGIN
 Step "Regime: Determine NORMAL/HIGH_VOL/CRISIS" {
   RunTool "tools\Build-RegimeStatus.ps1" @("-Symbol",$Symbol,"-Market",$Market)
+  RunTool "tools\Build-RegimeActions.ps1" @("-Symbol",$Symbol,"-Market",$Market)
 }
 # REGIME_HOOK_END
 # CRASHMODE_HOOK_BEGIN

@@ -2234,6 +2234,40 @@ try { $globalReadyOk = ([bool]$gdnaOk -and [bool]$gedgeOk -and [bool]$gdepOk -an
   } catch { }
   # EVH_FINALMILE_DEFINE_FULL_END
 
+# REGIME_ACTIONS_AUDIT_V1_BEGIN
+# Audit-only: read regime_actions.json (producer: tools/Build-RegimeActions.ps1)
+# MUST be defined BEFORE payload hashtable so variables are in scope.
+$regimeActionsPath = Join-Path $logsDir "regime_actions.json"
+$ra_ok_today = $false
+$ra_deny_new_trades = $false
+$ra_size_multiplier = 1.0
+$ra_cooldown_minutes = 0
+$ra_stop_multiplier = 1.0
+$ra_target_multiplier = 1.0
+$ra_reason = ""
+
+try {
+  if(Test-Path -LiteralPath $regimeActionsPath){
+    $raj = Get-Content -LiteralPath $regimeActionsPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+    if($raj){
+      if($raj.PSObject.Properties.Name -contains "ok_today"){ $ra_ok_today = [bool]$raj.ok_today }
+      if($raj.PSObject.Properties.Name -contains "deny_new_trades"){ $ra_deny_new_trades = [bool]$raj.deny_new_trades }
+      if($raj.PSObject.Properties.Name -contains "size_multiplier"){ $ra_size_multiplier = [double]$raj.size_multiplier }
+      if($raj.PSObject.Properties.Name -contains "cooldown_minutes"){ $ra_cooldown_minutes = [int]$raj.cooldown_minutes }
+      if($raj.PSObject.Properties.Name -contains "stop_multiplier"){ $ra_stop_multiplier = [double]$raj.stop_multiplier }
+      if($raj.PSObject.Properties.Name -contains "target_multiplier"){ $ra_target_multiplier = [double]$raj.target_multiplier }
+      if($raj.PSObject.Properties.Name -contains "regime_reason"){ $ra_reason = [string]$raj.regime_reason }
+      if((-not $ra_reason) -and ($raj.PSObject.Properties.Name -contains "reasons")){
+        try { $ra_reason = (@($raj.reasons) -join ",") } catch { }
+      }
+    }
+  } else {
+    $ra_reason = "missing_regime_actions_json"
+  }
+} catch {
+  $ra_reason = "regime_actions_parse_error"
+}
+# REGIME_ACTIONS_AUDIT_V1_END
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $todayLocal
@@ -2287,7 +2321,15 @@ dependency_risk_ok_today = [bool]$gdepOk
 risk_guard_ok_today      = [bool]$griskOk
 global_ready_ok_today    = [bool]$globalReadyOk
 # Crash-mode contract fields (producer: crisis_regime_status.json)
-    regime               = $regime
+# Regime Actions (audit-only; producer: regime_actions.json)
+regime_actions_ok_today           = [bool]$ra_ok_today
+regime_actions_deny_new_trades    = [bool]$ra_deny_new_trades
+regime_actions_size_multiplier    = [double]$ra_size_multiplier
+regime_actions_cooldown_minutes   = [int]$ra_cooldown_minutes
+regime_actions_stop_multiplier    = [double]$ra_stop_multiplier
+regime_actions_target_multiplier  = [double]$ra_target_multiplier
+regime_actions_reason             = $ra_reason
+regime               = $regime
     regime_ok_today      = [bool]$regimeOkToday
     regime_reason        = $regimeReason
     regime_status_path   = (Canon $regimePath)
