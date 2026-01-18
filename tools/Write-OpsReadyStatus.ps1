@@ -125,7 +125,7 @@ function Run-Step([string]$name,[scriptblock]$sb,[switch]$IgnoreFailure){
     $err = $_.Exception.Message
   }
   $ts1 = (Get-Date).ToUniversalTime().ToString("o")
-  $steps += [pscustomobject]@{
+  $script:steps += [pscustomobject]@{
     name = $name
     ts_utc_start = $ts0
     ts_utc_end = $ts1
@@ -167,7 +167,7 @@ if(Test-Path -LiteralPath $slipTool){
 } else {
   # If tool missing, only fatal when not ignoring and in PAPERLIVE/LIVE with slippage samples
   if(-not $ignoreSlipAttr){
-    $steps += [pscustomobject]@{
+    $script:steps += [pscustomobject]@{
       name="slippage_attrib"
       ts_utc_start=(Get-Date).ToUniversalTime().ToString("o")
       ts_utc_end=(Get-Date).ToUniversalTime().ToString("o")
