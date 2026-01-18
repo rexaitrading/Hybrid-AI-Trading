@@ -118,6 +118,7 @@ function Run-Step([string]$name,[scriptblock]$sb,[switch]$IgnoreFailure){
   $exit = 0
   $err = ""
   try {
+    $global:LASTEXITCODE = 0
     & $sb
     if($LASTEXITCODE -ne $null -and [int]$LASTEXITCODE -ne 0){ $exit = [int]$LASTEXITCODE }
   } catch {
