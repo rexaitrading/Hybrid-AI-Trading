@@ -143,6 +143,40 @@ Run-Step "ops_dashboard" { & $dashPath -Market $mk -Symbol $sy -Mode $rm -OutPat
 # policy outcomes can exit 2 without breaking producer success
 Run-Step "killswitch_status" { & $ksPath -Market $mk -Symbol $sy -Mode $rm -NoConsole:$NoConsole | Out-Null } -IgnoreFailure
 Run-Step "invariants_status" { & $invPath -Market $mk -Symbol $sy -Mode $rm -NoConsole:$NoConsole | Out-Null } -IgnoreFailure
+# Slippage attribution (execution evidence rollup)
+$slipTool = Join-Path $toolsDir "Build-SlippageAttributionDaily.ps1"
+$slipIn   = Join-Path $logsDirOut "execution\slippage_events.jsonl"
+$slipOutJ = Join-Path $logsDirOut "execution\slippage_attrib_daily.json"
+$slipOutC = Join-Path $logsDirOut "execution\slippage_attrib_daily.csv"
+
+$ignoreSlipAttr = $true
+# PAPERLIVE/LIVE: if we have at least 1 slippage line, attribution must succeed
+if($rm -in @("PAPERLIVE","LIVE")){
+  try {
+    if(Test-Path -LiteralPath $slipIn){
+      $c2 = (Get-Content -LiteralPath $slipIn -Encoding UTF8 | Measure-Object).Count
+      if($c2 -gt 0){ $ignoreSlipAttr = $false }
+    }
+  } catch { }
+}
+
+if(Test-Path -LiteralPath $slipTool){
+  Run-Step "slippage_attrib" {
+    & $slipTool -InPath $slipIn -OutJson $slipOutJ -OutCsv $slipOutC -NoConsole | Out-Null
+  } -IgnoreFailure:$ignoreSlipAttr
+} else {
+  # If tool missing, only fatal when not ignoring and in PAPERLIVE/LIVE with slippage samples
+  if(-not $ignoreSlipAttr){
+    $steps += [pscustomobject]@{
+      name="slippage_attrib"
+      ts_utc_start=(Get-Date).ToUniversalTime().ToString("o")
+      ts_utc_end=(Get-Date).ToUniversalTime().ToString("o")
+      exit_code=2
+      error="missing Build-SlippageAttributionDaily.ps1"
+    }
+    $stepFail = $true
+  }
+}
 
 # Read artifacts
 $dash = Read-JsonFile $dashOut
