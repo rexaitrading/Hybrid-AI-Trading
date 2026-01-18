@@ -46,7 +46,7 @@ function ToDoubleOrNull($v){
 }
 function Quantile([double[]]$arr,[double]$q){
   if(-not $arr -or $arr.Count -eq 0){ return $null }
-  $s = $arr | Sort-Object
+  $s = @($arr | Sort-Object)
   if($s.Count -eq 1){ return $s[0] }
   $pos = ($s.Count - 1) * $q
   $lo = [int][Math]::Floor($pos)
