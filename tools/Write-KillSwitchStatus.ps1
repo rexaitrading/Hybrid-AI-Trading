@@ -85,6 +85,56 @@ $env:HAT_MARKET    = $mk
 $env:HAT_SYMBOL    = $sy
 $env:HAT_ASOF_DATE = $asOf
 $env:HAT_LOGS_DIR  = $logsDirOut
+# --- Slippage spike kill-switch (PAPERLIVE/LIVE only) ---
+$rm2 = (($Mode + "")).Trim().ToUpperInvariant()
+$slipWindowN = 20
+$slipHardBps = 80.0
+$slipMedianBps = 35.0
+$slipPath = Join-Path $logsDirOut "execution\slippage_events.jsonl"
+
+$slipSamples = 0
+$slipMaxBps = $null
+$slipMedianObs = $null
+$slipTriggered = $false
+$slipReason = ""
+
+function _TryParseSlipBps([string]$line){
+  try {
+    $o = ($line | ConvertFrom-Json -ErrorAction Stop)
+    if($o -and ($o.PSObject.Properties.Name -contains "slip_bps")){
+      return [double]$o.slip_bps
+    }
+    return $null
+  } catch { return $null }
+}
+
+if($rm2 -in @("PAPERLIVE","LIVE")){
+  if(Test-Path -LiteralPath $slipPath){
+    $tail = @(Get-Content -LiteralPath $slipPath -Encoding UTF8 -ErrorAction Stop | Select-Object -Last $slipWindowN)
+    $vals = @()
+    foreach($ln in $tail){
+      $s = ($ln + "").Trim()
+      if(-not $s){ continue }
+      $v = _TryParseSlipBps $s
+      if($null -ne $v){ $vals += [double]$v }
+    }
+    $slipSamples = $vals.Count
+    if($slipSamples -gt 0){
+      $slipMaxBps = ($vals | Measure-Object -Maximum).Maximum
+      $sorted = @($vals | Sort-Object)
+      $mid = [int][Math]::Floor(($sorted.Count - 1) / 2)
+      $slipMedianObs = if($sorted.Count % 2 -eq 1){ $sorted[$mid] } else { ($sorted[$mid] + $sorted[$mid+1]) / 2.0 }
+
+      if([double]$slipMaxBps -ge $slipHardBps){
+        $slipTriggered = $true
+        $slipReason = "slippage_hard_stop"
+      } elseif([double]$slipMedianObs -ge $slipMedianBps){
+        $slipTriggered = $true
+        $slipReason = "slippage_median_stop"
+      }
+    }
+  }
+}
 
 # Call dashboard and parse its [DASH] line
 # Call dashboard in a child PowerShell to capture host output reliably (Write-Host)
@@ -104,7 +154,15 @@ if(-not $dashLine){
     run_mode = $Mode
     as_of_date = $asOf
     logs_dir_out = $logsDirOut
-    kill = $true
+    
+    slip_path = $slipPath
+    slip_window_n = $slipWindowN
+    slip_hard_bps = $slipHardBps
+    slip_median_bps = $slipMedianBps
+    slip_samples = $slipSamples
+    slip_max_bps = $slipMaxBps
+    slip_median_bps_observed = $slipMedianObs
+    slip_triggered = $slipTriggeredkill = $true
     top_reason = "dash_line_missing"
     signal = "DASH_PARSE_ERR"
     age_min = $null
@@ -145,6 +203,12 @@ if($tokens.ContainsKey('max')){
 $top = if($tokens.ContainsKey('top')){ [string]$tokens['top'] } else { "unknown" }
 $sig = if($tokens.ContainsKey('signal')){ [string]$tokens['signal'] } else { "unknown" }
 
+# Slippage override (PAPERLIVE/LIVE): if triggered, force kill + reason
+if($slipTriggered){
+  $kill = $true
+  $top = $slipReason
+  if($sig -eq "unknown" -or -not $sig){ $sig = "slippage_spike" }
+}
 $obj2 = [pscustomobject]@{
   ts_utc = (Get-Date).ToUniversalTime().ToString("o")
   market = $mk
@@ -152,7 +216,15 @@ $obj2 = [pscustomobject]@{
   run_mode = $Mode
   as_of_date = $asOf
   logs_dir_out = $logsDirOut
-  kill = $kill
+  
+    slip_path = $slipPath
+    slip_window_n = $slipWindowN
+    slip_hard_bps = $slipHardBps
+    slip_median_bps = $slipMedianBps
+    slip_samples = $slipSamples
+    slip_max_bps = $slipMaxBps
+    slip_median_bps_observed = $slipMedianObs
+    slip_triggered = $slipTriggeredkill = $kill
   top_reason = $top
   signal = $sig
   age_min = $ageMin
