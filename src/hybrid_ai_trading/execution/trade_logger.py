@@ -167,7 +167,8 @@ class TradeLogger:
             if exp is None:
                 exp = m.get("requested_price", None)
             if exp is not None:
-                sl_path = "logs/execution/slippage_events.jsonl"
+                sl_base = (os.getenv("HAT_LOGS_DIR", "") or "").strip()
+                sl_path = os.path.join(sl_base, "execution", "slippage_events.jsonl") if sl_base else "logs/execution/slippage_events.jsonl"
                 os.makedirs(os.path.dirname(sl_path), exist_ok=True)
                 sev = make_slippage_event(
                     ts=ev.ts, symbol=ev.symbol, side=ev.side, qty=ev.qty,
