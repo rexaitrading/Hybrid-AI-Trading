@@ -50,7 +50,7 @@ function Read-JsonFromStdout([string]$raw){
 function Read-JsonLines([string]$Path){
   $out = @()
   if(-not (Test-Path -LiteralPath $Path)){ return $out }
-  $lines = Get-Content -LiteralPath $Path -Encoding UTF8 -ErrorAction Stop
+  $lines = @(Get-Content -LiteralPath $Path -Encoding UTF8 -ErrorAction Stop)
   foreach($ln in $lines){
     $s = ($ln + "").Trim()
     if(-not $s){ continue }
@@ -71,9 +71,17 @@ function ShaFrac01([string]$s){
 function ToDoubleOrNull($v){
   try {
     if($null -eq $v){ return $null }
-    $s = ($v + "").Trim()
+
+    # numeric fast-path (culture-safe)
+    if($v -is [double] -or $v -is [single] -or $v -is [decimal] -or $v -is [int] -or $v -is [long]){
+      return [double]$v
+    }
+
+    $s = (($v + "")).Trim()
     if(-not $s){ return $null }
-    return [double]$s
+
+    # invariant parse (culture-safe)
+    return [double]::Parse($s, [System.Globalization.CultureInfo]::InvariantCulture)
   } catch { return $null }
 }
 function ToIntOrNull($v){
@@ -145,8 +153,8 @@ $quotesPath = ($candQuotes | Where-Object { Test-Path -LiteralPath $_ } | Select
 $orders = @()
 $quotes = @()
 
-if($ordersPath){ $orders = Read-JsonLines $ordersPath }
-if($quotesPath){ $quotes = Read-JsonLines $quotesPath }
+if($ordersPath){ $orders = @(Read-JsonLines $ordersPath) }
+if($quotesPath){ $quotes = @(Read-JsonLines $quotesPath) }
 
 # Quote lookup: simplest MVP — use last quote in file as static (deterministic)
 $bid = $null; $ask = $null; $mid = $null
@@ -351,3 +359,4 @@ if(-not $NoConsole){
 
 if($artifact.ok){ exit 0 }
 exit 2
+
