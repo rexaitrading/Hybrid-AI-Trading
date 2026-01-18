@@ -53,6 +53,7 @@ logs/*.tmp
 *.env
 config/*.yml
 config/*.yaml
+!config/order_type_rules.yaml
 **/config.yaml
 **/config.yml
 **/config.ini

@@ -1,0 +1,24 @@
+schema: order_type_rules.v1
+defaults:
+  order_type: market
+  allow_post_only: false
+  allow_stop: true
+  allow_stop_limit: true
+
+regimes:
+  NORMAL:
+    order_type: limit
+    allow_post_only: true
+    notes: "Prefer limit in normal regime to reduce slippage; fall back to market if not filled fast."
+  VOLATILE:
+    order_type: market
+    allow_post_only: false
+    notes: "Volatile regime prioritizes getting filled; protect with tight risk/kill-switch."
+  CHOP:
+    order_type: limit
+    allow_post_only: true
+    notes: "Chop prefers maker; deny breakout-style orders."
+  CRISIS:
+    order_type: market
+    allow_post_only: false
+    notes: "Crisis mode: simplify execution, reduce size, consider denial rules."
