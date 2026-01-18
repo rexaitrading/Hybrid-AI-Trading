@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Any, Dict
 
@@ -12,6 +12,20 @@ def _as_float(x: Any, name: str) -> float:
         return float(x)
     except Exception:
         raise ValueError(f"Invalid {name}: {x!r}")
+
+def _as_bool(x: Any, name: str) -> bool:
+    if isinstance(x, bool):
+        return x
+    if isinstance(x, (int, float)):
+        return bool(int(x))
+    if isinstance(x, str):
+        v = x.strip().lower()
+        if v in ("1","true","yes","y","on"):
+            return True
+        if v in ("0","false","no","n","off"):
+            return False
+    raise ValueError(f"Invalid {name}: {x!r}")
+
 
 
 def validate_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
@@ -78,6 +92,12 @@ def validate_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
         if not (0.0 <= nz <= 1.0):
             raise ValueError(f"sentiment.neutral_zone must be in [0,1], got {nz}")
         sent["neutral_zone"] = nz
+
+    # Ladder-2 realism: stateful paper simulator (opt-in, default off)
+    if "paper_simulator_stateful" in out:
+        out["paper_simulator_stateful"] = _as_bool(out["paper_simulator_stateful"], "paper_simulator_stateful")
+    else:
+        out["paper_simulator_stateful"] = False
 
     out["sentiment"] = sent
     return out

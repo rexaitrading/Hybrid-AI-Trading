@@ -146,14 +146,94 @@ class ExecutionEngine:
 
         if self.dry_run and self.paper_simulator:
             try:
-                fill = self.paper_simulator.simulate_fill(symbol, side, qty, price)
-                self.portfolio_tracker.update_position(
+                stateful_on = bool((self.config or {}).get("paper_simulator_stateful", False))
+                if not stateful_on:
+                    fill = self.paper_simulator.simulate_fill(symbol, side, qty, price)
+                    self.portfolio_tracker.update_position(
+                        symbol,
+                        side,
+                        qty,
+                        fill.get("fill_price", price),
+                    )
+                    return fill
+
+                # --- STATEFUL (opt-in): submit_order + advance ticks + adapter return ---
+                _px_ref = float(price or 0.0)
+                oid = self.paper_simulator.submit_order(
                     symbol,
                     side,
-                    qty,
-                    fill.get("fill_price", price),
+                    float(qty),
+                    "market",
+                    _px_ref,
                 )
-                return fill
+
+                psim_cfg = (self.config or {}).get("paper_simulator", {})
+                try:
+                    step_ms = int(psim_cfg.get("tick_ms", 50))
+                except Exception:
+                    step_ms = 50
+                try:
+                    n_ticks = int(psim_cfg.get("place_order_ticks", 6))
+                except Exception:
+                    n_ticks = 6
+                n_ticks = max(0, n_ticks)
+
+                # advance() signature is PROVEN: advance(order_id, *, mid_px=..., advance_ms=...)
+                if hasattr(self.paper_simulator, "advance"):
+                    for _ in range(n_ticks):
+                        try:
+                            self.paper_simulator.advance(oid, mid_px=_px_ref, advance_ms=step_ms)
+                        except Exception:
+                            break
+
+                ob = getattr(self.paper_simulator, "_orders", {}) or {}
+                o = dict(ob.get(oid, {}))
+                fills = list(o.get("fills", []) or [])
+
+                def _fqty(x):
+                    try:
+                        if isinstance(x, dict):
+                            if "filled_qty" in x: return float(x.get("filled_qty") or 0.0)
+                            if "size" in x: return float(x.get("size") or 0.0)
+                        return 0.0
+                    except Exception:
+                        return 0.0
+
+                def _fpx(x):
+                    try:
+                        if isinstance(x, dict) and "fill_price" in x: return float(x.get("fill_price") or 0.0)
+                        return float(_px_ref)
+                    except Exception:
+                        return float(_px_ref)
+
+                total_filled = 0.0
+                num = 0.0
+                for f in fills:
+                    fq = _fqty(f)
+                    fp = _fpx(f)
+                    if fq > 0:
+                        total_filled += fq
+                        num += fq * fp
+                        self.portfolio_tracker.update_position(symbol, side, fq, fp)
+
+                avg_px = (num / total_filled) if (total_filled > 0 and num > 0) else _px_ref
+                status = "submitted"
+                if total_filled > 0 and total_filled < float(qty):
+                    status = "partial"
+                if total_filled >= float(qty) and float(qty) > 0:
+                    status = "filled"
+
+                return {
+                    "status": status,
+                    "symbol": symbol,
+                    "side": str(side).upper(),
+                    "size": float(qty),
+                    "filled_qty": float(total_filled),
+                    "fill_price": float(avg_px),
+                    "order_id": oid,
+                    "fills": fills,
+                    "mode": "paper_stateful",
+                }
             except Exception as exc:  # noqa: BLE001
                 logger.error("Portfolio update failed: %s", exc)
                 return {"status": "rejected", "reason": "portfolio_update_failed"}
@@ -181,6 +261,12 @@ class ExecutionEngine:
     def cancel_order(self, order_id: str) -> Dict[str, Any]:
         """Cancel an order by ID."""
         if self.dry_run:
+            stateful_on = bool((self.config or {}).get("paper_simulator_stateful", False))
+            if stateful_on and self.paper_simulator and str(order_id).startswith("psim_"):
+                try:
+                    return self.paper_simulator.cancel_order(str(order_id))
+                except Exception:
+                    pass
             return {"status": "cancelled", "order_id": order_id}
         if self.order_manager:
             return self.order_manager.cancel_order(order_id)
