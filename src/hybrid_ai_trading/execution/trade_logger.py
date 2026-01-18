@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from hybrid_ai_trading.execution.fill_snapshot import make_slippage_event  # HAT_SLIPPAGE_JSONL_A
 import csv
 import json
 import logging
@@ -159,6 +160,26 @@ class TradeLogger:
             meta=meta,
             risk=prev.risk,
         )
+        # HAT_SLIPPAGE_JSONL_A: write slippage event if meta contains expected/reference price
+        try:
+            m = meta or {}
+            exp = m.get("expected_px", None)
+            if exp is None:
+                exp = m.get("requested_price", None)
+            if exp is not None:
+                sl_path = "logs/execution/slippage_events.jsonl"
+                os.makedirs(os.path.dirname(sl_path), exist_ok=True)
+                sev = make_slippage_event(
+                    ts=ev.ts, symbol=ev.symbol, side=ev.side, qty=ev.qty,
+                    expected_px=float(exp), actual_px=float(px_fill),
+                    broker=ev.broker, strategy=ev.strategy, order_id=order_id,
+                    extra={"order_type": ev.order_type, "mode": (m.get("mode","") or ""), "model": (m.get("model","") or "")},
+                )
+                with open(sl_path, "a", encoding="utf-8") as f:
+                    import json as _json
+                    f.write(_json.dumps(sev, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
         self.log(ev)
         return ev
 
