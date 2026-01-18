@@ -31,6 +31,9 @@ from hybrid_ai_trading.risk.risk_manager import RiskManager
 from hybrid_ai_trading.execution.blockg_guard import require_blockg_ready
 from hybrid_ai_trading.runtime.run_context import RunContext
 
+import os
+import json
+import yaml
 logger = logging.getLogger("hybrid_ai_trading.execution.execution_engine")
 
 
@@ -144,11 +147,64 @@ class ExecutionEngine:
             if (self.config or {}).get("cost_gate", {}).get("enabled", False):
                 return {"status": "rejected", "reason": "cost_gate: error_failclosed"}
 
+        # --- Ladder-2: order-type playbook (flag-gated; default off) ---
+        playbook_on = bool((self.config or {}).get("order_type_playbook_enabled", False))
+        selected_order_type = "market"
+        limit_price = None
+        stop_price = None
+
+        if playbook_on:
+            # Determine market best-effort: ctx.market -> env -> US
+            mkt = ""
+            try:
+                if ctx is not None and hasattr(ctx, "market") and ctx.market:
+                    mkt = str(ctx.market)
+            except Exception:
+                mkt = ""
+            if not mkt:
+                mkt = (os.getenv("HAT_MARKET", "") or "").strip()
+            if not mkt:
+                mkt = "US"
+            mkt = mkt.upper()
+
+            rules_path = (self.config or {}).get("order_type_rules_path", "config/order_type_rules.yaml")
+            try:
+                with open(rules_path, "r", encoding="utf-8") as f:
+                    rules = yaml.safe_load(f) or {}
+            except Exception:
+                rules = {}
+
+            regime = "NORMAL"
+            try:
+                rp = os.path.join("logs", mkt, "regime_status.json")
+                if os.path.exists(rp):
+                    rj = json.loads(open(rp, "r", encoding="utf-8").read() or "{}")
+                    regime = str(rj.get("regime", "NORMAL") or "NORMAL").upper()
+            except Exception:
+                regime = "NORMAL"
+
+            defaults = dict((rules or {}).get("defaults", {}) or {})
+            regimes = dict((rules or {}).get("regimes", {}) or {})
+            rr = dict(regimes.get(regime, {}) or {})
+            selected_order_type = str(rr.get("order_type", defaults.get("order_type", "market")) or "market").lower()
+
+            px_ref = float(price or 0.0)
+            if selected_order_type == "limit":
+                limit_price = px_ref
+            elif selected_order_type == "stop":
+                stop_price = px_ref
+            elif selected_order_type in ("stop-limit", "stop_limit"):
+                stop_price = px_ref
+                limit_price = px_ref
+        # --- end playbook ---
+
         if self.dry_run and self.paper_simulator:
             try:
                 stateful_on = bool((self.config or {}).get("paper_simulator_stateful", False))
                 if not stateful_on:
-                    fill = self.paper_simulator.simulate_fill(symbol, side, qty, price)
+                    fill = self.paper_simulator.simulate_fill(symbol, side, qty, price, order_type=selected_order_type, stop_price=stop_price, limit_price=limit_price)
+                    if playbook_on:
+                        fill["selected_order_type"] = selected_order_type
                     self.portfolio_tracker.update_position(
                         symbol,
                         side,
@@ -163,7 +219,7 @@ class ExecutionEngine:
                     symbol,
                     side,
                     float(qty),
-                    "market",
+                    selected_order_type,
                     _px_ref,
                 )
 
@@ -233,6 +289,7 @@ class ExecutionEngine:
                     "order_id": oid,
                     "fills": fills,
                     "mode": "paper_stateful",
+                    "selected_order_type": selected_order_type,
                 }
             except Exception as exc:  # noqa: BLE001
                 logger.error("Portfolio update failed: %s", exc)
@@ -329,4 +386,3 @@ __all__ = list(globals().get("__all__", []))
 for _name in ("ExecutionEngine", "LLVMExecutionEngine", "check_jit_execution", "create_mcjit_compiler"):
     if _name not in __all__:
         __all__.append(_name)
-
