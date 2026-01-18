@@ -15,6 +15,7 @@ Responsibilities:
 """
 
 import logging
+from datetime import datetime, timezone
 from datetime import datetime
 from typing import Any, Dict, Optional
 from hybrid_ai_trading.execution.blockg_enforce import require_blockg_ready_for_live
@@ -123,6 +124,20 @@ class ExecutionEngine:
         price: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Place an order with risk checks and routing."""
+        # P3_ORDERS_JSONL_WIRE_V1_BEGIN
+        def _append_order_jsonl(rec: dict) -> None:
+            try:
+                base = (os.getenv('HAT_LOGS_DIR', '') or '').strip()
+                out_dir = base if base else 'logs'
+                out_path = os.path.join(out_dir, 'orders.jsonl')
+                os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                import json as _json
+                with open(out_path, 'a', encoding='utf-8') as _f:
+                    _f.write(_json.dumps(rec, ensure_ascii=False) + '\n')
+            except Exception:
+                pass
+        # P3_ORDERS_JSONL_WIRE_V1_END
+
         notional = qty * (price or 0.0)
         if not self.risk_manager.approve_trade(symbol, side, qty, notional):
             return {"status": "rejected", "reason": "risk_check_failed"}
@@ -205,6 +220,22 @@ class ExecutionEngine:
                     fill = self.paper_simulator.simulate_fill(symbol, side, qty, price, order_type=selected_order_type, stop_price=stop_price, limit_price=limit_price)
                     if playbook_on:
                         fill["selected_order_type"] = selected_order_type
+                    # P3_ORDERS_JSONL_WIRE_V1_LEGACY
+                    _append_order_jsonl({
+                        'ts_utc': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),
+                        'symbol': str(symbol).upper(),
+                        'side': str(side).upper(),
+                        'qty': float(qty),
+                        'type': str(selected_order_type).lower(),
+                        'submit_px': float(price or 0.0),
+                        'limit_px': (float(limit_price) if limit_price is not None else None),
+                        'stop_px': (float(stop_price) if stop_price is not None else None),
+                        'status': str(fill.get('status', 'filled')),
+                        'fill_px': float(fill.get('fill_price', price or 0.0) or 0.0),
+                        'filled_qty': float(fill.get('size', qty) or qty),
+                        'mode': 'paper_legacy',
+                    })
+
                     self.portfolio_tracker.update_position(
                         symbol,
                         side,
@@ -279,6 +310,21 @@ class ExecutionEngine:
                 if total_filled >= float(qty) and float(qty) > 0:
                     status = "filled"
 
+                # P3_ORDERS_JSONL_WIRE_V1_STATEFUL
+                _append_order_jsonl({
+                    'ts_utc': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),
+                    'symbol': str(symbol).upper(),
+                    'side': str(side).upper(),
+                    'qty': float(qty),
+                    'type': str(selected_order_type).lower(),
+                    'submit_px': float(_px_ref),
+                    'status': status,
+                    'order_id': oid,
+                    'fill_px': float(avg_px),
+                    'filled_qty': float(total_filled),
+                    'mode': 'paper_stateful',
+                })
+
                 return {
                     "status": status,
                     "symbol": symbol,
@@ -304,6 +350,20 @@ class ExecutionEngine:
             # Institutional: Block-G semantics are enforced at the order-send chokepoint (broker/ib_safe.py).
             # ExecutionEngine must not re-implement contract logic.
             # EXEC_ENGINE_NO_DUP_BLOCKG_END
+            # P3_ORDERS_JSONL_WIRE_V1_LIVE_SUBMIT
+            _append_order_jsonl({
+                'ts_utc': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),
+                'symbol': str(symbol).upper(),
+                'side': str(side).upper(),
+                'qty': float(qty),
+                'type': str(selected_order_type).lower(),
+                'submit_px': float(price or 0.0),
+                'limit_px': (float(limit_price) if limit_price is not None else None),
+                'stop_px': (float(stop_price) if stop_price is not None else None),
+                'status': 'submitted',
+                'mode': 'live_submit',
+            })
+
             return self.order_manager.place_order(
                 symbol=symbol,
                 side=side,
