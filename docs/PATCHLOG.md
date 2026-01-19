@@ -379,3 +379,9 @@ tools/Disarm-NVDA-Live.ps1
 - Change: gatescore_by_symbol.NVDA now reports ok_today (daily) and adds samples_ok_live/threshold_ok_live/ok_live_today for audit.
 - Note: top-level ok_live_today still depends on events meta ok; next patch will make events-meta freshness content-based.
 
+
+## 2026-01-18 17:35:19 — BlockG: GateScore events meta freshness is content-based (tail), not file timestamp
+- Root cause proven: Get-GSEventsMeta used LastWriteTime date to set fresh, breaking evNVDA.ok on after-hours/weekend writes.
+- Change: fresh now computed via Has-TodayAsOfDateInJsonlTail(path, todayLocal), keeping fail-closed semantics but correct market-day truth.
+- Proof: evNVDA.fresh=True and evNVDA.ok=True even when file ts differs; gatescore_ok_live_today=True.
+

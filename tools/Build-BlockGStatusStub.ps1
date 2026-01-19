@@ -1395,7 +1395,7 @@ $logsDir = $logsDirOut
     try {
       $it = Get-Item -LiteralPath $p
       $ts = $it.LastWriteTime.ToString("yyyy-MM-dd")
-      $fresh = ($ts -eq $todayLocal)
+      $fresh = (Has-TodayAsOfDateInJsonlTail -Path $p -Today $todayLocal -TailLines 8000)
     } catch { $fresh = $false; $ts = "" }
 
     # Quality: count eligible rows for TODAY (prevents toxic files from reporting ok)
