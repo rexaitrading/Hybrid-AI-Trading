@@ -385,3 +385,10 @@ tools/Disarm-NVDA-Live.ps1
 - Change: fresh now computed via Has-TodayAsOfDateInJsonlTail(path, todayLocal), keeping fail-closed semantics but correct market-day truth.
 - Proof: evNVDA.fresh=True and evNVDA.ok=True even when file ts differs; gatescore_ok_live_today=True.
 
+
+## 2026-01-18 17:38:05 — RegimeStatus: fix per-market logs routing (stop env US overwrite); TW status now writes to logs\\TW
+- Root cause proven: Build-RegimeStatus overwrote logsDirOut using env:HAT_LOGS_DIR (pointing to logs\\US), causing IN/KR/TW writes into US and TW regime_status missing.
+- Change: env logs dirs are fallback-only; keep Get-MarketLogRoot per-market as authoritative.
+- Change: crisis fallback pinned to logs\\US legacy location (avoids global-root bleed).
+- Proof: Build-RegimeStatus -Market TW writes regime_status.json to logs\\TW and file exists.
+

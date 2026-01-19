@@ -152,11 +152,16 @@ try {
   $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
 } catch { $logsDirOut = $null }
 # A3_REGIME_LOGSDIR_OUT_BEGIN
-$logsDirOut = (($env:HAT_LOGS_DIR_OUT + "")).Trim()
-if(-not $logsDirOut){ $logsDirOut = (($env:HAT_LOGS_DIR + "")).Trim() }
+# Fallback-only: never overwrite per-market logsDirOut when Get-MarketLogRoot succeeded.
+$envOut = (($env:HAT_LOGS_DIR_OUT + "")).Trim()
+$envDir = (($env:HAT_LOGS_DIR + "")).Trim()
 if(-not $logsDirOut){
-  try { $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market } catch { $logsDirOut = $null }
-  $logsDirOut = (($logsDirOut + "")).Trim()
+  if($envOut){ $logsDirOut = $envOut }
+  elseif($envDir){ $logsDirOut = $envDir }
+  if(-not $logsDirOut){
+    try { $logsDirOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market } catch { $logsDirOut = $null }
+    $logsDirOut = (($logsDirOut + "")).Trim()
+  }
 }
 if(-not $logsDirOut){ $logsDirOut = Join-Path (Join-Path $repoRoot "logs") $Market }
 # A3_REGIME_LOGSDIR_OUT_END
@@ -172,7 +177,7 @@ if($LASTEXITCODE -ne 0){ throw "Build-CrisisRegimeStatus failed exit=$LASTEXITCO
 $crisisPath = Join-Path $logsDirOut "crisis_regime_status.json"
 if(-not (Test-Path -LiteralPath $crisisPath)){
   # fallback to legacy logs if producer wrote there
-  $crisisPath = Join-Path (Join-Path $repoRoot "logs") "crisis_regime_status.json"
+  $crisisPath = Join-Path (Join-Path (Join-Path $repoRoot "logs") "US") "crisis_regime_status.json"
 }
 if(-not (Test-Path -LiteralPath $crisisPath)){ throw "Missing crisis status: $crisisPath" }
 
