@@ -160,10 +160,17 @@ if(-not $input){
   exit 3
 }
 
-$writer = Join-Path $repoRoot "tools\Write-NvdaGateScoreEventsFromPaperlive.ps1"
+$symU = (([string]$Symbol).Trim().ToUpperInvariant())
+if(-not $symU){ $symU = "NVDA" }
+$writer = switch($symU){
+  "NVDA" { Join-Path $repoRoot "tools\Write-NvdaGateScoreEventsFromPaperlive.ps1" }
+  "SPY"  { Join-Path $repoRoot "tools\Write-SpyGateScoreEventsFromPaperlive.ps1" }
+  "QQQ"  { Join-Path $repoRoot "tools\Write-QqqGateScoreEventsFromPaperlive.ps1" }
+  default { Join-Path $repoRoot "tools\Write-NvdaGateScoreEventsFromPaperlive.ps1" }
+}
 if(-not (Test-Path -LiteralPath $writer)){ throw "[GS-PERMKT] Missing writer: Write-NvdaGateScoreEventsFromPaperlive.ps1" }
 
-$outPath = Join-Path $logsDirOut "nvda_gatescore_events.jsonl"
+$outPath = Join-Path $logsDirOut (("{0}_gatescore_events.jsonl" -f $symU.ToLowerInvariant()))
 Write-Host ("[GS-PERMKT] market=" + $Market + " input=" + $input + " out=" + $outPath + " proxy=" + $proxy) -ForegroundColor Cyan
 # PROXY_MODE_ENV_BEGIN
 try {
