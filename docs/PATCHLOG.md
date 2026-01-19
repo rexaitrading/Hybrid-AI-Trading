@@ -343,3 +343,9 @@ tools/Disarm-NVDA-Live.ps1
 
 **Scope:** tools/Build-TradeLabels.ps1, tools/Build-DailyAAR.ps1, tools/Build-Counterfactuals.ps1
 
+
+## 2026-01-18 16:20:45 — Fix RunContext TradeMode single-truth (PAPERLIVE)
+- Root cause proven: Resolve-RunContext default TradeMode=PAPER blocked Resolve-HatRunMode PAPERLIVE.
+- Change: Set default TradeMode to empty string so single-truth applies.
+- Proof: Resolve-HatRunMode run_mode=PAPERLIVE matches Resolve-RunContext trade_mode=PAPERLIVE.
+

@@ -7,7 +7,7 @@ param(
   [string]$Symbol = "ALL",
 
   [ValidateSet("PAPER","PAPERLIVE","LIVE")]
-  [string]$TradeMode = "PAPER",
+  [string]$TradeMode = "",
 
   [string]$AsOfDate = ""
 )
