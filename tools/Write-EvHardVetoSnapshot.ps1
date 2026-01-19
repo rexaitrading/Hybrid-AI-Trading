@@ -35,6 +35,16 @@ $dstEvidence = Join-Path $logRoot "ev_hard_snapshot.json"
   $dstRaw      = Join-Path $logRoot "ev_hard_evidence_raw.json"
 $dstVeto     = Join-Path $logRoot "phase5_ev_hard_veto_snapshot.json"
 # --- PER-MARKET EV-HARD OUTPUT PATHS END ---
+# WIRE_HAT_LOGS_DIR_FOR_EVH_SNAPSHOT_BEGIN
+$mkt0 = (($Market + "")).Trim().ToUpperInvariant(); if(-not $mkt0){ $mkt0 = "US" }
+$sym0 = (($Symbol + "")).Trim().ToUpperInvariant(); if(-not $sym0){ $sym0 = "NVDA" }
+$logsDirOut0 = & (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $mkt0
+$logsDirOut0 = (($logsDirOut0 + "")).Trim()
+if(-not $logsDirOut0){ throw ("[FAIL-CLOSED] Get-MarketLogRoot empty for market=" + $mkt0) }
+$env:HAT_MARKET = $mkt0
+$env:HAT_SYMBOL = $sym0
+$env:HAT_LOGS_DIR = $logsDirOut0
+# WIRE_HAT_LOGS_DIR_FOR_EVH_SNAPSHOT_END
 $build   = Join-Path $root "tools\Build-EvHardSnapshot.ps1"
 $compute = Join-Path $root "tools\Compute-Phase5EvHardSnapshotInput.ps1"
 $export  = Join-Path $root "tools\Export-Phase5EvHardVetoDailySnapshot.ps1"
