@@ -7,7 +7,7 @@ param(
   [ValidateSet("NVDA","SPY","QQQ","ALL")]
   [string]$Symbol = "NVDA",
 
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW")]
+  [ValidateSet("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")]
   [string]$Market = "US",
 
   [int]$WindowBars = 180,
@@ -171,13 +171,27 @@ New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $crisisProd = Join-Path $toolsDir "Build-CrisisRegimeStatus.ps1"
 if(-not (Test-Path -LiteralPath $crisisProd)){ throw "Missing: $crisisProd" }
-& $psExe -NoProfile -ExecutionPolicy Bypass -File $crisisProd -Symbol ($Symbol -replace '^ALL$','NVDA') *>&1 | Out-Host
+  $symCrisis = $Symbol
+  if($symCrisis -eq "ALL"){ $symCrisis = "NVDA" }
+  $oldHatMarket = $env:HAT_MARKET
+  $oldHatOut = $env:HAT_LOGS_DIR_OUT
+  $oldHatDir = $env:HAT_LOGS_DIR
+  try {
+    $env:HAT_MARKET = $Market
+    $env:HAT_LOGS_DIR_OUT = $logsDirOut
+    $env:HAT_LOGS_DIR = $logsDirOut
+    & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $crisisProd -Symbol $symCrisis 2>&1 | Out-Host
+  } finally {
+    $env:HAT_MARKET = $oldHatMarket
+    $env:HAT_LOGS_DIR_OUT = $oldHatOut
+    $env:HAT_LOGS_DIR = $oldHatDir
+  }
 if($LASTEXITCODE -ne 0){ throw "Build-CrisisRegimeStatus failed exit=$LASTEXITCODE" }
 
 $crisisPath = Join-Path $logsDirOut "crisis_regime_status.json"
 if(-not (Test-Path -LiteralPath $crisisPath)){
   # fallback to legacy logs if producer wrote there
-  $crisisPath = Join-Path (Join-Path (Join-Path $repoRoot "logs") "US") "crisis_regime_status.json"
+  # FAIL-CLOSED: do not fall back to other markets for crisis status
 }
 if(-not (Test-Path -LiteralPath $crisisPath)){ throw "Missing crisis status: $crisisPath" }
 
@@ -246,11 +260,9 @@ $out = [ordered]@{
 # RUNCONTEXT_OK_TODAY_BEGIN
 if(-not $rc){
   $out["regime_ok_today"] = $false
-if(-not $rc){
   $out["regime_reason"] = "runcontext_unreadable"
 } else {
   $out["regime_reason"] = $reason
-}
 }
 # RUNCONTEXT_OK_TODAY_END
 
