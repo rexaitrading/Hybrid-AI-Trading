@@ -100,6 +100,11 @@ if(-not $isLive){
   else { $reason = ("nonlive_default_ok_" + $reason) }
 }
 
+$portfolioHalt = [bool]$crisisRegime
+$riskFlatten   = [bool]$crisisRegime
+$cooldownMinutes = 0
+if([bool]$crisisRegime){ $cooldownMinutes = 120 }
+
 $payload = [ordered]@{
   ts_utc       = (Get-Date).ToUniversalTime().ToString("o")
   as_of_date   = $asOf
@@ -107,6 +112,9 @@ $payload = [ordered]@{
   crisis_regime= [bool]$crisisRegime
   reason       = [string]$reason
   source       = "crashmode_flatten_status"
+  portfolio_halt   = [bool]$portfolioHalt
+  risk_flatten     = [bool]$riskFlatten
+  cooldown_minutes = [int]$cooldownMinutes
 }
 
 # UTF-8 no BOM + LF
