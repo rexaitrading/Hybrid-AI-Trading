@@ -58,7 +58,32 @@ function Allow-NonLiveAny(){
 }
 
 
-$repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
+# A3_REPOROOT_FS_TRUTH_BEGIN
+$repoRoot = (($env:HAT_REPO_ROOT + "")).Trim()
+if($repoRoot){
+  $repoRoot = [System.IO.Path]::GetFullPath($repoRoot)
+} else {
+  $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+}
+if(-not (Test-Path -LiteralPath (Join-Path $repoRoot ".git"))){ throw ("[FAIL-CLOSED] repoRoot invalid (.git missing): " + $repoRoot) }
+# A3_REPOROOT_FS_TRUTH_END
+
+# A3_LOGSDIR_OUT_BEGIN
+$logsDirOut = $null
+try {
+  $logsDirOut = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
+} catch { $logsDirOut = $null }
+$logsDirOut = (($logsDirOut + "")).Trim()
+if(-not $logsDirOut){
+  $envOut = (($env:HAT_LOGS_DIR_OUT + "")).Trim()
+  $envDir = (($env:HAT_LOGS_DIR + "")).Trim()
+  if($envOut){ $logsDirOut = $envOut } elseif($envDir){ $logsDirOut = $envDir }
+}
+if(-not $logsDirOut){ $logsDirOut = Join-Path (Join-Path $repoRoot "logs") $Market }
+$logsDirOut = [System.IO.Path]::GetFullPath($logsDirOut)
+New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
+# A3_LOGSDIR_OUT_END
+
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $rc = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol NVDA | ConvertFrom-Json
 $todayLocal = Slice-Date ([string]$rc.as_of_date)
@@ -66,7 +91,7 @@ $todayLocal = Slice-Date ([string]$rc.as_of_date)
 $logsDir = ([string]$rc.logs_dir_out).Trim()
 if(-not $logsDir){ throw "[A3] logsDir unresolved from Resolve-RunContext (fail-closed)" }
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null;
-$outPath = Join-Path $logsDir "risk_guard_status.json"
+$outPath = Join-Path $logsDirOut "risk_guard_status.json"
 $obj = [ordered]@{
   ts_utc            = (Get-Date).ToUniversalTime().ToString("o")
   market            = $Market

@@ -399,3 +399,9 @@ tools/Disarm-NVDA-Live.ps1
 - Behavior: fail-closed if any non-allowlisted callsite exists (prevents LIVE/PAPERLIVE bypass).
 - Proof: Check-BlockGReady prints [A1] OK when repo is clean.
 
+
+## 2026-01-18 18:23:29 — G4 RiskGuard: write to per-market logsDirOut (A3 repo root fs-truth)
+- Root cause proven: Build-RiskGuardStatus resolved repoRoot via Resolve-Path, causing writes into OneDrive logs instead of HATJ logs.
+- Change: repoRoot now uses env:HAT_REPO_ROOT fs-truth; logsDirOut resolved via Get-MarketLogRoot (fallback env logs, then repoRoot\\logs\\Market).
+- Proof: risk_guard_status.json writes into C:\\HATJ\\HybridAITrading\\logs\\<Market>.
+
