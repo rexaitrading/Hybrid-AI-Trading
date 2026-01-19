@@ -68,7 +68,7 @@ if(-not (Test-Path -LiteralPath $logsDir)){
 
 function Run-One([string]$sym){
   $symU = $sym.ToUpperInvariant()
-  $out  = Join-Path $repoRoot ("logs\{0}_gatescore_events.jsonl" -f $symU.ToLowerInvariant())
+  $out  = Join-Path $repoRoot ("logs\{0}_gatescore_events_today.jsonl" -f $symU.ToLowerInvariant())
 
   $writer = switch($symU){
     "NVDA" { Join-Path $toolsDir "Write-NvdaGateScoreEventsFromPaperlive.ps1" }

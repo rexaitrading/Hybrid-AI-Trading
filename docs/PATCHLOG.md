@@ -349,3 +349,9 @@ tools/Disarm-NVDA-Live.ps1
 - Change: Set default TradeMode to empty string so single-truth applies.
 - Proof: Resolve-HatRunMode run_mode=PAPERLIVE matches Resolve-RunContext trade_mode=PAPERLIVE.
 
+
+## 2026-01-18 16:29:15 — GateScore: write TODAY slice to *_gatescore_events_today.jsonl (stop clobbering ledger)
+- Root cause proven: Build-GateScoreEvents-Today called writer with -Mode rewrite, forcing single-day events and rolling=0.
+- Change: Build-GateScoreEvents-Today now writes *_gatescore_events_today.jsonl (today slice).
+- Next: BlockG will read today slice for freshness/eligible counts while ledger remains for rolling.
+
