@@ -2362,7 +2362,8 @@ regime               = $regime
 
     gatescore_as_of_date = $gatescore_as_of_date_pinned
     gatescore_age_days = $gsAgeDays
-    gatescore_recent_enough = $gsRecentEnough_diag
+    gatescore_recent_enough = [bool]$gsRecentEnough
+    gatescore_recent_enough_diag = $gsRecentEnough_diag
     gatescore_fresh_for_session = $gsFreshForSession_diag
 gatescore_samples_ok    = $gsSamplesOk
     gatescore_daily_samples_ok   = $gatescore_daily_samples_ok

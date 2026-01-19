@@ -361,3 +361,9 @@ tools/Disarm-NVDA-Live.ps1
 - Change: Added Resolve-GatescoreEventsPathToday and rewired today-only reads (freshness/eligibleToday/metrics_source).
 - Rolling and other historical reads continue using *_gatescore_events.jsonl.
 
+
+## 2026-01-18 16:44:19 — BlockG: gatescore_recent_enough now reflects policy (age-days), add diag field
+- Root cause proven: payload used gsRecentEnough_diag (diagnostic) causing recent_enough=false even when age_days=0.
+- Change: gatescore_recent_enough = gsRecentEnough (policy truth); added gatescore_recent_enough_diag for audit.
+- Proof: age_days=0 => recent_enough=True while diag can remain False.
+
