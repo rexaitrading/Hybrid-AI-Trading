@@ -57,8 +57,25 @@ else { $maxAge = 999999 }
 ("now_utc=" + (Get-Date).ToUniversalTime().ToString("o")) | Out-Host
 
 # Find newest watchdog log anywhere under logs/
-$cands = @(Get-ChildItem -LiteralPath $logsRoot -Recurse -File -Filter "ibg_api_watch_*.log" -ErrorAction SilentlyContinue |
-  Sort-Object LastWriteTimeUtc -Descending)
+# Find newest watchdog log in canonical locations only (FAIL-CLOSED; avoid polluted logs/** recursion)
+$canon = @("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")
+$searchDirs = New-Object System.Collections.Generic.List[string]
+$searchDirs.Add($logsRoot) | Out-Null
+$d1 = Join-Path $logsRoot "scheduled"
+if(Test-Path -LiteralPath $d1){ $searchDirs.Add($d1) | Out-Null }
+$d2 = Join-Path $logsRoot "ops"
+if(Test-Path -LiteralPath $d2){ $searchDirs.Add($d2) | Out-Null }
+foreach($m in $canon){
+  $dm = Join-Path $logsRoot $m
+  if(Test-Path -LiteralPath $dm){ $searchDirs.Add($dm) | Out-Null }
+}
+$cands = @()
+foreach($d in $searchDirs){
+  try {
+    $cands += @(Get-ChildItem -LiteralPath $d -File -Filter "ibg_api_watch_*.log" -ErrorAction SilentlyContinue)
+  } catch { }
+}
+$cands = @($cands | Sort-Object LastWriteTimeUtc -Descending)
 
 if(-not $cands -or $cands.Count -eq 0){
   "`n[RED] No ibg_api_watch_*.log found under logs/. Likely watcher not running or wrong filename." | Out-Host

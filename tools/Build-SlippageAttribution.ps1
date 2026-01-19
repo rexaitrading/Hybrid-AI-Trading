@@ -67,7 +67,23 @@ New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 $regIdx = Load-RegimeIndex $logsRootFull
 
 # discover slippage_events.jsonl under logs/**/execution/
-$files = Get-ChildItem -LiteralPath $logsRootFull -Recurse -File -Filter "slippage_events.jsonl" -ErrorAction SilentlyContinue
+# discover slippage_events.jsonl under logs/<MKT>/execution only (FAIL-CLOSED; avoid polluted logs/** recursion)
+$canon = @("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")
+$files = New-Object System.Collections.Generic.List[System.IO.FileInfo]
+foreach($m in $canon){
+  try {
+    $p = Join-Path (Join-Path (Join-Path $logsRootFull $m) "execution") "slippage_events.jsonl"
+    if(Test-Path -LiteralPath $p){ $files.Add((Get-Item -LiteralPath $p)) }
+  } catch { }
+}
+# legacy optional: logs/execution/slippage_events.jsonl
+try {
+  $p0 = Join-Path (Join-Path $logsRootFull "execution") "slippage_events.jsonl"
+  if(Test-Path -LiteralPath $p0){ $files.Add((Get-Item -LiteralPath $p0)) }
+} catch { }
+if(-not $files -or $files.Count -eq 0){
+  throw "[FAIL-CLOSED] no slippage_events.jsonl found under canonical logs/<MKT>/execution"
+}
 if(-not $files -or $files.Count -eq 0){
   throw "[FAIL-CLOSED] no slippage_events.jsonl found under logs"
 }

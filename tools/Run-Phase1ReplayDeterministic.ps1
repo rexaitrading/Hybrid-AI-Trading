@@ -46,7 +46,16 @@ if($LASTEXITCODE -ne 0){ throw "Phase1 suite failed exit=$LASTEXITCODE" }
 
 # Determinism proof (Phase-1 only): hash replay_summary_*.json in repo root and logs (if any)
 $sum1 = Get-ChildItem $root -File -Filter "replay_summary_*.json" -ErrorAction SilentlyContinue
-$sum2 = Get-ChildItem $logs -Recurse -File -Filter "replay_summary_*.json" -ErrorAction SilentlyContinue
+  # BOUNDED: do not recurse all logs/ (polluted by non-market folders). Only scan canonical market folder.
+  $sum2 = @()
+  try {
+    $m = ([string]$Market).ToUpperInvariant().Trim()
+    if(-not $m){ $m = "US" }
+    $pMkt = Join-Path $logs $m
+    if(Test-Path -LiteralPath $pMkt){
+      $sum2 = @(Get-ChildItem -LiteralPath $pMkt -File -Filter "replay_summary_*.json" -ErrorAction SilentlyContinue)
+    }
+  } catch { $sum2 = @() }
 $targets = @($sum1 + $sum2) | Sort-Object FullName -Unique
 
 $hashes = foreach($f in $targets){
