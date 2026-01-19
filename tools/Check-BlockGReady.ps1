@@ -35,6 +35,56 @@ try {
 # --- END PATH BAN ---
 
 Set-StrictMode -Version Latest
+
+# A1_RUNTIME_NO_BYPASS_BEGIN
+# A1: Runtime enforcement — fail closed if any .placeOrder exists outside allowlist in src/ or scripts/.
+function Invoke-A1RuntimeNoBypass([string]$RepoRoot){
+  $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
+  $allow = New-Object System.Collections.Generic.HashSet[string] ([StringComparer]::OrdinalIgnoreCase)
+  $allow.Add([System.IO.Path]::GetFullPath((Join-Path $RepoRoot "src\hybrid_ai_trading\broker\ib_safe.py"))) | Out-Null
+  $allow.Add([System.IO.Path]::GetFullPath((Join-Path $RepoRoot "scripts\hat_ops.ps1"))) | Out-Null   # audit-only string needle
+
+  $targets = @(
+    (Join-Path $RepoRoot "src"),
+    (Join-Path $RepoRoot "scripts")
+  ) | Where-Object { Test-Path -LiteralPath $_ }
+
+  $hits = New-Object System.Collections.Generic.List[string]
+  foreach($root in $targets){
+    Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+      $p = $_.FullName
+      if($p -like "*\scripts\_quarantine\*"){ return }
+      $nm = $_.Name
+      if($nm -like "*.bak_*" -or $nm -like "*.bak" -or $nm -like "*.pyc"){ return }
+      try {
+        $m1 = Select-String -LiteralPath $p -SimpleMatch -Pattern ".placeOrder(" -ErrorAction SilentlyContinue
+        $m2 = Select-String -LiteralPath $p -SimpleMatch -Pattern "ib.placeOrder(" -ErrorAction SilentlyContinue
+        if($m1 -or $m2){
+          $rel = ""
+          try { $rel = [System.IO.Path]::GetRelativePath($RepoRoot, $p) } catch { $rel = $p }
+          $rel = (($rel + "") -replace "/","\").Trim().TrimEnd(",")
+          if([System.IO.Path]::IsPathRooted($rel)){
+            try { $rel = [System.IO.Path]::GetRelativePath($RepoRoot, $rel) } catch { }
+            $rel = (($rel + "") -replace "/","\").Trim().TrimEnd(",")
+          }
+          $canon = [System.IO.Path]::GetFullPath($p); if(-not $allow.Contains($canon)){ $hits.Add($canon) | Out-Null }
+        }
+      } catch { }
+    }
+  }
+
+  if($hits.Count -gt 0){
+    $uniq = @($hits | Sort-Object | Get-Unique)
+    $msg = "[FAIL-CLOSED][A1] direct placeOrder bypass detected outside allowlist: " + ($uniq -join ", ")
+    throw $msg
+  }
+  Write-Host "[A1] OK: no placeOrder bypass outside allowlist in src/scripts" -ForegroundColor Green
+}
+
+# Execute A1 runtime guard immediately (fail-closed)
+try { Invoke-A1RuntimeNoBypass -RepoRoot (Split-Path -Parent (Split-Path -Parent $PSCommandPath)) } catch { throw }
+# A1_RUNTIME_NO_BYPASS_END
+
 # --- HAT_RUNMODE_SINGLETRUTH_BEGIN
 $toolsDir = Split-Path -Parent $PSCommandPath
 $rmPath = Join-Path $toolsDir "Resolve-HatRunMode.ps1"

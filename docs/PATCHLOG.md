@@ -392,3 +392,10 @@ tools/Disarm-NVDA-Live.ps1
 - Change: crisis fallback pinned to logs\\US legacy location (avoids global-root bleed).
 - Proof: Build-RegimeStatus -Market TW writes regime_status.json to logs\\TW and file exists.
 
+
+## 2026-01-18 17:55:48 — A1 runtime: fail-closed no-bypass guard for direct placeOrder in src/scripts
+- Root cause proven: direct .placeOrder patterns existed in quarantine/backups; runtime guard must ignore non-production surfaces.
+- Policy: scan src/ + scripts/ for .placeOrder( or ib.placeOrder(; allowlist ib_safe.py and hat_ops.ps1; skip __pycache__, *.bak_*, *.pyc, and scripts\\_quarantine.
+- Behavior: fail-closed if any non-allowlisted callsite exists (prevents LIVE/PAPERLIVE bypass).
+- Proof: Check-BlockGReady prints [A1] OK when repo is clean.
+
