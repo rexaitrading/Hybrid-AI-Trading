@@ -65,6 +65,14 @@ function Resolve-GatescoreEventsPath([string]$sym,[string]$logsDir){
   return $pMain  # deterministic fallback (may not exist)
 }
 
+function Resolve-GatescoreEventsPathToday([string]$sym,[string]$logsDir){
+  $s = ($sym + '').ToLowerInvariant()
+  $pToday = Join-Path $logsDir (('{0}_gatescore_events_today.jsonl' -f $s))
+  if(Test-Path -LiteralPath $pToday){ return $pToday }
+  return (Resolve-GatescoreEventsPath $sym $logsDir)
+}
+
+
 function Get-MaxAsOfDateFromJsonlTail([string]$Path,[int]$TailLines=8000){
   if(-not (Test-Path -LiteralPath $Path)){ return "" }
   $max = ""
@@ -103,7 +111,7 @@ function Has-TodayAsOfDateInJsonlTail([string]$Path,[string]$Today,[int]$TailLin
 
 # Audit: capture metrics_source per symbol from RESOLVED events file (today-only).
 function Get-MetricsSourceTop([string]$sym,[string]$logsDir,[string]$todayLocal){
-  $p = Resolve-GatescoreEventsPath $sym $logsDir
+  $p = Resolve-GatescoreEventsPathToday $sym $logsDir
   $seen = @{}
   $exists = [bool](Test-Path -LiteralPath $p)
 
@@ -1374,7 +1382,7 @@ $GS_MIN_EVENTS_REQUIRED = 25
 
 function Get-GSEventsMeta([string]$RepoRoot, [string]$Sym, [string]$Today){
 $logsDir = $logsDirOut
-  $p = Resolve-GatescoreEventsPath $Sym $logsDir
+  $p = Resolve-GatescoreEventsPathToday $Sym $logsDir
 
   $rowsTotal = 0
   $eligibleToday = 0
@@ -1466,7 +1474,7 @@ if (-not $gsAsOf) {
 # GS_ASOF_TODAY_PRESENT_OVERRIDE_BEGIN
 # If resolved events has any rows stamped todayLocal, treat GateScore as fresh today (fail-closed).
 try {
-  $evPathToday = Resolve-GatescoreEventsPath "NVDA" $logsDir
+  $evPathToday = Resolve-GatescoreEventsPathToday "NVDA" $logsDir
   if(Has-TodayAsOfDateInJsonlTail -Path $evPathToday -Today $todayLocal -TailLines 8000){
     $gsAsOf = $todayLocal
   }

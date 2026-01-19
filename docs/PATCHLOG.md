@@ -355,3 +355,9 @@ tools/Disarm-NVDA-Live.ps1
 - Change: Build-GateScoreEvents-Today now writes *_gatescore_events_today.jsonl (today slice).
 - Next: BlockG will read today slice for freshness/eligible counts while ledger remains for rolling.
 
+
+## 2026-01-18 16:40:18 — BlockG: use *_gatescore_events_today.jsonl for today-only checks; keep ledger for rolling
+- Root cause proven: GateScore ledger was overwritten daily (single as_of_date) so rolling samples stayed 0.
+- Change: Added Resolve-GatescoreEventsPathToday and rewired today-only reads (freshness/eligibleToday/metrics_source).
+- Rolling and other historical reads continue using *_gatescore_events.jsonl.
+
