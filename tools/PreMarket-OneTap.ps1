@@ -85,7 +85,7 @@ try {
 } finally {
   if($oldHatLogsDir -ne $null){ $env:HAT_LOGS_DIR = $oldHatLogsDir } else { Remove-Item Env:\HAT_LOGS_DIR -ErrorAction SilentlyContinue }
 }
-# --- Step 1.6: A2 artifacts (per-market): DependencyRisk + RiskGuard + RegimeActions ---
+# --- Step 1.6: A2 artifacts (per-market): DependencyRisk + RiskGuard + RegimeActions + MarketDNA ---
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $mk = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
 if(-not $mk){ $mk = "US" }
@@ -110,14 +110,69 @@ try {
   }
 
   if(Test-Path '.\tools\Build-RegimeActions.ps1'){
-    Write-Host "`n[PREMARKET]   if(Test-Path '.\tools\Build-MarketDNA.ps1'){
-    Write-Host "`n[PREMARKET] Step 1.6d: Build-MarketDNA.ps1 (market=$mk)" -ForegroundColor Yellow
-    .\tools\Build-MarketDNA.ps1 -Market $mk | Out-Host
-  }
-Step 1.6c: Build-RegimeActions.ps1 (market=$mk)" -ForegroundColor Yellow
+    Write-Host "`n[PREMARKET] Step 1.6c: Build-RegimeActions.ps1 (market=$mk)" -ForegroundColor Yellow
     .\tools\Build-RegimeActions.ps1 -Market $mk -Symbol $Symbol | Out-Host
   } else {
     Write-Host "[PREMARKET] WARN: Build-RegimeActions.ps1 missing -> regime_actions.json stays missing (fail-closed)" -ForegroundColor Yellow
+  }
+
+  if(Test-Path '.\tools\Build-MarketDNA.ps1'){
+    Write-Host "`n[PREMARKET] Step 1.6d: Build-MarketDNA.ps1 (market=$mk)" -ForegroundColor Yellow
+    .\tools\Build-MarketDNA.ps1 -Market $mk | Out-Host
+  }
+
+} finally {
+  if($oldHatLogsDir -ne $null){ $env:HAT_LOGS_DIR = $oldHatLogsDir } else { Remove-Item Env:\HAT_LOGS_DIR -ErrorAction SilentlyContinue }
+}
+# --- Step 1.7: Crisis + Crashmode receipts (per-market, NOOP; no flatten action) ---
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$mk = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+if(-not $mk){ $mk = "US" }
+
+$oldHatLogsDir = ($env:HAT_LOGS_DIR + "")
+try {
+  $g = Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1"
+  if(-not (Test-Path -LiteralPath $g)){ throw "[FAIL-CLOSED] missing tools\Get-MarketLogRoot.ps1" }
+  $ld = (& $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $g -Market $mk 2>$null | Out-String).Trim()
+  if(-not $ld){ throw "[FAIL-CLOSED] Get-MarketLogRoot empty for market=" + $mk }
+  $env:HAT_LOGS_DIR = $ld
+  New-Item -ItemType Directory -Force -Path $ld | Out-Null
+
+  # (A) NOOP crashmode flatten status (receipt only; no flatten executed)
+  $cmPath = Join-Path $ld "crashmode_flatten_status.json"
+  $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
+
+  $asof = ""
+  try {
+    $rcRaw = (& (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $mk -Symbol $Symbol | Out-String).Trim()
+    $ix0=$rcRaw.IndexOf("{"); $ix1=$rcRaw.LastIndexOf("}")
+    if($ix0 -ge 0 -and $ix1 -gt $ix0){
+      $rc = ($rcRaw.Substring($ix0, ($ix1-$ix0+1)) | ConvertFrom-Json)
+      $asof = ([string]$rc.as_of_date).Trim()
+      if($asof.Length -gt 10){ $asof = $asof.Substring(0,10) }
+    }
+  } catch { $asof = "" }
+  if(-not $asof){ $asof = (Get-Date).ToString("yyyy-MM-dd") }
+
+  $cm = [ordered]@{
+    kind="crashmode_flatten_status"
+    ts_utc=$tsUtc
+    as_of_date=$asof
+    ok=$true
+    ok_today=$true
+    exit_code=0
+    reason="nonlive_noop_no_crisis"
+    note="Receipt only. No flatten executed."
+  }
+  [System.IO.File]::WriteAllText($cmPath, (($cm | ConvertTo-Json -Depth 6) + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+  Write-Host ("[CRASHMODE] wrote " + $cmPath + " ok=true (NOOP)") -ForegroundColor Yellow
+
+  # (B) Crisis regime status (market-aware; uses its own policy)
+  if(Test-Path '.\tools\Write-CrisisRegimeStatus.ps1'){
+    Write-Host "`n[PREMARKET] Step 1.7b: Write-CrisisRegimeStatus.ps1 (market=$mk symbol=$Symbol)" -ForegroundColor Yellow
+    .\tools\Write-CrisisRegimeStatus.ps1 -Market $mk -Symbol $Symbol | Out-Host
+  } else {
+    Write-Host "[PREMARKET] WARN: Write-CrisisRegimeStatus.ps1 missing -> crisis_ok_today may stay false" -ForegroundColor Yellow
   }
 
 } finally {
