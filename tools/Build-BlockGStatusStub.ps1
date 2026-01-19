@@ -2375,7 +2375,7 @@ gatescore_samples_ok    = $gsSamplesOk
     # Per-symbol GateScore detail (audit/Notion-friendly)
     gatescore_by_symbol = [ordered]@{
         NVDA = [ordered]@{
-            fresh=$gsNVDA.fresh; samples_ok=$gsNVDA.samplesOk; threshold_ok=$gsNVDA.threshOk; ok_today=$gsNVDA.okLiveToday;
+            fresh=$gsNVDA.fresh; samples_ok=$gsNVDA.samplesOk; threshold_ok=$gsNVDA.threshOk; ok_today=$gsNVDA.okToday; samples_ok_live=$gsNVDA.samplesOkLive; threshold_ok_live=$gsNVDA.threshOkLive; ok_live_today=$gsNVDA.okLiveToday;
             count_signals=$gsNVDA.cnt; pnl_samples=$gsNVDA.pnl; mean_edge_ratio=$gsNVDA.edge; mean_micro_score=$gsNVDA.micro;
             min_signals=$gsNVDA.minSignals; min_pnl_samples=$gsNVDA.minPnl; min_edge_ratio=$gsNVDA.minEdge; min_micro_score=$gsNVDA.minMicro
         }
@@ -2394,7 +2394,7 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_min_pnl_samples_live = $GS_LIVE_MIN_PNL_SAMPLES
     gatescore_min_edge_ratio_live   = $GS_LIVE_MIN_EDGE_RATIO
     gatescore_min_micro_score_live  = $GS_LIVE_MIN_MICRO_SCORE
-    gatescore_ok_live_today      = ([bool]$gsNVDA.okLiveToday -and [bool]$gsRecentEnough -and ($gsAsOf -eq $todayLocal) -and [bool]$evNVDA.ok)
+    gatescore_ok_live_today      = ([bool]$gatescore_rolling_samples_ok -and ([math]::Round([double]$gatescore_mean_edge_ratio_rolling,6) -ge [math]::Round([double]$GS_LIVE_MIN_EDGE_RATIO,6)) -and ([math]::Round([double]$gatescore_mean_micro_score_rolling,6) -ge [math]::Round([double]$GS_LIVE_MIN_MICRO_SCORE,6)) -and [bool]$gsRecentEnough -and ($gsAsOf -eq $todayLocal) -and [bool]$evNVDA.ok)
 
     gatescore_events_min_required = $GS_MIN_EVENTS_REQUIRED
     gatescore_events_by_symbol = [ordered]@{

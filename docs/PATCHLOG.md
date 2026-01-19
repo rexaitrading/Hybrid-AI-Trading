@@ -373,3 +373,9 @@ tools/Disarm-NVDA-Live.ps1
 - Change: default Mode=append; rewrite remains available manually.
 - Proof: per-market run reports mode=append and ledger lines increase (e.g., 360 -> 720).
 
+
+## 2026-01-18 16:58:07 — BlockG: rolling-first LIVE ok + NVDA live audit fields
+- Change: gatescore_ok_live_today now uses rolling-first policy checks (rolling samples/rolling means + live minima).
+- Change: gatescore_by_symbol.NVDA now reports ok_today (daily) and adds samples_ok_live/threshold_ok_live/ok_live_today for audit.
+- Note: top-level ok_live_today still depends on events meta ok; next patch will make events-meta freshness content-based.
+
