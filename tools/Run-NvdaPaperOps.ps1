@@ -41,7 +41,7 @@ if($LASTEXITCODE -ne 0){ throw "[OPS] evhard veto snapshot failed rc=$LASTEXITCO
 if($LASTEXITCODE -ne 0){ throw "[OPS] evhard daily failed rc=$LASTEXITCODE" }
 
 Write-Host "[OPS] 5) BlockG rebuild + check (NVDA)" -ForegroundColor Cyan
-& .\tools\Build-BlockGStatusStub.ps1 -Symbol NVDA
+& .\tools\Build-BlockGStatusStub.ps1 -Market $env:HAT_MARKET -Symbol NVDA
 & .\tools\Invoke-BlockGCheck.ps1 -Symbol NVDA
 if($LASTEXITCODE -ne 0){ throw "[OPS] BlockG not ready rc=$LASTEXITCODE" }
 

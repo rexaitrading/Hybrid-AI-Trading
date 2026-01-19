@@ -18,5 +18,5 @@ if (-not (Test-Path -LiteralPath $checker)) {
   exit 1
 }
 
-& $checker -Symbol $Symbol -Build
+& $checker -Symbol $Symbol -Build -Market $env:HAT_MARKET
 exit $LASTEXITCODE

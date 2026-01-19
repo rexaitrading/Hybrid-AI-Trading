@@ -351,7 +351,7 @@ if ($Build) {
 
   Write-Host "[BLOCKG] Build requested: running Build-BlockGStatusStub.ps1" -ForegroundColor Cyan
   $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
-  & $psExe -NoProfile -ExecutionPolicy Bypass -Command "& '$builder' -Symbol '$Symbol'" *>&1 | Out-Host
+  & $psExe -NoProfile -ExecutionPolicy Bypass -Command "& '$builder' -Market $Market -Symbol $Symbol" *>&1 | Out-Host
   if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub.ps1 failed exit=$LASTEXITCODE" }
 }
 

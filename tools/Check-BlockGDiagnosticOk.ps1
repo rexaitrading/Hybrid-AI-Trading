@@ -12,7 +12,7 @@ $toolsDir = Split-Path -Parent $PSCommandPath
 $checker  = Join-Path $toolsDir "Check-BlockGReady.ps1"
 if(-not (Test-Path -LiteralPath $checker)){ throw "Missing: $checker" }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol | Out-Host
+& powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol -Market $env:HAT_MARKET | Out-Host
 $code = $LASTEXITCODE
 
 if($code -eq 0){

@@ -85,7 +85,7 @@ Step "PH3 GateScore daily summary" {
 }
 # 5) BlockG build + check (PS is semantic owner)
 Step "PH5 BlockG build+check" {
-  powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-BlockGStatusStub.ps1 -Symbol $Symbol *>&1 | Out-Host
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-BlockGStatusStub.ps1 -Market $env:HAT_MARKET -Symbol $Symbol *>&1 | Out-Host
   powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-BlockGCheck.ps1 -Symbol $Symbol *>&1 | Out-Host
   "EXIT_BLOCKG=$LASTEXITCODE" | Out-Host
   if($LASTEXITCODE -ne 0){ exit 2 }

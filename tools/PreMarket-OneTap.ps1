@@ -63,7 +63,7 @@ if (-not (Test-Path '.\tools\Build-BlockGStatusStub.ps1')) {
   exit 1
 }
 Write-Host "`n[PREMARKET] Step 3: Build-BlockGStatusStub.ps1" -ForegroundColor Yellow
-.\tools\Build-BlockGStatusStub.ps1 | Out-Host
+.\tools\Build-BlockGStatusStub.ps1 -Market $env:HAT_MARKET -Symbol $Symbol | Out-Host
 
 # --- Step 4: Optional ProducersOnly quick exit ---
 if ($ProducersOnly) {

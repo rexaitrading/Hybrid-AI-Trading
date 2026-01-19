@@ -30,7 +30,7 @@ Run-Step "GateScoreDailySummary" ".\tools\Build-GateScoreDailySummary.ps1"
 Run-Step "EvHardEvidenceRaw" ".\tools\Build-EvHardEvidenceRaw.ps1"
 
 # ---- BlockG contract ----
-Run-Step "BlockGStatusStub" ".\tools\Build-BlockGStatusStub.ps1"
+Run-Step "BlockGStatusStub" ".\tools\Build-BlockGStatusStub.ps1 -Market $env:HAT_MARKET -Symbol $env:HAT_SYMBOL"
 
 # ---- Symbol stamps ----
 Run-Step "StampNVDA" ".\tools\Write-NvdaLiveReadyStamp.ps1"

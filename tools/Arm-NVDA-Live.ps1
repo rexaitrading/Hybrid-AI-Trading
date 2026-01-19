@@ -59,7 +59,7 @@ if(-not (Test-Path -LiteralPath $gsCsv)){
 # --- A2 END ---
 
 Write-Host "[ARM] Step 3/4 Build BlockG status" -ForegroundColor Cyan
-powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Build-BlockGStatusStub.ps1") -Symbol ALL | Out-Host
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir "Build-BlockGStatusStub.ps1") -Market $m -Symbol ALL | Out-Host
 if ($LASTEXITCODE -ne 0) { Fail "Build-BlockGStatusStub failed exit=$LASTEXITCODE" }
 
 Write-Host "[ARM] Step 4/4 Check BlockG readiness (NVDA)" -ForegroundColor Cyan

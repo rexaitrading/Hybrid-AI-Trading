@@ -183,7 +183,7 @@ if(Test-Path $evEvidence){
 & ".\tools\Run-EvHardVetoDaily.ps1"
 
 # --- 7) Build Block-G status + check (authoritative) ---
-& ".\tools\Build-BlockGStatusStub.ps1"
+& ".\tools\Build-BlockGStatusStub.ps1" -Market $Market -Symbol $Symbol
 & ".\tools\Check-BlockGDiagnosticOk.ps1" -Symbol $Symbol
 
 $rc = $LASTEXITCODE

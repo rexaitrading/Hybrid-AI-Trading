@@ -65,7 +65,7 @@ if($st.Count -eq 0){
 W ""
 W "## B) Block-G Contract (Authoritative)"
 
-$bgOut  = powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-BlockGStatusStub.ps1 2>&1
+$bgOut  = powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-BlockGStatusStub.ps1 -Market $env:HAT_MARKET -Symbol ALL 2>&1
 $bgExit = $LASTEXITCODE
 W ("- Build-BlockGStatusStub exit={0}" -f $bgExit)
 JAdd @{ area="blockg"; check="builder_exit0"; ok=($bgExit -eq 0); detail=($bgOut | Out-String) }

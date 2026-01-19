@@ -29,7 +29,7 @@ if($LASTEXITCODE -ne 0){ Fail "Gate P1-C failed" }
 
 
 # Phase-5 contract build + checker gate (single authority: tools\Check-BlockGReady.ps1)
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-BlockGStatusStub.ps1 | Out-Host
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-BlockGStatusStub.ps1 -Market $env:HAT_MARKET -Symbol $Symbol | Out-Host
 if($LASTEXITCODE -ne 0){ Fail "Gate P5-Builder failed" }
 
 

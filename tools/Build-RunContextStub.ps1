@@ -13,7 +13,7 @@ function Invoke-BlockGReady {
     [string]$Symbol
   )
   $checker = Join-Path (Split-Path -Parent $PSCommandPath) "Check-BlockGReady.ps1"
-  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol | Out-Host
+  powershell -NoProfile -ExecutionPolicy Bypass -File $checker -Symbol $Symbol -Market $env:HAT_MARKET | Out-Host
   return $LASTEXITCODE
 }
 

@@ -29,7 +29,7 @@ if ($LASTEXITCODE -ne 0) { throw "[PRE] Daily producers failed rc=$LASTEXITCODE"
 
 # 3) BlockG check (fail-closed)
 # 3) BlockG build + check (fail-closed, deterministic)
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1") | Out-Host
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Build-BlockGStatusStub.ps1") -Market $env:HAT_MARKET -Symbol $Symbol | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "[PRE] BlockG build failed rc=$LASTEXITCODE" }
 
 # Decide what readiness to REQUIRE:
