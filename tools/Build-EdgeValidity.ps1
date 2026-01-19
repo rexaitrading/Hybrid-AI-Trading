@@ -1,8 +1,18 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW")]
+  [ValidateSet("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")]
   [string]$Market = "US"
 )
+
+# --- Market mapping (MarketOut = log folder; MarketBase = canonical market) ---
+$MarketOut  = $Market
+$MarketBase = $Market
+switch (([string]$Market).Trim().ToUpperInvariant()) {
+  "HK_SH" { $MarketOut = "HK_SH"; $MarketBase = "HK" }
+  "HK_SZ" { $MarketOut = "HK_SZ"; $MarketBase = "HK" }
+  default { $MarketOut = $Market; $MarketBase = $Market }
+}
+
 
 Set-StrictMode -Version Latest
 # --- HAT_RUNMODE_SINGLETRUTH_BEGIN
@@ -71,6 +81,8 @@ $outPath = Join-Path $logsDir "edge_validity.json"
 $obj = [ordered]@{
   ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
   market     = $Market
+  market_out  = $MarketOut
+  market_base = $MarketBase
   as_of_date = $todayLocal
   ok_today   = $false
   edge_score = 0.0

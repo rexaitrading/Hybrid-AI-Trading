@@ -1,6 +1,6 @@
-[CmdletBinding()]
+  [ValidateSet("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")]
 param(
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW")]
+  [ValidateSet("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")]
   [string]$Market = "US"
 )
 
@@ -16,6 +16,13 @@ $rmObj = ($rmRaw.Substring($ix0, ($ix1 - $ix0 + 1)) | ConvertFrom-Json -ErrorAct
 $script:__HAT_RUNMODE = ([string]$rmObj.run_mode).Trim().ToUpperInvariant()
 # --- HAT_RUNMODE_SINGLETRUTH_END
 $ErrorActionPreference="Stop"
+
+# HK Stock Connect routing: write to MarketOut, compute RunContext on MarketBase
+$MarketOut = ($Market + "").Trim().ToUpperInvariant()
+if(-not $MarketOut){ $MarketOut = "US" }
+$MarketBase = $MarketOut
+if($MarketBase -eq "HK_SH" -or $MarketBase -eq "HK_SZ"){ $MarketBase = "HK" }
+
 chcp 65001 | Out-Null
 
 function Write-Utf8NoBomLf([string]$Path,[string]$Text){
@@ -61,16 +68,16 @@ function Allow-NonLiveUs([string]$Market){
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
-$rc = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $Market -Symbol NVDA | ConvertFrom-Json
+$rc = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Resolve-RunContext.ps1") -Market $MarketBase -Symbol NVDA | ConvertFrom-Json
 $todayLocal = Slice-Date ([string]$rc.as_of_date)
 
-$logsDir = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $Market
+$logsDir = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1") -Market $MarketOut
 if(-not $logsDir){ $logsDir = Join-Path $repoRoot "logs" }
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null;
 $outPath = Join-Path $logsDir "market_dna.json"
 $obj = [ordered]@{
   ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
-  market     = $Market
+  market     = $MarketOut
   as_of_date = $todayLocal
   ok_today   = $false
   dna_class  = "unknown"

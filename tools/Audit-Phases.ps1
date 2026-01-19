@@ -54,23 +54,24 @@ CheckPath "Phase2 package" "src\hybrid_ai_trading\phase2"
 CheckPath "Micro cost snapshot" "src\hybrid_ai_trading\phase2\micro_cost_snapshot.py"
 CheckPath "Phase2_3 diagnostics doc" "docs\Phase2_3_Diagnostics.md"
 
-Section "Phase 3 (GateScore)"
-CheckPath "GateScore package" "src\hybrid_ai_trading\gatescore"
-CheckPath "GateScore daily summary csv" "logs\gatescore_daily_summary.csv"
-CheckPath "GateScore thresholds" "configs\blockg_thresholds.json"
+Section "Phase 3/4/5 (Per-Market receipts)"
+$canonMkts = @("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")
+foreach($m in $canonMkts){
+  $mU = ($m + "").ToUpperInvariant()
+  Section ("Market " + $mU)
 
-Section "Phase 4 (Validation)"
-CheckPath "Phase4 stamp" "logs\phase4_validation_passed.json"
-CheckPath "Phase4 module" "src\hybrid_ai_trading\phase4"
+  # Phase 3
+  CheckPath ("GateScore daily summary csv [" + $mU + "]") ("logs\" + $mU + "\gatescore_daily_summary.csv")
 
-Section "Phase 5 (Risk + Execution perimeter)"
-CheckPath "Block-G status" "logs\blockg_status_stub.json"
-CheckPath "Build-BlockGStatusStub" "tools\Build-BlockGStatusStub.ps1"
-CheckPath "Check-BlockGReady" "tools\Check-BlockGReady.ps1"
-CheckPath "Smoke-LiveIbFailClosed" "tools\Smoke-LiveIbFailClosed.ps1"
+  # Phase 4
+  CheckPath ("Phase4 stamp [" + $mU + "]") ("logs\" + $mU + "\phase4_validation_passed.json")
 
-# ONLY build contract (safe, deterministic). Checker can fail on purpose -> nonfatal.
-RunPSNonFatal "BlockG build" "tools\Build-BlockGStatusStub.ps1"
+  # Phase 5
+  CheckPath ("Block-G status [" + $mU + "]") ("logs\" + $mU + "\blockg_status_stub.json")
+
+  # Build contract per market (safe, deterministic). Nonfatal.
+  RunPSNonFatal ("BlockG build [" + $mU + "]") "tools\Build-BlockGStatusStub.ps1" @("-Market",$mU,"-Symbol","ALL")
+}
 
 Section "Phase 6 (Portfolio / Aggregation)"
 CheckPath "Phase6 module" "src\hybrid_ai_trading\phase6"
