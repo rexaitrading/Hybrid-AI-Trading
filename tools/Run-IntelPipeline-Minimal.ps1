@@ -34,7 +34,7 @@ function Read-JsonSafe([string]$path) {
   try { return (Get-Content $path -Raw -Encoding utf8 | ConvertFrom-Json) } catch { return $null }
 }
 
-$bg = Read-JsonSafe (Join-Path $repoRoot "logs\blockg_status_stub.json")
+$bg = Read-JsonSafe (Join-Path $logsDir "blockg_status_stub.json")
 $ev = Read-JsonSafe (Join-Path $repoRoot "logs\ev_hard_snapshot.json")
 
 # Pull NVDA gatescore row
@@ -50,7 +50,7 @@ $obj = [ordered]@{
   ts_utc = $ts
   as_of_date = $today
   kind = "intel_minimal_pulse"
-  blockg_nvda_ready = [bool]($bg.nvda_blockg_ready)
+  blockg_nvda_ready = [bool](($bg -and ($bg.PSObject.Properties.Name -contains "nvda_blockg_ready")) -and [bool]$bg.nvda_blockg_ready)
   gatescore_nvda_samples = if($gsRow){ [int]$gsRow.count_signals } else { 0 }
   gatescore_nvda_edge = if($gsRow){ [double]$gsRow.mean_edge_ratio } else { 0.0 }
   ev_hard_ok = if($ev){ [bool]$ev.ok } else { $false }

@@ -194,6 +194,7 @@ if(-not (Get-Command _GetTodayLocalFromRunContext -ErrorAction SilentlyContinue)
 $isLiveMode = ($mode -eq "LIVE")
   # Contract semantics level (fail-closed deterministic)
   $contract_semantics_level = "PAPER_STRICT"
+  if($mode -eq "PAPERLIVE"){ $contract_semantics_level = "PAPERLIVE_STRICT" }
   if($isLiveMode){ $contract_semantics_level = "LIVE_STRICT" }
 try {
 # --- OUTPUT ENCODING (institutional) ---
@@ -370,7 +371,18 @@ function LastNTradingDays([string]$asOf,[int]$n){
 }
 function ComputeGateScoreRolling([string]$sym,[string]$logsDir,[string[]]$days){
   $path = Resolve-GatescoreEventsPath $sym $logsDir
-  $evs = @(Read-JsonlLines $path)
+  $evs = @()
+  foreach($ln in (Get-Content -LiteralPath $path -Encoding utf8)){
+    $s = ($ln + "").Trim(); if(-not $s){ continue }
+    try {
+      $o = $s | ConvertFrom-Json -ErrorAction Stop
+      if($o -and ($o.PSObject.Properties.Name -contains "symbol")){
+        $symKey = (($sym + "")).Trim().ToUpperInvariant()
+        $rowSym = (([string]$o.symbol).Trim().ToUpperInvariant())
+        if($rowSym -eq $symKey){ $evs += $o }
+      }
+    } catch { }
+  }
   if($evs.Count -eq 0){ return [pscustomobject]@{ samples=0; pnl_samples=0; mean_edge=0.0; mean_micro=0.0 } }
 
   $sel=@()
@@ -412,6 +424,7 @@ try {
 }
 
 function Get-GSFromEvents([string]$sym, [string]$asOf, [string]$todayLocal){
+  $asOfKey = ((($asOf + "")).Trim())
   # Compute GateScore metrics for a single as_of_date from resolved events source.
   $repoRoot = Resolve-RepoRoot
 
@@ -487,7 +500,18 @@ try {
 
 
   $path = Resolve-GatescoreEventsPath $sym $logsDir
-  $evs = @(Read-JsonlLines $path)
+  $evs = @()
+  foreach($ln in (Get-Content -LiteralPath $path -Encoding utf8)){
+    $s = ($ln + "").Trim(); if(-not $s){ continue }
+    try {
+      $o = $s | ConvertFrom-Json -ErrorAction Stop
+      if($o -and ($o.PSObject.Properties.Name -contains "symbol")){
+        $symKey = (($sym + "")).Trim().ToUpperInvariant()
+        $rowSym = (([string]$o.symbol).Trim().ToUpperInvariant())
+        if($rowSym -eq $symKey){ $evs += $o }
+      }
+    } catch { }
+  }
   if($evs.Count -eq 0){
     return [pscustomobject]@{ fresh=$false; cnt=0; pnl=0; edge=0.0; micro=0.0 }
   }
@@ -495,7 +519,7 @@ try {
   $sel=@()
   foreach($e in $evs){
     $d = SliceDate ([string]$e.as_of_date)
-    if($d -eq $asOf){
+    if($d -eq $asOfKey){
       if(-not ($e.PSObject.Properties.Name -contains "eligible") -or [bool]$e.eligible){
         $sel += $e
       }
@@ -554,8 +578,8 @@ if(-not $m){ $m = "US" }
 $Market = $m
 # A3_MARKET_ENVFIRST_END
 
-function Get-Phase4OkToday([string]$RepoRoot, [string]$Today){
-  $path = Prefer-LogsPath (Join-Path $logsDir "phase4_validation_passed.json") (Join-Path $logsRoot "phase4_validation_passed.json")
+function Get-Phase4OkToday([string]$RepoRoot, [string]$LogsDir, [string]$Today){
+  $path = Join-Path $LogsDir "phase4_validation_passed.json"
   if(-not (Test-Path $path)){ return $false }
 
   try {
@@ -1518,10 +1542,14 @@ try {
 } catch { }
 # A2_GS_SUMMARY_NONLIVE_END
 # ---- Phase4 ----
-$phase4Ok = Get-Phase4OkToday $repoRoot $today
+$phase4Ok = Get-Phase4OkToday $repoRoot $logsDirOut $todayLocal
 # A2: prefer producer status json (FULL builder) before legacy fallback logic
 $p4s = Prefer-LogsPath (Join-Path $logsDir "phase4_status.json") (Join-Path $logsRoot "phase4_status.json")
 $p4ok = Read-StatusOkToday $p4s $todayLocal
+$p4 = Prefer-LogsPath (Join-Path $logsDir "phase4_validation_passed.json") (Join-Path $logsRoot "phase4_validation_passed.json")
+if(-not (Test-Path -LiteralPath $p4)) {
+  if($null -ne $p4ok){ $phase4Ok = [bool]$p4ok }
+}
 # A2: prefer producer status json (FULL builder) before CSV parsing
 $evs = Prefer-LogsPath (Join-Path $logsDir "ev_hard_status.json") (Join-Path $logsRoot "ev_hard_status.json")
 # ---- C5 Global-Ready gates (fail-closed) ----
@@ -1556,7 +1584,6 @@ if(-not $griskOk){ $reasons.Add("risk_guard_ok_today=false") | Out-Null }
 $evDecided = $false
 $evok = Read-StatusOkToday $evs $todayLocal
 if($null -ne $evok){ $evHardOk = [bool]$evok; $evHardDailyAsOf=$todayLocal; $evDecided = $true }
-if($null -ne $p4ok){ $phase4Ok = [bool]$p4ok }
 
 
 # ---- EV hard veto daily ----
@@ -1727,7 +1754,7 @@ function Get-GSAsOfFromEvents([string]$sym, [string]$logsDir){
     try {
       $o = $s | ConvertFrom-Json
       $d = ""
-      if($o.PSObject.Properties.Name -contains "as_of_date"){ $d = Slice-Date ([string]$o.as_of_date) }
+      if($o.PSObject.Properties.Name -contains "as_of_date"){ $d = SliceDate ([string]$o.as_of_date) }
       if($d){
         if((-not $max) -or ($d -gt $max)){ $max = $d }
       }
@@ -1739,7 +1766,7 @@ function Get-GSFor([string]$sym) {
     # Per-symbol GateScore session date (do not reuse NVDA global $gsAsOf)
     if(-not $script:todayLocal){ try { $script:todayLocal = $today } catch { $script:todayLocal = (Get-Date).ToString("yyyy-MM-dd") } }
 
-    $asOfSym = Get-GSAsOfFromEvents $sym $logsDir
+    $asOfSym = Get-GSAsOfFromEvents $sym $logsDirOut
     if(-not $asOfSym){
       return [pscustomobject]@{ fresh=$false; cnt=0; pnl=0; edge=0.0; micro=0.0 }
     }
@@ -1781,8 +1808,8 @@ $gsQQQ  = Eval-GS "QQQ"
 
 # --- GateScore rolling truth (30 trading days) ---
 $ROLL_DAYS = 30
-$gsDays = LastNTradingDays $today $ROLL_DAYS
-$gsNVDA_roll = ComputeGateScoreRolling "NVDA" $logsDir $gsDays
+$gsDays = LastNTradingDays $todayLocal $ROLL_DAYS
+$gsNVDA_roll = ComputeGateScoreRolling "NVDA" $logsDirOut $gsDays
 
 $gatescore_samples_rolling     = $gsNVDA_roll.samples
 $gatescore_pnl_samples_rolling = $gsNVDA_roll.pnl_samples
@@ -1832,7 +1859,7 @@ $gsMicro = [double]$gsNVDA.micro
 # re-hydrate legacy GateScore fields from per-market summary CSV for PAPER/PAPERLIVE only.
 try {
   $mode2 = $script:__HAT_RUNMODE
-  if($mode2 -ne "LIVE"){
+  if($mode2 -ne "LIVE" -and [int]$gsNVDA.cnt -le 0){
     $gsCsv2 = Join-Path $logsDir "gatescore_pnl_summary.csv"
     if(-not (Test-Path -LiteralPath $gsCsv2)){ $gsCsv2 = Join-Path $logsDir "gatescore_daily_summary.csv" }
 
@@ -2207,7 +2234,7 @@ try { $globalReadyOk = ([bool]$gdnaOk -and [bool]$gedgeOk -and [bool]$gdepOk -an
   try {
     if([bool]$marketClosedToday){ $contract_semantics_reason = "closed_day" }
     else {
-      if((([string]$rcSessionName).Trim().ToUpperInvariant()) -ne "RTH"){ $contract_semantics_reason = "session_not_rth" }
+      if((([string]$rcSessionName).Trim().ToUpperInvariant()) -ne "RTH"){ if((($contract_semantics_level + "") -eq "PAPERLIVE_STRICT")){ $contract_semantics_reason = "paperlive_after_hours" } else { $contract_semantics_reason = "session_not_rth" } }
       elseif(-not [bool]$phase4Ok){ $contract_semantics_reason = "phase4_ok_today=false" }
       elseif(-not [bool]$phase23Ok){ $contract_semantics_reason = "phase23_health_ok_today=false" }
       elseif(-not [bool]$evHardOk){ $contract_semantics_reason = "ev_hard_daily_ok_today=false" }
@@ -2420,6 +2447,9 @@ gatescore_samples_ok    = $gsSamplesOk
     gatescore_mean_edge_ratio_rounded6 = $gatescore_mean_edge_ratio_rounded6
 # --- END PATCH1 ---
 
+    nvda_blockg_ready = [bool]$nvdaReady
+    spy_blockg_ready  = [bool]$spyReady
+    qqq_blockg_ready  = [bool]$qqqReady
   }
 $payloadJson = $payload | ConvertTo-Json -Depth 6
 Write-Host ("[BLOCK-G] Writing Block-G status stub: " + (Split-Path -Leaf $statusPath)) -ForegroundColor Cyan
