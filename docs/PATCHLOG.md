@@ -367,3 +367,9 @@ tools/Disarm-NVDA-Live.ps1
 - Change: gatescore_recent_enough = gsRecentEnough (policy truth); added gatescore_recent_enough_diag for audit.
 - Proof: age_days=0 => recent_enough=True while diag can remain False.
 
+
+## 2026-01-18 16:50:07 — GateScore ledger: default per-market writer Mode=append (multi-day accumulation)
+- Root cause proven: Write-GateScoreEvents-PerMarket default Mode=rewrite overwrote nvda_gatescore_events.jsonl each run, preventing rolling.
+- Change: default Mode=append; rewrite remains available manually.
+- Proof: per-market run reports mode=append and ledger lines increase (e.g., 360 -> 720).
+

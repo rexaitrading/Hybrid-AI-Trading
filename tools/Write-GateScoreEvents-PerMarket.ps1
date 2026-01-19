@@ -5,7 +5,7 @@ param(
   [ValidateSet("NVDA","SPY","QQQ")]
   [string]$Symbol="NVDA",
   [ValidateSet("rewrite","append","prune")]
-  [string]$Mode="rewrite",
+  [string]$Mode="append",
   [int]$MinEvents=10
 )
 
