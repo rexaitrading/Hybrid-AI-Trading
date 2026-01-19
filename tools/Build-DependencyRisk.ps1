@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("US","JP","HK","SG","IN","KR","TW")]
+  [ValidateSet("US","JP","HK","HK_SH","HK_SZ","SG","IN","KR","TW")]
   [string]$Market = "US"
 )
 

@@ -85,6 +85,44 @@ try {
 } finally {
   if($oldHatLogsDir -ne $null){ $env:HAT_LOGS_DIR = $oldHatLogsDir } else { Remove-Item Env:\HAT_LOGS_DIR -ErrorAction SilentlyContinue }
 }
+# --- Step 1.6: A2 artifacts (per-market): DependencyRisk + RiskGuard + RegimeActions ---
+$psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$mk = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+if(-not $mk){ $mk = "US" }
+
+$oldHatLogsDir = ($env:HAT_LOGS_DIR + "")
+try {
+  $g = Join-Path $repoRoot "tools\Get-MarketLogRoot.ps1"
+  if(-not (Test-Path -LiteralPath $g)){ throw "[FAIL-CLOSED] missing tools\Get-MarketLogRoot.ps1" }
+  $ld = (& $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $g -Market $mk 2>$null | Out-String).Trim()
+  if(-not $ld){ throw "[FAIL-CLOSED] Get-MarketLogRoot empty for market=" + $mk }
+  $env:HAT_LOGS_DIR = $ld
+  New-Item -ItemType Directory -Force -Path $ld | Out-Null
+
+  if(Test-Path '.\tools\Build-DependencyRisk.ps1'){
+    Write-Host "`n[PREMARKET] Step 1.6a: Build-DependencyRisk.ps1 (market=$mk)" -ForegroundColor Yellow
+    .\tools\Build-DependencyRisk.ps1 -Market $mk | Out-Host
+  }
+
+  if(Test-Path '.\tools\Build-RiskGuardStatus.ps1'){
+    Write-Host "`n[PREMARKET] Step 1.6b: Build-RiskGuardStatus.ps1 (market=$mk)" -ForegroundColor Yellow
+    .\tools\Build-RiskGuardStatus.ps1 -Market $mk | Out-Host
+  }
+
+  if(Test-Path '.\tools\Build-RegimeActions.ps1'){
+    Write-Host "`n[PREMARKET]   if(Test-Path '.\tools\Build-MarketDNA.ps1'){
+    Write-Host "`n[PREMARKET] Step 1.6d: Build-MarketDNA.ps1 (market=$mk)" -ForegroundColor Yellow
+    .\tools\Build-MarketDNA.ps1 -Market $mk | Out-Host
+  }
+Step 1.6c: Build-RegimeActions.ps1 (market=$mk)" -ForegroundColor Yellow
+    .\tools\Build-RegimeActions.ps1 -Market $mk -Symbol $Symbol | Out-Host
+  } else {
+    Write-Host "[PREMARKET] WARN: Build-RegimeActions.ps1 missing -> regime_actions.json stays missing (fail-closed)" -ForegroundColor Yellow
+  }
+
+} finally {
+  if($oldHatLogsDir -ne $null){ $env:HAT_LOGS_DIR = $oldHatLogsDir } else { Remove-Item Env:\HAT_LOGS_DIR -ErrorAction SilentlyContinue }
+}
 # --- Step 2: EV-hard raw evidence -> snapshot -> compute input -> daily export -> A2 status (per-market, fail-closed) ---
 # FS-truth: always derive HAT_LOGS_DIR from Get-MarketLogRoot for current HAT_MARKET (prevents cross-market bleed)
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
