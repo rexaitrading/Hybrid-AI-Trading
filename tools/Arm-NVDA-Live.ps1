@@ -2,6 +2,14 @@
 param()
 
 Set-StrictMode -Version Latest
+  # ALLOWLIST_GUARD_ARM_BEGIN
+  if(Test-Path '.\tools\Test-MarketEnablementAllowlist.ps1'){
+    .\tools\Test-MarketEnablementAllowlist.ps1 -Market ($env:HAT_MARKET + "") | Out-Host
+  } else {
+    throw "[FAIL-CLOSED] missing tools\Test-MarketEnablementAllowlist.ps1"
+  }
+  # ALLOWLIST_GUARD_ARM_END
+
 $ErrorActionPreference = "Stop"
 
 $toolsDir = Split-Path -Parent $PSCommandPath

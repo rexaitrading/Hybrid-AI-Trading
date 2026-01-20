@@ -36,6 +36,15 @@ if($hitsDirect -and $hitsDirect.Count -gt 0){
 
 # 1) READY executor definition (UPDATED):
 #    READY executor is Arm-NVDA-Live.ps1, and it must EXECUTE Check-BlockGReady.ps1 directly (deterministic gating).
+
+  # ALLOWLIST_GUARD_BEGIN
+  if(Test-Path '.\tools\Test-MarketEnablementAllowlist.ps1'){
+    .\tools\Test-MarketEnablementAllowlist.ps1 -Market ($env:HAT_MARKET + "") | Out-Host
+  } else {
+    throw "[FAIL-CLOSED] missing tools\Test-MarketEnablementAllowlist.ps1"
+  }
+  # ALLOWLIST_GUARD_END
+
 $armPath = (Resolve-Path -LiteralPath .\tools\Arm-NVDA-Live.ps1).Path
 $patArmExec = 'powershell\s+-NoProfile.*-File\s+.*Check-BlockGReady\.ps1|powershell\s+-NoProfile.*Check-BlockGReady\.ps1|&\s*"\.\\tools\\Check-BlockGReady\.ps1"|&\s*\.\\tools\\Check-BlockGReady\.ps1'
 $armHits = @(Select-String -LiteralPath $armPath -Pattern $patArmExec -ErrorAction SilentlyContinue)
