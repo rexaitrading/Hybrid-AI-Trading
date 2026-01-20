@@ -112,6 +112,14 @@ try {
   if(Test-Path '.\tools\Build-RegimeActions.ps1'){
     Write-Host "`n[PREMARKET] Step 1.6c: Build-RegimeActions.ps1 (market=$mk)" -ForegroundColor Yellow
     .\tools\Build-RegimeActions.ps1 -Market $mk -Symbol $Symbol | Out-Host
+
+   if(Test-Path '.\tools\Build-MarketSelector.ps1'){
+     Write-Host "`n[PREMARKET] Step 1.6e: Build-MarketSelector.ps1 (market=$mk)" -ForegroundColor Yellow
+     .\tools\Build-MarketSelector.ps1 -Market $mk -Symbol $Symbol | Out-Host
+   } else {
+     Write-Host "[PREMARKET] WARN: Build-MarketSelector.ps1 missing -> selector receipt absent (audit-only)" -ForegroundColor Yellow
+   }
+
   } else {
     Write-Host "[PREMARKET] WARN: Build-RegimeActions.ps1 missing -> regime_actions.json stays missing (fail-closed)" -ForegroundColor Yellow
   }

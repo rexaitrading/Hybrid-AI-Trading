@@ -1,4 +1,30 @@
 ---
+## 2026-01-19 20:32:00 — Ops: Market Selector v1 (audit-only) receipt + OneTap wiring
+
+Goal:
+- Institutionalize the “single-option, stable repeatable” Market Selector scaffold (audit-only, fail-closed).
+- Produce per-market selector receipt before Block-G build, so “0 trades unless perfect” can later be enforced as hard-veto.
+
+Root cause (hard proof):
+- Selector fields existed in Block-G but were missing/unstable until we made selector vars StrictMode-safe in the FULL payload scope.
+- Per-market selector receipt must be produced before Block-G build; OneTap is the canonical producer pipeline.
+
+Change:
+- Added tools/Build-MarketSelector.ps1 (US-only v1, audit-only): writes logs\<Market>\market_selector.json.
+- Wired tools/PreMarket-OneTap.ps1 Step 1.6e to run Build-MarketSelector.ps1 after RegimeActions.
+
+Proof:
+- Running PreMarket-OneTap -ProducersOnly produces logs\US\market_selector.json.
+- Build-BlockGStatusStub FULL shows market_selector_* fields (ok_today/decision/chosen_market/chosen_module/reason).
+
+Notes:
+- v1 policy is US-only; other markets remain NO_TRADE until per-market intel + session proofs exist.
+- Hard-veto enforcement in Check-BlockGReady is intentionally NOT enabled yet (audit-first).
+
+Rollback:
+- Restore tools/Build-MarketSelector.ps1 / tools/PreMarket-OneTap.ps1 from git history, or use the .bak_* backups created during the session.
+---
+
 ## 2026-01-19 18:51:03 — Intel: per-market minimal pulse mirror (BlockG reads logs\<Market>\risk_pulse.jsonl)
 
 Goal:
