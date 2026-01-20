@@ -29,6 +29,23 @@ if (Test-Path '.\tools\Run-Phase2ToPhase5Validation.ps1') {
 $mk = (($env:HAT_MARKET + "")).Trim()
 if(-not $mk){ $mk = "US" }
 
+# STEP_0_25_INTEL_PULSE_PERMARKET
+# --- Step 0.25: Intel minimal pulse (per-market, deterministic) ---
+if (Test-Path '.\tools\Run-IntelPipeline-Minimal.ps1') {
+  Write-Host "`n[PREMARKET] Step 0.25: Run-IntelPipeline-Minimal.ps1 (market=$mk)" -ForegroundColor Yellow
+  $oldHatMarket = ($env:HAT_MARKET + "")
+  try {
+    $env:HAT_MARKET = $mk
+    .\tools\Run-IntelPipeline-Minimal.ps1 | Out-Host
+    if($LASTEXITCODE -ne 0){ Write-Host "[PREMARKET] WARN: intel minimal pulse returned nonzero (fail-closed downstream may apply)." -ForegroundColor Yellow }
+  } finally {
+    if($oldHatMarket -ne $null){ $env:HAT_MARKET = $oldHatMarket } else { Remove-Item Env:\HAT_MARKET -ErrorAction SilentlyContinue }
+  }
+} else {
+  Write-Host "[PREMARKET] WARN: Run-IntelPipeline-Minimal.ps1 missing -> per-market risk_pulse may be stale; Block-G may fall back to global." -ForegroundColor Yellow
+}
+
+
 $writerOk = Test-Path '.\tools\Write-GateScoreEvents-PerMarket.ps1'
 if ($writerOk) {
   Write-Host "`n[PREMARKET] Step 0.5: Write-GateScoreEvents-PerMarket.ps1 (NVDA rewrite, market=$mk)" -ForegroundColor Yellow
@@ -111,11 +128,17 @@ try {
 
   if(Test-Path '.\tools\Build-RegimeActions.ps1'){
     Write-Host "`n[PREMARKET] Step 1.6c: Build-RegimeActions.ps1 (market=$mk)" -ForegroundColor Yellow
-    .\tools\Build-RegimeActions.ps1 -Market $mk -Symbol $Symbol | Out-Host
+    # ADAPTER_SYMBOL_ALL_REGIMEACTIONS_DEF
+    $symRA = $Symbol
+    if((($symRA + "")).Trim().ToUpperInvariant() -eq "ALL"){ $symRA = "NVDA" }
+    # ADAPTER_SYMBOL_ALL_MARKETSELECTOR_DEF
+    $symMS = $Symbol
+    if((($symMS + "")).Trim().ToUpperInvariant() -eq "ALL"){ $symMS = "NVDA" }
+    .\tools\Build-RegimeActions.ps1 -Market $mk -Symbol $symRA | Out-Host
 
    if(Test-Path '.\tools\Build-MarketSelector.ps1'){
      Write-Host "`n[PREMARKET] Step 1.6e: Build-MarketSelector.ps1 (market=$mk)" -ForegroundColor Yellow
-     .\tools\Build-MarketSelector.ps1 -Market $mk -Symbol $Symbol | Out-Host
+     .\tools\Build-MarketSelector.ps1 -Market $mk -Symbol $symMS | Out-Host
    } else {
      Write-Host "[PREMARKET] WARN: Build-MarketSelector.ps1 missing -> selector receipt absent (audit-only)" -ForegroundColor Yellow
    }
@@ -223,7 +246,10 @@ try {
   # --- Step 2e: [A2] refresh ev_hard_status.json (per-market) ---
   if (Test-Path '.\tools\Write-EvHardStatus.ps1') {
     Write-Host "`n[PREMARKET] Step 2e: Write-EvHardStatus.ps1 (market=$mk symbol=$Symbol)" -ForegroundColor Yellow
-    .\tools\Write-EvHardStatus.ps1 -Market $mk -Symbol $Symbol | Out-Host
+    # ADAPTER_SYMBOL_ALL_EVHSTATUS_DEF
+    $symEHS = $Symbol
+    if((($symEHS + "")).Trim().ToUpperInvariant() -eq "ALL"){ $symEHS = "NVDA" }
+    .\tools\Write-EvHardStatus.ps1 -Market $mk -Symbol $symEHS | Out-Host
   } else {
     Write-Host "[PREMARKET] WARN: Write-EvHardStatus.ps1 missing -> ev_hard_status.json may stay stale (fail-closed downstream)." -ForegroundColor Yellow
   }
