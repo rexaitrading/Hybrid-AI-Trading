@@ -32,14 +32,33 @@ if(-not $todayLocal){ throw "[FAIL-CLOSED] todayLocal empty" }
 if(-not $logsDirOut){ throw "[FAIL-CLOSED] logsDirOut empty" }
 New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
 
+# MARKET_ENABLEMENT_RECEIPT_V1
+$enablePath = Join-Path $logsDirOut "market_enablement.json"
+$marketEnabled = $false
+$enableReason = "missing_market_enablement_receipt"
+if(Test-Path -LiteralPath $enablePath){
+  try {
+    $enObj = (Get-Content -LiteralPath $enablePath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop)
+    try { if($enObj.PSObject.Properties.Name -contains "enabled"){ $marketEnabled = [bool]$enObj.enabled } } catch { $marketEnabled = $false }
+    try { if($enObj.PSObject.Properties.Name -contains "reason"){ $enableReason = ([string]$enObj.reason) } else { $enableReason = "receipt_present" } } catch { $enableReason = "receipt_present" }
+  } catch {
+    $marketEnabled = $false
+    $enableReason = "enablement_receipt_parse_failed"
+  }
+} else {
+  $marketEnabled = $false
+}
+
+
 # Default fail-closed: NO_TRADE
 $decision = "NO_TRADE"
 $chosenMarket = ""
 $chosenModule = ""
-$reason = "not_enabled_market_v1"
+$reason = "not_enabled_market_v2"
 $okToday = $true
 
 # US-only v1: TRADE only when ALL prereqs are green (audit-only; no enforcement yet)
+if($marketEnabled){
 if((($Market+"")).Trim().ToUpperInvariant() -eq "US"){
   $chosenMarket = "US"
   $chosenModule = "US_VWAP_Overnight_Reversion"
@@ -120,6 +139,14 @@ elseif((($Market+"")).Trim().ToUpperInvariant() -eq "JP"){
     elseif(-not $globalOk){ $reason = "global_ready_ok_today=false" }
     elseif(-not $gsFresh){ $reason = "gatescore_fresh_today=false" }
   }
+}
+
+} else {
+  # Not enabled => hard NO_TRADE (receipt-backed)
+  $decision = "NO_TRADE"
+  $chosenMarket = ""
+  $chosenModule = ""
+  if(($enableReason + "").Trim()){ $reason = "not_enabled_market_v2:" + (($enableReason + "")).Trim() } else { $reason = "not_enabled_market_v2" }
 }
 
 $out = [ordered]@{

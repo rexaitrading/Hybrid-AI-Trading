@@ -160,6 +160,15 @@ try {
     Write-Host "[PREMARKET] WARN: Build-EdgeValidity.ps1 missing -> edge_validity.json may stay stale (fail-closed)." -ForegroundColor Yellow
   }
 
+  # STEP_1_6G_MARKET_ENABLEMENT
+  if(Test-Path '.\tools\Write-MarketEnablement.ps1'){
+    Write-Host "`n[PREMARKET] Step 1.6g: Write-MarketEnablement.ps1 (market=$mk)" -ForegroundColor Yellow
+    .\tools\Write-MarketEnablement.ps1 -Market $mk | Out-Host
+  } else {
+    Write-Host "[PREMARKET] WARN: Write-MarketEnablement.ps1 missing -> enablement receipt absent (fail-closed)." -ForegroundColor Yellow
+  }
+
+
 
 } finally {
   if($oldHatLogsDir -ne $null){ $env:HAT_LOGS_DIR = $oldHatLogsDir } else { Remove-Item Env:\HAT_LOGS_DIR -ErrorAction SilentlyContinue }
