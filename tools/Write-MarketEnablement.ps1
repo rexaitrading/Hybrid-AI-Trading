@@ -98,6 +98,18 @@ if($explicitAllowed){ $mods = @($AllowedModules) }
 elseif(@($prevAllowed).Count -gt 0){ $mods = @($prevAllowed) }
 else { $mods = @() }
 
+# ALLOWLIST_AUTOFILL_FROM_POLICY_V1
+if($explicitEnabled -and $en -and (-not $explicitAllowed)){
+  $polPath = Join-Path $logsDirOut "market_module_policy.json"
+  if(-not (Test-Path -LiteralPath $polPath)){ throw ("[FAIL-CLOSED] enabling market requires policy receipt: " + $polPath) }
+  $pol = (Get-Content -LiteralPath $polPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop)
+  $pm = ""
+  try { if($pol.PSObject.Properties.Name -contains "primary_module"){ $pm = ([string]$pol.primary_module).Trim() } } catch { $pm = "" }
+  if(-not $pm){ throw "[FAIL-CLOSED] primary_module empty in policy; refusing to enable without allowlist" }
+  $mods = @($pm)
+}
+
+
 $out = [ordered]@{
   schema     = "market_enablement.v2"
   market     = (($Market + "")).Trim().ToUpperInvariant()

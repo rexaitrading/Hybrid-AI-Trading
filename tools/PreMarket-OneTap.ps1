@@ -175,6 +175,15 @@ try {
   if($oldHatLogsDir -ne $null){ $env:HAT_LOGS_DIR = $oldHatLogsDir } else { Remove-Item Env:\HAT_LOGS_DIR -ErrorAction SilentlyContinue }
 }
 
+
+  # STEP_1_6H_MARKET_MODULE_POLICY
+  if(Test-Path '.\tools\Write-MarketModulePolicy.ps1'){
+    Write-Host "`n[PREMARKET] Step 1.6h: Write-MarketModulePolicy.ps1 (market=$mk)" -ForegroundColor Yellow
+    .\tools\Write-MarketModulePolicy.ps1 -Market $mk | Out-Host
+  } else {
+    Write-Host "[PREMARKET] WARN: Write-MarketModulePolicy.ps1 missing -> policy receipt absent (audit-only)." -ForegroundColor Yellow
+  }
+
 # --- Step 1.7: Crisis + Crashmode receipts (per-market, NOOP; no flatten action) ---
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $mk = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
