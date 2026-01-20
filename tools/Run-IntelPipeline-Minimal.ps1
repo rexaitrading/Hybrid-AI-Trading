@@ -70,6 +70,25 @@ try {
   $line | Out-File -LiteralPath $intelFeedLog -Encoding utf8 -Append
 } catch { }
 Write-Host "[INTEL-MIN] mirrored $pulse -> $pulseLog and appended -> $intelFeedLog" -ForegroundColor Green
+
+# PERMARKET_INTEL_MIRROR_BEGIN
+# Institutional: Block-G prefers per-market logs first, so mirror the pulse into the market logsDir resolved from RunContext.
+try {
+  if($logsDir -and (Test-Path -LiteralPath $logsDir)){
+    $pmPulse = Join-Path $logsDir "risk_pulse.jsonl"
+    if(Test-Path -LiteralPath $pulseLog){
+      Copy-Item -LiteralPath $pulseLog -Destination $pmPulse -Force
+    }
+
+    # Optional: keep per-market intel_feed aligned (not required for Block-G contract, but useful)
+    $pmFeed = Join-Path $logsDir "intel_feed.jsonl"
+    if(Test-Path -LiteralPath $intelFeedLog){
+      Copy-Item -LiteralPath $intelFeedLog -Destination $pmFeed -Force
+    }
+  }
+} catch { }
+# PERMARKET_INTEL_MIRROR_END
+
 # LOGS_INTEL_MIRROR_BEGIN
 # Institutional: logs\.intel is the audit surface for Phase-6 (must be populated each run).
 try {

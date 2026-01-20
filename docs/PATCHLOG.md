@@ -1,4 +1,28 @@
 ---
+---
+## 2026-01-19 18:51:03 â€” Intel: per-market minimal pulse mirror (BlockG reads logs\<Market>\risk_pulse.jsonl)
+
+Goal:
+- Fix LIVE-semantics proof gap where Block-G intel contract stayed stale during RTH because it reads per-market first.
+
+Root cause (hard proof):
+- Run-IntelPipeline-Minimal wrote global: logs\risk_pulse.jsonl (fresh), but Block-G preferred per-market: logs\US\risk_pulse.jsonl (stale).
+- Build-BlockGStatusStub chooses intel_source_path via Prefer-LogsPath(logsDir\risk_pulse.jsonl, logsRoot\risk_pulse.jsonl).
+
+Change:
+- tools\Run-IntelPipeline-Minimal.ps1 now mirrors the minimal pulse into the per-market logsDir resolved from Resolve-RunContext:
+  - Copy logs\risk_pulse.jsonl -> <logsDir>\risk_pulse.jsonl
+  - (Optional) Copy logs\intel_feed.jsonl -> <logsDir>\intel_feed.jsonl
+
+Proof (EXECUTE):
+- global risk_pulse.jsonl age_min=0 and logs\US\risk_pulse.jsonl age_min=0.
+- Block-G: intel_ok_today=True, intel_age_minutes=0, intel_source_path=...\logs\US\risk_pulse.jsonl.
+
+Rollback:
+- Restore tools\Run-IntelPipeline-Minimal.ps1 from:
+  - tools\Run-IntelPipeline-Minimal.ps1.bak_20260119_185103_PERMARKET_INTEL_MIRROR
+---
+
 ## 2026-01-13 - Phase-4 Todayness (per-market) Root-Cause Gate + Hygiene
 
 Goal:
@@ -326,12 +350,12 @@ tools/Disarm-NVDA-Live.ps1
 - Fix: Write-Phase23Status / Write-EvHardStatus now fail-closed to market_closed_today when RunContext is missing/unreadable (prevents blank reason/not_evaluated fields).
 - Result: KR phase23_status.json and ev_hard_status.json now emit ok_today=false + not_evaluated_market_closed=true + reason=market_closed_today on closed days.
 - CHECKPOINT: CHECKPOINT_20260117_KR_CLOSED_DAY_SEMANTICS_GREEN
-## 2026-01-18 01:16:45 — Trade labeling + AAR scaffolding (US/PAPERLIVE proofed)
+## 2026-01-18 01:16:45 ï¿½ Trade labeling + AAR scaffolding (US/PAPERLIVE proofed)
 
 **New tools:**
-- `tools/Build-TradeLabels.ps1` — writes `trade_labels.jsonl` from orders + gatescore (+ optional sim/regime inputs), truth-preserving.
-- `tools/Build-DailyAAR.ps1` — generates `daily_aar.md` from `trade_labels.jsonl` only (no guessing).
-- `tools/Build-Counterfactuals.ps1` — truth-preserving stub: writes blocked record when bars cache missing.
+- `tools/Build-TradeLabels.ps1` ï¿½ writes `trade_labels.jsonl` from orders + gatescore (+ optional sim/regime inputs), truth-preserving.
+- `tools/Build-DailyAAR.ps1` ï¿½ generates `daily_aar.md` from `trade_labels.jsonl` only (no guessing).
+- `tools/Build-Counterfactuals.ps1` ï¿½ truth-preserving stub: writes blocked record when bars cache missing.
 
 **Hard-proven fixes inside TradeLabels:**
 - Brace mismatch in `Pick-GS` from non-balanced replacement ? removed extra `}` at line 117.
