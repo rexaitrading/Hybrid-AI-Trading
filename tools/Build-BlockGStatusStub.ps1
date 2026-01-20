@@ -843,7 +843,8 @@ function Resolve-GSFlagsDiag {
     $ms_chosen_module = ""
     $ms_reason = "missing_market_selector_json"
     try {
-      $msPath = Prefer-LogsPath (Join-Path $logsDir "market_selector.json") (Join-Path $logsRoot "market_selector.json")
+      $msPath = Prefer-LogsPath (Join-Path $logsDirOut "market_selector.json") (Join-Path $logsDir "market_selector.json")
+      $msPath = Prefer-LogsPath $msPath (Join-Path $logsRoot "market_selector.json")
       if($msPath -and (Test-Path -LiteralPath $msPath)){
         $msj = $null
         try { $msj = (Get-Content -LiteralPath $msPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop) } catch { $msj = $null }
