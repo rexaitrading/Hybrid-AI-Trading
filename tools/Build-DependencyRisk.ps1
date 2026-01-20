@@ -68,14 +68,24 @@ $logsDir = & $psExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Jo
 if(-not $logsDir){ $logsDir = Join-Path $repoRoot "logs" }
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null;
 $outPath = Join-Path $logsDir "dependency_risk.json"
+# A2_DEPRISK_OUTPATH_GUARD_BEGIN
+$mkt = (($Market + "")).Trim().ToUpperInvariant()
+if(-not $mkt){ $mkt = "US" }
+if($mkt -ne "US"){
+  $expect = [System.IO.Path]::GetFullPath((Join-Path (Join-Path $repoRoot "logs") $mkt))
+  $actualDir = [System.IO.Path]::GetFullPath((Split-Path -Parent $outPath))
+  if($actualDir -ne $expect){ throw ("[FAIL-CLOSED] dependency_risk outpath bleed: market={0} outdir={1} expect={2}" -f $mkt,$actualDir,$expect) }
+}
+# A2_DEPRISK_OUTPATH_GUARD_END
+
 $obj = [ordered]@{
   ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
   market     = $Market
   as_of_date = $todayLocal
   ok_today   = $false
   drivers    = @()
-  risk_bias  = "unknown"
-  reason     = "stub_not_implemented"
+  risk_bias  = "neutral"
+  reason     = "missing_gatescore_evidence_today"
 }
 
 # GREADY_POLICYB_CLOSED_DAY_BEGIN
@@ -83,6 +93,10 @@ $obj = [ordered]@{
 try {
   if($rc -and ($rc.PSObject.Properties.Name -contains "market_closed_today") -and [bool]$rc.market_closed_today){
     $obj.ok_today = $true
+# DEPRISK_MIN_OK_REASON_V1
+try { if($obj -and ($obj.PSObject.Properties.Name -contains "reason") -and (([string]$obj.reason).Trim() -eq "missing_gatescore_evidence_today")){ $obj.reason = "dependencies_ok_minimal_v1" } } catch { }
+try { if($obj -and ($obj.PSObject.Properties.Name -contains "risk_bias") -and (([string]$obj.risk_bias).Trim() -eq "neutral")){ } } catch { }
+
     try { $obj["not_evaluated_market_closed"] = $true } catch { }
     try { if($rc.PSObject.Properties.Name -contains "market_closed_reason"){ $obj["market_closed_reason"] = [string]$rc.market_closed_reason } } catch { }
     try { if($obj.PSObject.Properties.Name -contains "reason"){ $obj.reason = "market_closed_today" } else { $obj["reason"] = "market_closed_today" } } catch { try { $obj["reason"]="market_closed_today" } catch { } }
@@ -121,6 +135,9 @@ if($allow -and $evidenceRows -gt 0){
   } else {
     # allow non-proxy evidence
     $obj.ok_today = $true
+    # DEPRISK_OK_REASON_V2
+    try { $obj.reason = "dependencies_ok_minimal_v1" } catch { try { $obj["reason"] = "dependencies_ok_minimal_v1" } catch { } }
+
   }
   # GREADY_PROXY_DENY_MAIN_END} else {
   if(-not $allow){ $obj.reason = "blocked_policy_nonlive_us_only" }
