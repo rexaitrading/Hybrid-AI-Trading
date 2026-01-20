@@ -166,19 +166,15 @@ try {
     Write-Host "[PREMARKET] WARN: Build-EdgeValidity.ps1 missing -> edge_validity.json may stay stale (fail-closed)." -ForegroundColor Yellow
   }
 
-  # STEP_1_6G_MARKET_ENABLEMENT
-  if(Test-Path '.\tools\Write-MarketEnablement.ps1'){
-    Write-Host "`n[PREMARKET] Step 1.6g: Write-MarketEnablement.ps1 (market=$mk)" -ForegroundColor Yellow
-    .\tools\Write-MarketEnablement.ps1 -Market $mk | Out-Host
-  } else {
-    Write-Host "[PREMARKET] WARN: Write-MarketEnablement.ps1 missing -> enablement receipt absent (fail-closed)." -ForegroundColor Yellow
-  }
 
+  # STEP_1_6G_MARKET_ENABLEMENT (REMOVED)
+  # NOTE: enablement receipt is refreshed at Step 1.6e0 before selector; no duplicate write here.
 
 
 } finally {
   if($oldHatLogsDir -ne $null){ $env:HAT_LOGS_DIR = $oldHatLogsDir } else { Remove-Item Env:\HAT_LOGS_DIR -ErrorAction SilentlyContinue }
 }
+
 # --- Step 1.7: Crisis + Crashmode receipts (per-market, NOOP; no flatten action) ---
 $psExe = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
 $mk = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
