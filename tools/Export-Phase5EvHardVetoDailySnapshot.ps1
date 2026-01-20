@@ -6,6 +6,17 @@ param(
   [string]$DailyCsv = ".\logs\phase5_ev_hard_veto_daily.csv"
 )
 
+# A3_EVHARD_DAILY_OUTPATH_PERMARKET_BEGIN
+# If HAT_MARKET is set, write daily snapshot under logs\<MARKET>\ (single-truth per-market).
+$mkt = (($env:HAT_MARKET + "")).Trim().ToUpperInvariant()
+if(-not $mkt){ $mkt = "US" }
+try {
+  $want = (".\logs\{0}\phase5_ev_hard_veto_snapshot.json" -f $mkt)
+  if(($SnapshotOut + "") -eq ".\logs\phase5_ev_hard_veto_snapshot.json"){ $SnapshotOut = $want }
+} catch { }
+# A3_EVHARD_DAILY_OUTPATH_PERMARKET_END
+
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 

@@ -13,6 +13,11 @@ param(
   [double]$Micro = 0.60
 )
 
+# [A3] Back-compat: accept HAT_AS_OF_DATE when HAT_ASOF_DATE is empty
+if(-not $AsOfDate){
+  $AsOfDate = ((($env:HAT_AS_OF_DATE + "")).Trim())
+}
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -32,8 +37,8 @@ if($Market -ne "US"){
 
 if(-not $OutPath){
   if($Market -eq "US"){
-    # US legacy default (preserve existing consumers)
-    $OutPath = (Join-Path $repoRoot "logs\nvda_phase5_paperlive_results_today.jsonl")
+    # US per-market default (Block-G/A2 single-truth expects market-scoped)
+    $OutPath = (Join-Path $repoRoot ("logs\US\nvda_phase5_paperlive_results_today.jsonl"))
   } else {
     # Non-US per-market default
     $OutPath = (Join-Path $repoRoot ("logs\" + $Market + "\nvda_phase5_paperlive_results_today.jsonl"))

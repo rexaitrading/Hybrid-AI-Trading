@@ -1,4 +1,13 @@
 ---
+
+## 2026-01-20 2026-01-20 11:42:15  A3 as-of single-truth + NVDA Phase5 today chain + EV-hard daily per-market outpath (US RTH green)
+- Root cause: split-brain env var names (HAT_AS_OF_DATE vs HAT_ASOF_DATE) + missing NVDA expand step + US NVDA today OutPath wrote global + EV-hard daily snapshot exported to logs\\ root while status/Block-G read logs\\US\\.
+- Change: tools/Run-PreMarketBlockG.ps1 mirrors HAT_AS_OF_DATE -> HAT_ASOF_DATE and defines $root before RepoRoot print (StrictMode-safe).
+- Change: tools/Run-NvdaPaperliveToday.ps1 accepts HAT_AS_OF_DATE fallback and defaults US OutPath to logs\\US\\nvda_phase5_paperlive_results_today.jsonl.
+- Add: tools/Expand-NvdaPaperliveToday.ps1 (deterministic expand/normalize, RunContext-day aware).
+- Change: tools/Export-Phase5EvHardVetoDailySnapshot.ps1 writes daily snapshot under logs\\<MARKET>\\ when HAT_MARKET is set (per-market single truth).
+- Proof: US RTH Block-G snapshot shows session_name=RTH, market_is_open_now=True, ev_hard_daily_ok_today=True (as_of=2026-01-20), and nvda_blockg_ready=True.
+
 ## 2026-01-19 20:32:00 — Ops: Market Selector v1 (audit-only) receipt + OneTap wiring
 
 Goal:

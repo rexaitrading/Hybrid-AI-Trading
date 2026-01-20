@@ -24,6 +24,8 @@ $rc = (& (Join-Path $PSScriptRoot "Resolve-RunContext.ps1") -Market $env:HAT_MAR
 if(-not $rc -or -not $rc.as_of_date){ throw "[FAIL-CLOSED] Resolve-RunContext missing as_of_date" }
 if(-not $rc.logs_dir){ throw "[FAIL-CLOSED] Resolve-RunContext missing logs_dir" }
 $env:HAT_AS_OF_DATE = ([string]$rc.as_of_date)
+# [A3] Back-compat: unify as-of-date env vars (single truth from RunContext)
+$env:HAT_ASOF_DATE = ((($env:HAT_AS_OF_DATE + "")).Trim())
 $env:HAT_LOGS_DIR   = ([string]$rc.logs_dir)
 if($rc.PSObject.Properties.Name -contains "session_name"){ $env:HAT_SESSION_NAME = ([string]$rc.session_name) }
 Write-Host ("[A3] rc market=" + $env:HAT_MARKET + " as_of=" + $env:HAT_AS_OF_DATE + " session=" + (($env:HAT_SESSION_NAME + "")).Trim() + " logs_dir=" + $env:HAT_LOGS_DIR) -ForegroundColor DarkGray
@@ -79,6 +81,7 @@ if($Symbol -eq "ALL"){
 # [A3] disabled Set-Location $root (env-truth repo root already active)
 $today = (($env:HAT_AS_OF_DATE + "")).Trim()
 
+$root = (Resolve-Path -LiteralPath ".").Path
 Write-Host "[PRE] RepoRoot=$root Today=$today Symbol=$Symbol" -ForegroundColor Cyan
 
 # --- 0) Phase23 health daily (must be today-stamped) ---
