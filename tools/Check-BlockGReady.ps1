@@ -42,7 +42,13 @@ function Invoke-A1RuntimeNoBypass([string]$RepoRoot){
   $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
   $allow = New-Object System.Collections.Generic.HashSet[string] ([StringComparer]::OrdinalIgnoreCase)
   $allow.Add([System.IO.Path]::GetFullPath((Join-Path $RepoRoot "src\hybrid_ai_trading\broker\ib_safe.py"))) | Out-Null
-  $allow.Add([System.IO.Path]::GetFullPath((Join-Path $RepoRoot "scripts\hat_ops.ps1"))) | Out-Null   # audit-only string needle
+  # A1: scripts\hat_ops.ps1 is NON-LIVE only (it contains ib.placeOrder tokens for manual tooling).
+  # LIVE must fail-closed if any placeOrder surface exists outside ib_safe.py.
+  $tm = ((($env:HAT_TRADE_MODE + "") + "")).Trim().ToUpperInvariant()
+  if(-not $tm){ $tm = ((($env:HAT_MODE + "") + "")).Trim().ToUpperInvariant() }
+  if($tm -ne "LIVE"){
+    $allow.Add([System.IO.Path]::GetFullPath((Join-Path $RepoRoot "scripts\hat_ops.ps1"))) | Out-Null
+  }
 
   $targets = @(
     (Join-Path $RepoRoot "src"),
