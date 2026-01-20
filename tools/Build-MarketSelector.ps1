@@ -80,6 +80,47 @@ if((($Market+"")).Trim().ToUpperInvariant() -eq "US"){
     elseif(-not $gsFresh){ $reason = "gatescore_fresh_today=false" }
   }
 }
+elseif((($Market+"")).Trim().ToUpperInvariant() -eq "JP"){
+  $chosenMarket = "JP"
+  $chosenModule = "JP_Opening_Overreaction_Fade"
+  $reason = "default_no_trade"
+
+  # Read latest BlockG stub if present (audit-only prereq source)
+  $stubPath = Join-Path $logsDirOut "blockg_status_stub.json"
+  $st = $null
+  if(Test-Path -LiteralPath $stubPath){
+    try { $st = (Get-Content -LiteralPath $stubPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop) } catch { $st = $null }
+  }
+
+  $sessionOk = $false; $openOk = $false; $closedOk = $true
+  $intelOk = $false; $regimeOk = $false; $globalOk = $false; $gsFresh = $false
+
+  try { if($rc.PSObject.Properties.Name -contains "session_name"){ $sessionOk = (([string]$rc.session_name).Trim().ToUpperInvariant() -eq "RTH") } } catch { $sessionOk = $false }
+  try { if($rc.PSObject.Properties.Name -contains "is_open_now"){ $openOk = [bool]$rc.is_open_now } } catch { $openOk = $false }
+  try { if($rc.PSObject.Properties.Name -contains "market_closed_today"){ $closedOk = (-not [bool]$rc.market_closed_today) } } catch { $closedOk = $false }
+
+  if($st){
+    try { if($st.PSObject.Properties.Name -contains "intel_ok_today"){ $intelOk = [bool]$st.intel_ok_today } } catch { $intelOk = $false }
+    try { if($st.PSObject.Properties.Name -contains "regime_ok_today"){ $regimeOk = [bool]$st.regime_ok_today } } catch { $regimeOk = $false }
+    try { if($st.PSObject.Properties.Name -contains "global_ready_ok_today"){ $globalOk = [bool]$st.global_ready_ok_today } } catch { $globalOk = $false }
+    try { if($st.PSObject.Properties.Name -contains "gatescore_fresh_today"){ $gsFresh = [bool]$st.gatescore_fresh_today } } catch { $gsFresh = $false }
+  } else {
+    $reason = "missing_blockg_status_stub"
+  }
+
+  if($sessionOk -and $openOk -and $closedOk -and $intelOk -and $regimeOk -and $globalOk -and $gsFresh){
+    $decision = "TRADE"
+    $reason = "all_prereqs_green"
+  } else {
+    if(-not $sessionOk){ $reason = "session_not_rth" }
+    elseif(-not $openOk){ $reason = "market_is_open_now=false" }
+    elseif(-not $closedOk){ $reason = "market_closed_today=true" }
+    elseif(-not $intelOk){ $reason = "intel_ok_today=false" }
+    elseif(-not $regimeOk){ $reason = "regime_ok_today=false" }
+    elseif(-not $globalOk){ $reason = "global_ready_ok_today=false" }
+    elseif(-not $gsFresh){ $reason = "gatescore_fresh_today=false" }
+  }
+}
 
 $out = [ordered]@{
   schema = "market_selector.v1"
