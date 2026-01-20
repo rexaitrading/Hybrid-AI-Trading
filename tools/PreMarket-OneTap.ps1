@@ -138,6 +138,12 @@ try {
 
    if(Test-Path '.\tools\Build-MarketSelector.ps1'){
      Write-Host "`n[PREMARKET] Step 1.6e: Build-MarketSelector.ps1 (market=$mk)" -ForegroundColor Yellow
+    # STEP_1_6E0_MARKET_ENABLEMENT_BEFORE_SELECTOR
+    if(Test-Path '.\tools\Write-MarketEnablement.ps1'){
+      Write-Host "`n[PREMARKET] Step 1.6e0: Write-MarketEnablement.ps1 (market=$mk)" -ForegroundColor Yellow
+      .\tools\Write-MarketEnablement.ps1 -Market $mk | Out-Host
+    }
+
      .\tools\Build-MarketSelector.ps1 -Market $mk -Symbol $symMS | Out-Host
    } else {
      Write-Host "[PREMARKET] WARN: Build-MarketSelector.ps1 missing -> selector receipt absent (audit-only)" -ForegroundColor Yellow

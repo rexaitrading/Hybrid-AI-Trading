@@ -61,9 +61,36 @@ if(-not $logsDirOut){ throw "[FAIL-CLOSED] logsDirOut empty" }
 
 New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
 
-$en = [bool]$Enabled
-$r  = (($Reason + "")).Trim()
-if(-not $r){
+# ENABLEMENT_PRESERVE_V1
+$explicitEnabled = $PSBoundParameters.ContainsKey("Enabled")
+$explicitReason  = $PSBoundParameters.ContainsKey("Reason") -and ((($Reason+"")).Trim().Length -gt 0)
+$enablePathExisting = Join-Path $logsDirOut "market_enablement.json"
+$prevEnabled = $null
+$prevReason  = ""
+if((Test-Path -LiteralPath $enablePathExisting)){
+  try {
+    $prev = (Get-Content -LiteralPath $enablePathExisting -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop)
+    try { if($prev.PSObject.Properties.Name -contains "enabled"){ $prevEnabled = [bool]$prev.enabled } } catch { $prevEnabled = $null }
+    try { if($prev.PSObject.Properties.Name -contains "reason"){ $prevReason = ([string]$prev.reason) } } catch { $prevReason = "" }
+  } catch { $prevEnabled = $null; $prevReason = "" }
+}
+
+# Determine enabled/reason (never overwrite an existing enabled=true unless explicitly passed)
+$en = $false
+if($explicitEnabled){
+  $en = [bool]$Enabled
+} elseif($prevEnabled -ne $null){
+  $en = [bool]$prevEnabled
+} else {
+  $en = $false
+}
+
+$r = (($Reason+"")).Trim()
+if($explicitReason){
+  # keep provided reason
+} elseif((($prevReason+"")).Trim().Length -gt 0 -and ($prevEnabled -ne $null)){
+  $r = $prevReason
+} else {
   $r = if($en){ "explicitly_enabled" } else { "default_disabled" }
 }
 
