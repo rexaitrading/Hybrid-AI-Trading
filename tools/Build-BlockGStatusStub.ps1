@@ -1065,7 +1065,8 @@ $ms_chosen_market = ""
 $ms_chosen_module = ""
 $ms_reason = "missing_market_selector_json"
 try {
-  $msPath2 = Prefer-LogsPath (Join-Path $logsDir "market_selector.json") (Join-Path $logsRoot "market_selector.json")
+  $msPath2 = Prefer-LogsPath (Join-Path $logsDirOut "market_selector.json") (Join-Path $logsDir "market_selector.json")
+  $msPath2 = Prefer-LogsPath $msPath2 (Join-Path $logsRoot "market_selector.json")
   if($msPath2 -and (Test-Path -LiteralPath $msPath2)){
     $msj2 = $null
     try { $msj2 = (Get-Content -LiteralPath $msPath2 -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop) } catch { $msj2 = $null }
