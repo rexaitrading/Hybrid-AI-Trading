@@ -152,6 +152,15 @@ try {
     .\tools\Build-MarketDNA.ps1 -Market $mk | Out-Host
   }
 
+  # STEP_1_6F_EDGE_VALIDITY
+  if(Test-Path '.\tools\Build-EdgeValidity.ps1'){
+    Write-Host "`n[PREMARKET] Step 1.6f: Build-EdgeValidity.ps1 (market=$mk)" -ForegroundColor Yellow
+    .\tools\Build-EdgeValidity.ps1 -Market $mk | Out-Host
+  } else {
+    Write-Host "[PREMARKET] WARN: Build-EdgeValidity.ps1 missing -> edge_validity.json may stay stale (fail-closed)." -ForegroundColor Yellow
+  }
+
+
 } finally {
   if($oldHatLogsDir -ne $null){ $env:HAT_LOGS_DIR = $oldHatLogsDir } else { Remove-Item Env:\HAT_LOGS_DIR -ErrorAction SilentlyContinue }
 }
