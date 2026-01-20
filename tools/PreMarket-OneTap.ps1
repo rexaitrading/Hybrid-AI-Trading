@@ -79,6 +79,13 @@ try {
   if (Test-Path '.\tools\Run-Phase23HealthDaily.ps1') {
     Write-Host "`n[PREMARKET] Step 1.5a: Run-Phase23HealthDaily.ps1 (market=$mk logsDir=$ld)" -ForegroundColor Yellow
     .\tools\Run-Phase23HealthDaily.ps1 -Market $mk -Symbol $Symbol | Out-Host
+
+  if (Test-Path '.\tools\Write-Phase23Status.ps1') {
+    Write-Host "`n[PREMARKET] Step 1.5a2: Write-Phase23Status.ps1 (market=$mk symbol=$Symbol)" -ForegroundColor Yellow
+    .\tools\Write-Phase23Status.ps1 -Market $mk -Symbol $Symbol | Out-Host
+  } else {
+    Write-Host "[PREMARKET] WARN: Write-Phase23Status.ps1 missing -> phase23_status.json may remain stale (fail-closed downstream)" -ForegroundColor DarkYellow
+  }
   } else {
     Write-Host "[PREMARKET] WARN: Run-Phase23HealthDaily.ps1 missing -> Phase23 may remain stale (fail-closed downstream)." -ForegroundColor Yellow
   }
