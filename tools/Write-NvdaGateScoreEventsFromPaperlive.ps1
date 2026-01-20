@@ -184,6 +184,13 @@ foreach ($ln in $lines) {
     if ($null -eq $j) { continue }
     $props = $j.PSObject.Properties.Name
     $asOf = Pick-Date $j @("as_of_date","date","trading_day","day","ts","timestamp","ts_utc") $today
+# ASOF_SINGLE_TRUTH_V1_BEGIN
+$srcAsOf = $asOf
+# Institutional: GateScore event as_of_date must follow RunContext (single truth) for A2 todayness.
+if(-not $today){ throw "[FAIL-CLOSED] todayLocal missing (RunContext as_of_date empty)" }
+$asOf = $today
+# ASOF_SINGLE_TRUTH_V1_END
+
     if ($Mode -eq "rewrite") { $asOf = $today }
     $edge = 0.0
     foreach ($k in @("edge_ratio","mean_edge_ratio","edge","edge_mean","gatescore_edge","edgeValue","edge_score")) {
@@ -278,6 +285,7 @@ $eligible = ($edge -gt 0.0)
     $note = if($eligible){"from_paperlive"}else{"from_paperlive;ineligible_zero_metrics"}
     $outObj = [ordered]@{
         as_of_date         = $asOf
+        source_as_of_date  = $srcAsOf
         event_id           = (($asOf + "") + "|NVDA|" + $count.ToString())
         symbol             = "NVDA"
         source             = $src

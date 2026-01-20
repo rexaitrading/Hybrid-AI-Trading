@@ -91,7 +91,20 @@ $todayLocal = Slice-Date ([string]$rc.as_of_date)
 $logsDir = ([string]$rc.logs_dir_out).Trim()
 if(-not $logsDir){ throw "[A3] logsDir unresolved from Resolve-RunContext (fail-closed)" }
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null;
+# A2_RISK_OUTPATH_GUARD_BEGIN
+$mkt = (($Market + "")).Trim().ToUpperInvariant()
+if(-not $mkt){ $mkt = "US" }
+# Force logsDirOut to canonical per-market dir if mismatched/empty
+$expectDir = [System.IO.Path]::GetFullPath((Join-Path (Join-Path $repoRoot "logs") $mkt))
+$actualDir = [System.IO.Path]::GetFullPath($logsDirOut)
+if(-not $logsDirOut -or ($actualDir -ne $expectDir)){ $logsDirOut = $expectDir }
 $outPath = Join-Path $logsDirOut "risk_guard_status.json"
+# Fail-closed: non-US must write under logs\<MKT>\
+if($mkt -ne "US"){
+  $actualOutDir = [System.IO.Path]::GetFullPath((Split-Path -Parent $outPath))
+  if($actualOutDir -ne $expectDir){ throw ("[FAIL-CLOSED] risk_guard outpath bleed: market={0} outdir={1} expect={2}" -f $mkt,$actualOutDir,$expectDir) }
+}
+# A2_RISK_OUTPATH_GUARD_END
 $obj = [ordered]@{
   ts_utc            = (Get-Date).ToUniversalTime().ToString("o")
   market            = $Market
