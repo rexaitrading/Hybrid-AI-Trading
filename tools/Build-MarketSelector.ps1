@@ -36,11 +36,13 @@ New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
 $enablePath = Join-Path $logsDirOut "market_enablement.json"
 $marketEnabled = $false
 $enableReason = "missing_market_enablement_receipt"
+$allowedModules = @()
 if(Test-Path -LiteralPath $enablePath){
   try {
     $enObj = (Get-Content -LiteralPath $enablePath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop)
     try { if($enObj.PSObject.Properties.Name -contains "enabled"){ $marketEnabled = [bool]$enObj.enabled } } catch { $marketEnabled = $false }
     try { if($enObj.PSObject.Properties.Name -contains "reason"){ $enableReason = ([string]$enObj.reason) } else { $enableReason = "receipt_present" } } catch { $enableReason = "receipt_present" }
+    try { if($enObj.PSObject.Properties.Name -contains "allowed_modules"){ $allowedModules = @($enObj.allowed_modules) } } catch { $allowedModules = @() }
   } catch {
     $marketEnabled = $false
     $enableReason = "enablement_receipt_parse_failed"
@@ -140,6 +142,20 @@ elseif((($Market+"")).Trim().ToUpperInvariant() -eq "JP"){
     elseif(-not $gsFresh){ $reason = "gatescore_fresh_today=false" }
   }
 }
+
+  # ENABLEMENT_ALLOWLIST_V1
+  $allowList = @($allowedModules)
+  if($allowList.Count -le 0){
+    $decision = "NO_TRADE"
+    $reason = "no_allowed_modules"
+    $chosenMarket = ""
+    $chosenModule = ""
+  } elseif(-not $chosenModule -or -not ($allowList -contains $chosenModule)){
+    $decision = "NO_TRADE"
+    $reason = ("module_not_allowlisted:" + (($chosenModule + "")).Trim())
+    $chosenMarket = ""
+    $chosenModule = ""
+  }
 
 } else {
   # Not enabled => hard NO_TRADE (receipt-backed)

@@ -4,8 +4,10 @@ param(
   [ValidateSet("US","JP","HK","SG","IN","KR","TW","HK_SH","HK_SZ")]
   [string]$Market = "US",
   [bool]$Enabled = $false,
-  [string]$Reason = ""
+  [string]$Reason = "",
+  [string[]]$AllowedModules = @()
 )
+
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
@@ -61,45 +63,48 @@ if(-not $logsDirOut){ throw "[FAIL-CLOSED] logsDirOut empty" }
 
 New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
 
-# ENABLEMENT_PRESERVE_V1
+# ENABLEMENT_PRESERVE_V2
 $explicitEnabled = $PSBoundParameters.ContainsKey("Enabled")
 $explicitReason  = $PSBoundParameters.ContainsKey("Reason") -and ((($Reason+"")).Trim().Length -gt 0)
+$explicitAllowed = $PSBoundParameters.ContainsKey("AllowedModules")
 $enablePathExisting = Join-Path $logsDirOut "market_enablement.json"
 $prevEnabled = $null
 $prevReason  = ""
+$prevAllowed = @()
 if((Test-Path -LiteralPath $enablePathExisting)){
   try {
     $prev = (Get-Content -LiteralPath $enablePathExisting -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop)
     try { if($prev.PSObject.Properties.Name -contains "enabled"){ $prevEnabled = [bool]$prev.enabled } } catch { $prevEnabled = $null }
     try { if($prev.PSObject.Properties.Name -contains "reason"){ $prevReason = ([string]$prev.reason) } } catch { $prevReason = "" }
-  } catch { $prevEnabled = $null; $prevReason = "" }
+    try { if($prev.PSObject.Properties.Name -contains "allowed_modules"){ $prevAllowed = @($prev.allowed_modules) } } catch { $prevAllowed = @() }
+  } catch { $prevEnabled = $null; $prevReason = ""; $prevAllowed=@() }
 }
 
-# Determine enabled/reason (never overwrite an existing enabled=true unless explicitly passed)
+# enabled (never overwrite existing enabled=true unless explicitly passed)
 $en = $false
-if($explicitEnabled){
-  $en = [bool]$Enabled
-} elseif($prevEnabled -ne $null){
-  $en = [bool]$prevEnabled
-} else {
-  $en = $false
-}
+if($explicitEnabled){ $en = [bool]$Enabled }
+elseif($prevEnabled -ne $null){ $en = [bool]$prevEnabled }
+else { $en = $false }
 
+# reason
 $r = (($Reason+"")).Trim()
-if($explicitReason){
-  # keep provided reason
-} elseif((($prevReason+"")).Trim().Length -gt 0 -and ($prevEnabled -ne $null)){
-  $r = $prevReason
-} else {
-  $r = if($en){ "explicitly_enabled" } else { "default_disabled" }
-}
+if($explicitReason){ }
+elseif((($prevReason+"")).Trim().Length -gt 0 -and ($prevEnabled -ne $null)){ $r = $prevReason }
+else { $r = if($en){ "explicitly_enabled" } else { "default_disabled" } }
+
+# allowed modules
+$mods = @()
+if($explicitAllowed){ $mods = @($AllowedModules) }
+elseif(@($prevAllowed).Count -gt 0){ $mods = @($prevAllowed) }
+else { $mods = @() }
 
 $out = [ordered]@{
-  schema     = "market_enablement.v1"
+  schema     = "market_enablement.v2"
   market     = (($Market + "")).Trim().ToUpperInvariant()
   as_of_date = $todayLocal
   enabled    = $en
   reason     = $r
+  allowed_modules = @($mods)
   ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
 }
 
