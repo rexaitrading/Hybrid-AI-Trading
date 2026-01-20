@@ -2356,6 +2356,34 @@ try {
   $ra_reason = "regime_actions_parse_error"
 }
 # REGIME_ACTIONS_AUDIT_V1_END
+
+# MARKET_SELECTOR_FULL_PAYLOAD_DEFAULTS_BEGIN
+# Fail-closed: ensure selector vars are correct in FULL payload scope (StrictMode-safe).
+$ms_ok_today = $false
+$ms_decision = "NO_TRADE"
+$ms_chosen_market = ""
+$ms_chosen_module = ""
+$ms_reason = "missing_market_selector_json"
+try {
+  $msDirF = ""
+  try { $msDirF = (Split-Path -Parent $statusPath) } catch { $msDirF = "" }
+  $msPathF = Prefer-LogsPath (Join-Path $msDirF "market_selector.json") (Join-Path $logsDirOut "market_selector.json")
+  $msPathF = Prefer-LogsPath $msPathF (Join-Path $logsDir "market_selector.json")
+  $msPathF = Prefer-LogsPath $msPathF (Join-Path $logsRoot "market_selector.json")
+  if($msPathF -and (Test-Path -LiteralPath $msPathF)){
+    $msjF = $null
+    try { $msjF = (Get-Content -LiteralPath $msPathF -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop) } catch { $msjF = $null }
+    if($msjF){
+      if($msjF.PSObject.Properties.Name -contains "ok_today"){ $ms_ok_today = [bool]$msjF.ok_today }
+      if($msjF.PSObject.Properties.Name -contains "decision"){ $ms_decision = ([string]$msjF.decision).Trim() }
+      if($msjF.PSObject.Properties.Name -contains "chosen_market"){ $ms_chosen_market = ([string]$msjF.chosen_market).Trim() }
+      if($msjF.PSObject.Properties.Name -contains "chosen_module"){ $ms_chosen_module = ([string]$msjF.chosen_module).Trim() }
+      if($msjF.PSObject.Properties.Name -contains "reason"){ $ms_reason = ([string]$msjF.reason).Trim() }
+    }
+  }
+} catch { }
+# MARKET_SELECTOR_FULL_PAYLOAD_DEFAULTS_END
+
 $payload = [ordered]@{
     ts_utc = $tsUtc
     as_of_date = $todayLocal
