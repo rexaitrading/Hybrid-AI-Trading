@@ -225,7 +225,7 @@ Step "Block-G build status stub (timeout/reuse)" {
   try { Remove-Item -LiteralPath $stdout,$stderr -Force -ErrorAction SilentlyContinue } catch {}
 
   $job = Start-Job -ScriptBlock {
-    param($RepoRoot,$Builder,$Sym,$Stdout,$Stderr)
+    param($RepoRoot,$Builder,$Sym,$Mkt,$Stdout,$Stderr)
     $ErrorActionPreference="Stop"; Set-StrictMode -Version Latest
     Set-Location -LiteralPath $RepoRoot
     [System.Environment]::CurrentDirectory = $RepoRoot
@@ -233,14 +233,14 @@ Step "Block-G build status stub (timeout/reuse)" {
 # If operator explicitly set it, keep it; otherwise leave unset.
 if(($env:HAT_BLOCKG_BUILDER_FAST + "") -ne "1"){ $env:HAT_BLOCKG_BUILDER_FAST = "" }
     try {
-      & powershell -NoProfile -ExecutionPolicy Bypass -File $Builder -Symbol $Sym *>&1 |
+      & powershell -NoProfile -ExecutionPolicy Bypass -File $Builder -Symbol $Sym -Market $Mkt *>&1 |
         Out-File -LiteralPath $Stdout -Encoding UTF8
       exit 0
     } catch {
       ($_.Exception.ToString()) | Out-File -LiteralPath $Stderr -Encoding UTF8
       exit 2
     }
-  } -ArgumentList $repoRoot,$builder,$Symbol,$stdout,$stderr
+  } -ArgumentList $repoRoot,$builder,$Symbol,$Market,$stdout,$stderr
 
   $ok = Wait-Job -Id $job.Id -Timeout $BlockGTimeoutSec
   if(-not $ok){
