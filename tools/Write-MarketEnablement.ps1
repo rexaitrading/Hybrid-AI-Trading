@@ -5,8 +5,10 @@ param(
   [string]$Market = "US",
   [bool]$Enabled = $false,
   [string]$Reason = "",
-  [string[]]$AllowedModules = @()
+  [string[]]$AllowedModules = @(),
+  [string]$ExpiresAtUtc = ""
 )
+
 
 
 Set-StrictMode -Version Latest
@@ -67,6 +69,22 @@ New-Item -ItemType Directory -Force -Path $logsDirOut | Out-Null
 $explicitEnabled = $PSBoundParameters.ContainsKey("Enabled")
 $explicitReason  = $PSBoundParameters.ContainsKey("Reason") -and ((($Reason+"")).Trim().Length -gt 0)
 $explicitAllowed = $PSBoundParameters.ContainsKey("AllowedModules")
+# WINDOW_ENFORCE_V1
+$explicitExpires = $PSBoundParameters.ContainsKey("ExpiresAtUtc")
+$exp = (($ExpiresAtUtc+"")).Trim()
+# EXPIRES_OUT_V1
+$expiresOut = ""
+if($explicitExpires){ $expiresOut = $exp }
+
+if($explicitEnabled -and $en -and $explicitExpires){
+  if(-not $exp){ throw "[FAIL-CLOSED] ExpiresAtUtc was provided but empty" }
+  try {
+    $dt = [DateTimeOffset]::Parse($exp)
+    $exp = $dt.UtcDateTime.ToString("o")
+  } catch {
+    throw ("[FAIL-CLOSED] invalid ExpiresAtUtc: " + $exp)
+  }
+}
 $enablePathExisting = Join-Path $logsDirOut "market_enablement.json"
 $prevEnabled = $null
 $prevReason  = ""
@@ -133,7 +151,7 @@ $out = [ordered]@{
   enabled    = $en
   reason     = $r
   allowed_modules = @($mods)
-  expires_at_utc = ""
+  expires_at_utc = $expiresOut
   max_trades_per_day = 0
   cooldown_minutes_after_trade = 0
   enablement_window = "enablement_window.v1"

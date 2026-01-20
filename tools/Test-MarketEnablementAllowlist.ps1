@@ -36,6 +36,16 @@ try { if($en.PSObject.Properties.Name -contains "enabled"){ $enabled = [bool]$en
 $mods = @()
 try { if($en.PSObject.Properties.Name -contains "allowed_modules"){ $mods = @($en.allowed_modules) } } catch { $mods = @() }
 
+  # ENABLEMENT_EXPIRES_ENFORCE_V2
+  $exp = ""
+  try { if($en.PSObject.Properties.Name -contains "expires_at_utc"){ $exp = ([string]$en.expires_at_utc).Trim() } } catch { $exp = "" }
+  if($exp){
+    $dt = $null
+    try { $dt = [DateTimeOffset]::Parse($exp) } catch { throw ("[FAIL-CLOSED] invalid expires_at_utc in receipt: " + $exp) }
+    $now = [DateTimeOffset]::UtcNow
+    if($now -ge $dt){ throw ("[FAIL-CLOSED] enablement_expired at " + $dt.UtcDateTime.ToString("o")) }
+  }
+
 $chosen = ""
 try { if($ms.PSObject.Properties.Name -contains "chosen_module"){ $chosen = ([string]$ms.chosen_module).Trim() } } catch { $chosen = "" }
 
