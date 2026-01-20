@@ -104,6 +104,31 @@ if((($Market+"")).Trim().ToUpperInvariant() -eq "US"){
 elseif((($Market+"")).Trim().ToUpperInvariant() -eq "JP"){
   $chosenMarket = "JP"
   $chosenModule = "JP_Opening_Overreaction_Fade"
+
+  # POLICY_PRIMARY_MODULE_ENFORCE_V1
+  if($marketEnabled){
+    $polPath = Join-Path $logsDirOut "market_module_policy.json"
+    if(Test-Path -LiteralPath $polPath){
+      try {
+        $pol = (Get-Content -LiteralPath $polPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop)
+        $pm = ""
+        try { if($pol.PSObject.Properties.Name -contains "primary_module"){ $pm = ([string]$pol.primary_module).Trim() } } catch { $pm = "" }
+        if($pm){
+          if((($chosenModule+"")).Trim() -ne $pm){
+            $decision = "NO_TRADE"
+            $reason = ("policy_primary_module_mismatch:" + (($chosenModule+"")).Trim() + "!=" + $pm)
+          }
+        }
+      } catch {
+        $decision = "NO_TRADE"
+        $reason = "policy_receipt_parse_failed"
+      }
+    } else {
+      $decision = "NO_TRADE"
+      $reason = "missing_market_module_policy"
+    }
+  }
+
   $reason = "default_no_trade"
 
   # Read latest BlockG stub if present (audit-only prereq source)

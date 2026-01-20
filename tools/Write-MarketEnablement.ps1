@@ -99,6 +99,22 @@ elseif(@($prevAllowed).Count -gt 0){ $mods = @($prevAllowed) }
 else { $mods = @() }
 
 # ALLOWLIST_AUTOFILL_FROM_POLICY_V1
+# GLOBAL_SINGLE_MARKET_GUARD_V1
+if($explicitEnabled -and $en){
+  $gPath = Join-Path $repoRoot "logs\market_enablement_global.json"
+  $thisMk = (($Market+"")).Trim().ToUpperInvariant()
+  $other = ""
+  try {
+    if(Test-Path -LiteralPath $gPath){
+      $g = (Get-Content -LiteralPath $gPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop)
+      try { if($g.PSObject.Properties.Name -contains "enabled_market"){ $other = ([string]$g.enabled_market).Trim().ToUpperInvariant() } } catch { $other = "" }
+    }
+  } catch { $other = "" }
+  if($other -and $other -ne $thisMk){ throw ("[FAIL-CLOSED] another market already enabled: " + $other) }
+  $gOut = [ordered]@{ schema="market_enablement_global.v1"; enabled_market=$thisMk; ts_utc=(Get-Date).ToUniversalTime().ToString("o") }
+  Write-Utf8NoBomLf $gPath ($gOut | ConvertTo-Json -Depth 4)
+}
+
 if($explicitEnabled -and $en -and (-not $explicitAllowed)){
   $polPath = Join-Path $logsDirOut "market_module_policy.json"
   if(-not (Test-Path -LiteralPath $polPath)){ throw ("[FAIL-CLOSED] enabling market requires policy receipt: " + $polPath) }
@@ -111,12 +127,16 @@ if($explicitEnabled -and $en -and (-not $explicitAllowed)){
 
 
 $out = [ordered]@{
-  schema     = "market_enablement.v2"
+  schema     = "market_enablement.v3"
   market     = (($Market + "")).Trim().ToUpperInvariant()
   as_of_date = $todayLocal
   enabled    = $en
   reason     = $r
   allowed_modules = @($mods)
+  expires_at_utc = ""
+  max_trades_per_day = 0
+  cooldown_minutes_after_trade = 0
+  enablement_window = "enablement_window.v1"
   ts_utc     = (Get-Date).ToUniversalTime().ToString("o")
 }
 
