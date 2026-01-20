@@ -1,5 +1,4 @@
 ---
----
 ## 2026-01-19 18:51:03 — Intel: per-market minimal pulse mirror (BlockG reads logs\<Market>\risk_pulse.jsonl)
 
 Goal:
